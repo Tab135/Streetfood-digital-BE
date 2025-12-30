@@ -1,0 +1,9 @@
+using System.Threading.Tasks;
+
+namespace Service
+{
+    public interface IEmailSender
+    {
+        Task SendEmailAsync(string toEmail, string subject, string body);
+    }
+}

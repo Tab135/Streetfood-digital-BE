@@ -1,0 +1,6 @@
+@StreetFood_HostAddress = http://localhost:5276
+
+GET {{StreetFood_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
