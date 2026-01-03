@@ -37,7 +37,7 @@ namespace DAL
         public async Task<User?> GetByUsernameAsync(string username)
         {
             return await _context.Users
-                  .FirstOrDefaultAsync(u => u.Username == username);
+                  .FirstOrDefaultAsync(u => u.UserName == username);
         }
 
         public async Task UpdateAsync(User user)
@@ -49,7 +49,7 @@ namespace DAL
         public async Task<bool> UsernameExistsAsync(string username)
         {
             return await _context.Users
-                 .AnyAsync(u => u.Username == username);
+                 .AnyAsync(u => u.UserName == username);
         }
 
         public async Task<User> FindOrCreateUserFromGoogleAsync(GoogleJsonWebSignature.Payload payload)
@@ -61,12 +61,14 @@ namespace DAL
             {
                 user = new User
                 {
-                    Username = payload.Name,
+                    UserName = payload.Name,
                     Email = payload.Email,
                     Password = "", // No password for Google users
                     Role = Role.User,
-                    Createdat = DateTime.UtcNow,
-                    EmailVerified = true // Google auth implies verified email
+                    CreatedAt = DateTime.UtcNow,
+                    EmailVerified = true, // Google auth implies verified email
+                    FirstName = payload.GivenName,
+                    LastName = payload.FamilyName
                 };
 
                 await CreateAsync(user);

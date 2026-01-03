@@ -137,10 +137,10 @@ namespace StreetFood.Controllers
                     user = new
                     {
                         id = user.Id,
-                        username = user.Username,
+                        username = user.UserName,
                         email = user.Email,
                         role = user.Role,
-                        createdAt = user.Createdat,
+                        createdAt = user.CreatedAt,
                         emailVerified = user.EmailVerified,
                         point = user.Point
                     }
@@ -302,11 +302,11 @@ namespace StreetFood.Controllers
                     user = new
                     {
                         updatedUser.Id,
-                        updatedUser.Username,
+                        updatedUser.UserName,
                         updatedUser.Email,
                         updatedUser.EmailVerified,
-                        updatedUser.Phone_number,
-                        updatedUser.Avatar_url,
+                        updatedUser.PhoneNumber,
+                        updatedUser.AvatarUrl,
                         updatedUser.Status
                     }
                 });
