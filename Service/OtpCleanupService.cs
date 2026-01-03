@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Repository;
+using Repository.Interfaces;
 using System;
 using System.Threading;
 using System.Threading.Tasks;

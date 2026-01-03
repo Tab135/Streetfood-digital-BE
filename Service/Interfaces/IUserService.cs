@@ -5,7 +5,7 @@ using BO.Entities;
 using Google.Apis.Auth;
 using System.Threading.Tasks;
 
-namespace Service
+namespace Service.Interfaces
 {
     public interface IUserService
     {

@@ -4,7 +4,7 @@ using BO.DTO.Users;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Service;
+using Service.Interfaces;
 using Service.JWT;
 using System.Security.Claims;
 

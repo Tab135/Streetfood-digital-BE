@@ -2,7 +2,7 @@ using BO.Entities;
 using Google.Apis.Auth;
 using System.Threading.Tasks;
 
-namespace Repository
+namespace Repository.Interfaces
 {
     public interface IUserRepository
     {

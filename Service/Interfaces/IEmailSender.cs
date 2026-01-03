@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace Service
+namespace Service.Interfaces
 {
     public interface IEmailSender
     {

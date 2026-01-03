@@ -3,6 +3,7 @@ using MailKit.Security;
 using MimeKit;
 using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
+using Service.Interfaces;
 
 namespace Service
 {
