@@ -2,7 +2,7 @@ using BO.DTO.Badge;
 using BO.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Service;
+using Service.Interfaces;
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;

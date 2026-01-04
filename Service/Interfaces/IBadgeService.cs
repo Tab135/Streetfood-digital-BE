@@ -4,7 +4,7 @@ using BO.Entities;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Service
+namespace Service.Interfaces
 {
     public interface IBadgeService
     {

@@ -1,7 +1,8 @@
 using BO.DTO;
 using BO.DTO.Badge;
 using BO.Entities;
-using Repository;
+using Repository.Interfaces;
+using Service.Interfaces;
 
 namespace Service
 {
