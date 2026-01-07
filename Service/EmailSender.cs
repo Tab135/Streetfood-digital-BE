@@ -1,9 +1,11 @@
-using MailKit.Net.Smtp;
-using MailKit.Security;
-using MimeKit;
-using Microsoft.Extensions.Configuration;
-using System.Threading.Tasks;
+using brevo_csharp.Api;
+using brevo_csharp.Client;
+using brevo_csharp.Model;
+using Microsoft.Extensions.Configuration; // Note: This might also cause ambiguity if you aren't careful, but the error here is about Brevo.
 using Service.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Service
 {
@@ -16,34 +18,52 @@ namespace Service
             _configuration = configuration;
         }
 
-        public async Task SendEmailAsync(string toEmail, string subject, string body)
+        public async System.Threading.Tasks.Task SendEmailAsync(string toEmail, string subject, string body)
         {
+            // 1. Retrieve Config
+            var apiKey = _configuration["Brevo:ApiKey"];
+            var senderName = _configuration["Brevo:SenderName"];
+            var senderEmail = _configuration["Brevo:SenderEmail"];
+
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                throw new Exception("Brevo API Key is missing in configuration.");
+            }
+
+            // 2. Configure Brevo Client (Global Configuration)
+            // FIX: Use the fully qualified name 'brevo_csharp.Client.Configuration'
+            if (!brevo_csharp.Client.Configuration.Default.ApiKey.ContainsKey("api-key"))
+            {
+                brevo_csharp.Client.Configuration.Default.ApiKey.Add("api-key", apiKey);
+            }
+            else
+            {
+                brevo_csharp.Client.Configuration.Default.ApiKey["api-key"] = apiKey;
+            }
+
+            var apiInstance = new TransactionalEmailsApi();
+
+            // 3. Create Sender & Recipient objects
+            var emailSender = new SendSmtpEmailSender(senderName, senderEmail);
+            var emailReceiver = new SendSmtpEmailTo(toEmail);
+            var recipients = new List<SendSmtpEmailTo> { emailReceiver };
+
+            // 4. Construct the Email
+            var sendSmtpEmail = new SendSmtpEmail(
+                sender: emailSender,
+                to: recipients,
+                subject: subject,
+                htmlContent: body
+            );
+
             try
             {
-                var smtpHost = _configuration["SmtpSettings:Host"];
-                var smtpPort = int.Parse(_configuration["SmtpSettings:Port"]);
-                var smtpUsername = _configuration["SmtpSettings:Username"];
-                var smtpPassword = _configuration["SmtpSettings:Password"];
-                var senderEmail = _configuration["SmtpSettings:SenderEmail"];
-                var senderName = _configuration["SmtpSettings:SenderName"];
-
-                var message = new MimeMessage();
-                message.From.Add(new MailboxAddress(senderName, senderEmail));
-                message.To.Add(new MailboxAddress("", toEmail));
-                message.Subject = subject;
-                message.Body = new TextPart("html") { Text = body };
-
-                using (var client = new SmtpClient())
-                {
-                    await client.ConnectAsync(smtpHost, smtpPort, SecureSocketOptions.StartTls);
-                    await client.AuthenticateAsync(smtpUsername, smtpPassword);
-                    await client.SendAsync(message);
-                    await client.DisconnectAsync(true);
-                }
+                // 5. Send Async
+                await apiInstance.SendTransacEmailAsync(sendSmtpEmail);
             }
             catch (Exception ex)
             {
-                throw new Exception($"Failed to send email: {ex.Message}");
+                throw new Exception($"Failed to send email via Brevo API: {ex.Message}", ex);
             }
         }
     }
