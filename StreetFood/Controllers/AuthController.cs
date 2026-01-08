@@ -316,5 +316,31 @@ namespace StreetFood.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpPost]
+        [Route("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest changePasswordRequest)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                // Get current user id from claims
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized(new { message = "Invalid user token" });
+
+                var message = await _userService.ChangePassword(userId, changePasswordRequest.OldPassword,
+                    changePasswordRequest.NewPassword, changePasswordRequest.ConfirmNewPassword);
+
+                return Ok(new { message = message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

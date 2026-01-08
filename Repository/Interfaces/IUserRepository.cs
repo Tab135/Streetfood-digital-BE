@@ -14,5 +14,6 @@ namespace Repository.Interfaces
         Task<bool> UsernameExistsAsync(string username);
         Task<User> FindOrCreateUserFromGoogleAsync(GoogleJsonWebSignature.Payload payload);
         Task<User> GetUserById(int userId);
+        Task UpdatePasswordAsync(int userId, string hashedPassword);
     }
 }

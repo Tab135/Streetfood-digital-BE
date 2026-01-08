@@ -81,5 +81,15 @@ namespace DAL
         {
             return await _context.Users.FirstOrDefaultAsync(x => x.Id == userId);
         }
+
+        // Added: update only password
+        public async Task UpdatePasswordAsync(int userId, string hashedPassword)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null) throw new Exception("User not found");
+            user.Password = hashedPassword;
+            _context.Users.Update(user);
+            await _context.SaveChangesAsync();
+        }
     }
 }

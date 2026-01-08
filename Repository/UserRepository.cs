@@ -55,5 +55,10 @@ namespace Repository
         {
             return await _userDAO.GetUserById(userId);
         }
+
+        public async Task UpdatePasswordAsync(int userId, string hashedPassword)
+        {
+            await _userDAO.UpdatePasswordAsync(userId, hashedPassword);
+        }
     }
 }

@@ -201,6 +201,29 @@ namespace Service
             return user;
         }
 
+        // New ChangePassword implementation
+        public async Task<string> ChangePassword(string userId, string oldPassword, string newPassword, string confirmNewPassword)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new Exception("Invalid user id");
+
+            if (newPassword != confirmNewPassword)
+                throw new Exception("New password and confirmation do not match");
+
+            if (!int.TryParse(userId, out int parsedUserId))
+                throw new Exception("Invalid user id format");
+
+            var user = await GetUserByIdAsync(parsedUserId);
+
+            if (!BCrypt.Net.BCrypt.Verify(oldPassword, user.Password))
+                throw new Exception("Old password is incorrect");
+
+            var hashed = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            await _userRepository.UpdatePasswordAsync(parsedUserId, hashed);
+
+            return "Password changed successfully";
+        }
+
         // Helper methods
         private async Task ValidateEmailNotExistsAsync(string email)
         {
