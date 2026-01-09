@@ -56,13 +56,12 @@ namespace StreetFood.Controllers
                 {
                     return BadRequest(ModelState);
                 }
-
-                var message = await _userService.VerifyRegistrationAsync(request);
+                var message = await _userService.VerifyRegistrationAsync(request); 
 
                 return Ok(new
                 {
                     message = message,
-                    redirectTo = "/login" // Indicate to frontend to redirect to login
+                    redirectTo = "/login"
                 });
             }
             catch (Exception ex)

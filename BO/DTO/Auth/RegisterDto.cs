@@ -15,7 +15,10 @@ public class RegisterDto
     [Required]
     [StringLength(50, MinimumLength = 8)]
     public string Password { get; set; } = string.Empty;
-
-    public string? FirstName { get; set; }
-    public string? LastName { get; set; }
+    [Required]
+    public string FirstName { get; set; }
+    [Required]
+    public string LastName { get; set; }
+    [Required]
+    public string PhoneNumber { get; set; }
 }

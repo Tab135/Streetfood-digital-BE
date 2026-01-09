@@ -43,11 +43,18 @@ namespace Service
             _configuration = configuration;
         }
 
+        // Inside UserService.cs
+
         public async Task<(string token, User user)> LoginAsync(LoginDto loginDto)
         {
-            var user = await _userRepository.GetByEmailAsync(loginDto.Email);
+            var user = await _userRepository.GetByEmailAsync(loginDto.Email); //
+
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password))
                 throw new Exception("Invalid credentials");
+            if (!user.EmailVerified)
+            {
+                throw new Exception("Account is not verified. Please verify your email first.");
+            }
 
             var token = _jwtService.GenerateToken(user);
             return (token, user);
@@ -55,35 +62,64 @@ namespace Service
 
         public async Task<string> SendRegistrationOtpAsync(RegisterDto registerDto)
         {
-            await ValidateEmailNotExistsAsync(registerDto.Email);
+            // 1. Check if user already exists
+            var existingUser = await _userRepository.GetByEmailAsync(registerDto.Email); //
 
-            var otpCode = await GenerateAndStoreOtpAsync(registerDto.Email);
+            if (existingUser != null)
+            {
+                if (existingUser.EmailVerified)
+                {
+                    throw new Exception("Email already exists");
+                }
+                else
+                {
+                    existingUser.UserName = registerDto.Username;
+                    existingUser.Password = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
+                    await _userRepository.UpdateAsync(existingUser); //
+                }
+            }
+            else
+            {
+                var newUser = new User
+                {
+                    UserName = registerDto.Username,
+                    Email = registerDto.Email,
+                    Role = Role.User,
+                    CreatedAt = DateTime.UtcNow,
+                    EmailVerified = false, 
+                    Password = BCrypt.Net.BCrypt.HashPassword(registerDto.Password)
+                };
 
+                await _userRepository.CreateAsync(newUser); 
+            }
+
+            var otpCode = await GenerateAndStoreOtpAsync(registerDto.Email); 
             var subject = $"{PlatformName} - Registration Verification Code";
             var body = GenerateOtpEmailTemplate(registerDto.Username, otpCode, "register your account");
 
-            await _emailSender.SendEmailAsync(registerDto.Email, subject, body);
+            await _emailSender.SendEmailAsync(registerDto.Email, subject, body); 
 
             return $"OTP sent to {registerDto.Email}. Please check your email and verify within {OtpExpiryMinutes} minutes.";
         }
 
         public async Task<string> VerifyRegistrationAsync(VerifyRegistrationRequest request)
         {
-            var validOtp = await GetValidOtpAsync(request.Email, request.Otp);
-            await ValidateEmailNotExistsAsync(request.Email);
+            var validOtp = await GetValidOtpAsync(request.Email, request.Otp); 
 
-            var user = new User
+            var user = await _userRepository.GetByEmailAsync(request.Email);
+            if (user == null)
             {
-                UserName = request.Username,
-                Email = request.Email,
-                Role = Role.User,
-                CreatedAt = DateTime.UtcNow,
-                EmailVerified = true,
-                Password = BCrypt.Net.BCrypt.HashPassword(request.Password)
-            };
+                throw new Exception("User not found. Please register first.");
+            }
 
-            await _userRepository.CreateAsync(user);
-            await MarkOtpAsUsedAsync(validOtp.Id, request.Email, request.Otp);
+            if (user.EmailVerified)
+            {
+                return "User is already verified. Please log in.";
+            }
+            user.EmailVerified = true;
+            await _userRepository.UpdateAsync(user); 
+
+            await MarkOtpAsUsedAsync(validOtp.Id, request.Email, request.Otp); 
 
             return "Registration successful. Please log in with your credentials.";
         }
@@ -114,15 +150,31 @@ namespace Service
             }
         }
 
+
         public async Task<string> ResendRegistrationOtpAsync(string email, string username)
         {
-            await CheckOtpRequestLimitAsync(email);
-            await ValidateEmailNotExistsAsync(email);
+            await CheckOtpRequestLimitAsync(email); //
+
+            var user = await _userRepository.GetByEmailAsync(email);
+
+            if (user != null)
+            {
+                if (user.EmailVerified)
+                {
+                    throw new Exception("Email is already registered and verified. Please login.");
+                }
+            }
+            else
+            {
+                throw new Exception("No registration request found for this email.");
+            }
 
             var otpCode = await GenerateAndStoreOtpAsync(email);
 
             var subject = $"{PlatformName} - Registration Verification Code";
-            var body = GenerateOtpEmailTemplate(username, otpCode, "register your account");
+            var validUsername = string.IsNullOrEmpty(username) ? user.UserName : username;
+
+            var body = GenerateOtpEmailTemplate(validUsername, otpCode, "register your account");
 
             await _emailSender.SendEmailAsync(email, subject, body);
 
