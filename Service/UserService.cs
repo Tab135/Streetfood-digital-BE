@@ -63,7 +63,7 @@ namespace Service
         public async Task<string> SendRegistrationOtpAsync(RegisterDto registerDto)
         {
             // 1. Check if user already exists
-            var existingUser = await _userRepository.GetByEmailAsync(registerDto.Email); //
+            var existingUser = await _userRepository.GetByEmailAsync(registerDto.Email); 
 
             if (existingUser != null)
             {
@@ -75,7 +75,10 @@ namespace Service
                 {
                     existingUser.UserName = registerDto.Username;
                     existingUser.Password = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
-                    await _userRepository.UpdateAsync(existingUser); //
+                    await _userRepository.UpdateAsync(existingUser);
+                    existingUser.FirstName = registerDto.FirstName;
+                    existingUser.LastName = registerDto.LastName;
+                    existingUser.PhoneNumber = registerDto.PhoneNumber;
                 }
             }
             else
@@ -86,8 +89,11 @@ namespace Service
                     Email = registerDto.Email,
                     Role = Role.User,
                     CreatedAt = DateTime.UtcNow,
-                    EmailVerified = false, 
-                    Password = BCrypt.Net.BCrypt.HashPassword(registerDto.Password)
+                    EmailVerified = false,
+                    Password = BCrypt.Net.BCrypt.HashPassword(registerDto.Password),
+                    FirstName = registerDto.FirstName,
+                    LastName = registerDto.LastName,
+                    PhoneNumber = registerDto.PhoneNumber
                 };
 
                 await _userRepository.CreateAsync(newUser); 
