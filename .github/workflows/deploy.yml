@@ -1,0 +1,218 @@
+name: Deploy Backend to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🚀 Starting Backend Deployment
+        run: echo "Starting .NET backend deployment to VPS..."
+
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 📦 Create Backend Archive
+        run: |
+          zip -r /tmp/Streetfood-digital-BE.zip . \
+            -x "*.git*" \
+            -x "*.github*" \
+            -x "*/bin/*" \
+            -x "*/obj/*" \
+            -x "*/.vs/*"
+          mv /tmp/Streetfood-digital-BE.zip ./Streetfood-digital-BE.zip
+
+      - name: 📤 Upload Backend to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "Streetfood-digital-BE.zip"
+          target: "/root/dotnet/"
+
+      - name: 🔧 Deploy Backend on VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 5m
+          script: |
+            # Source common profile files to get dotnet in PATH
+            [ -f ~/.bashrc ] && source ~/.bashrc
+            [ -f ~/.profile ] && source ~/.profile
+            [ -f /etc/profile ] && source /etc/profile
+            
+            DOTNET_PATH="/root/dotnet"
+            PROJECT_PATH="$DOTNET_PATH/Streetfood-digital-BE/StreetFood"
+            
+            # Locate dotnet installation
+            echo "Searching for dotnet..."
+            if command -v dotnet &> /dev/null; then
+              DOTNET_EXEC=$(command -v dotnet)
+            elif [ -f "/usr/bin/dotnet" ]; then
+              DOTNET_EXEC="/usr/bin/dotnet"
+            elif [ -f "/usr/local/bin/dotnet" ]; then
+              DOTNET_EXEC="/usr/local/bin/dotnet"
+            elif [ -f "$HOME/.dotnet/dotnet" ]; then
+              DOTNET_EXEC="$HOME/.dotnet/dotnet"
+            elif [ -f "/root/.dotnet/dotnet" ]; then
+              DOTNET_EXEC="/root/.dotnet/dotnet"
+            else
+              DOTNET_EXEC=$(find /usr /opt /root -name "dotnet" -type f 2>/dev/null | grep -E "bin/dotnet$" | head -1)
+            fi
+            
+            if [ -z "$DOTNET_EXEC" ] || [ ! -f "$DOTNET_EXEC" ]; then
+              echo "❌ ERROR: dotnet not found"
+              echo "Searched locations:"
+              echo "  - which dotnet"
+              echo "  - /usr/bin/dotnet"
+              echo "  - /usr/local/bin/dotnet"
+              echo "  - ~/.dotnet/dotnet"
+              echo "  - /root/.dotnet/dotnet"
+              exit 1
+            fi
+            echo "✓ Found dotnet at: $DOTNET_EXEC"
+            
+            echo '------ 1. Stopping Running Application ------'
+            # Find and kill the dotnet process running on port 5298
+            PID=$(lsof -ti:5298 2>/dev/null || true)
+            if [ ! -z "$PID" ]; then
+              echo "Found process on port 5298 (PID: $PID), stopping..."
+              kill -TERM $PID 2>/dev/null || true
+              sleep 3
+              # Force kill if still running
+              if ps -p $PID > /dev/null 2>&1; then
+                echo "Force killing process..."
+                kill -9 $PID 2>/dev/null || true
+              fi
+              echo "✓ Stopped running application"
+            else
+              echo "No running application found on port 5298"
+            fi
+            
+            echo '------ 2. Verifying Files ------'
+            cd $DOTNET_PATH || exit 1
+            if [ ! -f "Streetfood-digital-BE.zip" ]; then
+              echo "❌ ERROR: Streetfood-digital-BE.zip not found in $DOTNET_PATH"
+              ls -la
+              exit 1
+            fi
+            echo "✓ Found Streetfood-digital-BE.zip ($(du -h Streetfood-digital-BE.zip | cut -f1))"
+            
+            echo '------ 3. Backing Up User-Uploaded Content ------'
+            UPLOADS_PATH="$DOTNET_PATH/Streetfood-digital-BE/StreetFood/uploads"
+            UPLOADS_BACKUP="$DOTNET_PATH/uploads_backup"
+            WWWROOT_PATH="$DOTNET_PATH/Streetfood-digital-BE/StreetFood/wwwroot"
+            WWWROOT_BACKUP="$DOTNET_PATH/wwwroot_backup"
+            
+            # Backup uploads folder
+            if [ -d "$UPLOADS_PATH" ]; then
+              echo "Backing up uploads folder..."
+              rm -rf "$UPLOADS_BACKUP"
+              cp -r "$UPLOADS_PATH" "$UPLOADS_BACKUP"
+              UPLOAD_COUNT=$(find "$UPLOADS_BACKUP" -type f | wc -l)
+              UPLOAD_SIZE=$(du -sh "$UPLOADS_BACKUP" | cut -f1)
+              echo "✓ Backed up uploads folder ($UPLOAD_COUNT files, $UPLOAD_SIZE)"
+            else
+              echo "No uploads folder to backup"
+            fi
+            
+            # Backup wwwroot folder
+            if [ -d "$WWWROOT_PATH" ]; then
+              echo "Backing up wwwroot folder..."
+              rm -rf "$WWWROOT_BACKUP"
+              cp -r "$WWWROOT_PATH" "$WWWROOT_BACKUP"
+              WWWROOT_COUNT=$(find "$WWWROOT_BACKUP" -type f | wc -l)
+              WWWROOT_SIZE=$(du -sh "$WWWROOT_BACKUP" | cut -f1)
+              echo "✓ Backed up wwwroot folder ($WWWROOT_COUNT files, $WWWROOT_SIZE)"
+            else
+              echo "No wwwroot folder to backup"
+            fi
+            
+            echo '------ 4. Cleaning Old Deployment ------'
+            rm -rf Streetfood-digital-BE
+            echo "✓ Cleaned old deployment"
+            
+            echo '------ 5. Extracting New Version ------'
+            unzip -o Streetfood-digital-BE.zip -d Streetfood-digital-BE
+            if [ $? -ne 0 ]; then
+              echo "❌ ERROR: Failed to extract zip file"
+              exit 1
+            fi
+            rm Streetfood-digital-BE.zip
+            echo "✓ Extracted successfully"
+            
+            echo '------ 6. Restoring User-Uploaded Content ------'
+            # Restore uploads folder
+            if [ -d "$UPLOADS_BACKUP" ]; then
+              echo "Restoring uploads folder..."
+              mkdir -p "$UPLOADS_PATH"
+              cp -r "$UPLOADS_BACKUP"/* "$UPLOADS_PATH/" 2>/dev/null || true
+              RESTORED_UPLOAD_COUNT=$(find "$UPLOADS_PATH" -type f | wc -l)
+              echo "✓ Restored uploads folder ($RESTORED_UPLOAD_COUNT files)"
+              rm -rf "$UPLOADS_BACKUP"
+            else
+              echo "No uploads backup to restore"
+              mkdir -p "$UPLOADS_PATH"
+              echo "✓ Created empty uploads directory"
+            fi
+            
+            # Restore wwwroot folder
+            if [ -d "$WWWROOT_BACKUP" ]; then
+              echo "Restoring wwwroot folder..."
+              mkdir -p "$WWWROOT_PATH"
+              cp -r "$WWWROOT_BACKUP"/* "$WWWROOT_PATH/" 2>/dev/null || true
+              RESTORED_WWWROOT_COUNT=$(find "$WWWROOT_PATH" -type f | wc -l)
+              echo "✓ Restored wwwroot folder ($RESTORED_WWWROOT_COUNT files)"
+              rm -rf "$WWWROOT_BACKUP"
+            else
+              echo "No wwwroot backup to restore"
+              mkdir -p "$WWWROOT_PATH/images"
+              echo "✓ Created empty wwwroot/images directory"
+            fi
+            
+            echo '------ 7. Verifying Project Structure ------'
+            if [ ! -d "$PROJECT_PATH" ]; then
+              echo "❌ ERROR: Project path not found: $PROJECT_PATH"
+              ls -la $DOTNET_PATH/Streetfood-digital-BE/
+              exit 1
+            fi
+            echo "✓ Project directory found"
+            
+            echo '------ 8. Starting Application ------'
+            cd $PROJECT_PATH || exit 1
+            nohup $DOTNET_EXEC run --urls "http://159.223.47.89:5298" > nohup.out 2>&1 &
+            APP_PID=$!
+            echo "✓ Started dotnet with PID: $APP_PID"
+            
+            echo '------ 9. Waiting for Application ------'
+            sleep 8
+            
+            echo '------ 10. Verifying Application ------'
+            if ps -p $APP_PID > /dev/null 2>&1; then
+              echo "✅ Application is running (PID: $APP_PID)"
+              echo "Recent logs:"
+              tail -30 nohup.out
+            else
+              echo "❌ Application process died"
+              echo "Full logs:"
+              cat nohup.out
+              exit 1
+            fi
+            
+            echo '✅ Backend Deployment Complete!'
+
+      - name: ✅ Backend Deployment Status
+        if: success()
+        run: echo "Backend deployed successfully! 🎉"
+
+      - name: ❌ Backend Deployment Failed
+        if: failure()
+        run: echo "Backend deployment failed 😢"
