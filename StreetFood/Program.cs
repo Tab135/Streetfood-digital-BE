@@ -161,7 +161,7 @@ namespace StreetFood
             });
 
             app.UseCors("AllowFrontend");
-
+            app.UseMiddleware<StreetFood.Middleware.ResponseMiddleware>();
             app.UseAuthentication();
             app.UseAuthorization();
 
