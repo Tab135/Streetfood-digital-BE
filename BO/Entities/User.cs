@@ -17,7 +17,7 @@ public class User
     public string? Password { get; set; }
     public Role Role { get; set; } = Role.User;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int Point {  get; set; }
     public bool EmailVerified { get; set; } = false;
     public string? PhoneNumber {  get; set; }  

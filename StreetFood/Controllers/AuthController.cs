@@ -153,23 +153,31 @@ namespace StreetFood.Controllers
 
         [HttpGet("profile")]
         [Authorize]
-        public IActionResult GetProfile()
+        public async Task<IActionResult> GetProfile() 
         {
             try
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-                if (string.IsNullOrEmpty(userId))
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
                 {
                     return Unauthorized(new { message = "Invalid user identity" });
                 }
+                var user = await _userService.GetUserById(userId);
 
                 return Ok(new
                 {
-                    userId = userId,
-                    username = User.FindFirst(ClaimTypes.Name)?.Value,
-                    email = User.FindFirst(ClaimTypes.Email)?.Value,
-                    role = User.FindFirst(ClaimTypes.Role)?.Value
+                    userId = user.Id,
+                    username = user.UserName,
+                    email = user.Email,
+                    role = user.Role,
+                    phoneNumber = user.PhoneNumber,
+                    avatarUrl = user.AvatarUrl,
+                    point = user.Point, 
+                    createdAt = user.CreatedAt,
+                    firstName = user.FirstName,
+                    lastName = user.LastName,
+
                 });
             }
             catch (Exception ex)
@@ -300,13 +308,12 @@ namespace StreetFood.Controllers
                     token = newToken,
                     user = new
                     {
-                        updatedUser.Id,
                         updatedUser.UserName,
                         updatedUser.Email,
-                        updatedUser.EmailVerified,
                         updatedUser.PhoneNumber,
                         updatedUser.AvatarUrl,
-                        updatedUser.Status
+                        updatedUser.FirstName,
+                        updatedUser.LastName,   
                     }
                 });
             }

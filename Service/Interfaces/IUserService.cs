@@ -20,5 +20,6 @@ namespace Service.Interfaces
         Task<string> ResendForgetPasswordOtpAsync(string email);
         Task<User> UpdateUserProfile(int userId, UpdateUserProfileDto updateDto);
         Task<string> ChangePassword(string userId, string oldPassword, string newPassword, string confirmNewPassword);
+        Task<User> GetUserById(int userId);
     }
 }

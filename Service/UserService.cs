@@ -43,8 +43,22 @@ namespace Service
             _configuration = configuration;
         }
 
-        // Inside UserService.cs
+        public async Task<User> GetUserById(int userId)
+        {
 
+            var user = await _userRepository.GetUserById(userId);
+
+            if (user == null)
+            {
+                throw new Exception("User not found");
+            }
+            if (!user.EmailVerified)
+            {
+                throw new Exception("User is not verified");
+            }
+
+            return user;
+        }
         public async Task<(string token, User user)> LoginAsync(LoginDto loginDto)
         {
             var user = await _userRepository.GetByEmailAsync(loginDto.Email); //
@@ -255,6 +269,11 @@ namespace Service
             if (!string.IsNullOrWhiteSpace(updateDto.AvatarUrl))
                 user.AvatarUrl = updateDto.AvatarUrl;
 
+            if (!string.IsNullOrWhiteSpace(updateDto.FirstName))
+                user.FirstName = updateDto.FirstName;
+
+            if (!string.IsNullOrWhiteSpace(updateDto.LastName))
+                user.LastName = updateDto.LastName;
             await _userRepository.UpdateAsync(user);
             return user;
         }
