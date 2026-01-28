@@ -25,4 +25,7 @@ public class User
     public string? Status { get; set; }
     public string FirstName { get; set; }
     public string LastName { get; set; }
+
+    public virtual ICollection<UserDietaryPreference> DietaryPreferences { get; set; }
 }
+

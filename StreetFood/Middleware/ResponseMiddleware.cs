@@ -140,7 +140,41 @@ namespace StreetFood.Middleware
                     break;
                 case 401:
                     errorCode = "ERR_401";
-                    message = "Unauthorized. Please log in.";
+                    // Preserve controller-provided message when possible (e.g., "Account is not verified..."),
+                    // otherwise fall back to generic message.
+                    if (!string.IsNullOrWhiteSpace(body))
+                    {
+                        try
+                        {
+                            using (JsonDocument doc = JsonDocument.Parse(body))
+                            {
+                                if (doc.RootElement.TryGetProperty("message", out JsonElement msgEl))
+                                {
+                                    var extracted = msgEl.GetString();
+                                    if (!string.IsNullOrWhiteSpace(extracted))
+                                    {
+                                        message = extracted;
+                                    }
+                                    else
+                                    {
+                                        message = "Unauthorized. Please log in.";
+                                    }
+                                }
+                                else
+                                {
+                                    message = "Unauthorized. Please log in.";
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            message = "Unauthorized. Please log in.";
+                        }
+                    }
+                    else
+                    {
+                        message = "Unauthorized. Please log in.";
+                    }
                     break;
                 case 403:
                     errorCode = "ERR_403";

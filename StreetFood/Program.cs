@@ -57,18 +57,25 @@ namespace StreetFood
             builder.Services.AddScoped<OtpVerifyDAO>();
             builder.Services.AddScoped<BadgeDAO>();
             builder.Services.AddScoped<UserBadgeDAO>();
+            // Dietary DAOs
+            builder.Services.AddScoped<DietaryPreferenceDAO>();
+            builder.Services.AddScoped<UserDietaryPreferenceDAO>();
 
             // Register Repositories
             builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddScoped<IOtpVerifyRepository, OtpVerifyRepository>();
             builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
             builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
+            builder.Services.AddScoped<IDietaryPreferenceRepository, DietaryPreferenceRepository>();
+            builder.Services.AddScoped<IUserDietaryPreferenceRepository, UserDietaryPreferenceRepository>();
 
             // Register Services
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IJwtService, JWTService>();
             builder.Services.AddScoped<IEmailSender, EmailSender>();
             builder.Services.AddScoped<IBadgeService, BadgeService>();
+            builder.Services.AddScoped<IDietaryPreferenceService, DietaryPreferenceService>();
+            builder.Services.AddScoped<IUserDietaryPreferenceService, UserDietaryPreferenceService>();
             builder.Services.AddHostedService<OtpCleanupService>();
 
             // JWT Authentication Configuration
