@@ -1,5 +1,6 @@
 using BO.Entities;
 using Google.Apis.Auth;
+using BO.DTO.Auth;
 using System.Threading.Tasks;
 
 namespace Repository.Interfaces
@@ -13,6 +14,7 @@ namespace Repository.Interfaces
         Task UpdateAsync(User user);
         Task<bool> UsernameExistsAsync(string username);
         Task<User> FindOrCreateUserFromGoogleAsync(GoogleJsonWebSignature.Payload payload);
+        Task<User> FindOrCreateUserFromFacebookAsync(FacebookUserInfo info);
         Task<User> GetUserById(int userId);
         Task UpdatePasswordAsync(int userId, string hashedPassword);
     }

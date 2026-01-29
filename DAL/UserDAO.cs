@@ -4,6 +4,7 @@ using Google.Apis.Auth;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Threading.Tasks;
+using BO.DTO.Auth;
 
 namespace DAL
 {
@@ -77,6 +78,44 @@ namespace DAL
 
             return user;
         }
+
+        public async Task<User> FindOrCreateUserFromFacebookAsync(FacebookUserInfo info)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == info.Email);
+
+            if (user == null)
+            {
+                user = new User
+                {
+                    UserName = info.Name ?? info.Email,
+                    Email = info.Email,
+                    Password = "",
+                    Role = Role.User,
+                    CreatedAt = DateTime.UtcNow,
+                    EmailVerified = true,
+                    FirstName = info.FirstName ?? string.Empty,
+                    LastName = info.LastName ?? string.Empty,
+                    AvatarUrl = info.AvatarUrl
+                };
+
+                await CreateAsync(user);
+                user = await GetByEmailAsync(info.Email);
+            }
+            else
+            {
+                // If user exists but avatar is missing and we have one from Facebook, update it
+                if (string.IsNullOrEmpty(user.AvatarUrl) && !string.IsNullOrEmpty(info.AvatarUrl))
+                {
+                    user.AvatarUrl = info.AvatarUrl;
+                    _context.Users.Update(user);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            return user;
+        }
+
         public async Task<User> GetUserById(int userId)
         {
             return await _context.Users.FirstOrDefaultAsync(x => x.Id == userId);

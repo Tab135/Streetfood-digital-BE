@@ -13,6 +13,7 @@ namespace Service.Interfaces
         Task<string> SendRegistrationOtpAsync(RegisterDto registerDto);
         Task<string> VerifyRegistrationAsync(VerifyRegistrationRequest request);
         Task<LoginResponse> GoogleLoginAsync(GoogleAuthDto googleAuthDto);
+        Task<LoginResponse> FacebookLoginAsync(FacebookAuthDto facebookAuthDto);
         Task<string> ResendRegistrationOtpAsync(string email, string username);
         Task<string> SendForgetPasswordOtpAsync(string email);
         Task<string> VerifyOtpAsync(string email, string otp);
