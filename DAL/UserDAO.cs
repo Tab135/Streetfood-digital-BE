@@ -69,11 +69,22 @@ namespace DAL
                     CreatedAt = DateTime.UtcNow,
                     EmailVerified = true, // Google auth implies verified email
                     FirstName = payload.GivenName,
-                    LastName = payload.FamilyName
+                    LastName = payload.FamilyName,
+                    AvatarUrl = payload.Picture
                 };
 
                 await CreateAsync(user);
                 user = await GetByEmailAsync(payload.Email); // Reload with Role if needed
+            }
+            else
+            {
+                // If user exists but avatar is missing and we have one from Google, update it
+                if (string.IsNullOrEmpty(user.AvatarUrl) && !string.IsNullOrEmpty(payload.Picture))
+                {
+                    user.AvatarUrl = payload.Picture;
+                    _context.Users.Update(user);
+                    await _context.SaveChangesAsync();
+                }
             }
 
             return user;

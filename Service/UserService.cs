@@ -322,7 +322,8 @@ namespace Service
                     Email = email,
                     Name = info.Name,
                     FirstName = info.FirstName,
-                    LastName = info.LastName
+                    LastName = info.LastName,
+                    AvatarUrl = info.AvatarUrl
                 });
 
                 var token = _jwt_service.GenerateToken(user);
