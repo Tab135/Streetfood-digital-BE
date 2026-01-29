@@ -18,6 +18,13 @@ public class StreetFoodDbContext : DbContext
     public DbSet<DietaryPreference> DietaryPreferences { get; set; }
     public DbSet<UserDietaryPreference> UserDietaryPreferences { get; set; }
 
+    // Vendor-related DbSets
+    public DbSet<Vendor> Vendors { get; set; }
+    public DbSet<VendorImage> VendorImages { get; set; }
+    public DbSet<WorkSchedule> WorkSchedules { get; set; }
+    public DbSet<DayOff> DayOffs { get; set; }
+    public DbSet<VendorRegisterRequest> VendorRegisterRequests { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -75,6 +82,69 @@ public class StreetFoodDbContext : DbContext
             entity.HasKey(e => e.UserDietaryPreferenceId);
             entity.HasOne(udp => udp.User).WithMany(u => u.DietaryPreferences).HasForeignKey(udp => udp.UserId);
             entity.HasOne(udp => udp.DietaryPreference).WithMany(dp => dp.UserPreferences).HasForeignKey(udp => udp.DietaryPreferenceId);
+        }); // <--- FIX: Added closing brace and parenthesis here
+
+        // Vendor-related entities
+        modelBuilder.Entity<Vendor>(entity =>
+        {
+            entity.HasKey(e => e.VendorId);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.PhoneNumber).HasMaxLength(50);
+            entity.Property(e => e.Email).HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.IsVerified).HasDefaultValue(false);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            entity.HasOne(e => e.VendorOwner)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<VendorImage>(entity =>
+        {
+            entity.HasKey(e => e.VendorImageId);
+            entity.Property(e => e.ImageUrl).IsRequired();
+            entity.HasOne(e => e.Vendor)
+                  .WithMany()
+                  .HasForeignKey(e => e.VendorId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WorkSchedule>(entity =>
+        {
+            entity.HasKey(e => e.WorkScheduleId);
+            entity.Property(e => e.Weekday).IsRequired();
+            entity.Property(e => e.OpenTime).IsRequired();
+            entity.Property(e => e.CloseTime).IsRequired();
+            entity.HasOne(e => e.Vendor)
+                  .WithMany()
+                  .HasForeignKey(e => e.VendorId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DayOff>(entity =>
+        {
+            entity.HasKey(e => e.DayOffId);
+            entity.Property(e => e.StartDate).HasColumnType("date");
+            entity.Property(e => e.EndDate).HasColumnType("date");
+            entity.HasOne(e => e.Vendor)
+                  .WithMany()
+                  .HasForeignKey(e => e.VendorId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<VendorRegisterRequest>(entity =>
+        {
+            entity.HasKey(e => e.VendorRegisterRequestId);
+            entity.Property(e => e.LicenseUrl).IsRequired();
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdateAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.HasOne<Vendor>()
+                  .WithOne()
+                  .HasForeignKey<VendorRegisterRequest>(e => e.VendorId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
