@@ -1,4 +1,3 @@
-
 using DAL;
 using Repository;
 using Service;
@@ -73,6 +72,7 @@ namespace StreetFood
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IJwtService, JWTService>();
             builder.Services.AddScoped<IEmailSender, EmailSender>();
+            builder.Services.AddScoped<IFacebookService, FacebookService>();
             builder.Services.AddScoped<IBadgeService, BadgeService>();
             builder.Services.AddScoped<IDietaryPreferenceService, DietaryPreferenceService>();
             builder.Services.AddScoped<IUserDietaryPreferenceService, UserDietaryPreferenceService>();
