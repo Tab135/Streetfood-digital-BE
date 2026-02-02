@@ -37,6 +37,11 @@ namespace Repository
             return await _userDAO.GetByUsernameAsync(username);
         }
 
+        public async Task<User?> GetByPhoneNumberAsync(string phoneNumber)
+        {
+            return await _userDAO.GetByPhoneNumberAsync(phoneNumber);
+        }
+
         public async Task UpdateAsync(User user)
         {
             await _userDAO.UpdateAsync(user);

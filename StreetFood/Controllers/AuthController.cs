@@ -136,6 +136,68 @@ namespace StreetFood.Controllers
             }
         }
 
+        [HttpPost("phone-login")]
+        public async Task<IActionResult> PhoneLogin([FromBody] PhoneLoginDto request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var otp = await _userService.SendPhoneLoginOtpAsync(request.PhoneNumber);
+
+                return Ok(new
+                {
+                    message = "OTP generated",
+                    phoneNumber = request.PhoneNumber,
+                    otp = otp
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("phone-verify")]
+        public async Task<IActionResult> PhoneVerify([FromBody] VerifyPhoneOtpDto request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var response = await _userService.VerifyPhoneOtpAsync(request.PhoneNumber, request.Otp);
+
+                return Ok(new
+                {
+                    message = "Login successful",
+                    token = response.Token,
+                    user = new
+                    {
+                        id = response.User?.Id,
+                        username = response.User?.UserName,
+                        email = response.User?.Email,
+                        role = response.User?.Role,
+                        phoneNumber = response.User?.PhoneNumber,
+                        avatarUrl = response.User?.AvatarUrl,
+                        point = response.User?.Point,
+                        createdAt = response.User?.CreatedAt,
+                        firstName = response.User?.FirstName,
+                        lastName = response.User?.LastName
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+        }
+
         //[HttpPost("login")]
         //public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         //{

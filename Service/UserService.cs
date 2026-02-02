@@ -255,6 +255,58 @@ namespace Service
             return $"New password reset OTP sent to {email}. Please check your email and verify within {OtpExpiryMinutes} minutes.";
         }
 
+        // Send OTP for phone-based login 
+        public async Task<string> SendPhoneLoginOtpAsync(string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+                throw new Exception("Phone number is required");
+
+           
+            await CheckOtpRequestLimitAsync(phoneNumber);
+
+            // Generate and store OTP associated with the phone number (stored in OtpVerify.Email field)
+            var otpCode = await GenerateAndStoreOtpAsync(phoneNumber);
+
+            //Fucking implement the phonenumber send OTP here
+            return otpCode;
+        }
+
+        public async Task<LoginResponse> VerifyPhoneOtpAsync(string phoneNumber, string otp)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber) || string.IsNullOrWhiteSpace(otp))
+                throw new Exception("Phone number and OTP are required");
+
+            var validOtp = await GetValidOtpAsync(phoneNumber, otp);
+
+            // Find existing user by phone
+            var user = await _userRepository.GetByPhoneNumberAsync(phoneNumber);
+
+            if (user == null)
+            {
+                var newUser = new User
+                {
+                    UserName = phoneNumber,
+                    Email = string.Empty,
+                    Password = string.Empty,
+                    Role = Role.User,
+                    CreatedAt = DateTime.UtcNow,
+                    EmailVerified = true, 
+                    PhoneNumber = phoneNumber,
+                    FirstName = string.Empty,
+                    LastName = string.Empty
+                };
+
+                user = await _userRepository.CreateAsync(newUser);
+            }
+
+            var token = _jwt_service.GenerateToken(user);
+
+            // Mark OTP as used and delete it
+            await MarkOtpAsUsedAsync(validOtp.Id, phoneNumber, otp);
+
+            return new LoginResponse { Token = token, User = user };
+        }
+
         public async Task<User> UpdateUserProfile(int userId, UpdateUserProfileDto updateDto)
         {
             var user = await GetUserByIdAsync(userId);
