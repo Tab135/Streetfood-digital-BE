@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260129114419_Vendor")]
+    partial class Vendor
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -400,10 +403,11 @@ namespace DAL.Migrations
                     b.Property<int>("VendorId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("processedById")
+                    b.Property<int>("processedById")
                         .HasColumnType("integer");
 
                     b.Property<string>("rejectReason")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("VendorRegisterRequestId");
@@ -505,7 +509,9 @@ namespace DAL.Migrations
 
                     b.HasOne("BO.Entities.User", "processedBy")
                         .WithMany()
-                        .HasForeignKey("processedById");
+                        .HasForeignKey("processedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("processedBy");
                 });
