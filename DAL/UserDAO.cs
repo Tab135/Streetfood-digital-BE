@@ -41,6 +41,12 @@ namespace DAL
                   .FirstOrDefaultAsync(u => u.UserName == username);
         }
 
+        public async Task<User?> GetByPhoneNumberAsync(string phoneNumber)
+        {
+            return await _context.Users
+                  .FirstOrDefaultAsync(u => u.PhoneNumber == phoneNumber);
+        }
+
         public async Task UpdateAsync(User user)
         {
             _context.Users.Update(user);
