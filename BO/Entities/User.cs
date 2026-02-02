@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BO.Entities;
 
@@ -20,10 +21,21 @@ public class User
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int Point {  get; set; }
     public bool EmailVerified { get; set; } = false;
-    public string? PhoneNumber {  get; set; }  
+
+    [StringLength(20)]
+    public string? PhoneNumber {  get; set; }
+
+    // Avatar URLs from providers can be very long; map to text to avoid truncation
+    [Column(TypeName = "text")]
     public string? AvatarUrl { get; set; }
+
+    [StringLength(100)]
     public string? Status { get; set; }
+
+    [StringLength(100)]
     public string FirstName { get; set; }
+
+    [StringLength(100)]
     public string LastName { get; set; }
 
     public virtual ICollection<UserDietaryPreference> DietaryPreferences { get; set; }
