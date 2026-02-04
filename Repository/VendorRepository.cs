@@ -31,19 +31,14 @@ namespace Repository
             return await _vendorDAO.GetByUserIdAsync(userId);
         }
 
-        public async Task<List<Vendor>> GetAllAsync()
+        public async Task<(List<Vendor> items, int totalCount)> GetAllAsync(int pageNumber, int pageSize)
         {
-            return await _vendorDAO.GetAllAsync();
+            return await _vendorDAO.GetAllAsync(pageNumber, pageSize);
         }
 
-        public async Task<List<Vendor>> GetActiveVendorsAsync()
+        public async Task<(List<Vendor> items, int totalCount)> GetActiveVendorsAsync(int pageNumber, int pageSize)
         {
-            return await _vendorDAO.GetActiveVendorsAsync();
-        }
-
-        public async Task<List<Vendor>> GetByVerificationStatusAsync(bool isVerified)
-        {
-            return await _vendorDAO.GetByVerificationStatusAsync(isVerified);
+            return await _vendorDAO.GetActiveVendorsAsync(pageNumber, pageSize);
         }
 
         public async Task UpdateAsync(Vendor vendor)
@@ -66,29 +61,9 @@ namespace Repository
             return await _vendorDAO.ExistsByUserIdAsync(userId);
         }
 
-        public async Task<List<WorkSchedule>> GetWorkSchedulesAsync(int vendorId)
-        {
-            return await _vendorDAO.GetWorkSchedulesAsync(vendorId);
-        }
-
-        public async Task<List<DayOff>> GetDayOffsAsync(int vendorId)
-        {
-            return await _vendorDAO.GetDayOffsAsync(vendorId);
-        }
-
         public async Task<List<VendorImage>> GetVendorImagesAsync(int vendorId)
         {
             return await _vendorDAO.GetVendorImagesAsync(vendorId);
-        }
-
-        public async Task AddWorkScheduleAsync(WorkSchedule workSchedule)
-        {
-            await _vendorDAO.AddWorkScheduleAsync(workSchedule);
-        }
-
-        public async Task AddDayOffAsync(DayOff dayOff)
-        {
-            await _vendorDAO.AddDayOffAsync(dayOff);
         }
 
         public async Task AddVendorImageAsync(VendorImage vendorImage)

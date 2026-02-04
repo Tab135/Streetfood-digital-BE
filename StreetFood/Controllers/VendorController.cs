@@ -48,26 +48,7 @@ namespace StreetFood.Controllers
                 }
 
                 var vendor = await _vendorService.CreateVendorAsync(createVendorDto, userId);
-                var vendorResponse = new VendorResponseDto
-                {
-                    VendorId = vendor.VendorId,
-                    UserId = vendor.UserId,
-                    Name = vendor.Name,
-                    PhoneNumber = vendor.PhoneNumber,
-                    Email = vendor.Email,
-                    AddressDetail = vendor.AddressDetail,
-                    BuildingName = vendor.BuildingName,
-                    Ward = vendor.Ward,
-                    City = vendor.City,
-                    Lat = vendor.Lat,
-                    Long = vendor.Long,
-                    CreatedAt = vendor.CreatedAt,
-                    UpdatedAt = vendor.UpdatedAt,
-                    IsVerified = vendor.IsVerified,
-                    AvgRating = vendor.AvgRating,
-                    IsActive = vendor.IsActive,
-                    IsSubscribed = vendor.IsSubscribed
-                };
+                var vendorResponse = await _vendorService.GetVendorByIdAsync(vendor.VendorId);
 
                 return CreatedAtAction(nameof(GetVendorById), new { id = vendor.VendorId }, vendorResponse);
             }
@@ -122,11 +103,11 @@ namespace StreetFood.Controllers
         /// Get all vendors (public endpoint)
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAllVendors()
+        public async Task<IActionResult> GetAllVendors([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var vendors = await _vendorService.GetAllVendorsAsync();
+                var vendors = await _vendorService.GetAllVendorsAsync(pageNumber, pageSize);
                 return Ok(vendors);
             }
             catch (Exception ex)
@@ -139,11 +120,11 @@ namespace StreetFood.Controllers
         /// Get active vendors only
         /// </summary>
         [HttpGet("active")]
-        public async Task<IActionResult> GetActiveVendors()
+        public async Task<IActionResult> GetActiveVendors([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var vendors = await _vendorService.GetActiveVendorsAsync();
+                var vendors = await _vendorService.GetActiveVendorsAsync(pageNumber, pageSize);
                 return Ok(vendors);
             }
             catch (Exception ex)
@@ -152,6 +133,7 @@ namespace StreetFood.Controllers
             }
         }
 
+        /*
         /// <summary>
         /// Update vendor information
         /// </summary>
@@ -208,6 +190,7 @@ namespace StreetFood.Controllers
                 return BadRequest(new ApiResponse<object>(400, ex.Message, "UPDATE_VENDOR_ERROR"));
             }
         }
+        */
 
         /// <summary>
         /// Delete vendor account
@@ -227,87 +210,9 @@ namespace StreetFood.Controllers
             }
         }
 
-        // Registration and License Management
+        // Schedule and Day Off Management (moved to BranchController)
 
-        /// <summary>
-        /// Submit vendor registration with license image
-        /// Business Rule: Vendor must be created first, then submit license for verification
-        /// </summary>
-        [HttpPost("{id}/submit-registration")]
-        [Authorize(Roles = "User")]
-        public async Task<IActionResult> SubmitVendorRegistration(int id, [FromForm] SubmitVendorRegistrationDto submissionDto)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(new ApiResponse<object>(400, "Invalid input", ModelState));
-                }
-
-                if (submissionDto.LicenseImage == null || submissionDto.LicenseImage.Length == 0)
-                {
-                    return BadRequest(new ApiResponse<object>(400, "License image is required", "INVALID_FILE"));
-                }
-
-                // Verify user owns this vendor
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
-                {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
-                }
-
-                var vendor = await _vendorService.GetVendorByIdAsync(id);
-                if (vendor.UserId != userId && !User.IsInRole("Admin"))
-                {
-                    return Forbid();
-                }
-
-                // Save image to uploads folder
-                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "licenses");
-                if (!Directory.Exists(uploadsFolder))
-                {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
-                var fileName = $"license_{id}_{Guid.NewGuid()}{Path.GetExtension(submissionDto.LicenseImage.FileName)}";
-                var filePath = Path.Combine(uploadsFolder, fileName);
-
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
-                {
-                    await submissionDto.LicenseImage.CopyToAsync(fileStream);
-                }
-
-                // Save relative path to database
-                var licenseUrl = $"/uploads/licenses/{fileName}";
-                var registrationRequest = await _vendorService.SubmitVendorRegistrationAsync(id, licenseUrl);
-
-                return Ok(new { registrationRequestId = registrationRequest.VendorRegisterRequestId, licenseUrl = licenseUrl });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        /// <summary>
-        /// Get vendor registration status
-        /// </summary>
-        [HttpGet("{id}/registration-status")]
-        public async Task<IActionResult> GetRegistrationStatus(int id)
-        {
-            try
-            {
-                var registrationRequest = await _vendorService.GetVendorRegistrationStatusAsync(id);
-                return Ok(registrationRequest);
-            }
-            catch (Exception ex)
-            {
-                return NotFound(new ApiResponse<object>(404, ex.Message, "REGISTRATION_NOT_FOUND"));
-            }
-        }
-
-        // Schedule and Day Off Management
-
+        /*
         /// <summary>
         /// Add work schedule for vendor
         /// </summary>
@@ -344,7 +249,9 @@ namespace StreetFood.Controllers
                 return BadRequest(new ApiResponse<object>(400, ex.Message, "ADD_SCHEDULE_ERROR"));
             }
         }
+        */
 
+        /*
         /// <summary>
         /// Get work schedules for vendor
         /// </summary>
@@ -361,7 +268,9 @@ namespace StreetFood.Controllers
                 return BadRequest(new ApiResponse<object>(400, ex.Message, "GET_SCHEDULES_ERROR"));
             }
         }
+        */
 
+        /*
         /// <summary>
         /// Add day off for vendor
         /// </summary>
@@ -398,7 +307,9 @@ namespace StreetFood.Controllers
                 return BadRequest(new ApiResponse<object>(400, ex.Message, "ADD_DAY_OFF_ERROR"));
             }
         }
+        */
 
+        /*
         /// <summary>
         /// Get day offs for vendor
         /// </summary>
@@ -415,9 +326,11 @@ namespace StreetFood.Controllers
                 return BadRequest(new ApiResponse<object>(400, ex.Message, "GET_DAY_OFFS_ERROR"));
             }
         }
+        */
 
         // Vendor Images
 
+        /*
         /// <summary>
         /// Add vendor image (gallery)
         /// </summary>
@@ -472,7 +385,9 @@ namespace StreetFood.Controllers
                 return BadRequest(new ApiResponse<object>(400, ex.Message, "ADD_IMAGE_ERROR"));
             }
         }
+        */
 
+        /*
         /// <summary>
         /// Get vendor images
         /// </summary>
@@ -489,84 +404,9 @@ namespace StreetFood.Controllers
                 return BadRequest(new ApiResponse<object>(400, ex.Message, "GET_IMAGES_ERROR"));
             }
         }
+        */
 
         // Admin Operations
-
-        /// <summary>
-        /// Get pending vendor registrations (for admin/moderator verification)
-        /// </summary>
-        [HttpGet("pending-registrations")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetPendingRegistrations()
-        {
-            try
-            {
-                var pendingRegistrations = await _vendorService.GetPendingVendorRegistrationsAsync();
-                return Ok(pendingRegistrations);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        /// <summary>
-        /// Get unverified vendors (Public endpoint)
-        /// </summary>
-        [HttpGet("unverified")]
-        public async Task<IActionResult> GetUnverifiedVendors()
-        {
-            try
-            {
-                var vendors = await _vendorService.GetUnverifiedVendorsAsync();
-                return Ok(vendors);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
-
-        /// <summary>
-        /// Verify a vendor (Admin only)
-        /// </summary>
-        [HttpPut("{id}/verify")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> VerifyVendor(int id)
-        {
-            try
-            {
-                await _vendorService.VerifyVendorAsync(id);
-                return Ok(new { message = "Vendor verified successfully" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, "VERIFY_VENDOR_ERROR"));
-            }
-        }
-
-        /// <summary>
-        /// Reject vendor registration (Admin only)
-        /// </summary>
-        [HttpPut("{id}/reject")]
-        [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> RejectVendor(int id, [FromBody] RejectVendorDto rejectDto)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return BadRequest(new ApiResponse<object>(400, "Invalid input", ModelState));
-                }
-
-                await _vendorService.RejectVendorRegistrationAsync(id, rejectDto.RejectionReason);
-                return Ok(new { message = "Vendor registration rejected" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, "REJECT_VENDOR_ERROR"));
-            }
-        }
 
         /// <summary>
         /// Suspend vendor account (Admin only)

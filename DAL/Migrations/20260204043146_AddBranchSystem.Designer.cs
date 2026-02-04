@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260204043146_AddBranchSystem")]
+    partial class AddBranchSystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -158,46 +161,6 @@ namespace DAL.Migrations
                     b.HasIndex("BranchId");
 
                     b.ToTable("BranchImages");
-                });
-
-            modelBuilder.Entity("BO.Entities.BranchRegisterRequest", b =>
-                {
-                    b.Property<int>("BranchRegisterRequestId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("BranchRegisterRequestId"));
-
-                    b.Property<int>("BranchId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("LicenseUrl")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("RejectReason")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.HasKey("BranchRegisterRequestId");
-
-                    b.HasIndex("BranchId")
-                        .IsUnique();
-
-                    b.ToTable("BranchRegisterRequests");
                 });
 
             modelBuilder.Entity("BO.Entities.DayOff", b =>
@@ -574,17 +537,6 @@ namespace DAL.Migrations
                     b.HasOne("BO.Entities.Branch", "Branch")
                         .WithMany("BranchImages")
                         .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Branch");
-                });
-
-            modelBuilder.Entity("BO.Entities.BranchRegisterRequest", b =>
-                {
-                    b.HasOne("BO.Entities.Branch", "Branch")
-                        .WithOne()
-                        .HasForeignKey("BO.Entities.BranchRegisterRequest", "BranchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

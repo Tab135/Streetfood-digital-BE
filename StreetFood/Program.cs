@@ -61,6 +61,7 @@ namespace StreetFood
             builder.Services.AddScoped<DietaryPreferenceDAO>();
             builder.Services.AddScoped<UserDietaryPreferenceDAO>();
             builder.Services.AddScoped<VendorDAO>();
+            builder.Services.AddScoped<BranchDAO>();
 
             // Register Repositories
             builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -70,6 +71,7 @@ namespace StreetFood
             builder.Services.AddScoped<IDietaryPreferenceRepository, DietaryPreferenceRepository>();
             builder.Services.AddScoped<IUserDietaryPreferenceRepository, UserDietaryPreferenceRepository>();
             builder.Services.AddScoped<IVendorRepository, VendorRepository>();
+            builder.Services.AddScoped<IBranchRepository, BranchRepository>();
 
             // Register Services
             builder.Services.AddScoped<IUserService, UserService>();
@@ -79,6 +81,7 @@ namespace StreetFood
             builder.Services.AddScoped<IDietaryPreferenceService, DietaryPreferenceService>();
             builder.Services.AddScoped<IUserDietaryPreferenceService, UserDietaryPreferenceService>();
             builder.Services.AddScoped<IVendorService, VendorService>();
+            builder.Services.AddScoped<IBranchService, BranchService>();
             builder.Services.AddHostedService<OtpCleanupService>();
 
             // JWT Authentication Configuration

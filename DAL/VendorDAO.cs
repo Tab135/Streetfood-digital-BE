@@ -19,7 +19,6 @@ namespace DAL
         public async Task<Vendor> CreateAsync(Vendor vendor)
         {
             vendor.CreatedAt = DateTime.UtcNow;
-            vendor.IsVerified = false; // Business rule: default to not verified
             _context.Vendors.Add(vendor);
             await _context.SaveChangesAsync();
             return vendor;
@@ -39,27 +38,35 @@ namespace DAL
                 .FirstOrDefaultAsync(v => v.UserId == userId);
         }
 
-        public async Task<List<Vendor>> GetAllAsync()
+        public async Task<(List<Vendor> items, int totalCount)> GetAllAsync(int pageNumber, int pageSize)
         {
-            return await _context.Vendors
+            var query = _context.Vendors;
+
+            var totalCount = await query.CountAsync();
+            
+            var items = await query
                 .Include(v => v.VendorOwner)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (items, totalCount);
         }
 
-        public async Task<List<Vendor>> GetActiveVendorsAsync()
+        public async Task<(List<Vendor> items, int totalCount)> GetActiveVendorsAsync(int pageNumber, int pageSize)
         {
-            return await _context.Vendors
-                .Include(v => v.VendorOwner)
-                .Where(v => v.IsActive && v.IsVerified)
-                .ToListAsync();
-        }
+            var query = _context.Vendors
+                .Where(v => v.IsActive);
 
-        public async Task<List<Vendor>> GetByVerificationStatusAsync(bool isVerified)
-        {
-            return await _context.Vendors
+            var totalCount = await query.CountAsync();
+            
+            var items = await query
                 .Include(v => v.VendorOwner)
-                .Where(v => v.IsVerified == isVerified)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (items, totalCount);
         }
 
         public async Task UpdateAsync(Vendor vendor)
@@ -92,37 +99,11 @@ namespace DAL
         }
 
         // Related entities queries
-        public async Task<List<WorkSchedule>> GetWorkSchedulesAsync(int vendorId)
-        {
-            return await _context.WorkSchedules
-                .Where(ws => ws.VendorId == vendorId)
-                .ToListAsync();
-        }
-
-        public async Task<List<DayOff>> GetDayOffsAsync(int vendorId)
-        {
-            return await _context.DayOffs
-                .Where(d => d.VendorId == vendorId)
-                .ToListAsync();
-        }
-
         public async Task<List<VendorImage>> GetVendorImagesAsync(int vendorId)
         {
             return await _context.VendorImages
                 .Where(vi => vi.VendorId == vendorId)
                 .ToListAsync();
-        }
-
-        public async Task AddWorkScheduleAsync(WorkSchedule workSchedule)
-        {
-            _context.WorkSchedules.Add(workSchedule);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task AddDayOffAsync(DayOff dayOff)
-        {
-            _context.DayOffs.Add(dayOff);
-            await _context.SaveChangesAsync();
         }
 
         public async Task AddVendorImageAsync(VendorImage vendorImage)
