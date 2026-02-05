@@ -71,14 +71,14 @@ namespace Repository
             return await _branchDAO.ExistsByIdAsync(branchId);
         }
 
-        public async Task<(List<WorkSchedule> items, int totalCount)> GetWorkSchedulesAsync(int branchId, int pageNumber, int pageSize)
+        public async Task<List<WorkSchedule>> GetWorkSchedulesAsync(int branchId)
         {
-            return await _branchDAO.GetWorkSchedulesAsync(branchId, pageNumber, pageSize);
+            return await _branchDAO.GetWorkSchedulesAsync(branchId);
         }
 
-        public async Task<(List<DayOff> items, int totalCount)> GetDayOffsAsync(int branchId, int pageNumber, int pageSize)
+        public async Task<List<DayOff>> GetDayOffsAsync(int branchId)
         {
-            return await _branchDAO.GetDayOffsAsync(branchId, pageNumber, pageSize);
+            return await _branchDAO.GetDayOffsAsync(branchId);
         }
 
         public async Task<(List<BranchImage> items, int totalCount)> GetBranchImagesAsync(int branchId, int pageNumber, int pageSize)

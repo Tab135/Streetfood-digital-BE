@@ -21,7 +21,7 @@ namespace Service.Interfaces
         Task<bool> UserOwnsBranchAsync(int branchId, int userId);
         
         // License submission and verification
-        Task<BranchRegisterRequest> SubmitBranchLicenseAsync(int branchId, string licenseImagePath, int userId);
+        Task<BranchRegisterRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId);
         Task<BranchRegisterRequest> GetBranchLicenseStatusAsync(int branchId);
         Task<PaginatedResponse<BranchRegisterRequest>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize);
         Task<bool> VerifyBranchAsync(int branchId);
@@ -29,13 +29,13 @@ namespace Service.Interfaces
 
         // Work Schedule operations
         Task<WorkSchedule> AddWorkScheduleAsync(int branchId, AddWorkScheduleDto dto, int userId);
-        Task<PaginatedResponse<WorkScheduleResponseDto>> GetBranchWorkSchedulesAsync(int branchId, int pageNumber, int pageSize);
+        Task<List<WorkScheduleResponseDto>> GetBranchWorkSchedulesAsync(int branchId);
         Task<WorkSchedule> UpdateWorkScheduleAsync(int scheduleId, UpdateWorkScheduleDto dto, int userId);
         Task DeleteWorkScheduleAsync(int scheduleId, int userId);
 
         // Day Off operations
         Task<DayOff> AddDayOffAsync(int branchId, AddDayOffDto dto, int userId);
-        Task<PaginatedResponse<DayOffResponseDto>> GetBranchDayOffsAsync(int branchId, int pageNumber, int pageSize);
+        Task<List<DayOffResponseDto>> GetBranchDayOffsAsync(int branchId);
         Task DeleteDayOffAsync(int dayOffId, int userId);
 
         // Branch Image operations

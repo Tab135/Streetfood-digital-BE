@@ -193,7 +193,7 @@ namespace Service
             return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
-        public async Task<BranchRegisterRequest> SubmitBranchLicenseAsync(int branchId, string licenseImagePath, int userId)
+        public async Task<BranchRegisterRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId)
         {
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
@@ -209,11 +209,14 @@ namespace Service
 
             // Check if registration request already exists
             var existingRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            
+            // Serialize list of URLs to JSON
+            var licenseUrlJson = System.Text.Json.JsonSerializer.Serialize(licenseImagePaths);
 
             var registrationRequest = new BranchRegisterRequest
             {
                 BranchId = branchId,
-                LicenseUrl = licenseImagePath,
+                LicenseUrl = licenseUrlJson,
                 Status = RegisterVendorStatusEnum.Pending,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
@@ -222,14 +225,23 @@ namespace Service
             if (existingRequest != null)
             {
                 registrationRequest.BranchRegisterRequestId = existingRequest.BranchRegisterRequestId;
-                await _branchRepository.UpdateBranchRegisterRequestAsync(registrationRequest);
+                // Preserve RejectReason if it was rejected previously?
+                // Or clear it? A new submission clears previous rejection reason usually.
+                // But the entity property is just reset here if we create new object, but here we are updating.
+                // The provided code in oldString created a new object and passed it to Update.
+                // Just use the new licenseUrl
+                existingRequest.LicenseUrl = licenseUrlJson;
+                existingRequest.Status = RegisterVendorStatusEnum.Pending;
+                existingRequest.UpdatedAt = DateTime.UtcNow;
+                
+                await _branchRepository.UpdateBranchRegisterRequestAsync(existingRequest);
+                return existingRequest; // Return the updated entity
             }
             else
             {
                 await _branchRepository.AddBranchRegisterRequestAsync(registrationRequest);
+                return registrationRequest;
             }
-
-            return registrationRequest;
         }
 
         public async Task<BranchRegisterRequest> GetBranchLicenseStatusAsync(int branchId)
@@ -294,6 +306,29 @@ namespace Service
         {
             var licenseRequest = await _branchRepository.GetBranchRegisterRequestAsync(branch.BranchId);
             
+            List<string> licenseUrls = new List<string>();
+            string firstLicenseUrl = licenseRequest?.LicenseUrl;
+
+            if (!string.IsNullOrEmpty(licenseRequest?.LicenseUrl))
+            {
+                if (licenseRequest.LicenseUrl.TrimStart().StartsWith("["))
+                {
+                    try
+                    {
+                        licenseUrls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(licenseRequest.LicenseUrl);
+                        firstLicenseUrl = licenseUrls?.FirstOrDefault();
+                    }
+                    catch
+                    {
+                        licenseUrls.Add(licenseRequest.LicenseUrl);
+                    }
+                }
+                else
+                {
+                    licenseUrls.Add(licenseRequest.LicenseUrl);
+                }
+            }
+
             return new BranchResponseDto
             {
                 BranchId = branch.BranchId,
@@ -314,7 +349,8 @@ namespace Service
                 AvgRating = branch.AvgRating,
                 IsActive = branch.IsActive,
                 IsSubscribed = branch.IsSubscribed,
-                LicenseUrl = licenseRequest?.LicenseUrl,
+                LicenseUrl = firstLicenseUrl,
+                LicenseUrls = licenseUrls,
                 LicenseStatus = licenseRequest?.Status.ToString(),
                 LicenseRejectReason = licenseRequest?.RejectReason
             };
@@ -368,10 +404,10 @@ namespace Service
             return workSchedule;
         }
 
-        public async Task<PaginatedResponse<WorkScheduleResponseDto>> GetBranchWorkSchedulesAsync(int branchId, int pageNumber, int pageSize)
+        public async Task<List<WorkScheduleResponseDto>> GetBranchWorkSchedulesAsync(int branchId)
         {
-            var (schedules, totalCount) = await _branchRepository.GetWorkSchedulesAsync(branchId, pageNumber, pageSize);
-            var items = schedules.Select(s => new WorkScheduleResponseDto
+            var schedules = await _branchRepository.GetWorkSchedulesAsync(branchId);
+            return schedules.Select(s => new WorkScheduleResponseDto
             {
                 WorkScheduleId = s.WorkScheduleId,
                 BranchId = s.BranchId,
@@ -380,7 +416,6 @@ namespace Service
                 OpenTime = s.OpenTime,
                 CloseTime = s.CloseTime
             }).ToList();
-            return new PaginatedResponse<WorkScheduleResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task<WorkSchedule> UpdateWorkScheduleAsync(int scheduleId, UpdateWorkScheduleDto dto, int userId)
@@ -445,10 +480,10 @@ namespace Service
             return dayOff;
         }
 
-        public async Task<PaginatedResponse<DayOffResponseDto>> GetBranchDayOffsAsync(int branchId, int pageNumber, int pageSize)
+        public async Task<List<DayOffResponseDto>> GetBranchDayOffsAsync(int branchId)
         {
-            var (dayOffs, totalCount) = await _branchRepository.GetDayOffsAsync(branchId, pageNumber, pageSize);
-            var items = dayOffs.Select(d => new DayOffResponseDto
+            var dayOffs = await _branchRepository.GetDayOffsAsync(branchId);
+            return dayOffs.Select(d => new DayOffResponseDto
             {
                 DayOffId = d.DayOffId,
                 BranchId = d.BranchId,
@@ -457,7 +492,6 @@ namespace Service
                 StartTime = d.StartTime,
                 EndTime = d.EndTime
             }).ToList();
-            return new PaginatedResponse<DayOffResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task DeleteDayOffAsync(int dayOffId, int userId)
