@@ -1,18 +1,14 @@
 using System;
-using System.ComponentModel.DataAnnotations;
 
-namespace BO.DTO.Vendor
+namespace BO.DTO.Branch
 {
-    public class AddDayOffDto
+    public class DayOffResponseDto
     {
-        [Required(ErrorMessage = "Start date is required")]
+        public int DayOffId { get; set; }
+        public int BranchId { get; set; }
         public DateTime StartDate { get; set; }
-
-        [Required(ErrorMessage = "End date is required")]
         public DateTime EndDate { get; set; }
-
         public TimeSpan? StartTime { get; set; }
-
         public TimeSpan? EndTime { get; set; }
     }
 }

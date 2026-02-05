@@ -13,8 +13,8 @@ namespace BO.Entities
         [Key]
         public int DayOffId { get; set; }
 
-        [ForeignKey("Vendor")]
-        public int VendorId { get; set; }
+        [ForeignKey("Branch")]
+        public int BranchId { get; set; }
 
         [Column(TypeName = "date")]
         public DateTime StartDate { get; set; }
@@ -26,6 +26,6 @@ namespace BO.Entities
 
         public TimeSpan? EndTime { get; set; }
 
-        public virtual Vendor Vendor { get; set; }
+        public virtual Branch Branch { get; set; }
     }
 }

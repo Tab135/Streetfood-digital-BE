@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260204043146_AddBranchSystem")]
+    partial class AddBranchSystem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -160,45 +163,6 @@ namespace DAL.Migrations
                     b.ToTable("BranchImages");
                 });
 
-            modelBuilder.Entity("BO.Entities.BranchRegisterRequest", b =>
-                {
-                    b.Property<int>("BranchRegisterRequestId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("BranchRegisterRequestId"));
-
-                    b.Property<int>("BranchId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("LicenseUrl")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("RejectReason")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.HasKey("BranchRegisterRequestId");
-
-                    b.HasIndex("BranchId")
-                        .IsUnique();
-
-                    b.ToTable("BranchRegisterRequests");
-                });
-
             modelBuilder.Entity("BO.Entities.DayOff", b =>
                 {
                     b.Property<int>("DayOffId")
@@ -327,7 +291,7 @@ namespace DAL.Migrations
 
                     b.Property<string>("AvatarUrl")
                         .HasMaxLength(500)
-                        .HasColumnType("text");
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -341,13 +305,11 @@ namespace DAL.Migrations
 
                     b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<string>("LastName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Password")
                         .HasMaxLength(255)
@@ -575,17 +537,6 @@ namespace DAL.Migrations
                     b.HasOne("BO.Entities.Branch", "Branch")
                         .WithMany("BranchImages")
                         .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Branch");
-                });
-
-            modelBuilder.Entity("BO.Entities.BranchRegisterRequest", b =>
-                {
-                    b.HasOne("BO.Entities.Branch", "Branch")
-                        .WithOne()
-                        .HasForeignKey("BO.Entities.BranchRegisterRequest", "BranchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

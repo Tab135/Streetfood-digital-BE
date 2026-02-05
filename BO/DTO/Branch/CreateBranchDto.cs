@@ -1,10 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace BO.DTO.Vendor
+namespace BO.DTO.Branch
 {
-    public class UpdateVendorDto
+    public class CreateBranchDto
     {
-        [StringLength(255, ErrorMessage = "Vendor name cannot exceed 255 characters")]
+        [Required(ErrorMessage = "Branch name is required")]
+        [StringLength(255, ErrorMessage = "Branch name cannot exceed 255 characters")]
         public string Name { get; set; }
 
         [Phone(ErrorMessage = "Invalid phone number")]
@@ -15,6 +16,7 @@ namespace BO.DTO.Vendor
         [StringLength(255, ErrorMessage = "Email cannot exceed 255 characters")]
         public string Email { get; set; }
 
+        [Required(ErrorMessage = "Address detail is required")]
         public string AddressDetail { get; set; }
 
         [StringLength(255)]
@@ -23,11 +25,14 @@ namespace BO.DTO.Vendor
         [StringLength(255)]
         public string Ward { get; set; }
 
+        [Required(ErrorMessage = "City is required")]
         [StringLength(255)]
         public string City { get; set; }
 
-        public double? Lat { get; set; }
+        [Required(ErrorMessage = "Latitude is required")]
+        public double Lat { get; set; }
 
-        public double? Long { get; set; }
+        [Required(ErrorMessage = "Longitude is required")]
+        public double Long { get; set; }
     }
 }
