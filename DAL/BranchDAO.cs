@@ -145,34 +145,18 @@ namespace DAL
             return await _context.Branches.AnyAsync(b => b.BranchId == branchId);
         }
 
-        public async Task<(List<WorkSchedule> items, int totalCount)> GetWorkSchedulesAsync(int branchId, int pageNumber, int pageSize)
+        public async Task<List<WorkSchedule>> GetWorkSchedulesAsync(int branchId)
         {
-            var query = _context.WorkSchedules
-                .Where(ws => ws.BranchId == branchId);
-
-            var totalCount = await query.CountAsync();
-            
-            var items = await query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
+            return await _context.WorkSchedules
+                .Where(ws => ws.BranchId == branchId)
                 .ToListAsync();
-
-            return (items, totalCount);
         }
 
-        public async Task<(List<DayOff> items, int totalCount)> GetDayOffsAsync(int branchId, int pageNumber, int pageSize)
+        public async Task<List<DayOff>> GetDayOffsAsync(int branchId)
         {
-            var query = _context.DayOffs
-                .Where(d => d.BranchId == branchId);
-
-            var totalCount = await query.CountAsync();
-            
-            var items = await query
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
+            return await _context.DayOffs
+                .Where(d => d.BranchId == branchId)
                 .ToListAsync();
-
-            return (items, totalCount);
         }
 
         public async Task<(List<BranchImage> items, int totalCount)> GetBranchImagesAsync(int branchId, int pageNumber, int pageSize)

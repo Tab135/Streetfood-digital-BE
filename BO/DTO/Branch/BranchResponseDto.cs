@@ -25,6 +25,7 @@ namespace BO.DTO.Branch
         
         // License info
         public string LicenseUrl { get; set; }
+        public System.Collections.Generic.List<string> LicenseUrls { get; set; }
         public string LicenseStatus { get; set; } // Pending, Accept, Reject
         public string LicenseRejectReason { get; set; }
     }

@@ -202,13 +202,13 @@ namespace StreetFood.Controllers
         /// </summary>
         [HttpPost("{id}/submit-license")]
         [Authorize(Roles = "User")]
-        public async Task<IActionResult> SubmitBranchLicense(int id, IFormFile licenseImage)
+        public async Task<IActionResult> SubmitBranchLicense(int id, List<IFormFile> licenseImages)
         {
             try
             {
-                if (licenseImage == null || licenseImage.Length == 0)
+                if (licenseImages == null || licenseImages.Count == 0)
                 {
-                    return BadRequest(new ApiResponse<object>(400, "License image is required", null));
+                    return BadRequest(new ApiResponse<object>(400, "At least one license image is required", null));
                 }
 
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -217,28 +217,35 @@ namespace StreetFood.Controllers
                     return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
                 }
 
-                // Save the license image
+                // Save the license images
                 var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "licenses");
                 if (!Directory.Exists(uploadsFolder))
                 {
                     Directory.CreateDirectory(uploadsFolder);
                 }
 
-                var uniqueFileName = $"{Guid.NewGuid()}_{licenseImage.FileName}";
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                var licenseUrls = new System.Collections.Generic.List<string>();
 
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                foreach(var image in licenseImages)
                 {
-                    await licenseImage.CopyToAsync(stream);
+                    if (image.Length > 0)
+                    {
+                        var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
+                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await image.CopyToAsync(stream);
+                        }
+                        licenseUrls.Add($"/uploads/licenses/{uniqueFileName}");
+                    }
                 }
 
-                var licenseUrl = $"/uploads/licenses/{uniqueFileName}";
-
-                var result = await _branchService.SubmitBranchLicenseAsync(id, licenseUrl, userId);
+                var result = await _branchService.SubmitBranchLicenseAsync(id, licenseUrls, userId);
                 return Ok(new ApiResponse<object>(200, "License submitted successfully. Pending verification.", new
                 {
                     BranchId = id,
-                    LicenseUrl = licenseUrl,
+                    LicenseUrls = licenseUrls,
                     Status = result.Status.ToString()
                 }));
             }
@@ -258,10 +265,32 @@ namespace StreetFood.Controllers
             try
             {
                 var result = await _branchService.GetBranchLicenseStatusAsync(id);
+                
+                var licenseUrls = new System.Collections.Generic.List<string>();
+                if (!string.IsNullOrEmpty(result.LicenseUrl))
+                {
+                     if (result.LicenseUrl.TrimStart().StartsWith("["))
+                     {
+                        try 
+                        {
+                            licenseUrls = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<string>>(result.LicenseUrl);
+                        }
+                        catch
+                        {
+                            licenseUrls.Add(result.LicenseUrl);
+                        }
+                     }
+                     else
+                     {
+                        licenseUrls.Add(result.LicenseUrl);
+                     }
+                }
+
                 return Ok(new ApiResponse<object>(200, "License status retrieved successfully", new
                 {
                     BranchId = id,
-                    LicenseUrl = result.LicenseUrl,
+                    LicenseUrl = licenseUrls.FirstOrDefault(), // For backward compatibility
+                    LicenseUrls = licenseUrls,
                     Status = result.Status.ToString(),
                     RejectReason = result.RejectReason,
                     SubmittedAt = result.CreatedAt,
@@ -381,11 +410,11 @@ namespace StreetFood.Controllers
         /// Get work schedules for a branch
         /// </summary>
         [HttpGet("{branchId}/work-schedules")]
-        public async Task<IActionResult> GetBranchWorkSchedules(int branchId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetBranchWorkSchedules(int branchId)
         {
             try
             {
-                var schedules = await _branchService.GetBranchWorkSchedulesAsync(branchId, pageNumber, pageSize);
+                var schedules = await _branchService.GetBranchWorkSchedulesAsync(branchId);
                 return Ok(new ApiResponse<object>(200, "Work schedules retrieved successfully", schedules));
             }
             catch (Exception ex)
@@ -482,11 +511,11 @@ namespace StreetFood.Controllers
         /// Get day offs for a branch
         /// </summary>
         [HttpGet("{branchId}/day-offs")]
-        public async Task<IActionResult> GetBranchDayOffs(int branchId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetBranchDayOffs(int branchId)
         {
             try
             {
-                var dayOffs = await _branchService.GetBranchDayOffsAsync(branchId, pageNumber, pageSize);
+                var dayOffs = await _branchService.GetBranchDayOffsAsync(branchId);
                 return Ok(new ApiResponse<object>(200, "Day offs retrieved successfully", dayOffs));
             }
             catch (Exception ex)
