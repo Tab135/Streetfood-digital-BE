@@ -24,5 +24,10 @@ namespace Service.Interfaces
         Task<User> UpdateUserProfile(int userId, UpdateUserProfileDto updateDto);
         Task<string> ChangePassword(string userId, string oldPassword, string newPassword, string confirmNewPassword);
         Task<User> GetUserById(int userId);
+
+        // Setup flags
+        Task<(bool UserInfoSetup, bool DietarySetup)> GetUserSetupStatusAsync(int userId);
+        Task<bool> MarkUserInfoSetupAsync(int userId);
+        Task<bool> MarkDietarySetupAsync(int userId);
     }
 }

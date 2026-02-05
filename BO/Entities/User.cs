@@ -39,5 +39,9 @@ public class User
     public string LastName { get; set; }
 
     public virtual ICollection<UserDietaryPreference> DietaryPreferences { get; set; }
+
+    // Setup flags
+    public bool UserInfoSetup { get; set; } = false;
+    public bool DietarySetup { get; set; } = false;
 }
 

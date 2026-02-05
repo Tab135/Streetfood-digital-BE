@@ -335,6 +335,31 @@ namespace Service
             return user;
         }
 
+        // Setup flags
+        public async Task<(bool UserInfoSetup, bool DietarySetup)> GetUserSetupStatusAsync(int userId)
+        {
+            var user = await GetUserByIdAsync(userId);
+            return (user.UserInfoSetup, user.DietarySetup);
+        }
+
+        public async Task<bool> MarkUserInfoSetupAsync(int userId)
+        {
+            var user = await GetUserByIdAsync(userId);
+            if (user.UserInfoSetup) return true; // already
+            user.UserInfoSetup = true;
+            await _userRepository.UpdateAsync(user);
+            return true;
+        }
+
+        public async Task<bool> MarkDietarySetupAsync(int userId)
+        {
+            var user = await GetUserByIdAsync(userId);
+            if (user.DietarySetup) return true; // already
+            user.DietarySetup = true;
+            await _userRepository.UpdateAsync(user);
+            return true;
+        }
+
         // New ChangePassword implementation
         public async Task<string> ChangePassword(string userId, string oldPassword, string newPassword, string confirmNewPassword)
         {
