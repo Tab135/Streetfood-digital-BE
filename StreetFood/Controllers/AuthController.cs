@@ -1,6 +1,7 @@
 using BO.DTO.Auth;
 using BO.DTO.Password;
 using BO.DTO.Users;
+using BO.Entities;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -188,7 +189,9 @@ namespace StreetFood.Controllers
                         point = response.User?.Point,
                         createdAt = response.User?.CreatedAt,
                         firstName = response.User?.FirstName,
-                        lastName = response.User?.LastName
+                        lastName = response.User?.LastName,
+                        UserinfoSetup = response.User?.UserInfoSetup,
+                        DietarySetup = response.User?.DietarySetup
                     }
                 });
             }
@@ -380,13 +383,10 @@ namespace StreetFood.Controllers
 
                 var updatedUser = await _userService.UpdateUserProfile(userId, updateDto);
 
-                var newToken = _jwtService.GenerateToken(updatedUser);
-
                 // Return user without password
                 return Ok(new
                 {
                     message = "Profile updated successfully",
-                    token = newToken,
                     user = new
                     {
                         updatedUser.UserName,
