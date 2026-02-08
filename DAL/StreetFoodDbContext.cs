@@ -207,7 +207,6 @@ public class StreetFoodDbContext : DbContext
             entity.HasKey(e => e.CategoryId);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.Property(e => e.Description).HasMaxLength(500);
-            entity.Property(e => e.ImageUrl).HasMaxLength(500);
         });
 
         // Taste
