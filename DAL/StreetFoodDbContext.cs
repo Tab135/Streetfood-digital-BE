@@ -28,6 +28,13 @@ public class StreetFoodDbContext : DbContext
     public DbSet<DayOff> DayOffs { get; set; }
     public DbSet<VendorRegisterRequest> VendorRegisterRequests { get; set; }
 
+    // Menu Management DbSets
+    public DbSet<Category> Categories { get; set; }
+    public DbSet<Taste> Tastes { get; set; }
+    public DbSet<Dish> Dishes { get; set; }
+    public DbSet<DishTaste> DishTastes { get; set; }
+    public DbSet<DishDietaryPreference> DishDietaryPreferences { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -189,6 +196,80 @@ public class StreetFoodDbContext : DbContext
             entity.HasOne(e => e.Branch)
                   .WithOne()
                   .HasForeignKey<BranchRegisterRequest>(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ==================== MENU MANAGEMENT ENTITIES ====================
+
+        // Category
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.HasKey(e => e.CategoryId);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
+        });
+
+        // Taste
+        modelBuilder.Entity<Taste>(entity =>
+        {
+            entity.HasKey(e => e.TasteId);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Description).HasMaxLength(500);
+        });
+
+        // Dish
+        modelBuilder.Entity<Dish>(entity =>
+        {
+            entity.HasKey(e => e.DishId);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Price).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.IsSoldOut).HasDefaultValue(false);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(e => e.Branch)
+                  .WithMany()
+                  .HasForeignKey(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Category)
+                  .WithMany(c => c.Dishes)
+                  .HasForeignKey(e => e.CategoryId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // DishTaste
+        modelBuilder.Entity<DishTaste>(entity =>
+        {
+            entity.HasKey(e => e.DishTasteId);
+
+            entity.HasOne(e => e.Dish)
+                  .WithMany(d => d.DishTastes)
+                  .HasForeignKey(e => e.DishId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Taste)
+                  .WithMany(t => t.DishTastes)
+                  .HasForeignKey(e => e.TasteId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // DishDietaryPreference
+        modelBuilder.Entity<DishDietaryPreference>(entity =>
+        {
+            entity.HasKey(e => e.DishDietaryPreferenceId);
+
+            entity.HasOne(e => e.Dish)
+                  .WithMany(d => d.DishDietaryPreferences)
+                  .HasForeignKey(e => e.DishId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.DietaryPreference)
+                  .WithMany(dp => dp.DishDietaryPreferences)
+                  .HasForeignKey(e => e.DietaryPreferenceId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
     }
