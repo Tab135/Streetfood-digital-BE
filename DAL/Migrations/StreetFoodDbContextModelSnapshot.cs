@@ -52,6 +52,239 @@ namespace DAL.Migrations
                     b.ToTable("Badges");
                 });
 
+            modelBuilder.Entity("BO.Entities.Branch", b =>
+                {
+                    b.Property<int>("BranchId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("BranchId"));
+
+                    b.Property<string>("AddressDetail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<double>("AvgRating")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("BuildingName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsSubscribed")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<double>("Lat")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("Long")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("VendorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Ward")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.HasKey("BranchId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("VendorId");
+
+                    b.ToTable("Branches");
+                });
+
+            modelBuilder.Entity("BO.Entities.BranchImage", b =>
+                {
+                    b.Property<int>("BranchImageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("BranchImageId"));
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("BranchImageId");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("BranchImages");
+                });
+
+            modelBuilder.Entity("BO.Entities.BranchRegisterRequest", b =>
+                {
+                    b.Property<int>("BranchRegisterRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("BranchRegisterRequestId"));
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("LicenseUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RejectReason")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.HasKey("BranchRegisterRequestId");
+
+                    b.HasIndex("BranchId")
+                        .IsUnique();
+
+                    b.ToTable("BranchRegisterRequests");
+                });
+
+            modelBuilder.Entity("BO.Entities.DayOff", b =>
+                {
+                    b.Property<int>("DayOffId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("DayOffId"));
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeSpan?>("EndTime")
+                        .HasColumnType("interval");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("date");
+
+                    b.Property<TimeSpan?>("StartTime")
+                        .HasColumnType("interval");
+
+                    b.HasKey("DayOffId");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("DayOffs");
+                });
+
+            modelBuilder.Entity("BO.Entities.DietaryPreference", b =>
+                {
+                    b.Property<int>("DietaryPreferenceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("dietaryPreferenceId");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("DietaryPreferenceId"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("DietaryPreferenceId");
+
+                    b.ToTable("DietaryPreferences");
+
+                    b.HasData(
+                        new
+                        {
+                            DietaryPreferenceId = 1,
+                            Description = "Không thịt",
+                            Name = "Ăn chay"
+                        },
+                        new
+                        {
+                            DietaryPreferenceId = 2,
+                            Description = "Món ăn có vị cay nồng, sử dụng nhiều ớt hoặc tiêu",
+                            Name = "Cay"
+                        },
+                        new
+                        {
+                            DietaryPreferenceId = 3,
+                            Description = "Món ăn có vị ngọt, hoặc các món tráng miệng",
+                            Name = "Ngọt"
+                        },
+                        new
+                        {
+                            DietaryPreferenceId = 4,
+                            Description = "Hương vị đậm đà, thích hợp ăn kèm với cơm",
+                            Name = "Mặn"
+                        },
+                        new
+                        {
+                            DietaryPreferenceId = 5,
+                            Description = "Bao gồm các loại tôm, cua, cá, mực và đồ biển khác",
+                            Name = "Hải sản"
+                        });
+                });
+
             modelBuilder.Entity("BO.Entities.OtpVerify", b =>
                 {
                     b.Property<int>("Id")
@@ -94,10 +327,13 @@ namespace DAL.Migrations
 
                     b.Property<string>("AvatarUrl")
                         .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("DietarySetup")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Email")
                         .HasMaxLength(100)
@@ -107,10 +343,14 @@ namespace DAL.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<string>("FirstName")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("LastName")
-                        .HasColumnType("text");
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Password")
                         .HasMaxLength(255)
@@ -132,6 +372,9 @@ namespace DAL.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("UserInfoSetup")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(50)
@@ -158,6 +401,210 @@ namespace DAL.Migrations
                     b.HasKey("UserId", "BadgeId");
 
                     b.ToTable("UserBadges");
+                });
+
+            modelBuilder.Entity("BO.Entities.UserDietaryPreference", b =>
+                {
+                    b.Property<int>("UserDietaryPreferenceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("userDietaryPreferencesId");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("UserDietaryPreferenceId"));
+
+                    b.Property<int>("DietaryPreferenceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("dietaryPreferenceId");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserDietaryPreferenceId");
+
+                    b.HasIndex("DietaryPreferenceId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserDietaryPreferences");
+                });
+
+            modelBuilder.Entity("BO.Entities.Vendor", b =>
+                {
+                    b.Property<int>("VendorId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VendorId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("VendorId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Vendors");
+                });
+
+            modelBuilder.Entity("BO.Entities.WorkSchedule", b =>
+                {
+                    b.Property<int>("WorkScheduleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("WorkScheduleId"));
+
+                    b.Property<int>("BranchId")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeSpan>("CloseTime")
+                        .HasColumnType("interval");
+
+                    b.Property<TimeSpan>("OpenTime")
+                        .HasColumnType("interval");
+
+                    b.Property<int>("Weekday")
+                        .HasColumnType("integer");
+
+                    b.HasKey("WorkScheduleId");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("WorkSchedules");
+                });
+
+            modelBuilder.Entity("BO.Entities.Branch", b =>
+                {
+                    b.HasOne("BO.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BO.Entities.Vendor", "Vendor")
+                        .WithMany("Branches")
+                        .HasForeignKey("VendorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+
+                    b.Navigation("Vendor");
+                });
+
+            modelBuilder.Entity("BO.Entities.BranchImage", b =>
+                {
+                    b.HasOne("BO.Entities.Branch", "Branch")
+                        .WithMany("BranchImages")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("BO.Entities.BranchRegisterRequest", b =>
+                {
+                    b.HasOne("BO.Entities.Branch", "Branch")
+                        .WithOne()
+                        .HasForeignKey("BO.Entities.BranchRegisterRequest", "BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("BO.Entities.DayOff", b =>
+                {
+                    b.HasOne("BO.Entities.Branch", "Branch")
+                        .WithMany("DayOffs")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("BO.Entities.UserDietaryPreference", b =>
+                {
+                    b.HasOne("BO.Entities.DietaryPreference", "DietaryPreference")
+                        .WithMany("UserPreferences")
+                        .HasForeignKey("DietaryPreferenceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BO.Entities.User", "User")
+                        .WithMany("DietaryPreferences")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DietaryPreference");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BO.Entities.Vendor", b =>
+                {
+                    b.HasOne("BO.Entities.User", "VendorOwner")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("VendorOwner");
+                });
+
+            modelBuilder.Entity("BO.Entities.WorkSchedule", b =>
+                {
+                    b.HasOne("BO.Entities.Branch", "Branch")
+                        .WithMany("WorkSchedules")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("BO.Entities.Branch", b =>
+                {
+                    b.Navigation("BranchImages");
+
+                    b.Navigation("DayOffs");
+
+                    b.Navigation("WorkSchedules");
+                });
+
+            modelBuilder.Entity("BO.Entities.DietaryPreference", b =>
+                {
+                    b.Navigation("UserPreferences");
+                });
+
+            modelBuilder.Entity("BO.Entities.User", b =>
+                {
+                    b.Navigation("DietaryPreferences");
+                });
+
+            modelBuilder.Entity("BO.Entities.Vendor", b =>
+                {
+                    b.Navigation("Branches");
                 });
 #pragma warning restore 612, 618
         }

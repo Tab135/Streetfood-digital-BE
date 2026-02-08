@@ -1,6 +1,7 @@
 using BO.Entities;
 using DAL;
 using Google.Apis.Auth;
+using BO.DTO.Auth;
 using Repository.Interfaces;
 using System;
 using System.Threading.Tasks;
@@ -36,6 +37,11 @@ namespace Repository
             return await _userDAO.GetByUsernameAsync(username);
         }
 
+        public async Task<User?> GetByPhoneNumberAsync(string phoneNumber)
+        {
+            return await _userDAO.GetByPhoneNumberAsync(phoneNumber);
+        }
+
         public async Task UpdateAsync(User user)
         {
             await _userDAO.UpdateAsync(user);
@@ -49,6 +55,11 @@ namespace Repository
         public async Task<User> FindOrCreateUserFromGoogleAsync(GoogleJsonWebSignature.Payload payload)
         {
             return await _userDAO.FindOrCreateUserFromGoogleAsync(payload);
+        }
+
+        public async Task<User> FindOrCreateUserFromFacebookAsync(FacebookUserInfo info)
+        {
+            return await _userDAO.FindOrCreateUserFromFacebookAsync(info);
         }
 
         public async Task<User> GetUserById(int userId)

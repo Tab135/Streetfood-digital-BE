@@ -11,6 +11,8 @@ using Service.Interfaces;
 using Service.JWT;
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Service
@@ -18,10 +20,11 @@ namespace Service
     public class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
-        private readonly IJwtService _jwtService;
+        private readonly IJwtService _jwt_service;
         private readonly IOtpVerifyRepository _otpRepository;
-        private readonly IEmailSender _emailSender;
+        private readonly IEmailSender _email_sender;
         private readonly IConfiguration _configuration;
+        private readonly IFacebookService _facebookService;
 
         // Constants
         private const int OtpExpiryMinutes = 3;
@@ -34,17 +37,33 @@ namespace Service
             IJwtService jwtService,
             IOtpVerifyRepository otpVerifyRepository,
             IEmailSender emailSender,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IFacebookService facebookService)
         {
             _userRepository = userRepository;
-            _jwtService = jwtService;
+            _jwt_service = jwtService;
             _otpRepository = otpVerifyRepository;
-            _emailSender = emailSender;
+            _email_sender = emailSender;
             _configuration = configuration;
+            _facebookService = facebookService;
         }
 
-        // Inside UserService.cs
+        public async Task<User> GetUserById(int userId)
+        {
 
+            var user = await _userRepository.GetUserById(userId);
+
+            if (user == null)
+            {
+                throw new Exception("User not found");
+            }
+            if (!user.EmailVerified)
+            {
+                throw new Exception("User is not verified");
+            }
+
+            return user;
+        }
         public async Task<(string token, User user)> LoginAsync(LoginDto loginDto)
         {
             var user = await _userRepository.GetByEmailAsync(loginDto.Email); //
@@ -56,7 +75,7 @@ namespace Service
                 throw new Exception("Account is not verified. Please verify your email first.");
             }
 
-            var token = _jwtService.GenerateToken(user);
+            var token = _jwt_service.GenerateToken(user);
             return (token, user);
         }
 
@@ -103,7 +122,7 @@ namespace Service
             var subject = $"{PlatformName} - Registration Verification Code";
             var body = GenerateOtpEmailTemplate(registerDto.Username, otpCode, "register your account");
 
-            await _emailSender.SendEmailAsync(registerDto.Email, subject, body); 
+            await _email_sender.SendEmailAsync(registerDto.Email, subject, body); 
 
             return $"OTP sent to {registerDto.Email}. Please check your email and verify within {OtpExpiryMinutes} minutes.";
         }
@@ -142,7 +161,7 @@ namespace Service
                     });
 
                 var user = await _userRepository.FindOrCreateUserFromGoogleAsync(payload);
-                var token = _jwtService.GenerateToken(user);
+                var token = _jwt_service.GenerateToken(user);
 
                 return new LoginResponse
                 {
@@ -182,7 +201,7 @@ namespace Service
 
             var body = GenerateOtpEmailTemplate(validUsername, otpCode, "register your account");
 
-            await _emailSender.SendEmailAsync(email, subject, body);
+            await _email_sender.SendEmailAsync(email, subject, body);
 
             return $"New OTP sent to {email}. Please check your email and verify within {OtpExpiryMinutes} minutes.";
         }
@@ -197,7 +216,7 @@ namespace Service
             var subject = $"{PlatformName} - Reset Your Password";
             var body = GenerateOtpEmailTemplate(user.UserName, otpCode, "reset your password");
 
-            await _emailSender.SendEmailAsync(email, subject, body);
+            await _email_sender.SendEmailAsync(email, subject, body);
 
             return $"Password reset OTP sent to {email}. Please check your email and verify within {OtpExpiryMinutes} minutes.";
         }
@@ -231,9 +250,61 @@ namespace Service
             var subject = $"{PlatformName} - Reset Your Password";
             var body = GenerateOtpEmailTemplate(user.UserName, otpCode, "reset your password");
 
-            await _emailSender.SendEmailAsync(email, subject, body);
+            await _email_sender.SendEmailAsync(email, subject, body);
 
             return $"New password reset OTP sent to {email}. Please check your email and verify within {OtpExpiryMinutes} minutes.";
+        }
+
+        // Send OTP for phone-based login 
+        public async Task<string> SendPhoneLoginOtpAsync(string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+                throw new Exception("Phone number is required");
+
+           
+            await CheckOtpRequestLimitAsync(phoneNumber);
+
+            // Generate and store OTP associated with the phone number (stored in OtpVerify.Email field)
+            var otpCode = await GenerateAndStoreOtpAsync(phoneNumber);
+
+            //Fucking implement the phonenumber send OTP here
+            return otpCode;
+        }
+
+        public async Task<LoginResponse> VerifyPhoneOtpAsync(string phoneNumber, string otp)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber) || string.IsNullOrWhiteSpace(otp))
+                throw new Exception("Phone number and OTP are required");
+
+            var validOtp = await GetValidOtpAsync(phoneNumber, otp);
+
+            // Find existing user by phone
+            var user = await _userRepository.GetByPhoneNumberAsync(phoneNumber);
+
+            if (user == null)
+            {
+                var newUser = new User
+                {
+                    UserName = phoneNumber,
+                    Email = string.Empty,
+                    Password = string.Empty,
+                    Role = Role.User,
+                    CreatedAt = DateTime.UtcNow,
+                    EmailVerified = true, 
+                    PhoneNumber = phoneNumber,
+                    FirstName = string.Empty,
+                    LastName = string.Empty
+                };
+
+                user = await _userRepository.CreateAsync(newUser);
+            }
+
+            var token = _jwt_service.GenerateToken(user);
+
+            // Mark OTP as used and delete it
+            await MarkOtpAsUsedAsync(validOtp.Id, phoneNumber, otp);
+
+            return new LoginResponse { Token = token, User = user };
         }
 
         public async Task<User> UpdateUserProfile(int userId, UpdateUserProfileDto updateDto)
@@ -255,8 +326,38 @@ namespace Service
             if (!string.IsNullOrWhiteSpace(updateDto.AvatarUrl))
                 user.AvatarUrl = updateDto.AvatarUrl;
 
+            if (!string.IsNullOrWhiteSpace(updateDto.FirstName))
+                user.FirstName = updateDto.FirstName;
+
+            if (!string.IsNullOrWhiteSpace(updateDto.LastName))
+                user.LastName = updateDto.LastName;
             await _userRepository.UpdateAsync(user);
             return user;
+        }
+
+        // Setup flags
+        public async Task<(bool UserInfoSetup, bool DietarySetup)> GetUserSetupStatusAsync(int userId)
+        {
+            var user = await GetUserByIdAsync(userId);
+            return (user.UserInfoSetup, user.DietarySetup);
+        }
+
+        public async Task<bool> MarkUserInfoSetupAsync(int userId)
+        {
+            var user = await GetUserByIdAsync(userId);
+            if (user.UserInfoSetup) return true; // already
+            user.UserInfoSetup = true;
+            await _userRepository.UpdateAsync(user);
+            return true;
+        }
+
+        public async Task<bool> MarkDietarySetupAsync(int userId)
+        {
+            var user = await GetUserByIdAsync(userId);
+            if (user.DietarySetup) return true; // already
+            user.DietarySetup = true;
+            await _userRepository.UpdateAsync(user);
+            return true;
         }
 
         // New ChangePassword implementation
@@ -282,6 +383,35 @@ namespace Service
             return "Password changed successfully";
         }
 
+        // Refactored Facebook login implementation
+        public async Task<LoginResponse> FacebookLoginAsync(FacebookAuthDto facebookAuthDto)
+        {
+            try
+            {
+                var info = await _facebookService.ValidateTokenAndGetUserAsync(facebookAuthDto.AccessToken);
+
+                // Fallback email when not provided
+                var email = info.Email ?? $"fb_{info.Id}@facebook.com";
+
+                var user = await _userRepository.FindOrCreateUserFromFacebookAsync(new FacebookUserInfo
+                {
+                    Id = info.Id,
+                    Email = email,
+                    Name = info.Name,
+                    FirstName = info.FirstName,
+                    LastName = info.LastName,
+                    AvatarUrl = info.AvatarUrl
+                });
+
+                var token = _jwt_service.GenerateToken(user);
+                return new LoginResponse { Token = token, User = user };
+            }
+            catch (Exception)
+            {
+                throw new Exception("Invalid Facebook token");
+            }
+        }
+
         // Helper methods
         private async Task ValidateEmailNotExistsAsync(string email)
         {
@@ -300,8 +430,7 @@ namespace Service
         private async Task<User> GetUserByIdAsync(int userId)
         {
             var user = await _userRepository.GetUserById(userId);
-            if (user == null)
-                throw new Exception("User not found");
+            if (user == null) throw new Exception("User not found");
             return user;
         }
 

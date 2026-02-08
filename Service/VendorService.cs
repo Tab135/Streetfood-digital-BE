@@ -1,0 +1,188 @@
+using BO.Common;
+using BO.DTO.Vendor;
+using BO.Entities;
+using Repository.Interfaces;
+using Service.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace Service
+{
+    public class VendorService : IVendorService
+    {
+        private readonly IVendorRepository _vendorRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IBranchRepository _branchRepository;
+
+        public VendorService(
+            IVendorRepository vendorRepository,
+            IUserRepository userRepository,
+            IBranchRepository branchRepository)
+        {
+            _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
+            _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+            _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
+        }
+
+        public async Task<Vendor> CreateVendorAsync(CreateVendorDto createVendorDto, int userId)
+        {
+            var user = await _userRepository.GetUserById(userId);
+            if (user == null)
+            {
+                throw new Exception($"User with ID {userId} not found");
+            }
+
+            // Check if user already has a vendor
+            var existingVendor = await _vendorRepository.GetByUserIdAsync(userId);
+            if (existingVendor != null)
+            {
+                throw new Exception("User already has a vendor account");
+            }
+
+            var vendor = new Vendor
+            {
+                UserId = userId,
+                Name = createVendorDto.Name,
+                IsActive = true
+            };
+
+            var createdVendor = await _vendorRepository.CreateAsync(vendor);
+
+            // Create default branch with vendor name
+            var defaultBranch = new Branch
+            {
+                VendorId = createdVendor.VendorId,
+                UserId = userId,
+                Name = createVendorDto.Name, // Uses vendor name for default branch
+                PhoneNumber = createVendorDto.PhoneNumber,
+                Email = createVendorDto.Email,
+                AddressDetail = createVendorDto.AddressDetail,
+                BuildingName = createVendorDto.BuildingName,
+                Ward = createVendorDto.Ward,
+                City = createVendorDto.City,
+                Lat = createVendorDto.Lat,
+                Long = createVendorDto.Long,
+                IsVerified = false,
+                IsActive = false, // Not active until verified
+                IsSubscribed = false,
+                AvgRating = 0
+            };
+
+            await _branchRepository.CreateAsync(defaultBranch);
+
+            return createdVendor;
+        }
+
+        public async Task<VendorResponseDto> GetVendorByIdAsync(int vendorId)
+        {
+            var vendor = await _vendorRepository.GetByIdAsync(vendorId);
+            if (vendor == null)
+            {
+                throw new Exception($"Vendor with ID {vendorId} not found");
+            }
+
+            return MapToResponseDto(vendor);
+        }
+
+        public async Task<VendorResponseDto> GetVendorByUserIdAsync(int userId)
+        {
+            var vendor = await _vendorRepository.GetByUserIdAsync(userId);
+            if (vendor == null)
+            {
+                throw new Exception($"Vendor for user ID {userId} not found");
+            }
+
+            return MapToResponseDto(vendor);
+        }
+
+        public async Task<PaginatedResponse<VendorResponseDto>> GetAllVendorsAsync(int pageNumber, int pageSize)
+        {
+            var (vendors, totalCount) = await _vendorRepository.GetAllAsync(pageNumber, pageSize);
+            var items = vendors.Select(MapToResponseDto).ToList();
+            return new PaginatedResponse<VendorResponseDto>(items, totalCount, pageNumber, pageSize);
+        }
+
+        public async Task<PaginatedResponse<VendorResponseDto>> GetActiveVendorsAsync(int pageNumber, int pageSize)
+        {
+            var (vendors, totalCount) = await _vendorRepository.GetActiveVendorsAsync(pageNumber, pageSize);
+            var items = vendors.Select(MapToResponseDto).ToList();
+            return new PaginatedResponse<VendorResponseDto>(items, totalCount, pageNumber, pageSize);
+        }
+
+        public async Task DeleteVendorAsync(int vendorId)
+        {
+            var exists = await _vendorRepository.ExistsByIdAsync(vendorId);
+            if (!exists)
+            {
+                throw new Exception($"Vendor with ID {vendorId} not found");
+            }
+
+            await _vendorRepository.DeleteAsync(vendorId);
+        }
+
+        public async Task<bool> SuspendVendorAsync(int vendorId)
+        {
+            var vendor = await _vendorRepository.GetByIdAsync(vendorId);
+            if (vendor == null)
+            {
+                throw new Exception($"Vendor with ID {vendorId} not found");
+            }
+
+            vendor.IsActive = false;
+            await _vendorRepository.UpdateAsync(vendor);
+            return true;
+        }
+
+        public async Task<bool> ReactivateVendorAsync(int vendorId)
+        {
+            var vendor = await _vendorRepository.GetByIdAsync(vendorId);
+            if (vendor == null)
+            {
+                throw new Exception($"Vendor with ID {vendorId} not found");
+            }
+
+            vendor.IsActive = true;
+            await _vendorRepository.UpdateAsync(vendor);
+            return true;
+        }
+
+        private VendorResponseDto MapToResponseDto(Vendor vendor)
+        {
+            var branches = _branchRepository.GetAllByVendorIdAsync(vendor.VendorId).Result;
+            
+            return new VendorResponseDto
+            {
+                VendorId = vendor.VendorId,
+                UserId = vendor.UserId,
+                Name = vendor.Name,
+                CreatedAt = vendor.CreatedAt,
+                UpdatedAt = vendor.UpdatedAt,
+                IsActive = vendor.IsActive,
+                VendorOwnerName = vendor.VendorOwner != null ? $"{vendor.VendorOwner.FirstName} {vendor.VendorOwner.LastName}".Trim() : "",
+                Branches = branches.Select(b => new BO.DTO.Branch.BranchResponseDto
+                {
+                    BranchId = b.BranchId,
+                    VendorId = b.VendorId,
+                    UserId = b.UserId,
+                    Name = b.Name,
+                    PhoneNumber = b.PhoneNumber,
+                    Email = b.Email,
+                    AddressDetail = b.AddressDetail,
+                    BuildingName = b.BuildingName,
+                    Ward = b.Ward,
+                    City = b.City,
+                    Lat = b.Lat,
+                    Long = b.Long,
+                    CreatedAt = b.CreatedAt,
+                    UpdatedAt = b.UpdatedAt,
+                    IsVerified = b.IsVerified,
+                    AvgRating = b.AvgRating,
+                    IsActive = b.IsActive,
+                    IsSubscribed = b.IsSubscribed
+                }).ToList()
+            };
+        }
+    }
+}
