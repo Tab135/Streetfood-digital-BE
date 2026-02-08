@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 using Service.JWT;
 using System.Security.Claims;
+using static Google.Apis.Requests.BatchRequest;
 
 namespace StreetFood.Controllers
 {
@@ -261,7 +262,8 @@ namespace StreetFood.Controllers
                     createdAt = user.CreatedAt,
                     firstName = user.FirstName,
                     lastName = user.LastName,
-
+                    UserinfoSetup = user.UserInfoSetup,
+                    DietarySetup = user.DietarySetup
                 });
             }
             catch (Exception ex)
@@ -395,6 +397,8 @@ namespace StreetFood.Controllers
                         updatedUser.AvatarUrl,
                         updatedUser.FirstName,
                         updatedUser.LastName,   
+                        updatedUser.DietarySetup,
+                        updatedUser.UserInfoSetup
                     }
                 });
             }
