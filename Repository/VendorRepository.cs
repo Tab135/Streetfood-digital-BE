@@ -60,35 +60,5 @@ namespace Repository
         {
             return await _vendorDAO.ExistsByUserIdAsync(userId);
         }
-
-        public async Task<List<VendorImage>> GetVendorImagesAsync(int vendorId)
-        {
-            return await _vendorDAO.GetVendorImagesAsync(vendorId);
-        }
-
-        public async Task AddVendorImageAsync(VendorImage vendorImage)
-        {
-            await _vendorDAO.AddVendorImageAsync(vendorImage);
-        }
-
-        public async Task<VendorRegisterRequest> GetVendorRegisterRequestAsync(int vendorId)
-        {
-            return await _vendorDAO.GetVendorRegisterRequestAsync(vendorId);
-        }
-
-        public async Task<List<VendorRegisterRequest>> GetAllVendorRegisterRequestsAsync()
-        {
-            return await _vendorDAO.GetAllVendorRegisterRequestsAsync();
-        }
-
-        public async Task AddVendorRegisterRequestAsync(VendorRegisterRequest request)
-        {
-            await _vendorDAO.AddVendorRegisterRequestAsync(request);
-        }
-
-        public async Task UpdateVendorRegisterRequestAsync(VendorRegisterRequest request)
-        {
-            await _vendorDAO.UpdateVendorRegisterRequestAsync(request);
-        }
     }
 }

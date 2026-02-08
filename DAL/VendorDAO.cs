@@ -97,43 +97,5 @@ namespace DAL
             return await _context.Vendors
                 .AnyAsync(v => v.UserId == userId);
         }
-
-        // Related entities queries
-        public async Task<List<VendorImage>> GetVendorImagesAsync(int vendorId)
-        {
-            return await _context.VendorImages
-                .Where(vi => vi.VendorId == vendorId)
-                .ToListAsync();
-        }
-
-        public async Task AddVendorImageAsync(VendorImage vendorImage)
-        {
-            _context.VendorImages.Add(vendorImage);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task<VendorRegisterRequest> GetVendorRegisterRequestAsync(int vendorId)
-        {
-            return await _context.VendorRegisterRequests
-                .FirstOrDefaultAsync(vrr => vrr.VendorId == vendorId);
-        }
-
-        public async Task<List<VendorRegisterRequest>> GetAllVendorRegisterRequestsAsync()
-        {
-            return await _context.VendorRegisterRequests
-                .ToListAsync();
-        }
-
-        public async Task AddVendorRegisterRequestAsync(VendorRegisterRequest request)
-        {
-            _context.VendorRegisterRequests.Add(request);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task UpdateVendorRegisterRequestAsync(VendorRegisterRequest request)
-        {
-            _context.VendorRegisterRequests.Update(request);
-            await _context.SaveChangesAsync();
-        }
     }
 }

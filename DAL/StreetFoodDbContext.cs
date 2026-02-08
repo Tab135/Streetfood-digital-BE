@@ -23,10 +23,8 @@ public class StreetFoodDbContext : DbContext
     public DbSet<Branch> Branches { get; set; }
     public DbSet<BranchImage> BranchImages { get; set; }
     public DbSet<BranchRegisterRequest> BranchRegisterRequests { get; set; }
-    public DbSet<VendorImage> VendorImages { get; set; }
     public DbSet<WorkSchedule> WorkSchedules { get; set; }
     public DbSet<DayOff> DayOffs { get; set; }
-    public DbSet<VendorRegisterRequest> VendorRegisterRequests { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -133,16 +131,6 @@ public class StreetFoodDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<VendorImage>(entity =>
-        {
-            entity.HasKey(e => e.VendorImageId);
-            entity.Property(e => e.ImageUrl).IsRequired();
-            entity.HasOne(e => e.Vendor)
-                  .WithMany()
-                  .HasForeignKey(e => e.VendorId)
-                  .OnDelete(DeleteBehavior.Cascade);
-        });
-
         modelBuilder.Entity<WorkSchedule>(entity =>
         {
             entity.HasKey(e => e.WorkScheduleId);
@@ -163,19 +151,6 @@ public class StreetFoodDbContext : DbContext
             entity.HasOne(e => e.Branch)
                   .WithMany(b => b.DayOffs)
                   .HasForeignKey(e => e.BranchId)
-                  .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<VendorRegisterRequest>(entity =>
-        {
-            entity.HasKey(e => e.VendorRegisterRequestId);
-            entity.Property(e => e.LicenseUrl).IsRequired();
-            entity.Property(e => e.Status).IsRequired();
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.UpdateAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.HasOne<Vendor>()
-                  .WithOne()
-                  .HasForeignKey<VendorRegisterRequest>(e => e.VendorId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
