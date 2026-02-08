@@ -87,15 +87,15 @@ namespace StreetFood.Controllers
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized( "UNAUTHORIZED");
                 }
 
                 var vendor = await _vendorService.GetVendorByUserIdAsync(userId);
                 return Ok(vendor);
-            }
+            }       
             catch (Exception ex)
             {
-                return NotFound(new ApiResponse<object>(404, ex.Message, "VENDOR_NOT_FOUND"));
+                return NotFound("VENDOR_NOT_FOUND");
             }
         }
 
@@ -112,7 +112,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, "GET_VENDORS_ERROR"));
+                return BadRequest(ex.Message);
             }
         }
 

@@ -389,17 +389,15 @@ namespace StreetFood.Controllers
                 return Ok(new
                 {
                     message = "Profile updated successfully",
-                    user = new
-                    {
-                        updatedUser.UserName,
-                        updatedUser.Email,
-                        updatedUser.PhoneNumber,
-                        updatedUser.AvatarUrl,
-                        updatedUser.FirstName,
-                        updatedUser.LastName,   
-                        updatedUser.DietarySetup,
-                        updatedUser.UserInfoSetup
-                    }
+                    updatedUser.UserName,
+                    updatedUser.Email,
+                    updatedUser.PhoneNumber,
+                    updatedUser.AvatarUrl,
+                    updatedUser.FirstName,
+                    updatedUser.LastName,   
+                    updatedUser.DietarySetup,
+                    updatedUser.UserInfoSetup
+                    
                 });
             }
             catch (Exception ex)
