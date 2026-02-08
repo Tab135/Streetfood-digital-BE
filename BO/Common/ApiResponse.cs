@@ -10,11 +10,11 @@ namespace BO.Common
     {
         public int Status { get; set; }
         public string Message { get; set; }
-        public T Data { get; set; }
-        public string ErrorCode { get; set; } // Nullable
+        public T? Data { get; set; }
+        public string? ErrorCode { get; set; } // Nullable
 
 
-        public ApiResponse(int status, string message, T data)
+        public ApiResponse(int status, string message, T? data)
         {
             Status = status;
             Message = message;
@@ -23,7 +23,7 @@ namespace BO.Common
         }
 
         
-        public ApiResponse(int status, string message, string errorCode)
+        public ApiResponse(int status, string message, string? errorCode)
         {
             Status = status;
             Message = message;

@@ -24,8 +24,8 @@ namespace StreetFood.Middleware
         {
             // 1. Skip Middleware for Swagger/Scalar/Uploads
             var path = context.Request.Path.Value?.ToLower();
-            if (path.StartsWith("/scalar") || path.StartsWith("/openapi") ||
-                path.StartsWith("/swagger") || path.StartsWith("/uploads"))
+            if (path != null && (path.StartsWith("/scalar") || path.StartsWith("/openapi") ||
+                path.StartsWith("/swagger") || path.StartsWith("/uploads")))
             {
                 await _next(context);
                 return;
@@ -64,8 +64,8 @@ namespace StreetFood.Middleware
 
         private async Task HandleSuccessAsync(HttpContext context, string body, MemoryStream memoryStream)
         {
-            var data = string.IsNullOrEmpty(body) ? null : JsonSerializer.Deserialize<object>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            var response = new ApiResponse<object>(context.Response.StatusCode, "Success", data);
+            var (message, data) = ExtractMessageAndData(body, "Success");
+            var response = new ApiResponse<object>(context.Response.StatusCode, message, data);
             await WriteResponseAsync(context, response, memoryStream);
         }
 
@@ -74,6 +74,8 @@ namespace StreetFood.Middleware
             string message = "An error occurred";
             string errorCode = $"ERR_{statusCode}";
             object data = null;
+
+            var extracted = ExtractMessageAndData(body, message);
 
             switch (statusCode)
             {
@@ -127,8 +129,9 @@ namespace StreetFood.Middleware
                                 }
                                 else
                                 {
-                                    // Handle manual BadRequest
-                                    data = JsonSerializer.Deserialize<object>(body);
+                                    // Handle manual BadRequest - use extracted message if available
+                                    message = extracted.Message == "An error occurred" ? "Bad Request" : extracted.Message;
+                                    data = extracted.Data;
                                 }
                             }
                         }
@@ -137,22 +140,30 @@ namespace StreetFood.Middleware
                             data = body;
                         }
                     }
+                    else
+                    {
+                        message = "Bad Request";
+                    }
                     break;
                 case 401:
                     errorCode = "ERR_401";
-                    message = "Unauthorized. Please log in.";
+                    message = extracted.Message == "An error occurred" ? "Unauthorized. Please log in." : extracted.Message;
+                    data = extracted.Data;
                     break;
                 case 403:
                     errorCode = "ERR_403";
-                    message = "Forbidden. You do not have permission.";
+                    message = extracted.Message == "An error occurred" ? "Forbidden. You do not have permission." : extracted.Message;
+                    data = extracted.Data;
                     break;
                 case 404:
                     errorCode = "ERR_404";
-                    message = "Resource not found.";
+                    message = extracted.Message == "An error occurred" ? "Resource not found." : extracted.Message;
+                    data = extracted.Data;
                     break;
                 case 500:
                     errorCode = "ERR_500";
-                    message = "Internal Server Error.";
+                    message = extracted.Message == "An error occurred" ? "Internal Server Error." : extracted.Message;
+                    data = extracted.Data;
                     break;
             }
 
@@ -182,6 +193,59 @@ namespace StreetFood.Middleware
 
             var json = JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
             await context.Response.WriteAsync(json);
+        }
+
+        private (string Message, object? Data) ExtractMessageAndData(string body, string defaultMessage)
+        {
+            if (string.IsNullOrWhiteSpace(body))
+            {
+                return (defaultMessage, null);
+            }
+
+            try
+            {
+                using (JsonDocument doc = JsonDocument.Parse(body))
+                {
+                    if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                    {
+                        return (defaultMessage, JsonSerializer.Deserialize<object>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }));
+                    }
+
+                    var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    if (dict == null) return (defaultMessage, null);
+
+                    // Use case-insensitive dictionary to handle "message" or "Message"
+                    var ciDict = new Dictionary<string, object>(dict, StringComparer.OrdinalIgnoreCase);
+
+                    string message = defaultMessage;
+                    if (ciDict.TryGetValue("message", out object? msgObj) && msgObj != null)
+                    {
+                        message = msgObj.ToString() ?? defaultMessage;
+                        ciDict.Remove("message");
+                    }
+
+                    object? data;
+                    if (ciDict.Count == 1 && ciDict.TryGetValue("data", out object? dataObj))
+                    {
+                        data = dataObj;
+                    }
+                    else if (ciDict.Count == 0)
+                    {
+                        data = null;
+                    }
+                    else
+                    {
+                        // Return the dictionary without the message
+                        data = ciDict;
+                    }
+
+                    return (message, data);
+                }
+            }
+            catch
+            {
+                return (defaultMessage, body);
+            }
         }
 
         private async Task WriteResponseAsync(HttpContext context, object responseObj, MemoryStream memoryStream)
