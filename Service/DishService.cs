@@ -50,6 +50,12 @@ namespace Service
                 throw new Exception("You do not own this branch");
             }
 
+            // Check if branch is verified
+            if (!branch.IsVerified)
+            {
+                throw new Exception("Branch must be verified before creating dishes");
+            }
+
             // Validate Category exists
             var categoryExists = await _categoryRepository.ExistsByIdAsync(request.CategoryId);
             if (!categoryExists)
@@ -165,6 +171,12 @@ namespace Service
             if (vendor == null || vendor.UserId != userId)
             {
                 throw new Exception("You do not own this branch");
+            }
+
+            // Check if branch is verified
+            if (!branch.IsVerified)
+            {
+                throw new Exception("Branch must be verified before updating dishes");
             }
 
             // Validate CategoryId if provided
@@ -283,6 +295,12 @@ namespace Service
             if (vendor == null || vendor.UserId != userId)
             {
                 throw new Exception("You do not own this branch");
+            }
+
+            // Check if branch is verified
+            if (!branch.IsVerified)
+            {
+                throw new Exception("Branch must be verified before deleting dishes");
             }
 
             await _dishRepository.DeleteAsync(dishId);

@@ -91,6 +91,8 @@ namespace StreetFood
             builder.Services.AddScoped<IVendorService, VendorService>();
             builder.Services.AddScoped<IBranchService, BranchService>();
             // Menu Management Services
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
+            builder.Services.AddScoped<ITasteService, TasteService>();
             builder.Services.AddScoped<IDishService, DishService>();
             builder.Services.AddHostedService<OtpCleanupService>();
 
