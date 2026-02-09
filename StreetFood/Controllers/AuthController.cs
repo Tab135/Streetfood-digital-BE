@@ -191,8 +191,8 @@ namespace StreetFood.Controllers
                         createdAt = response.User?.CreatedAt,
                         firstName = response.User?.FirstName,
                         lastName = response.User?.LastName,
-                        UserinfoSetup = response.User?.UserInfoSetup,
-                        DietarySetup = response.User?.DietarySetup
+                        userInfoSetup = response.User?.UserInfoSetup,
+                        dietarySetup = response.User?.DietarySetup
                     }
                 });
             }
@@ -262,8 +262,8 @@ namespace StreetFood.Controllers
                     createdAt = user.CreatedAt,
                     firstName = user.FirstName,
                     lastName = user.LastName,
-                    UserinfoSetup = user.UserInfoSetup,
-                    DietarySetup = user.DietarySetup
+                    userInfoSetup = user.UserInfoSetup,
+                    dietarySetup = user.DietarySetup
                 });
             }
             catch (Exception ex)
