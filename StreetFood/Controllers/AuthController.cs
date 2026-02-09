@@ -385,19 +385,21 @@ namespace StreetFood.Controllers
 
                 var updatedUser = await _userService.UpdateUserProfile(userId, updateDto);
 
-                // Return user without password
+                // Return user with same format as GET /profile
                 return Ok(new
                 {
-                    message = "Profile updated successfully",
-                    updatedUser.UserName,
-                    updatedUser.Email,
-                    updatedUser.PhoneNumber,
-                    updatedUser.AvatarUrl,
-                    updatedUser.FirstName,
-                    updatedUser.LastName,   
-                    updatedUser.DietarySetup,
-                    updatedUser.UserInfoSetup
-                    
+                    userId = updatedUser.Id,
+                    username = updatedUser.UserName,
+                    email = updatedUser.Email,
+                    role = updatedUser.Role,
+                    phoneNumber = updatedUser.PhoneNumber,
+                    avatarUrl = updatedUser.AvatarUrl,
+                    point = updatedUser.Point,
+                    createdAt = updatedUser.CreatedAt,
+                    firstName = updatedUser.FirstName,
+                    lastName = updatedUser.LastName,
+                    userInfoSetup = updatedUser.UserInfoSetup,
+                    dietarySetup = updatedUser.DietarySetup
                 });
             }
             catch (Exception ex)
