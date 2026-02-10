@@ -169,7 +169,7 @@ namespace StreetFood.Controllers
                         firstName = response.User?.FirstName,
                         lastName = response.User?.LastName,
                         userInfoSetup = response.User?.UserInfoSetup,
-                        dietarySetup = response.User?.DietarySetup
+                        dietarySetup = response.User?.DietarySetup,
                         status = response.User?.Status
                     }
                 });
