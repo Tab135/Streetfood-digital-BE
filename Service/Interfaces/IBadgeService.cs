@@ -19,8 +19,10 @@ namespace Service.Interfaces
         
         // User badge operations
         Task<List<BadgeWithUserInfoDto>> GetUserBadgesWithInfo(int userId);
+        Task<List<UserWithBadgesDto>> GetAllUsersWithBadges();
         Task CheckAndAwardBadges(int userId);
         Task<UserBadgeDto> AwardBadgeToUser(int userId, int badgeId);
+        Task<bool> RemoveBadgeFromUser(int userId, int badgeId);
         Task<int> GetUserBadgeCount(int userId);
     }
 }

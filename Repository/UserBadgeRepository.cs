@@ -1,4 +1,5 @@
 using BO.Entities;
+using BO.DTO.Badge;
 using DAL;
 using Repository.Interfaces;
 using System;
@@ -21,16 +22,6 @@ namespace Repository
             return await _userBadgeDAO.Create(userBadge);
         }
 
-        public async Task<UserBadge?> GetByUserAndBadge(int userId, int badgeId)
-        {
-            return await _userBadgeDAO.GetByUserAndBadge(userId, badgeId);
-        }
-
-        public async Task<List<UserBadge>> GetByUserId(int userId)
-        {
-            return await _userBadgeDAO.GetByUserId(userId);
-        }
-
         public async Task<List<int>> GetBadgeIdsByUserId(int userId)
         {
             return await _userBadgeDAO.GetBadgeIdsByUserId(userId);
@@ -49,6 +40,16 @@ namespace Repository
         public async Task<bool> Delete(int userId, int badgeId)
         {
             return await _userBadgeDAO.Delete(userId, badgeId);
+        }
+
+        public async Task<List<UserWithBadgesDto>> GetAllUsersWithBadges()
+        {
+            return await _userBadgeDAO.GetAllUsersWithBadges();
+        }
+
+        public async Task<List<BadgeWithUserInfoDto>> GetUserBadgesWithInfo(int userId)
+        {
+            return await _userBadgeDAO.GetUserBadgesWithInfo(userId);
         }
     }
 }

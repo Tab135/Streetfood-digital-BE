@@ -117,6 +117,22 @@ namespace StreetFood.Controllers
             }
         }
 
+        // Admin user badge endpoints
+        [HttpGet("users")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllUsersWithBadges()
+        {
+            try
+            {
+                var usersWithBadges = await _badgeService.GetAllUsersWithBadges();
+                return Ok(usersWithBadges);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // User badge endpoints
         [HttpGet("user")]
         [Authorize]
@@ -167,8 +183,41 @@ namespace StreetFood.Controllers
                 return Ok(new
                 {
                     message = "Badge awarded successfully",
-                    userBadge = userBadge
+                    data = userBadge
                 });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpDelete("user/{userId}/badge/{badgeId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RemoveBadgeFromUser(int userId, int badgeId)
+        {
+            try
+            {
+                var result = await _badgeService.RemoveBadgeFromUser(userId, badgeId);
+                if (result)
+                {
+                    return Ok(new { message = "Badge removed from user successfully" });
+                }
+                return NotFound(new { message = "User badge not found" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetBadgesByUserId(int userId)
+        {
+            try
+            {
+                var badges = await _badgeService.GetUserBadgesWithInfo(userId);
+                return Ok(badges);
             }
             catch (Exception ex)
             {

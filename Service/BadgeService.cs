@@ -67,7 +67,7 @@ namespace Service
             return await _badgeRepository.Delete(badgeId);
         }
 
-        // Badge queries
+
         public async Task<BadgeDto?> GetBadgeById(int badgeId)
         {
             var badge = await _badgeRepository.GetById(badgeId);
@@ -79,34 +79,17 @@ namespace Service
             var badges = await _badgeRepository.GetAll();
             return badges.Select(MapToDto).ToList();
         }
-
-        // User badge operations
         public async Task<List<BadgeWithUserInfoDto>> GetUserBadgesWithInfo(int userId)
         {
             var user = await _userRepository.GetUserById(userId);
             if (user == null)
                 throw new Exception($"User with ID {userId} not found");
+            return await _userBadgeRepository.GetUserBadgesWithInfo(userId);
+        }
 
-            var allBadges = await _badgeRepository.GetAll();
-            var earnedBadgeIds = await _userBadgeRepository.GetBadgeIdsByUserId(userId);
-            var userBadges = await _userBadgeRepository.GetByUserId(userId);
-
-            var badgeWithInfo = allBadges.Select(badge =>
-            {
-                var userBadge = userBadges.FirstOrDefault(ub => ub.BadgeId == badge.BadgeId);
-                return new BadgeWithUserInfoDto
-                {
-                    BadgeId = badge.BadgeId,
-                    BadgeName = badge.BadgeName,
-                    PointToGet = badge.PointToGet,
-                    IconUrl = badge.IconUrl,
-                    Description = badge.Description,
-                    IsEarned = earnedBadgeIds.Contains(badge.BadgeId),
-                    EarnedAt = userBadge?.CreatedAt
-                };
-            }).ToList();
-
-            return badgeWithInfo;
+        public async Task<List<UserWithBadgesDto>> GetAllUsersWithBadges()
+        {
+            return await _userBadgeRepository.GetAllUsersWithBadges();
         }
 
         public async Task CheckAndAwardBadges(int userId)
@@ -167,6 +150,15 @@ namespace Service
                 BadgeId = createdUserBadge.BadgeId,
                 CreatedAt = createdUserBadge.CreatedAt
             };
+        }
+
+        public async Task<bool> RemoveBadgeFromUser(int userId, int badgeId)
+        {
+            var exists = await _userBadgeRepository.Exists(userId, badgeId);
+            if (!exists)
+                throw new Exception($"User badge not found");
+
+            return await _userBadgeRepository.Delete(userId, badgeId);
         }
 
         public async Task<int> GetUserBadgeCount(int userId)

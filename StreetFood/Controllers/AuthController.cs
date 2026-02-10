@@ -107,7 +107,28 @@ namespace StreetFood.Controllers
                 }
 
                 var response = await _userService.GoogleLoginAsync(googleAuthDto);
-                return Ok(response);
+                
+                return Ok(new
+                {
+                    message = "Login successful",
+                    token = response.Token,
+                    user = new
+                    {
+                        id = response.User?.Id,
+                        username = response.User?.UserName,
+                        email = response.User?.Email,
+                        role = response.User?.Role,
+                        phoneNumber = response.User?.PhoneNumber,
+                        avatarUrl = response.User?.AvatarUrl,
+                        point = response.User?.Point,
+                        createdAt = response.User?.CreatedAt,
+                        firstName = response.User?.FirstName,
+                        lastName = response.User?.LastName,
+                        userInfoSetup = response.User?.UserInfoSetup,
+                        dietarySetup = response.User?.DietarySetup,
+                        status = response.User?.Status
+                    }
+                });
             }
             catch (InvalidJwtException ex)
             {
@@ -130,7 +151,28 @@ namespace StreetFood.Controllers
                 }
 
                 var response = await _userService.FacebookLoginAsync(facebookAuthDto);
-                return Ok(response);
+                
+                return Ok(new
+                {
+                    message = "Login successful",
+                    token = response.Token,
+                    user = new
+                    {
+                        id = response.User?.Id,
+                        username = response.User?.UserName,
+                        email = response.User?.Email,
+                        role = response.User?.Role,
+                        phoneNumber = response.User?.PhoneNumber,
+                        avatarUrl = response.User?.AvatarUrl,
+                        point = response.User?.Point,
+                        createdAt = response.User?.CreatedAt,
+                        firstName = response.User?.FirstName,
+                        lastName = response.User?.LastName,
+                        userInfoSetup = response.User?.UserInfoSetup,
+                        dietarySetup = response.User?.DietarySetup
+                        status = response.User?.Status
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -192,7 +234,8 @@ namespace StreetFood.Controllers
                         firstName = response.User?.FirstName,
                         lastName = response.User?.LastName,
                         userInfoSetup = response.User?.UserInfoSetup,
-                        dietarySetup = response.User?.DietarySetup
+                        dietarySetup = response.User?.DietarySetup,
+                        status = response.User?.Status
                     }
                 });
             }
