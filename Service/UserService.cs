@@ -153,12 +153,53 @@ namespace Service
         {
             try
             {
-                var payload = await GoogleJsonWebSignature.ValidateAsync(
-                    googleAuthDto.IdToken,
-                    new GoogleJsonWebSignature.ValidationSettings
+                GoogleJsonWebSignature.Payload payload;
+
+                // Handle AccessToken flow (for web with useGoogleLogin)
+                if (!string.IsNullOrEmpty(googleAuthDto.AccessToken))
+                {
+                    using var httpClient = new HttpClient();
+                    var response = await httpClient.GetAsync($"https://www.googleapis.com/oauth2/v3/userinfo?access_token={googleAuthDto.AccessToken}");
+                    
+                    if (!response.IsSuccessStatusCode)
                     {
-                        Audience = new[] { _configuration["GoogleAuth:ClientId"] }
-                    });
+                        throw new Exception("Invalid Google access token");
+                    }
+
+                    var userInfoJson = await response.Content.ReadAsStringAsync();
+                    var userInfo = JsonSerializer.Deserialize<GoogleUserInfo>(userInfoJson);
+
+                    if (userInfo == null || string.IsNullOrEmpty(userInfo.Sub))
+                    {
+                        throw new Exception("Failed to retrieve user information from Google");
+                    }
+
+                    // Convert Google user info to payload format
+                    payload = new GoogleJsonWebSignature.Payload
+                    {
+                        Subject = userInfo.Sub,
+                        Email = userInfo.Email,
+                        Name = userInfo.Name,
+                        GivenName = userInfo.GivenName,
+                        FamilyName = userInfo.FamilyName,
+                        Picture = userInfo.Picture,
+                        EmailVerified = userInfo.EmailVerified
+                    };
+                }
+                // Handle IdToken flow (for mobile/existing implementation)
+                else if (!string.IsNullOrEmpty(googleAuthDto.IdToken))
+                {
+                    payload = await GoogleJsonWebSignature.ValidateAsync(
+                        googleAuthDto.IdToken,
+                        new GoogleJsonWebSignature.ValidationSettings
+                        {
+                            Audience = new[] { _configuration["GoogleAuth:ClientId"] }
+                        });
+                }
+                else
+                {
+                    throw new Exception("Either IdToken or AccessToken must be provided");
+                }
 
                 var user = await _userRepository.FindOrCreateUserFromGoogleAsync(payload);
                 var token = _jwt_service.GenerateToken(user);
@@ -169,9 +210,9 @@ namespace Service
                     User = user
                 };
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw new Exception("Invalid Google token");
+                throw new Exception($"Google authentication failed: {ex.Message}");
             }
         }
 

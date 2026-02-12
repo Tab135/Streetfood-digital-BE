@@ -4,6 +4,7 @@ namespace BO.DTO.Auth;
 
 public class GoogleAuthDto
 {
-    [Required]
-    public string IdToken { get; set; } = string.Empty;
+    public string? IdToken { get; set; }
+    
+    public string? AccessToken { get; set; }
 }
