@@ -1,4 +1,5 @@
 using BO.Entities;
+using BO.DTO.Badge;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -23,20 +24,6 @@ namespace DAL
             return userBadge;
         }
 
-        public async Task<UserBadge?> GetByUserAndBadge(int userId, int badgeId)
-        {
-            return await _context.UserBadges
-                .FirstOrDefaultAsync(ub => ub.UserId == userId && ub.BadgeId == badgeId);
-        }
-
-        public async Task<List<UserBadge>> GetByUserId(int userId)
-        {
-            return await _context.UserBadges
-                .Where(ub => ub.UserId == userId)
-                .OrderByDescending(ub => ub.CreatedAt)
-                .ToListAsync();
-        }
-
         public async Task<List<int>> GetBadgeIdsByUserId(int userId)
         {
             return await _context.UserBadges
@@ -59,13 +46,74 @@ namespace DAL
 
         public async Task<bool> Delete(int userId, int badgeId)
         {
-            var userBadge = await GetByUserAndBadge(userId, badgeId);
+            var userBadge = await _context.UserBadges
+                .FirstOrDefaultAsync(ub => ub.UserId == userId && ub.BadgeId == badgeId);
+            
             if (userBadge == null)
                 return false;
 
             _context.UserBadges.Remove(userBadge);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        // Query method for getting all users with their badges using database join
+        public async Task<List<UserWithBadgesDto>> GetAllUsersWithBadges()
+        {
+            var result = await _context.Users
+                .Select(user => new UserWithBadgesDto
+                {
+                    UserId = user.Id,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Point = user.Point,
+                    Badges = _context.UserBadges
+                        .Where(ub => ub.UserId == user.Id)
+                        .Join(
+                            _context.Badges,
+                            ub => ub.BadgeId,
+                            badge => badge.BadgeId,
+                            (ub, badge) => new BadgeWithUserInfoDto
+                            {
+                                BadgeId = badge.BadgeId,
+                                BadgeName = badge.BadgeName,
+                                PointToGet = badge.PointToGet,
+                                IconUrl = badge.IconUrl,
+                                Description = badge.Description,
+                                IsEarned = true,
+                                EarnedAt = ub.CreatedAt
+                            })
+                        .ToList()
+                })
+                .ToListAsync();
+
+            return result;
+        }
+
+        // Query method for getting a specific user's badges with info using database join
+        public async Task<List<BadgeWithUserInfoDto>> GetUserBadgesWithInfo(int userId)
+        {
+            var result = await _context.UserBadges
+                .Where(ub => ub.UserId == userId)
+                .Join(
+                    _context.Badges,
+                    ub => ub.BadgeId,
+                    badge => badge.BadgeId,
+                    (ub, badge) => new BadgeWithUserInfoDto
+                    {
+                        BadgeId = badge.BadgeId,
+                        BadgeName = badge.BadgeName,
+                        PointToGet = badge.PointToGet,
+                        IconUrl = badge.IconUrl,
+                        Description = badge.Description,
+                        IsEarned = true,
+                        EarnedAt = ub.CreatedAt
+                    })
+                .ToListAsync();
+
+            return result;
         }
     }
 }
