@@ -225,11 +225,6 @@ namespace Service
             if (existingRequest != null)
             {
                 registrationRequest.BranchRegisterRequestId = existingRequest.BranchRegisterRequestId;
-                // Preserve RejectReason if it was rejected previously?
-                // Or clear it? A new submission clears previous rejection reason usually.
-                // But the entity property is just reset here if we create new object, but here we are updating.
-                // The provided code in oldString created a new object and passed it to Update.
-                // Just use the new licenseUrl
                 existingRequest.LicenseUrl = licenseUrlJson;
                 existingRequest.Status = RegisterVendorStatusEnum.Pending;
                 existingRequest.UpdatedAt = DateTime.UtcNow;
