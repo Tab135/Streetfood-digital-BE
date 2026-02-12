@@ -94,6 +94,8 @@ namespace StreetFood
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITasteService, TasteService>();
             builder.Services.AddScoped<IDishService, DishService>();
+            // Search Service
+            builder.Services.AddScoped<ISearchService, SearchService>();
             builder.Services.AddHostedService<OtpCleanupService>();
 
             // JWT Authentication Configuration

@@ -155,5 +155,10 @@ namespace Repository
         {
             await _branchDAO.UpdateBranchRegisterRequestAsync(request);
         }
+
+        public async Task<List<Branch>> SearchBranchesWithDishesAsync(string keyword)
+        {
+            return await _branchDAO.SearchBranchesWithDishesAsync(keyword);
+        }
     }
 }

@@ -36,5 +36,8 @@ namespace Repository.Interfaces
         Task<(List<BranchRegisterRequest> items, int totalCount)> GetAllBranchRegisterRequestsAsync(int pageNumber, int pageSize);
         Task AddBranchRegisterRequestAsync(BranchRegisterRequest request);
         Task UpdateBranchRegisterRequestAsync(BranchRegisterRequest request);
+        
+        // Search functionality
+        Task<List<Branch>> SearchBranchesWithDishesAsync(string keyword);
     }
 }

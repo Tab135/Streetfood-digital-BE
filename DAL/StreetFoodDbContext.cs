@@ -230,7 +230,7 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.HasOne(e => e.Branch)
-                  .WithMany()
+                  .WithMany(b => b.Dishes)
                   .HasForeignKey(e => e.BranchId)
                   .OnDelete(DeleteBehavior.Cascade);
 

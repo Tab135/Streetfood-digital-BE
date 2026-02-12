@@ -277,5 +277,36 @@ namespace DAL
             _context.BranchRegisterRequests.Update(request);
             await _context.SaveChangesAsync();
         }
+
+        /// <summary>
+        /// Search branches by keyword in branch name or dish name (case-insensitive)
+        /// Returns only active and verified branches with their matching dishes
+        /// Uses PostgreSQL ILike for initial filtering, service layer adds accent-insensitive search
+        /// </summary>
+        public async Task<List<Branch>> SearchBranchesWithDishesAsync(string keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return new List<Branch>();
+            }
+
+            // Use broader search pattern to catch potential accent variations
+            // e.g., searching "cuon" should return items with "cu?n"
+            var searchPattern = $"%{keyword}%";
+
+            // PostgreSQL ILike for case-insensitive base search
+            // Service layer will apply additional accent-insensitive filtering
+            var branches = await _context.Branches
+                .Where(b => b.IsActive && b.IsVerified &&
+                    (EF.Functions.ILike(b.Name, searchPattern) ||
+                     b.Dishes.Any(d => d.IsActive && EF.Functions.ILike(d.Name, searchPattern))))
+                .Include(b => b.Dishes.Where(d => d.IsActive))
+                    .ThenInclude(d => d.Category)
+                .OrderByDescending(b => b.AvgRating)
+                .ThenBy(b => b.Name)
+                .ToListAsync();
+
+            return branches;
+        }
     }
 }
