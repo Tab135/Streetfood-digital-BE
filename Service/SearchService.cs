@@ -25,13 +25,9 @@ namespace Service
                 return new List<SearchResultDto>();
             }
 
-            // Normalize keyword for accent-insensitive search
             var normalizedKeyword = TextNormalizer.NormalizeForSearch(keyword);
-
-            // Get branches with their matching dishes from repository
             var branches = await _branchRepository.SearchBranchesWithDishesAsync(keyword);
 
-            // Filter results by normalized text (accent-insensitive)
             var results = branches
                 .Where(branch => 
                     TextNormalizer.NormalizeForSearch(branch.Name).Contains(normalizedKeyword) ||

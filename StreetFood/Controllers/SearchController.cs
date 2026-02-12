@@ -6,9 +6,6 @@ using System.Threading.Tasks;
 
 namespace StreetFood.Controllers
 {
-    /// <summary>
-    /// Global Search Controller - Search across branches and dishes
-    /// </summary>
     [Route("api/search")]
     [ApiController]
     public class SearchController : ControllerBase
@@ -20,21 +17,6 @@ namespace StreetFood.Controllers
             _searchService = searchService ?? throw new ArgumentNullException(nameof(searchService));
         }
 
-        /// <summary>
-        /// Search for branches and dishes by keyword
-        /// </summary>
-        /// <param name="keyword">Search keyword (e.g., "banh cuon")</param>
-        /// <returns>List of branches with matching dishes</returns>
-        /// <remarks>
-        /// Search logic:
-        /// - Searches in branch names (case-insensitive)
-        /// - Searches in dish names (case-insensitive)
-        /// - Returns only active and verified branches
-        /// - Returns only active dishes
-        /// - Results ordered by branch rating (highest first)
-        /// 
-        /// Example: GET /api/search?keyword=banh cuon
-        /// </remarks>
         [HttpGet]
         public async Task<IActionResult> Search([FromQuery] string? keyword)
         {
@@ -48,7 +30,6 @@ namespace StreetFood.Controllers
                     }));
                 }
 
-                // Trim the keyword to avoid unnecessary whitespace
                 var trimmedKeyword = keyword.Trim();
 
                 if (trimmedKeyword.Length < 2)

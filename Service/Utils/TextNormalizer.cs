@@ -10,7 +10,6 @@ namespace Service.Utils
     {
         /// <summary>
         /// Remove Vietnamese accents/diacritics from text
-        /// Converts: "Bánh Cu?n" -> "Banh Cuon"
         /// </summary>
         /// <param name="text">Text with accents</param>
         /// <returns>Text without accents</returns>
