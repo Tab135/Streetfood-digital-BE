@@ -26,20 +26,25 @@ public class StreetFoodDbContext : DbContext
     public DbSet<WorkSchedule> WorkSchedules { get; set; }
     public DbSet<DayOff> DayOffs { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<User>(entity =>
+        // Feedback-related DbSets
+        public DbSet<Feedback> Feedbacks { get; set; }
+        public DbSet<FeedbackImage> FeedbackImages { get; set; }
+        public DbSet<FeedbackTag> FeedbackTags { get; set; }
+        public DbSet<FeedbackTagAssociation> FeedbackTagAssociations { get; set; }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.UserName).HasMaxLength(50);
-            entity.Property(e => e.Email).HasMaxLength(100);
-            entity.Property(e => e.Password).HasMaxLength(255);
-            entity.Property(e => e.PhoneNumber).HasMaxLength(20);
-            entity.Property(e => e.AvatarUrl).HasMaxLength(500);
-            entity.Property(e => e.Status).HasMaxLength(100);
-        });
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.UserName).HasMaxLength(50);
+                entity.Property(e => e.Email).HasMaxLength(100);
+                entity.Property(e => e.Password).HasMaxLength(255);
+                entity.Property(e => e.PhoneNumber).HasMaxLength(20);
+                entity.Property(e => e.AvatarUrl).HasMaxLength(500);
+                entity.Property(e => e.Status).HasMaxLength(100);
+            });
 
         modelBuilder.Entity<OtpVerify>(entity =>
         {
@@ -164,6 +169,53 @@ public class StreetFoodDbContext : DbContext
             entity.HasOne(e => e.Branch)
                   .WithOne()
                   .HasForeignKey<BranchRegisterRequest>(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Feedback entities
+        modelBuilder.Entity<FeedbackTag>(entity =>
+        {
+            entity.HasKey(e => e.TagId);
+            entity.Property(e => e.TagName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(255);
+        });
+
+        modelBuilder.Entity<Feedback>(entity =>
+        {
+            entity.HasKey(e => e.FeedbackId);
+            entity.Property(e => e.Rating).IsRequired();
+            entity.Property(e => e.Comment).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Branch)
+                  .WithMany()
+                  .HasForeignKey(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FeedbackImage>(entity =>
+        {
+            entity.HasKey(e => e.FeedbackImageId);
+            entity.Property(e => e.ImageUrl).IsRequired().HasMaxLength(500);
+            entity.HasOne(e => e.Feedback)
+                  .WithMany(f => f.FeedbackImages)
+                  .HasForeignKey(e => e.FeedbackId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FeedbackTagAssociation>(entity =>
+        {
+            entity.HasKey(e => e.FeedbackTagId);
+            entity.HasOne(e => e.Feedback)
+                  .WithMany(f => f.FeedbackTagAssociations)
+                  .HasForeignKey(e => e.FeedbackId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.FeedbackTag)
+                  .WithMany(t => t.FeedbackTagAssociations)
+                  .HasForeignKey(e => e.TagId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
     }

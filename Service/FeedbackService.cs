@@ -1,0 +1,342 @@
+using BO.Common;
+using BO.DTO.Feedback;
+using BO.Entities;
+using Repository.Interfaces;
+using Service.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace Service
+{
+    public class FeedbackService : IFeedbackService
+    {
+        private readonly IFeedbackRepository _feedbackRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IBranchRepository _branchRepository;
+        private readonly IFeedbackTagRepository _feedbackTagRepository;
+
+        public FeedbackService(
+            IFeedbackRepository feedbackRepository,
+            IUserRepository userRepository,
+            IBranchRepository branchRepository,
+            IFeedbackTagRepository feedbackTagRepository)
+        {
+            _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
+            _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+            _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
+            _feedbackTagRepository = feedbackTagRepository ?? throw new ArgumentNullException(nameof(feedbackTagRepository));
+        }
+
+        public async Task<FeedbackResponseDto> CreateFeedback(CreateFeedbackDto createFeedbackDto, int userId)
+        {
+            // Verify user exists
+            var user = await _userRepository.GetUserById(userId);
+            if (user == null)
+            {
+                throw new Exception($"User with ID {userId} not found");
+            }
+
+            // Verify branch exists
+            var branch = await _branchRepository.GetByIdAsync(createFeedbackDto.BranchId);
+            if (branch == null)
+            {
+                throw new Exception($"Branch with ID {createFeedbackDto.BranchId} not found");
+            }
+
+            // Validate rating
+            if (createFeedbackDto.Rating < 1 || createFeedbackDto.Rating > 5)
+            {
+                throw new Exception("Rating must be between 1 and 5");
+            }
+
+            var feedback = new Feedback
+            {
+                UserId = userId,
+                BranchId = createFeedbackDto.BranchId,
+                Rating = createFeedbackDto.Rating,
+                Comment = createFeedbackDto.Comment,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var createdFeedback = await _feedbackRepository.Create(
+                feedback,
+                null,
+                createFeedbackDto.TagIds);
+
+            return await MapToResponseDtoAsync(createdFeedback);
+        }
+
+        public async Task<FeedbackResponseDto> AddImagesToFeedback(int feedbackId, List<string> imageUrls, int userId)
+        {
+            var feedback = await _feedbackRepository.GetById(feedbackId);
+            if (feedback == null)
+            {
+                throw new Exception($"Feedback with ID {feedbackId} not found");
+            }
+
+            // Verify the user owns this feedback
+            if (feedback.UserId != userId)
+            {
+                throw new Exception("You can only add images to your own feedback");
+            }
+
+            // Add images to feedback
+            await _feedbackRepository.AddImagesToFeedback(feedbackId, imageUrls);
+
+            // Return updated feedback
+            var updatedFeedback = await _feedbackRepository.GetById(feedbackId);
+            return await MapToResponseDtoAsync(updatedFeedback);
+        }
+
+        public async Task<FeedbackResponseDto> GetFeedbackById(int feedbackId)
+        {
+            var feedback = await _feedbackRepository.GetById(feedbackId);
+            if (feedback == null)
+            {
+                throw new Exception($"Feedback with ID {feedbackId} not found");
+            }
+
+            return await MapToResponseDtoAsync(feedback);
+        }
+
+        public async Task<PaginatedResponse<FeedbackResponseDto>> GetFeedbackByBranchId(int branchId, int pageNumber, int pageSize)
+        {
+            // Verify branch exists
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null)
+            {
+                throw new Exception($"Branch with ID {branchId} not found");
+            }
+
+            var (feedbacks, totalCount) = await _feedbackRepository.GetByBranchId(branchId, pageNumber, pageSize);
+            var items = new List<FeedbackResponseDto>();
+            
+            foreach (var feedback in feedbacks)
+            {
+                items.Add(await MapToResponseDtoAsync(feedback));
+            }
+
+            return new PaginatedResponse<FeedbackResponseDto>(items, totalCount, pageNumber, pageSize);
+        }
+
+        public async Task<PaginatedResponse<FeedbackResponseDto>> GetFeedbackByUserId(int userId, int pageNumber, int pageSize)
+        {
+            // Verify user exists
+            var user = await _userRepository.GetUserById(userId);
+            if (user == null)
+            {
+                throw new Exception($"User with ID {userId} not found");
+            }
+
+            var (feedbacks, totalCount) = await _feedbackRepository.GetByUserId(userId, pageNumber, pageSize);
+            var items = new List<FeedbackResponseDto>();
+            
+            foreach (var feedback in feedbacks)
+            {
+                items.Add(await MapToResponseDtoAsync(feedback));
+            }
+
+            return new PaginatedResponse<FeedbackResponseDto>(items, totalCount, pageNumber, pageSize);
+        }
+
+        public async Task<FeedbackResponseDto> UpdateFeedback(int feedbackId, UpdateFeedbackDto updateFeedbackDto, int userId)
+        {
+            var feedback = await _feedbackRepository.GetById(feedbackId);
+            if (feedback == null)
+            {
+                throw new Exception($"Feedback with ID {feedbackId} not found");
+            }
+
+            // Verify user owns this feedback
+            if (feedback.UserId != userId)
+            {
+                throw new Exception("User does not own this feedback");
+            }
+
+            // Validate rating if being updated
+            if (updateFeedbackDto.Rating < 1 || updateFeedbackDto.Rating > 5)
+            {
+                throw new Exception("Rating must be between 1 and 5");
+            }
+
+            // Update feedback basic info
+            feedback.Rating = updateFeedbackDto.Rating;
+            feedback.Comment = updateFeedbackDto.Comment;
+            feedback.UpdatedAt = DateTime.UtcNow;
+            await _feedbackRepository.Update(feedback);
+
+            // Handle image updates (if ImageUrls is provided)
+            if (updateFeedbackDto.ImageUrls != null)
+            {
+                // Remove all existing images
+                var existingImages = await _feedbackRepository.GetImagesByFeedbackId(feedbackId);
+                foreach (var img in existingImages)
+                {
+                    await _feedbackRepository.DeleteImage(img.FeedbackImageId);
+                }
+
+                // Add new images
+                foreach (var imageUrl in updateFeedbackDto.ImageUrls)
+                {
+                    await _feedbackRepository.AddImage(new FeedbackImage
+                    {
+                        FeedbackId = feedbackId,
+                        ImageUrl = imageUrl
+                    });
+                }
+            }
+
+            // Handle tag updates (if TagIds is provided)
+            if (updateFeedbackDto.TagIds != null)
+            {
+                // Validate all tags exist
+                foreach (var tagId in updateFeedbackDto.TagIds)
+                {
+                    var tagExists = await _feedbackTagRepository.Exists(tagId);
+                    if (!tagExists)
+                    {
+                        throw new Exception($"Tag with ID {tagId} not found");
+                    }
+                }
+
+                // Remove all existing tags
+                await _feedbackRepository.RemoveAllTags(feedbackId);
+
+                // Add new tags
+                foreach (var tagId in updateFeedbackDto.TagIds)
+                {
+                    await _feedbackRepository.AddTag(feedbackId, tagId);
+                }
+            }
+
+            // Get updated feedback with all relations
+            var updatedFeedback = await _feedbackRepository.GetById(feedbackId);
+            return await MapToResponseDtoAsync(updatedFeedback);
+        }
+
+        public async Task<bool> DeleteFeedback(int feedbackId, int userId)
+        {
+            var feedback = await _feedbackRepository.GetById(feedbackId);
+            if (feedback == null)
+            {
+                throw new Exception($"Feedback with ID {feedbackId} not found");
+            }
+
+            // Verify user owns this feedback
+            if (feedback.UserId != userId)
+            {
+                throw new Exception("User does not own this feedback");
+            }
+
+            return await _feedbackRepository.Delete(feedbackId);
+        }
+
+        public async Task<double> GetAverageRatingByBranch(int branchId)
+        {
+            // Verify branch exists
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null)
+            {
+                throw new Exception($"Branch with ID {branchId} not found");
+            }
+
+            return await _feedbackRepository.GetAverageRatingByBranchId(branchId);
+        }
+
+        public async Task<int> GetFeedbackCountByBranch(int branchId)
+        {
+            // Verify branch exists
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null)
+            {
+                throw new Exception($"Branch with ID {branchId} not found");
+            }
+
+            return await _feedbackRepository.GetCountByBranchId(branchId);
+        }
+
+        public async Task<PaginatedResponse<FeedbackResponseDto>> GetFeedbackByRatingRange(
+            int branchId, int minRating, int maxRating, int pageNumber, int pageSize)
+        {
+            // Verify branch exists
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null)
+            {
+                throw new Exception($"Branch with ID {branchId} not found");
+            }
+
+            // Validate rating range
+            if (minRating < 1 || maxRating > 5 || minRating > maxRating)
+            {
+                throw new Exception("Rating range must be between 1 and 5, and min must be less than or equal to max");
+            }
+
+            var (feedbacks, totalCount) = await _feedbackRepository.GetByRatingRange(branchId, minRating, maxRating, pageNumber, pageSize);
+            var items = new List<FeedbackResponseDto>();
+            
+            foreach (var feedback in feedbacks)
+            {
+                items.Add(await MapToResponseDtoAsync(feedback));
+            }
+
+            return new PaginatedResponse<FeedbackResponseDto>(items, totalCount, pageNumber, pageSize);
+        }
+
+        public async Task<List<FeedbackImageDto>> GetFeedbackImages(int feedbackId)
+        {
+            var feedback = await _feedbackRepository.GetById(feedbackId);
+            if (feedback == null)
+            {
+                throw new Exception($"Feedback with ID {feedbackId} not found");
+            }
+
+            var images = await _feedbackRepository.GetImagesByFeedbackId(feedbackId);
+            return images.Select(img => new FeedbackImageDto
+            {
+                Id = img.FeedbackImageId,
+                Url = img.ImageUrl
+            }).ToList();
+        }
+
+        // Helper method to map Feedback entity to ResponseDto
+        private async Task<FeedbackResponseDto> MapToResponseDtoAsync(Feedback feedback)
+        {
+            var images = feedback.FeedbackImages?.Select(img => new FeedbackImageDto
+            {
+                Id = img.FeedbackImageId,
+                Url = img.ImageUrl
+            }).ToList() ?? new List<FeedbackImageDto>();
+
+            var tags = feedback.FeedbackTagAssociations?.Select(fta => new FeedbackTagDto
+            {
+                Id = fta.FeedbackTag.TagId,
+                Name = fta.FeedbackTag.TagName
+            }).ToList() ?? new List<FeedbackTagDto>();
+
+            FeedbackUserDto? userDto = null;
+            if (feedback.User != null)
+            {
+                userDto = new FeedbackUserDto
+                {
+                    Id = feedback.User.Id,
+                    Name = $"{feedback.User.FirstName} {feedback.User.LastName}".Trim(),
+                    Avatar = feedback.User.AvatarUrl
+                };
+            }
+
+            return new FeedbackResponseDto
+            {
+                Id = feedback.FeedbackId,
+                User = userDto,
+                Rating = feedback.Rating,
+                Comment = feedback.Comment,
+                CreatedAt = feedback.CreatedAt,
+                UpdatedAt = feedback.UpdatedAt,
+                Images = images,
+                Tags = tags
+            };
+        }
+    }
+}
