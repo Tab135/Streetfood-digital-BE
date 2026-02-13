@@ -63,6 +63,10 @@ namespace StreetFood
             builder.Services.AddScoped<BranchDAO>();
             builder.Services.AddScoped<FeedbackTagDAO>();
             builder.Services.AddScoped<FeedbackDAO>();
+            // Menu Management DAOs
+            builder.Services.AddScoped<CategoryDAO>();
+            builder.Services.AddScoped<TasteDAO>();
+            builder.Services.AddScoped<DishDAO>();
 
             // Register Repositories
             builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -75,6 +79,10 @@ namespace StreetFood
             builder.Services.AddScoped<IBranchRepository, BranchRepository>();
             builder.Services.AddScoped<IFeedbackTagRepository, FeedbackTagRepository>();
             builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+            // Menu Management Repositories
+            builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+            builder.Services.AddScoped<ITasteRepository, TasteRepository>();
+            builder.Services.AddScoped<IDishRepository, DishRepository>();
 
             // Register Services
             builder.Services.AddScoped<IUserService, UserService>();
@@ -88,6 +96,12 @@ namespace StreetFood
             builder.Services.AddScoped<IBranchService, BranchService>();
             builder.Services.AddScoped<IFeedbackService, FeedbackService>();
             builder.Services.AddScoped<IFeedbackTagService, FeedbackTagService>();
+            // Menu Management Services
+            builder.Services.AddScoped<ICategoryService, CategoryService>();
+            builder.Services.AddScoped<ITasteService, TasteService>();
+            builder.Services.AddScoped<IDishService, DishService>();
+            // Search Service
+            builder.Services.AddScoped<ISearchService, SearchService>();
             builder.Services.AddHostedService<OtpCleanupService>();
 
             // JWT Authentication Configuration

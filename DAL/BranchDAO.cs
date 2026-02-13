@@ -277,5 +277,28 @@ namespace DAL
             _context.BranchRegisterRequests.Update(request);
             await _context.SaveChangesAsync();
         }
+
+        /// Search branches by keyword in branch name or dish name (case-insensitive)
+        public async Task<List<Branch>> SearchBranchesWithDishesAsync(string keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return new List<Branch>();
+            }
+
+            var searchPattern = $"%{keyword}%";
+
+            var branches = await _context.Branches
+                .Where(b => b.IsActive && b.IsVerified &&
+                    (EF.Functions.ILike(b.Name, searchPattern) ||
+                     b.Dishes.Any(d => d.IsActive && EF.Functions.ILike(d.Name, searchPattern))))
+                .Include(b => b.Dishes.Where(d => d.IsActive))
+                    .ThenInclude(d => d.Category)
+                .OrderByDescending(b => b.AvgRating)
+                .ThenBy(b => b.Name)
+                .ToListAsync();
+
+            return branches;
+        }
     }
 }

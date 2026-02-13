@@ -1,6 +1,7 @@
 using BO.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DAL
@@ -21,6 +22,13 @@ namespace DAL
         public async Task<DietaryPreference?> GetById(int id)
         {
             return await _context.DietaryPreferences.FirstOrDefaultAsync(x => x.DietaryPreferenceId == id);
+        }
+
+        public async Task<List<DietaryPreference>> GetByIdsAsync(List<int> ids)
+        {
+            return await _context.DietaryPreferences
+                .Where(dp => ids.Contains(dp.DietaryPreferenceId))
+                .ToListAsync();
         }
 
         public async Task<DietaryPreference> Create(DietaryPreference dietaryPreference)

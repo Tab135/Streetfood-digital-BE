@@ -12,5 +12,6 @@ namespace Repository.Interfaces
         Task<DietaryPreference> Update(DietaryPreference dietaryPreference);
         Task<bool> Delete(int id);
         Task<bool> Exists(int id);
+        Task<List<DietaryPreference>> GetByIdsAsync(List<int> ids);
     }
 }

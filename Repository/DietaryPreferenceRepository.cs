@@ -43,5 +43,10 @@ namespace Repository
         {
             return await _dao.Update(dietaryPreference);
         }
+
+        public async Task<List<DietaryPreference>> GetByIdsAsync(List<int> ids)
+        {
+            return await _dao.GetByIdsAsync(ids);
+        }
     }
 }

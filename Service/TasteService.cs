@@ -1,0 +1,117 @@
+using BO.DTO.Taste;
+using BO.Entities;
+using Repository.Interfaces;
+using Service.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace Service
+{
+    public class TasteService : ITasteService
+    {
+        private readonly ITasteRepository _repo;
+        private readonly IVendorRepository _vendorRepository;
+        private readonly IBranchRepository _branchRepository;
+
+        public TasteService(
+            ITasteRepository repo,
+            IVendorRepository vendorRepository,
+            IBranchRepository branchRepository)
+        {
+            _repo = repo ?? throw new ArgumentNullException(nameof(repo));
+            _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
+            _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
+        }
+
+        public async Task<TasteDto> CreateTasteAsync(CreateTasteDto createDto, int userId)
+        {
+            // Check if user is a vendor with at least one verified branch
+            await ValidateVendorHasVerifiedBranchAsync(userId);
+
+            var entity = new Taste
+            {
+                Name = createDto.Name,
+                Description = createDto.Description
+            };
+
+            var created = await _repo.CreateAsync(entity);
+            return MapToDto(created);
+        }
+
+        public async Task<TasteDto?> GetTasteByIdAsync(int id)
+        {
+            var taste = await _repo.GetByIdAsync(id);
+            return taste == null ? null : MapToDto(taste);
+        }
+
+        public async Task<List<TasteDto>> GetAllTastesAsync()
+        {
+            var list = await _repo.GetAllAsync();
+            return list.Select(MapToDto).ToList();
+        }
+
+        public async Task<TasteDto> UpdateTasteAsync(int id, UpdateTasteDto updateDto, int userId)
+        {
+            var existing = await _repo.GetByIdAsync(id);
+            if (existing == null)
+                throw new Exception($"Taste with id {id} not found");
+
+            // Check if user is a vendor with at least one verified branch
+            // No ownership check - any vendor with verified branch can edit shared tastes
+            await ValidateVendorHasVerifiedBranchAsync(userId);
+
+            if (!string.IsNullOrEmpty(updateDto.Name))
+                existing.Name = updateDto.Name;
+
+            if (updateDto.Description != null)
+                existing.Description = updateDto.Description;
+
+            await _repo.UpdateAsync(existing);
+            return MapToDto(existing);
+        }
+
+        public async Task<bool> DeleteTasteAsync(int id, int userId)
+        {
+            var existing = await _repo.GetByIdAsync(id);
+            if (existing == null)
+                throw new Exception($"Taste with id {id} not found");
+
+            // Check if user is a vendor with at least one verified branch
+            // No ownership check - any vendor with verified branch can delete shared tastes
+            await ValidateVendorHasVerifiedBranchAsync(userId);
+
+            await _repo.DeleteAsync(id);
+            return true;
+        }
+
+        /// <summary>
+        /// Validates that the user is a vendor with at least one verified branch
+        /// </summary>
+        private async Task ValidateVendorHasVerifiedBranchAsync(int userId)
+        {
+            var vendor = await _vendorRepository.GetByUserIdAsync(userId);
+            if (vendor == null)
+            {
+                throw new Exception("You must be a vendor to manage tastes");
+            }
+
+            var branches = await _branchRepository.GetAllByVendorIdAsync(vendor.VendorId);
+            if (!branches.Any(b => b.IsVerified))
+            {
+                throw new Exception("You must have at least one verified branch to manage tastes");
+            }
+        }
+
+        private static TasteDto MapToDto(Taste t)
+        {
+            return new TasteDto
+            {
+                TasteId = t.TasteId,
+                Name = t.Name,
+                Description = t.Description
+            };
+        }
+    }
+}
