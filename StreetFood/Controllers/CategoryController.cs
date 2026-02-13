@@ -21,11 +21,8 @@ namespace StreetFood.Controllers
             _categoryService = categoryService ?? throw new ArgumentNullException(nameof(categoryService));
         }
 
-        /// <summary>
-        /// Create a new category (Vendor with verified branch only - shared data)
-        /// </summary>
         [HttpPost]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateCategoryDto createDto)
         {
             try
@@ -49,9 +46,6 @@ namespace StreetFood.Controllers
             }
         }
 
-        /// <summary>
-        /// Get a category by ID
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -69,9 +63,6 @@ namespace StreetFood.Controllers
             }
         }
 
-        /// <summary>
-        /// Get all categories (shared data - all vendors can view)
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -86,11 +77,8 @@ namespace StreetFood.Controllers
             }
         }
 
-        /// <summary>
-        /// Update a category (Vendor with verified branch only - shared data, no ownership check)
-        /// </summary>
         [HttpPut("{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateCategoryDto updateDto)
         {
             try
@@ -113,11 +101,8 @@ namespace StreetFood.Controllers
             }
         }
 
-        /// <summary>
-        /// Delete a category (Vendor with verified branch only - shared data, no ownership check)
-        /// </summary>
         [HttpDelete("{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             try
