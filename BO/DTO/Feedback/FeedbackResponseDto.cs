@@ -4,6 +4,8 @@ public class FeedbackResponseDto
 {
     public int Id { get; set; }
     public FeedbackUserDto? User { get; set; }
+    public int? DishId { get; set; }
+    public FeedbackDishDto? Dish { get; set; }
     public int Rating { get; set; }
     public string? Comment { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -17,6 +19,14 @@ public class FeedbackUserDto
     public int Id { get; set; }
     public string? Name { get; set; }
     public string? Avatar { get; set; }
+}
+
+public class FeedbackDishDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+    public string? ImageUrl { get; set; }
 }
 
 public class FeedbackImageDto

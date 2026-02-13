@@ -16,17 +16,20 @@ namespace Service
         private readonly IUserRepository _userRepository;
         private readonly IBranchRepository _branchRepository;
         private readonly IFeedbackTagRepository _feedbackTagRepository;
+        private readonly IDishRepository _dishRepository;
 
         public FeedbackService(
             IFeedbackRepository feedbackRepository,
             IUserRepository userRepository,
             IBranchRepository branchRepository,
-            IFeedbackTagRepository feedbackTagRepository)
+            IFeedbackTagRepository feedbackTagRepository,
+            IDishRepository dishRepository)
         {
             _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
             _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
             _feedbackTagRepository = feedbackTagRepository ?? throw new ArgumentNullException(nameof(feedbackTagRepository));
+            _dishRepository = dishRepository ?? throw new ArgumentNullException(nameof(dishRepository));
         }
 
         public async Task<FeedbackResponseDto> CreateFeedback(CreateFeedbackDto createFeedbackDto, int userId)
@@ -45,6 +48,22 @@ namespace Service
                 throw new Exception($"Branch with ID {createFeedbackDto.BranchId} not found");
             }
 
+            // If DishId is provided, verify it exists and belongs to the branch
+            if (createFeedbackDto.DishId.HasValue)
+            {
+                var dish = await _dishRepository.GetByIdAsync(createFeedbackDto.DishId.Value);
+                if (dish == null)
+                {
+                    throw new Exception($"Dish with ID {createFeedbackDto.DishId.Value} not found");
+                }
+
+                // Validate dish belongs to the specified branch
+                if (dish.BranchId != createFeedbackDto.BranchId)
+                {
+                    throw new Exception($"Dish with ID {createFeedbackDto.DishId.Value} does not belong to Branch with ID {createFeedbackDto.BranchId}");
+                }
+            }
+
             // Validate rating
             if (createFeedbackDto.Rating < 1 || createFeedbackDto.Rating > 5)
             {
@@ -55,6 +74,7 @@ namespace Service
             {
                 UserId = userId,
                 BranchId = createFeedbackDto.BranchId,
+                DishId = createFeedbackDto.DishId,
                 Rating = createFeedbackDto.Rating,
                 Comment = createFeedbackDto.Comment,
                 CreatedAt = DateTime.UtcNow
@@ -153,6 +173,24 @@ namespace Service
             if (feedback.UserId != userId)
             {
                 throw new Exception("User does not own this feedback");
+            }
+
+            // Validate and update DishId if provided
+            if (updateFeedbackDto.DishId.HasValue)
+            {
+                var dish = await _dishRepository.GetByIdAsync(updateFeedbackDto.DishId.Value);
+                if (dish == null)
+                {
+                    throw new Exception($"Dish with ID {updateFeedbackDto.DishId.Value} not found");
+                }
+
+                // Validate dish belongs to the feedback's branch
+                if (dish.BranchId != feedback.BranchId)
+                {
+                    throw new Exception($"Dish with ID {updateFeedbackDto.DishId.Value} does not belong to the same branch as the feedback");
+                }
+
+                feedback.DishId = updateFeedbackDto.DishId;
             }
 
             // Validate rating if being updated
@@ -326,10 +364,24 @@ namespace Service
                 };
             }
 
+            FeedbackDishDto? dishDto = null;
+            if (feedback.DishId.HasValue && feedback.Dish != null)
+            {
+                dishDto = new FeedbackDishDto
+                {
+                    Id = feedback.Dish.DishId,
+                    Name = feedback.Dish.Name,
+                    Price = feedback.Dish.Price,
+                    ImageUrl = feedback.Dish.ImageUrl
+                };
+            }
+
             return new FeedbackResponseDto
             {
                 Id = feedback.FeedbackId,
                 User = userDto,
+                DishId = feedback.DishId,
+                Dish = dishDto,
                 Rating = feedback.Rating,
                 Comment = feedback.Comment,
                 CreatedAt = feedback.CreatedAt,
