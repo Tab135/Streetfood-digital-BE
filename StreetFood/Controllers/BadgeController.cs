@@ -120,12 +120,12 @@ namespace StreetFood.Controllers
         // Admin user badge endpoints
         [HttpGet("users")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetAllUsersWithBadges()
+        public async Task<IActionResult> GetAllUsersWithBadges([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var usersWithBadges = await _badgeService.GetAllUsersWithBadges();
-                return Ok(usersWithBadges);
+                var result = await _badgeService.GetAllUsersWithBadges(pageNumber, pageSize);
+                return Ok(result);
             }
             catch (Exception ex)
             {

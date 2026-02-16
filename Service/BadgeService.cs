@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO;
 using BO.DTO.Badge;
 using BO.Entities;
@@ -87,9 +88,10 @@ namespace Service
             return await _userBadgeRepository.GetUserBadgesWithInfo(userId);
         }
 
-        public async Task<List<UserWithBadgesDto>> GetAllUsersWithBadges()
+        public async Task<PaginatedResponse<UserWithBadgesDto>> GetAllUsersWithBadges(int pageNumber, int pageSize)
         {
-            return await _userBadgeRepository.GetAllUsersWithBadges();
+            var (items, totalCount) = await _userBadgeRepository.GetAllUsersWithBadges(pageNumber, pageSize);
+            return new PaginatedResponse<UserWithBadgesDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task CheckAndAwardBadges(int userId)

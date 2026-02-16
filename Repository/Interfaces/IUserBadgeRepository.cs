@@ -12,7 +12,7 @@ namespace Repository.Interfaces
         Task<bool> Exists(int userId, int badgeId);
         Task<int> GetUserBadgeCount(int userId);
         Task<bool> Delete(int userId, int badgeId);
-        Task<List<UserWithBadgesDto>> GetAllUsersWithBadges();
+        Task<(List<UserWithBadgesDto> items, int totalCount)> GetAllUsersWithBadges(int pageNumber, int pageSize);
         Task<List<BadgeWithUserInfoDto>> GetUserBadgesWithInfo(int userId);
     }
 }

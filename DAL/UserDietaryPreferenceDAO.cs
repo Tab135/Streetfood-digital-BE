@@ -41,13 +41,21 @@ namespace DAL
             await _context.SaveChangesAsync();
         }
 
-        public async Task<List<User>> GetUsersWithPreferences()
+        public async Task<(List<User> items, int totalCount)> GetUsersWithPreferences(int pageNumber, int pageSize)
         {
-            return await _context.Users
+            var query = _context.Users
                 .Include(u => u.DietaryPreferences)
-                    .ThenInclude(up => up.DietaryPreference)
+                    .ThenInclude(up => up.DietaryPreference);
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .AsNoTracking()
                 .ToListAsync();
+
+            return (items, totalCount);
         }
 
         public async Task<bool> UserHasPreference(int userId, int dietaryPreferenceId)

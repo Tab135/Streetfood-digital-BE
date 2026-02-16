@@ -59,12 +59,12 @@ namespace StreetFood.Controllers
 
         [HttpGet("users")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetAllUsersWithPreferences()
+        public async Task<IActionResult> GetAllUsersWithPreferences([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var list = await _service.GetAllUsersWithPreferences();
-                return Ok(list);
+                var result = await _service.GetAllUsersWithPreferences(pageNumber, pageSize);
+                return Ok(result);
             }
             catch (Exception ex)
             {

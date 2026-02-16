@@ -42,9 +42,9 @@ namespace Repository
             return await _userBadgeDAO.Delete(userId, badgeId);
         }
 
-        public async Task<List<UserWithBadgesDto>> GetAllUsersWithBadges()
+        public async Task<(List<UserWithBadgesDto> items, int totalCount)> GetAllUsersWithBadges(int pageNumber, int pageSize)
         {
-            return await _userBadgeDAO.GetAllUsersWithBadges();
+            return await _userBadgeDAO.GetAllUsersWithBadges(pageNumber, pageSize);
         }
 
         public async Task<List<BadgeWithUserInfoDto>> GetUserBadgesWithInfo(int userId)
