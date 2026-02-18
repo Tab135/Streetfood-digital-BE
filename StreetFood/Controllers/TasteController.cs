@@ -25,12 +25,12 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> Create([FromBody] CreateTasteDto createDto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                return BadRequest( new { message = "Model is not valid" });
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return Unauthorized("User not authenticated");
+                return BadRequest(new { message = "Model is not valid" });
             }
 
             var created = await _tasteService.CreateTasteAsync(createDto, userId);
@@ -42,7 +42,7 @@ namespace StreetFood.Controllers
         {
             var taste = await _tasteService.GetTasteByIdAsync(id);
             if (taste == null)
-                return NotFound("Taste not found");
+                return NotFound(new { message = "Taste not found" });
 
             return Ok(taste);
         }
@@ -59,12 +59,12 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> Update(int id, [FromBody] UpdateTasteDto updateDto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                return BadRequest(new { message = "Model is not valid" });
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return Unauthorized("User not authenticated");
+                return BadRequest(new { message = "Model is not valid" });
             }
 
             var updated = await _tasteService.UpdateTasteAsync(id, updateDto, userId);
@@ -78,11 +78,11 @@ namespace StreetFood.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return Unauthorized("User not authenticated");
+                return BadRequest(new { message = "Model is not valid" });
             }
 
             await _tasteService.DeleteTasteAsync(id, userId);
-            return Ok("Taste deleted successfully");
+            return Ok(new { message = "Taste deleted successfully" });
         }
     }
 }

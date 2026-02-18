@@ -25,12 +25,12 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> Create([FromBody] CreateCategoryDto createDto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                return BadRequest(new { message = "Model is not valid" });
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return Unauthorized("User not authenticated");
+                return BadRequest(new { message = "Model is not valid" });
             }
 
             var created = await _categoryService.CreateCategoryAsync(createDto, userId);
@@ -42,7 +42,7 @@ namespace StreetFood.Controllers
         {
             var category = await _categoryService.GetCategoryByIdAsync(id);
             if (category == null)
-                return NotFound("Category not found");
+                return NotFound(new { message = "Category not found" });
 
             return Ok(category);
         }
@@ -59,12 +59,12 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> Update(int id, [FromBody] UpdateCategoryDto updateDto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                return BadRequest(new { message = "Model is not valid" });
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return Unauthorized("User not authenticated");
+                return BadRequest(new { message = "Model is not valid" });
             }
 
             var updated = await _categoryService.UpdateCategoryAsync(id, updateDto, userId);
@@ -78,11 +78,11 @@ namespace StreetFood.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return Unauthorized("User not authenticated");
+                return BadRequest(new { message = "Model is not valid" });
             }
 
             await _categoryService.DeleteCategoryAsync(id, userId);
-            return Ok("Category deleted successfully");
+            return Ok( new { message = "Category deleted successfully" });
         }
     }
 }

@@ -25,13 +25,13 @@ namespace StreetFood.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequest(new {message = "Model is not valid" });
             }
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return Unauthorized("User not authenticated");
+                return Unauthorized(new {message = "User not authenticated"});
             }
 
             var result = await _dishService.CreateDishAsync(request, userId);
@@ -63,13 +63,13 @@ namespace StreetFood.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequest(new { message = "Model is not valid" });
             }
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return Unauthorized("User not authenticated");
+                return Unauthorized(new { message = "User not authenticated" });
             }
 
             var result = await _dishService.UpdateDishAsync(id, request, userId);
@@ -83,7 +83,7 @@ namespace StreetFood.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return Unauthorized("User not authenticated");
+                return BadRequest(new { message = "Model is not valid" });
             }
 
             await _dishService.DeleteDishAsync(id, userId);
