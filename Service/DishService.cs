@@ -1,6 +1,7 @@
 using BO.Common;
 using BO.DTO.Dish;
 using BO.Entities;
+using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -41,26 +42,26 @@ namespace Service
             var branch = await _branchRepository.GetByIdAsync(request.BranchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {request.BranchId} not found");
+                throw new DomainExceptions($"Branch with ID {request.BranchId} not found");
             }
 
             var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
             if (vendor == null || vendor.UserId != userId)
             {
-                throw new Exception("You do not own this branch");
+                throw new DomainExceptions("You do not own this branch");
             }
 
             // Check if branch is verified
             if (!branch.IsVerified)
             {
-                throw new Exception("Branch must be verified before creating dishes");
+                throw new DomainExceptions("Branch must be verified before creating dishes");
             }
 
             // Validate Category exists
             var categoryExists = await _categoryRepository.ExistsByIdAsync(request.CategoryId);
             if (!categoryExists)
             {
-                throw new Exception($"Category with ID {request.CategoryId} not found");
+                throw new DomainExceptions($"Category with ID {request.CategoryId} not found");
             }
 
             // Validate all TasteIds exist
@@ -70,7 +71,7 @@ namespace Service
                 var missingTasteIds = request.TasteIds.Except(existingTastes.Select(t => t.TasteId)).ToList();
                 if (missingTasteIds.Any())
                 {
-                    throw new Exception($"Taste IDs not found: {string.Join(", ", missingTasteIds)}");
+                    throw new DomainExceptions($"Taste IDs not found: {string.Join(", ", missingTasteIds)}");
                 }
             }
 
@@ -81,7 +82,7 @@ namespace Service
                 var missingPrefIds = request.DietaryPreferenceIds.Except(existingPrefs.Select(p => p.DietaryPreferenceId)).ToList();
                 if (missingPrefIds.Any())
                 {
-                    throw new Exception($"DietaryPreference IDs not found: {string.Join(", ", missingPrefIds)}");
+                    throw new DomainExceptions($"DietaryPreference IDs not found: {string.Join(", ", missingPrefIds)}");
                 }
             }
 
@@ -133,7 +134,7 @@ namespace Service
             var dish = await _dishRepository.GetByIdAsync(dishId);
             if (dish == null)
             {
-                throw new Exception($"Dish with ID {dishId} not found");
+                throw new DomainExceptions($"Dish with ID {dishId} not found");
             }
 
             return MapToResponse(dish);
@@ -157,26 +158,26 @@ namespace Service
             var dish = await _dishRepository.GetByIdAsync(dishId);
             if (dish == null)
             {
-                throw new Exception($"Dish with ID {dishId} not found");
+                throw new DomainExceptions($"Dish with ID {dishId} not found");
             }
 
             // Validate user owns the branch
             var branch = await _branchRepository.GetByIdAsync(dish.BranchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {dish.BranchId} not found");
+                throw new DomainExceptions($"Branch with ID {dish.BranchId} not found");
             }
 
             var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
             if (vendor == null || vendor.UserId != userId)
             {
-                throw new Exception("You do not own this branch");
+                throw new DomainExceptions("You do not own this branch");
             }
 
             // Check if branch is verified
             if (!branch.IsVerified)
             {
-                throw new Exception("Branch must be verified before updating dishes");
+                throw new DomainExceptions("Branch must be verified before updating dishes");
             }
 
             // Validate CategoryId if provided
@@ -185,7 +186,7 @@ namespace Service
                 var categoryExists = await _categoryRepository.ExistsByIdAsync(request.CategoryId.Value);
                 if (!categoryExists)
                 {
-                    throw new Exception($"Category with ID {request.CategoryId.Value} not found");
+                    throw new DomainExceptions($"Category with ID {request.CategoryId.Value} not found");
                 }
             }
 
@@ -223,7 +224,7 @@ namespace Service
                     var missingTasteIds = request.TasteIds.Except(existingTastes.Select(t => t.TasteId)).ToList();
                     if (missingTasteIds.Any())
                     {
-                        throw new Exception($"Taste IDs not found: {string.Join(", ", missingTasteIds)}");
+                        throw new DomainExceptions($"Taste IDs not found: {string.Join(", ", missingTasteIds)}");
                     }
                 }
 
@@ -252,7 +253,7 @@ namespace Service
                     var missingPrefIds = request.DietaryPreferenceIds.Except(existingPrefs.Select(p => p.DietaryPreferenceId)).ToList();
                     if (missingPrefIds.Any())
                     {
-                        throw new Exception($"DietaryPreference IDs not found: {string.Join(", ", missingPrefIds)}");
+                        throw new DomainExceptions($"DietaryPreference IDs not found: {string.Join(", ", missingPrefIds)}");
                     }
                 }
 
@@ -281,26 +282,26 @@ namespace Service
             var dish = await _dishRepository.GetByIdAsync(dishId);
             if (dish == null)
             {
-                throw new Exception($"Dish with ID {dishId} not found");
+                throw new DomainExceptions($"Dish with ID {dishId} not found");
             }
 
             // Validate user owns the branch
             var branch = await _branchRepository.GetByIdAsync(dish.BranchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {dish.BranchId} not found");
+                throw new DomainExceptions($"Branch with ID {dish.BranchId} not found");
             }
 
             var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
             if (vendor == null || vendor.UserId != userId)
             {
-                throw new Exception("You do not own this branch");
+                throw new DomainExceptions("You do not own this branch");
             }
 
             // Check if branch is verified
             if (!branch.IsVerified)
             {
-                throw new Exception("Branch must be verified before deleting dishes");
+                throw new DomainExceptions("Branch must be verified before deleting dishes");
             }
 
             await _dishRepository.DeleteAsync(dishId);

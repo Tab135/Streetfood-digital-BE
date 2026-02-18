@@ -1,11 +1,12 @@
-using BO.DTO.Category;
-using BO.Entities;
-using Repository.Interfaces;
-using Service.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BO.DTO.Category;
+using BO.Entities;
+using BO.Exceptions;
+using Repository.Interfaces;
+using Service.Interfaces;
 
 namespace Service
 {
@@ -56,7 +57,7 @@ namespace Service
         {
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null)
-                throw new Exception($"Category with id {id} not found");
+                throw new DomainExceptions($"Category with id {id} not found");
 
             // Check if user is a vendor with at least one verified branch
             // No ownership check - any vendor with verified branch can edit shared categories
@@ -76,7 +77,7 @@ namespace Service
         {
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null)
-                throw new Exception($"Category with id {id} not found");
+                throw new DomainExceptions($"Category with id {id} not found");
 
             // Check if user is a vendor with at least one verified branch
             // No ownership check - any vendor with verified branch can delete shared categories
@@ -86,21 +87,19 @@ namespace Service
             return true;
         }
 
-        /// <summary>
-        /// Validates that the user is a vendor with at least one verified branch
-        /// </summary>
+    
         private async Task ValidateVendorHasVerifiedBranchAsync(int userId)
         {
             var vendor = await _vendorRepository.GetByUserIdAsync(userId);
             if (vendor == null)
             {
-                throw new Exception("You must be a vendor to manage categories");
+                throw new DomainExceptions("You must be a vendor to manage categories");
             }
 
             var branches = await _branchRepository.GetAllByVendorIdAsync(vendor.VendorId);
             if (!branches.Any(b => b.IsVerified))
             {
-                throw new Exception("You must have at least one verified branch to manage categories");
+                throw new DomainExceptions("You must have at least one verified branch to manage categories");
             }
         }
 
