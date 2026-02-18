@@ -23,7 +23,8 @@ namespace StreetFood.Controllers
             {
                 return BadRequest(new
                 {
-                    keyword = new[] { "The keyword field is required." }
+                        keyword = new[] { "The keyword field is required." }
+                    
                 });
             }
 
@@ -33,7 +34,9 @@ namespace StreetFood.Controllers
             {
                 return BadRequest(new
                 {
-                    keyword = new[] { "Search keyword must be at least 2 characters" }
+
+                        keyword = new[] { "Search keyword must be at least 2 characters" }
+                    
                 });
             }
 
