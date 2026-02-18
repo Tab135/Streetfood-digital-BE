@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO;
 using BO.DTO.Badge;
 using BO.Entities;
@@ -19,7 +20,7 @@ namespace Service.Interfaces
         
         // User badge operations
         Task<List<BadgeWithUserInfoDto>> GetUserBadgesWithInfo(int userId);
-        Task<List<UserWithBadgesDto>> GetAllUsersWithBadges();
+        Task<PaginatedResponse<UserWithBadgesDto>> GetAllUsersWithBadges(int pageNumber, int pageSize);
         Task CheckAndAwardBadges(int userId);
         Task<UserBadgeDto> AwardBadgeToUser(int userId, int badgeId);
         Task<bool> RemoveBadgeFromUser(int userId, int badgeId);

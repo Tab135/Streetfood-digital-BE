@@ -24,9 +24,9 @@ namespace Repository
             return await _dao.GetPreferencesByUserId(userId);
         }
 
-        public async Task<List<User>> GetUsersWithPreferences()
+        public async Task<(List<User> items, int totalCount)> GetUsersWithPreferences(int pageNumber, int pageSize)
         {
-            return await _dao.GetUsersWithPreferences();
+            return await _dao.GetUsersWithPreferences(pageNumber, pageSize);
         }
 
         public async Task<bool> UserHasPreference(int userId, int dietaryPreferenceId)

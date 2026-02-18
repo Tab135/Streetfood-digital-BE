@@ -58,9 +58,15 @@ namespace DAL
         }
 
         // Query method for getting all users with their badges using database join
-        public async Task<List<UserWithBadgesDto>> GetAllUsersWithBadges()
+        public async Task<(List<UserWithBadgesDto> items, int totalCount)> GetAllUsersWithBadges(int pageNumber, int pageSize)
         {
-            var result = await _context.Users
+            var query = _context.Users;
+
+            var totalCount = await query.CountAsync();
+
+            var result = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .Select(user => new UserWithBadgesDto
                 {
                     UserId = user.Id,
@@ -89,7 +95,7 @@ namespace DAL
                 })
                 .ToListAsync();
 
-            return result;
+            return (result, totalCount);
         }
 
         // Query method for getting a specific user's badges with info using database join

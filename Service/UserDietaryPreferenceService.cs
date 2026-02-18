@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO.Dietary;
 using BO.DTO.Users;
 using Repository.Interfaces;
@@ -42,17 +43,17 @@ namespace Service
             }).ToList();
         }
 
-        public async Task<List<UserDietaryPreferencesDto>> GetAllUsersWithPreferences()
+        public async Task<PaginatedResponse<UserDietaryPreferencesDto>> GetAllUsersWithPreferences(int pageNumber, int pageSize)
         {
-            var users = await _userDietaryRepo.GetUsersWithPreferences();
-            var result = users.Select(u => new UserDietaryPreferencesDto
+            var (users, totalCount) = await _userDietaryRepo.GetUsersWithPreferences(pageNumber, pageSize);
+            var items = users.Select(u => new UserDietaryPreferencesDto
             {
                 UserId = u.Id,
                 UserName = u.UserName,
                 DietaryPreferences = u.DietaryPreferences?.Select(dp => dp.DietaryPreference.Name).ToList() ?? new List<string>()
             }).ToList();
 
-            return result;
+            return new PaginatedResponse<UserDietaryPreferencesDto>(items, totalCount, pageNumber, pageSize);
         }
     }
 }

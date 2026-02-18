@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO.Users;
 using BO.DTO.Dietary;
 using System.Collections.Generic;
@@ -9,6 +10,6 @@ namespace Service.Interfaces
     {
         Task AssignPreferencesToUser(int userId, List<int> dietaryPreferenceIds);
         Task<List<DietaryPreferenceDto>> GetPreferencesByUserId(int userId);
-        Task<List<UserDietaryPreferencesDto>> GetAllUsersWithPreferences();
+        Task<PaginatedResponse<UserDietaryPreferencesDto>> GetAllUsersWithPreferences(int pageNumber, int pageSize);
     }
 }
