@@ -68,7 +68,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -85,7 +85,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return NotFound(new ApiResponse<object>(404, ex.Message, null));
+                return NotFound(new { message = ex.Message });
             }
         }
 
@@ -102,7 +102,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return NotFound(new ApiResponse<object>(404, ex.Message, null));
+                return NotFound(new { message = ex.Message });
             }
         }
 
@@ -120,7 +120,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -138,7 +138,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -167,7 +167,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -191,7 +191,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -251,7 +251,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -299,7 +299,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return NotFound(new ApiResponse<object>(404, ex.Message, null));
+                return NotFound(new { message = ex.Message });
             }
         }
 
@@ -317,7 +317,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -335,7 +335,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -353,7 +353,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -371,7 +371,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -402,7 +402,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -419,7 +419,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -448,7 +448,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -472,7 +472,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -503,7 +503,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -520,7 +520,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -544,7 +544,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -592,7 +592,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -609,7 +609,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -633,7 +633,7 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<object>(400, ex.Message, null));
+                return BadRequest(new { message = ex.Message });
             }
         }
     }
