@@ -28,9 +28,6 @@ namespace Service
 
         public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryDto createDto, int userId)
         {
-            // Check if user is a vendor with at least one verified branch
-            await ValidateVendorHasVerifiedBranchAsync(userId);
-
             var entity = new Category
             {
                 Name = createDto.Name,
@@ -59,10 +56,6 @@ namespace Service
             if (existing == null)
                 throw new DomainExceptions($"Category with id {id} not found");
 
-            // Check if user is a vendor with at least one verified branch
-            // No ownership check - any vendor with verified branch can edit shared categories
-            await ValidateVendorHasVerifiedBranchAsync(userId);
-
             if (!string.IsNullOrEmpty(updateDto.Name))
                 existing.Name = updateDto.Name;
 
@@ -78,10 +71,6 @@ namespace Service
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null)
                 throw new DomainExceptions($"Category with id {id} not found");
-
-            // Check if user is a vendor with at least one verified branch
-            // No ownership check - any vendor with verified branch can delete shared categories
-            await ValidateVendorHasVerifiedBranchAsync(userId);
 
             await _repo.DeleteAsync(id);
             return true;
