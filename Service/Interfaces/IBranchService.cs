@@ -28,7 +28,7 @@ namespace Service.Interfaces
         Task<bool> RejectBranchRegistrationAsync(int branchId, string rejectionReason);
 
         // Work Schedule operations
-        Task<WorkSchedule> AddWorkScheduleAsync(int branchId, AddWorkScheduleDto dto, int userId);
+        Task<List<WorkSchedule>> AddWorkScheduleAsync(int branchId, AddWorkScheduleDto dto, int userId);
         Task<List<WorkScheduleResponseDto>> GetBranchWorkSchedulesAsync(int branchId);
         Task<WorkSchedule> UpdateWorkScheduleAsync(int scheduleId, UpdateWorkScheduleDto dto, int userId);
         Task DeleteWorkScheduleAsync(int scheduleId, int userId);
