@@ -1,4 +1,3 @@
-using BO.Common;
 using BO.DTO.Branch;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,13 +31,13 @@ namespace StreetFood.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new ApiResponse<object>(400, "Invalid input", ModelState));
+                    return BadRequest(ModelState);
                 }
 
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 var branch = await _branchService.CreateBranchAsync(createBranchDto, vendorId, userId);
@@ -81,7 +80,7 @@ namespace StreetFood.Controllers
             try
             {
                 var branch = await _branchService.GetBranchByIdAsync(id);
-                return Ok(new ApiResponse<BranchResponseDto>(200, "Branch retrieved successfully", branch));
+                return Ok(new { message = "Branch retrieved successfully", data = branch });
             }
             catch (Exception ex)
             {
@@ -98,7 +97,7 @@ namespace StreetFood.Controllers
             try
             {
                 var branches = await _branchService.GetBranchesByVendorIdAsync(vendorId, pageNumber, pageSize);
-                return Ok(new ApiResponse<object>(200, "Branches retrieved successfully", branches));
+                return Ok(new { message = "Branches retrieved successfully", data = branches });
             }
             catch (Exception ex)
             {
@@ -116,7 +115,7 @@ namespace StreetFood.Controllers
             try
             {
                 var branches = await _branchService.GetAllBranchesAsync(pageNumber, pageSize);
-                return Ok(new ApiResponse<object>(200, "All branches retrieved successfully", branches));
+                return Ok(new { message = "All branches retrieved successfully", data = branches });
             }
             catch (Exception ex)
             {
@@ -134,7 +133,7 @@ namespace StreetFood.Controllers
             try
             {
                 var branches = await _branchService.GetActiveBranchesAsync(pageNumber, pageSize);
-                return Ok(new ApiResponse<object>(200, "Active branches retrieved successfully", branches));
+                return Ok(new { message = "Active branches retrieved successfully", data = branches });
             }
             catch (Exception ex)
             {
@@ -153,17 +152,17 @@ namespace StreetFood.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new ApiResponse<object>(400, "Invalid input", ModelState));
+                    return BadRequest(ModelState);
                 }
 
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 var branch = await _branchService.UpdateBranchAsync(id, updateBranchDto, userId);
-                return Ok(new ApiResponse<BranchResponseDto>(200, "Branch updated successfully", branch));
+                return Ok(new { message = "Branch updated successfully", data = branch });
             }
             catch (Exception ex)
             {
@@ -183,11 +182,11 @@ namespace StreetFood.Controllers
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 await _branchService.DeleteBranchAsync(id, userId);
-                return Ok(new ApiResponse<object>(200, "Branch deleted successfully", null));
+                return Ok(new { message = "Branch deleted successfully" });
             }
             catch (Exception ex)
             {
@@ -208,13 +207,13 @@ namespace StreetFood.Controllers
             {
                 if (licenseImages == null || licenseImages.Count == 0)
                 {
-                    return BadRequest(new ApiResponse<object>(400, "At least one license image is required", null));
+                    return BadRequest(new { message = "At least one license image is required" });
                 }
 
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 // Save the license images
@@ -242,12 +241,12 @@ namespace StreetFood.Controllers
                 }
 
                 var result = await _branchService.SubmitBranchLicenseAsync(id, licenseUrls, userId);
-                return Ok(new ApiResponse<object>(200, "License submitted successfully. Pending verification.", new
+                return Ok(new { message = "License submitted successfully. Pending verification.", data = new
                 {
                     BranchId = id,
                     LicenseUrls = licenseUrls,
                     Status = result.Status.ToString()
-                }));
+                }});
             }
             catch (Exception ex)
             {
@@ -286,7 +285,7 @@ namespace StreetFood.Controllers
                      }
                 }
 
-                return Ok(new ApiResponse<object>(200, "License status retrieved successfully", new
+                return Ok(new { message = "License status retrieved successfully", data = new
                 {
                     BranchId = id,
                     LicenseUrl = licenseUrls.FirstOrDefault(), // For backward compatibility
@@ -295,7 +294,7 @@ namespace StreetFood.Controllers
                     RejectReason = result.RejectReason,
                     SubmittedAt = result.CreatedAt,
                     UpdatedAt = result.UpdatedAt
-                }));
+                }});
             }
             catch (Exception ex)
             {
@@ -313,7 +312,7 @@ namespace StreetFood.Controllers
             try
             {
                 var pendingRegistrations = await _branchService.GetPendingBranchRegistrationsAsync(pageNumber, pageSize);
-                return Ok(new ApiResponse<object>(200, "Pending registrations retrieved successfully", pendingRegistrations));
+                return Ok(new { message = "Pending registrations retrieved successfully", data = pendingRegistrations });
             }
             catch (Exception ex)
             {
@@ -331,7 +330,7 @@ namespace StreetFood.Controllers
             try
             {
                 var branches = await _branchService.GetUnverifiedBranchesAsync(pageNumber, pageSize);
-                return Ok(new ApiResponse<object>(200, "Unverified branches retrieved successfully", branches));
+                return Ok(new { message = "Unverified branches retrieved successfully", data = branches });
             }
             catch (Exception ex)
             {
@@ -349,7 +348,7 @@ namespace StreetFood.Controllers
             try
             {
                 await _branchService.VerifyBranchAsync(id);
-                return Ok(new ApiResponse<object>(200, "Branch verified successfully", null));
+                return Ok(new { message = "Branch verified successfully" });
             }
             catch (Exception ex)
             {
@@ -367,7 +366,7 @@ namespace StreetFood.Controllers
             try
             {
                 await _branchService.RejectBranchRegistrationAsync(id, rejectDto.Reason);
-                return Ok(new ApiResponse<object>(200, "Branch registration rejected", null));
+                return Ok(new { message = "Branch registration rejected" });
             }
             catch (Exception ex)
             {
@@ -388,17 +387,17 @@ namespace StreetFood.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new ApiResponse<object>(400, "Invalid input", ModelState));
+                    return BadRequest(ModelState);
                 }
 
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
-                var schedule = await _branchService.AddWorkScheduleAsync(branchId, dto, userId);
-                return Ok(new ApiResponse<object>(200, "Work schedule added successfully", schedule));
+                var schedules = await _branchService.AddWorkScheduleAsync(branchId, dto, userId);
+                return Ok(new { message = "Work schedules added successfully", data = schedules });
             }
             catch (Exception ex)
             {
@@ -415,7 +414,7 @@ namespace StreetFood.Controllers
             try
             {
                 var schedules = await _branchService.GetBranchWorkSchedulesAsync(branchId);
-                return Ok(new ApiResponse<object>(200, "Work schedules retrieved successfully", schedules));
+                return Ok(new { message = "Work schedules retrieved successfully", data = schedules });
             }
             catch (Exception ex)
             {
@@ -434,17 +433,17 @@ namespace StreetFood.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new ApiResponse<object>(400, "Invalid input", ModelState));
+                    return BadRequest(ModelState);
                 }
 
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 var schedule = await _branchService.UpdateWorkScheduleAsync(scheduleId, dto, userId);
-                return Ok(new ApiResponse<object>(200, "Work schedule updated successfully", schedule));
+                return Ok(new { message = "Work schedule updated successfully", data = schedule });
             }
             catch (Exception ex)
             {
@@ -464,11 +463,11 @@ namespace StreetFood.Controllers
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 await _branchService.DeleteWorkScheduleAsync(scheduleId, userId);
-                return Ok(new ApiResponse<object>(200, "Work schedule deleted successfully", null));
+                return Ok(new { message = "Work schedule deleted successfully" });
             }
             catch (Exception ex)
             {
@@ -489,17 +488,17 @@ namespace StreetFood.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new ApiResponse<object>(400, "Invalid input", ModelState));
+                    return BadRequest(ModelState);
                 }
 
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 var dayOff = await _branchService.AddDayOffAsync(branchId, dto, userId);
-                return Ok(new ApiResponse<object>(200, "Day off added successfully", dayOff));
+                return Ok(new { message = "Day off added successfully", data = dayOff });
             }
             catch (Exception ex)
             {
@@ -516,7 +515,7 @@ namespace StreetFood.Controllers
             try
             {
                 var dayOffs = await _branchService.GetBranchDayOffsAsync(branchId);
-                return Ok(new ApiResponse<object>(200, "Day offs retrieved successfully", dayOffs));
+                return Ok(new { message = "Day offs retrieved successfully", data = dayOffs });
             }
             catch (Exception ex)
             {
@@ -536,11 +535,11 @@ namespace StreetFood.Controllers
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 await _branchService.DeleteDayOffAsync(dayOffId, userId);
-                return Ok(new ApiResponse<object>(200, "Day off deleted successfully", null));
+                return Ok(new { message = "Day off deleted successfully" });
             }
             catch (Exception ex)
             {
@@ -561,13 +560,13 @@ namespace StreetFood.Controllers
             {
                 if (image == null || image.Length == 0)
                 {
-                    return BadRequest(new ApiResponse<object>(400, "Image is required", null));
+                    return BadRequest(new { message = "Image is required" });
                 }
 
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 // Save the image
@@ -588,7 +587,7 @@ namespace StreetFood.Controllers
                 var imageUrl = $"/uploads/branches/{uniqueFileName}";
 
                 var branchImage = await _branchService.AddBranchImageAsync(branchId, imageUrl, userId);
-                return Ok(new ApiResponse<object>(200, "Image added successfully", branchImage));
+                return Ok(new { message = "Image added successfully", data = branchImage });
             }
             catch (Exception ex)
             {
@@ -605,7 +604,7 @@ namespace StreetFood.Controllers
             try
             {
                 var images = await _branchService.GetBranchImagesAsync(branchId, pageNumber, pageSize);
-                return Ok(new ApiResponse<object>(200, "Images retrieved successfully", images));
+                return Ok(new { message = "Images retrieved successfully", data = images });
             }
             catch (Exception ex)
             {
@@ -625,11 +624,11 @@ namespace StreetFood.Controllers
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 await _branchService.DeleteBranchImageAsync(imageId, userId);
-                return Ok(new ApiResponse<object>(200, "Image deleted successfully", null));
+                return Ok(new { message = "Image deleted successfully" });
             }
             catch (Exception ex)
             {

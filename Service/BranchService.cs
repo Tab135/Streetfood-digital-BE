@@ -379,7 +379,7 @@ namespace Service
 
         // ==================== WORK SCHEDULE OPERATIONS ====================
 
-        public async Task<WorkSchedule> AddWorkScheduleAsync(int branchId, AddWorkScheduleDto dto, int userId)
+        public async Task<List<WorkSchedule>> AddWorkScheduleAsync(int branchId, AddWorkScheduleDto dto, int userId)
         {
             // Verify branch exists and user owns it
             if (!await UserOwnsBranchAsync(branchId, userId))
@@ -387,16 +387,20 @@ namespace Service
                 throw new Exception("Unauthorized: You do not own this branch");
             }
 
-            var workSchedule = new WorkSchedule
+            var workSchedules = dto.Weekdays.Select(weekday => new WorkSchedule
             {
                 BranchId = branchId,
-                Weekday = dto.Weekday,
+                Weekday = weekday,
                 OpenTime = dto.OpenTime,
                 CloseTime = dto.CloseTime
-            };
+            }).ToList();
 
-            await _branchRepository.AddWorkScheduleAsync(workSchedule);
-            return workSchedule;
+            foreach (var workSchedule in workSchedules)
+            {
+                await _branchRepository.AddWorkScheduleAsync(workSchedule);
+            }
+
+            return workSchedules;
         }
 
         public async Task<List<WorkScheduleResponseDto>> GetBranchWorkSchedulesAsync(int branchId)
