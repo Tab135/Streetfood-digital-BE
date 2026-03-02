@@ -161,26 +161,46 @@ namespace Service
                 UpdatedAt = vendor.UpdatedAt,
                 IsActive = vendor.IsActive,
                 VendorOwnerName = vendor.VendorOwner != null ? $"{vendor.VendorOwner.FirstName} {vendor.VendorOwner.LastName}".Trim() : "",
-                Branches = branches.Select(b => new BO.DTO.Branch.BranchResponseDto
+                Branches = branches.Select(b =>
                 {
-                    BranchId = b.BranchId,
-                    VendorId = b.VendorId,
-                    UserId = b.UserId,
-                    Name = b.Name,
-                    PhoneNumber = b.PhoneNumber,
-                    Email = b.Email,
-                    AddressDetail = b.AddressDetail,
-                    BuildingName = b.BuildingName,
-                    Ward = b.Ward,
-                    City = b.City,
-                    Lat = b.Lat,
-                    Long = b.Long,
-                    CreatedAt = b.CreatedAt,
-                    UpdatedAt = b.UpdatedAt,
-                    IsVerified = b.IsVerified,
-                    AvgRating = b.AvgRating,
-                    IsActive = b.IsActive,
-                    IsSubscribed = b.IsSubscribed
+                    var licenseRequest = _branchRepository.GetBranchRegisterRequestAsync(b.BranchId).Result;
+                    var licenseUrls = new System.Collections.Generic.List<string>();
+                    if (!string.IsNullOrEmpty(licenseRequest?.LicenseUrl))
+                    {
+                        if (licenseRequest.LicenseUrl.TrimStart().StartsWith("["))
+                        {
+                            try { licenseUrls = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<string>>(licenseRequest.LicenseUrl); }
+                            catch { licenseUrls.Add(licenseRequest.LicenseUrl); }
+                        }
+                        else
+                        {
+                            licenseUrls.Add(licenseRequest.LicenseUrl);
+                        }
+                    }
+                    return new BO.DTO.Branch.BranchResponseDto
+                    {
+                        BranchId = b.BranchId,
+                        VendorId = b.VendorId,
+                        UserId = b.UserId,
+                        Name = b.Name,
+                        PhoneNumber = b.PhoneNumber,
+                        Email = b.Email,
+                        AddressDetail = b.AddressDetail,
+                        BuildingName = b.BuildingName,
+                        Ward = b.Ward,
+                        City = b.City,
+                        Lat = b.Lat,
+                        Long = b.Long,
+                        CreatedAt = b.CreatedAt,
+                        UpdatedAt = b.UpdatedAt,
+                        IsVerified = b.IsVerified,
+                        AvgRating = b.AvgRating,
+                        IsActive = b.IsActive,
+                        IsSubscribed = b.IsSubscribed,
+                        LicenseUrls = licenseUrls,
+                        LicenseStatus = licenseRequest?.Status.ToString(),
+                        LicenseRejectReason = licenseRequest?.RejectReason
+                    };
                 }).ToList()
             };
         }

@@ -302,7 +302,6 @@ namespace Service
             var licenseRequest = await _branchRepository.GetBranchRegisterRequestAsync(branch.BranchId);
             
             List<string> licenseUrls = new List<string>();
-            string firstLicenseUrl = licenseRequest?.LicenseUrl;
 
             if (!string.IsNullOrEmpty(licenseRequest?.LicenseUrl))
             {
@@ -311,7 +310,6 @@ namespace Service
                     try
                     {
                         licenseUrls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(licenseRequest.LicenseUrl);
-                        firstLicenseUrl = licenseUrls?.FirstOrDefault();
                     }
                     catch
                     {
@@ -344,7 +342,6 @@ namespace Service
                 AvgRating = branch.AvgRating,
                 IsActive = branch.IsActive,
                 IsSubscribed = branch.IsSubscribed,
-                LicenseUrl = firstLicenseUrl,
                 LicenseUrls = licenseUrls,
                 LicenseStatus = licenseRequest?.Status.ToString(),
                 LicenseRejectReason = licenseRequest?.RejectReason

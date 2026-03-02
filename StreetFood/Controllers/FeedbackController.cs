@@ -81,7 +81,7 @@ namespace StreetFood.Controllers
                         {
                             await image.CopyToAsync(stream);
                         }
-                        imageUrls.Add($"/uploads/feedbacks/{uniqueFileName}");
+                        imageUrls.Add("http://159.223.47.89:5298" + $"/uploads/feedbacks/{uniqueFileName}");
                     }
                 }
 

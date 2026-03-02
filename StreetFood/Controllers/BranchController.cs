@@ -236,7 +236,7 @@ namespace StreetFood.Controllers
                         {
                             await image.CopyToAsync(stream);
                         }
-                        licenseUrls.Add($"/uploads/licenses/{uniqueFileName}");
+                        licenseUrls.Add("http://159.223.47.89:5298" + $"/uploads/licenses/{uniqueFileName}");
                     }
                 }
 
@@ -288,7 +288,6 @@ namespace StreetFood.Controllers
                 return Ok(new { message = "License status retrieved successfully", data = new
                 {
                     BranchId = id,
-                    LicenseUrl = licenseUrls.FirstOrDefault(), // For backward compatibility
                     LicenseUrls = licenseUrls,
                     Status = result.Status.ToString(),
                     RejectReason = result.RejectReason,
@@ -584,7 +583,7 @@ namespace StreetFood.Controllers
                     await image.CopyToAsync(stream);
                 }
 
-                var imageUrl = $"/uploads/branches/{uniqueFileName}";
+                var imageUrl = "http://159.223.47.89:5298" + $"/uploads/branches/{uniqueFileName}";
 
                 var branchImage = await _branchService.AddBranchImageAsync(branchId, imageUrl, userId);
                 return Ok(new { message = "Image added successfully", data = branchImage });
