@@ -72,6 +72,8 @@ namespace StreetFood.Controllers
 
         /// <summary>
         /// Get branch by ID
+        /// If user is a Vendor and owns the branch, returns vendor-specific fields (subscription, license info)
+        /// Otherwise returns public data only
         /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetBranchById(int id)
@@ -79,7 +81,22 @@ namespace StreetFood.Controllers
             try
             {
                 var branch = await _branchService.GetBranchByIdAsync(id);
-                return Ok(new { message = "Branch retrieved successfully", data = branch });
+                
+                // Check if current user is the vendor owner of this branch
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                var roleClaim = User.FindFirst(ClaimTypes.Role);
+                
+                bool isVendorOwner = false;
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId) 
+                    && roleClaim?.Value == "Vendor" 
+                    && branch.UserId == userId)
+                {
+                    isVendorOwner = true;
+                }
+                
+                // Return appropriate DTO based on ownership
+                object responseData = isVendorOwner ? (object)branch : ConvertToPublicDto(branch);
+                return Ok(new { message = "Branch retrieved successfully", data = responseData });
             }
             catch (Exception ex)
             {
@@ -88,14 +105,64 @@ namespace StreetFood.Controllers
         }
 
         /// <summary>
-        /// Get all branches for a vendor
+        /// Helper method to convert BranchResponseDto to BranchPublicDto
         /// </summary>
+        private BO.DTO.Branch.BranchPublicDto ConvertToPublicDto(BO.DTO.Branch.BranchResponseDto full)
+        {
+            return new BO.DTO.Branch.BranchPublicDto
+            {
+                BranchId = full.BranchId,
+                VendorId = full.VendorId,
+                UserId = full.UserId,
+                Name = full.Name,
+                PhoneNumber = full.PhoneNumber,
+                Email = full.Email,
+                AddressDetail = full.AddressDetail,
+                Ward = full.Ward,
+                City = full.City,
+                Lat = full.Lat,
+                Long = full.Long,
+                CreatedAt = full.CreatedAt,
+                UpdatedAt = full.UpdatedAt,
+                IsVerified = full.IsVerified,
+                AvgRating = full.AvgRating,
+                IsActive = full.IsActive,
+            };
+        }
+
+
         [HttpGet("vendor/{vendorId}")]
         public async Task<IActionResult> GetBranchesByVendorId(int vendorId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
                 var branches = await _branchService.GetBranchesByVendorIdAsync(vendorId, pageNumber, pageSize);
+                
+                // Check if current user is the vendor owner
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                var roleClaim = User.FindFirst(ClaimTypes.Role);
+                
+                bool isVendorOwner = false;
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId) 
+                    && roleClaim?.Value == "Vendor")
+                {
+                    // Check if any branch belongs to this user
+                    isVendorOwner = branches.Items.Any(b => b.UserId == userId);
+                }
+                
+                // Convert to public DTOs if not vendor owner
+                if (!isVendorOwner)
+                {
+                    var publicBranches = branches.Items.Select(ConvertToPublicDto).ToList();
+                    var publicResponse = new BO.Common.PaginatedResponse<BO.DTO.Branch.BranchPublicDto>(
+                        publicBranches,
+                        branches.TotalCount,
+                        branches.CurrentPage,
+                        branches.PageSize
+                    );
+                    return Ok(new { message = "Branches retrieved successfully", data = publicResponse });
+                }
+                
                 return Ok(new { message = "Branches retrieved successfully", data = branches });
             }
             catch (Exception ex)
@@ -122,17 +189,20 @@ namespace StreetFood.Controllers
             }
         }
 
-        /// <summary>
-        /// Get all active and verified branches (for public map/home page)
-        /// Returns only branches that have been verified and are currently active
-        /// </summary>
         [HttpGet("active")]
         public async Task<IActionResult> GetActiveBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
                 var branches = await _branchService.GetActiveBranchesAsync(pageNumber, pageSize);
-                return Ok(new { message = "Active branches retrieved successfully", data = branches });
+                // Convert all to public DTOs
+                var publicBranches = new BO.Common.PaginatedResponse<BO.DTO.Branch.BranchPublicDto>(
+                    branches.Items.Select(ConvertToPublicDto).ToList(),
+                    branches.TotalCount,
+                    branches.CurrentPage,
+                    branches.PageSize
+                );
+                return Ok(new { message = "Active branches retrieved successfully", data = publicBranches });
             }
             catch (Exception ex)
             {
@@ -140,9 +210,6 @@ namespace StreetFood.Controllers
             }
         }
 
-        /// <summary>
-        /// Update a branch
-        /// </summary>
         [HttpPut("{id}")]
         [Authorize(Roles = "User")]
         public async Task<IActionResult> UpdateBranch(int id, [FromBody] UpdateBranchDto updateBranchDto)
@@ -169,9 +236,6 @@ namespace StreetFood.Controllers
             }
         }
 
-        /// <summary>
-        /// Delete a branch
-        /// </summary>
         [HttpDelete("{id}")]
         [Authorize(Roles = "User")]
         public async Task<IActionResult> DeleteBranch(int id)
@@ -195,9 +259,7 @@ namespace StreetFood.Controllers
 
         // ==================== LICENSE SUBMISSION & VERIFICATION ====================
 
-        /// <summary>
-        /// Submit license image for branch verification
-        /// </summary>
+
         [HttpPost("{id}/submit-license")]
         [Authorize(Roles = "User")]
         public async Task<IActionResult> SubmitBranchLicense(int id, List<IFormFile> licenseImages)
@@ -253,9 +315,6 @@ namespace StreetFood.Controllers
             }
         }
 
-        /// <summary>
-        /// Get license/registration status for a branch
-        /// </summary>
         [HttpGet("{id}/license-status")]
         [Authorize(Roles = "User")]
         public async Task<IActionResult> GetBranchLicenseStatus(int id)
@@ -551,7 +610,7 @@ namespace StreetFood.Controllers
         /// Add an image to a branch gallery
         /// </summary>
         [HttpPost("{branchId}/images")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> AddBranchImage(int branchId, IFormFile image)
         {
             try
@@ -614,7 +673,7 @@ namespace StreetFood.Controllers
         /// Delete a branch image
         /// </summary>
         [HttpDelete("images/{imageId}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> DeleteBranchImage(int imageId)
         {
             try

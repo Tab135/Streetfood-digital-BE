@@ -1,0 +1,29 @@
+﻿using BO.DTO.Payments;
+using BO.Entities;
+using PayOS.Models.Webhooks;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace Service.PaymentsService
+{
+    public interface IPaymentService
+    {
+        /// <summary>
+        /// Creates a PayOS checkout link for the 20,000 VND vendor subscription fee.
+        /// The branch must have been approved by a moderator (RegisterVendorStatus = Accept).
+        /// </summary>
+        Task<PaymentLinkResult> CreatePaymentLink(int userId, int branchId);
+
+        Task<Payment?> GetPaymentByOrderCode(long orderCode);
+
+        Task<List<Payment>> GetUserPaymentHistory(int userId);
+
+        Task<PaymentStatusResponse> GetPaymentStatus(long orderCode);
+
+        Task<PaymentStatusResponse> ConfirmPaymentFromRedirect(long orderCode, string status, string? transactionId);
+
+        Task<bool> VerifyPaymentOwnership(long orderCode, int userId);
+
+        Task<bool> RegisterWebhookUrl(string webhookUrl);
+    }
+}

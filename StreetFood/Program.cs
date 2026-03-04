@@ -1,7 +1,4 @@
 using DAL;
-using Repository;
-using Service;
-using Service.JWT;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.OpenApi;
@@ -9,13 +6,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Repository;
+using Repository.Interfaces;
 using Scalar.AspNetCore;
+using Service;
+using Service.Interfaces;
+using Service.JWT;
+using Service.PaymentsService;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Repository.Interfaces;
-using Service.Interfaces;
 
 namespace StreetFood
 {
@@ -50,7 +51,15 @@ namespace StreetFood
 
             builder.Services.AddDbContext<StreetFoodDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+            // DAL
+            builder.Services.AddScoped<PaymentDAO>();
 
+            // Repository
+            builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+
+            // Service
+            builder.Services.AddScoped<IPaymentService, PaymentService>();
+            builder.Services.AddHostedService<SubscriptionExpiryService>();
             // Register DAL
             builder.Services.AddScoped<UserDAO>();
             builder.Services.AddScoped<OtpVerifyDAO>();

@@ -195,6 +195,10 @@ namespace Service
                         AvgRating = b.AvgRating,
                         IsActive = b.IsActive,
                         IsSubscribed = b.IsSubscribed,
+                        SubscriptionExpiresAt = b.SubscriptionExpiresAt,
+                        DaysRemaining = b.SubscriptionExpiresAt.HasValue 
+                            ? (int)Math.Ceiling((b.SubscriptionExpiresAt.Value - DateTime.UtcNow).TotalDays)
+                            : null,
                         LicenseUrls = licenseUrls,
                         LicenseStatus = licenseRequest?.Status.ToString(),
                         LicenseRejectReason = licenseRequest?.RejectReason

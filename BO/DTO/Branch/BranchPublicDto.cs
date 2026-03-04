@@ -2,7 +2,10 @@ using System;
 
 namespace BO.DTO.Branch
 {
-    public class BranchResponseDto
+    /// <summary>
+    /// Public branch DTO for normal users - hides vendor-specific fields
+    /// </summary>
+    public class BranchPublicDto
     {
         public int BranchId { get; set; }
         public int VendorId { get; set; }
@@ -20,13 +23,5 @@ namespace BO.DTO.Branch
         public bool IsVerified { get; set; }
         public double AvgRating { get; set; }
         public bool IsActive { get; set; }
-        public bool IsSubscribed { get; set; }
-        public DateTime? SubscriptionExpiresAt { get; set; }
-        public int? DaysRemaining { get; set; }
-        
-        // License info
-        public System.Collections.Generic.List<string> LicenseUrls { get; set; }
-        public string LicenseStatus { get; set; } // Pending, Accept, Reject
-        public string LicenseRejectReason { get; set; }
     }
 }

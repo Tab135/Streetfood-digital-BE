@@ -54,6 +54,9 @@ namespace BO.Entities
 
         public bool IsSubscribed { get; set; }
 
+        /// <summary>Date when the paid subscription expires (null = never paid)</summary>
+        public DateTime? SubscriptionExpiresAt { get; set; }
+
         // Navigation properties
         public virtual Vendor Vendor { get; set; }
         public virtual User User { get; set; }

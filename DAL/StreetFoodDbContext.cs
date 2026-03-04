@@ -1,4 +1,5 @@
-﻿using BO.Entities;
+﻿using BO.DTO.Payments;
+using BO.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace DAL;
@@ -38,6 +39,7 @@ public class StreetFoodDbContext : DbContext
     public DbSet<Dish> Dishes { get; set; }
     public DbSet<DishTaste> DishTastes { get; set; }
     public DbSet<DishDietaryPreference> DishDietaryPreferences { get; set; }
+    public DbSet<Payment> Payments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

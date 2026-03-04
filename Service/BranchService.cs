@@ -25,14 +25,12 @@ namespace Service
 
         public async Task<Branch> CreateBranchAsync(CreateBranchDto createBranchDto, int vendorId, int userId)
         {
-            // Verify vendor exists
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
             if (vendor == null)
             {
                 throw new Exception($"Vendor with ID {vendorId} not found");
             }
 
-            // Verify user owns the vendor
             if (vendor.UserId != userId)
             {
                 throw new Exception("User does not own this vendor");
@@ -67,28 +65,28 @@ namespace Service
                 throw new Exception($"Branch with ID {branchId} not found");
             }
 
-            return MapToResponseDto(branch);
+            return await MapToResponseDtoAsync(branch);
         }
 
         public async Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
         {
             var (branches, totalCount) = await _branchRepository.GetByVendorIdAsync(vendorId, pageNumber, pageSize);
-            var items = branches.Select(MapToResponseDto).ToList();
-            return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
+            var items = await Task.WhenAll(branches.Select(MapToResponseDtoAsync));
+            return new PaginatedResponse<BranchResponseDto>(items.ToList(), totalCount, pageNumber, pageSize);
         }
 
         public async Task<PaginatedResponse<BranchResponseDto>> GetAllBranchesAsync(int pageNumber, int pageSize)
         {
             var (branches, totalCount) = await _branchRepository.GetAllAsync(pageNumber, pageSize);
-            var items = branches.Select(MapToResponseDto).ToList();
-            return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
+            var items = await Task.WhenAll(branches.Select(MapToResponseDtoAsync));
+            return new PaginatedResponse<BranchResponseDto>(items.ToList(), totalCount, pageNumber, pageSize);
         }
 
         public async Task<PaginatedResponse<BranchResponseDto>> GetActiveBranchesAsync(int pageNumber, int pageSize)
         {
             var (branches, totalCount) = await _branchRepository.GetActiveBranchesAsync(pageNumber, pageSize);
-            var items = branches.Select(MapToResponseDto).ToList();
-            return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
+            var items = await Task.WhenAll(branches.Select(MapToResponseDtoAsync));
+            return new PaginatedResponse<BranchResponseDto>(items.ToList(), totalCount, pageNumber, pageSize);
         }
 
         public async Task<BranchResponseDto> UpdateBranchAsync(int branchId, UpdateBranchDto updateBranchDto, int userId)
@@ -136,7 +134,7 @@ namespace Service
 
             await _branchRepository.UpdateAsync(branch);
 
-            return MapToResponseDto(branch);
+            return await MapToResponseDtoAsync(branch);
         }
 
         public async Task DeleteBranchAsync(int branchId, int userId)
@@ -147,7 +145,6 @@ namespace Service
                 throw new Exception($"Branch with ID {branchId} not found");
             }
 
-            // Verify vendor exists and user owns it
             var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
             if (vendor == null || vendor.UserId != userId)
             {
@@ -337,16 +334,20 @@ namespace Service
                 AvgRating = branch.AvgRating,
                 IsActive = branch.IsActive,
                 IsSubscribed = branch.IsSubscribed,
+                SubscriptionExpiresAt = branch.SubscriptionExpiresAt,
+                DaysRemaining = branch.SubscriptionExpiresAt.HasValue 
+                    ? (int)Math.Ceiling((branch.SubscriptionExpiresAt.Value - DateTime.UtcNow).TotalDays)
+                    : null,
                 LicenseUrls = licenseUrls,
                 LicenseStatus = licenseRequest?.Status.ToString(),
                 LicenseRejectReason = licenseRequest?.RejectReason
             };
         }
 
-        private BranchResponseDto MapToResponseDto(Branch branch)
+        private BO.DTO.Branch.BranchPublicDto MapToPublicDto(Branch branch)
         {
-            // Sync version - license info fetched separately if needed
-            return new BranchResponseDto
+            // Public version without vendor-specific fields
+            return new BO.DTO.Branch.BranchPublicDto
             {
                 BranchId = branch.BranchId,
                 VendorId = branch.VendorId,
@@ -364,7 +365,6 @@ namespace Service
                 IsVerified = branch.IsVerified,
                 AvgRating = branch.AvgRating,
                 IsActive = branch.IsActive,
-                IsSubscribed = branch.IsSubscribed
             };
         }
 

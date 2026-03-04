@@ -10,6 +10,7 @@ namespace BO.Entities
     {
         User = 0,
         Admin = 1,
-        Moderator = 2
+        Moderator = 2,
+        Vendor = 3
     }
 }
