@@ -55,11 +55,10 @@ namespace Service
             {
                 VendorId = createdVendor.VendorId,
                 UserId = userId,
-                Name = createVendorDto.Name, // Uses vendor name for default branch
+                Name = !string.IsNullOrWhiteSpace(createVendorDto.BranchName) ? createVendorDto.BranchName : $"{createVendorDto.Name} 1",
                 PhoneNumber = createVendorDto.PhoneNumber,
                 Email = createVendorDto.Email,
                 AddressDetail = createVendorDto.AddressDetail,
-                BuildingName = createVendorDto.BuildingName,
                 Ward = createVendorDto.Ward,
                 City = createVendorDto.City,
                 Lat = createVendorDto.Lat,
@@ -186,7 +185,6 @@ namespace Service
                         PhoneNumber = b.PhoneNumber,
                         Email = b.Email,
                         AddressDetail = b.AddressDetail,
-                        BuildingName = b.BuildingName,
                         Ward = b.Ward,
                         City = b.City,
                         Lat = b.Lat,

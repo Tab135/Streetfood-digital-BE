@@ -50,7 +50,6 @@ namespace StreetFood.Controllers
                     PhoneNumber = branch.PhoneNumber,
                     Email = branch.Email,
                     AddressDetail = branch.AddressDetail,
-                    BuildingName = branch.BuildingName,
                     Ward = branch.Ward,
                     City = branch.City,
                     Lat = branch.Lat,

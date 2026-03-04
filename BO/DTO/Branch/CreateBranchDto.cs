@@ -20,9 +20,6 @@ namespace BO.DTO.Branch
         public string AddressDetail { get; set; }
 
         [StringLength(255)]
-        public string BuildingName { get; set; }
-
-        [StringLength(255)]
         public string Ward { get; set; }
 
         [Required(ErrorMessage = "City is required")]

@@ -11,7 +11,6 @@ namespace BO.DTO.Branch
         public string PhoneNumber { get; set; }
         public string Email { get; set; }
         public string AddressDetail { get; set; }
-        public string BuildingName { get; set; }
         public string Ward { get; set; }
         public string City { get; set; }
         public double Lat { get; set; }

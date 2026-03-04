@@ -12,6 +12,9 @@ namespace BO.DTO.Vendor
         [StringLength(255, ErrorMessage = "Vendor name cannot exceed 255 characters")]
         public string Name { get; set; }
 
+        [StringLength(255, ErrorMessage = "Branch name cannot exceed 255 characters")]
+        public string BranchName { get; set; }
+
         [Phone(ErrorMessage = "Invalid phone number")]
         [StringLength(50, ErrorMessage = "Phone number cannot exceed 50 characters")]
         public string PhoneNumber { get; set; }
@@ -22,9 +25,6 @@ namespace BO.DTO.Vendor
 
         [Required(ErrorMessage = "Address detail is required")]
         public string AddressDetail { get; set; }
-
-        [StringLength(255)]
-        public string BuildingName { get; set; }
 
         [StringLength(255)]
         public string Ward { get; set; }

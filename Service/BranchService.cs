@@ -46,7 +46,6 @@ namespace Service
                 PhoneNumber = createBranchDto.PhoneNumber,
                 Email = createBranchDto.Email,
                 AddressDetail = createBranchDto.AddressDetail,
-                BuildingName = createBranchDto.BuildingName,
                 Ward = createBranchDto.Ward,
                 City = createBranchDto.City,
                 Lat = createBranchDto.Lat,
@@ -119,9 +118,6 @@ namespace Service
 
             if (!string.IsNullOrEmpty(updateBranchDto.AddressDetail))
                 branch.AddressDetail = updateBranchDto.AddressDetail;
-
-            if (!string.IsNullOrEmpty(updateBranchDto.BuildingName))
-                branch.BuildingName = updateBranchDto.BuildingName;
 
             if (!string.IsNullOrEmpty(updateBranchDto.Ward))
                 branch.Ward = updateBranchDto.Ward;
@@ -331,7 +327,6 @@ namespace Service
                 PhoneNumber = branch.PhoneNumber,
                 Email = branch.Email,
                 AddressDetail = branch.AddressDetail,
-                BuildingName = branch.BuildingName,
                 Ward = branch.Ward,
                 City = branch.City,
                 Lat = branch.Lat,
@@ -360,7 +355,6 @@ namespace Service
                 PhoneNumber = branch.PhoneNumber,
                 Email = branch.Email,
                 AddressDetail = branch.AddressDetail,
-                BuildingName = branch.BuildingName,
                 Ward = branch.Ward,
                 City = branch.City,
                 Lat = branch.Lat,
