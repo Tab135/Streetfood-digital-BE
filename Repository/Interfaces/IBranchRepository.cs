@@ -37,7 +37,7 @@ namespace Repository.Interfaces
         Task AddBranchRegisterRequestAsync(BranchRegisterRequest request);
         Task UpdateBranchRegisterRequestAsync(BranchRegisterRequest request);
         
-        // Search functionality
-        Task<List<Branch>> SearchBranchesWithDishesAsync(string keyword);
+        // Search vendors with branches and dishes
+        Task<List<Branch>> SearchVendorsWithBranchesAndDishesAsync(string keyword);
     }
 }

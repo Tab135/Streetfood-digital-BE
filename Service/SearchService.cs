@@ -26,42 +26,63 @@ namespace Service
             }
 
             var normalizedKeyword = TextNormalizer.NormalizeForSearch(keyword);
-            var branches = await _branchRepository.SearchBranchesWithDishesAsync(keyword);
+            
+            // Search for vendors with their branches and dishes
+            var branches = await _branchRepository.SearchVendorsWithBranchesAndDishesAsync(keyword);
 
-            var results = branches
+            // Filter branches that match the search keyword (by branch name or dish name)
+            var matchingBranches = branches
                 .Where(branch => 
                     TextNormalizer.NormalizeForSearch(branch.Name).Contains(normalizedKeyword) ||
                     branch.Dishes.Any(d => TextNormalizer.NormalizeForSearch(d.Name).Contains(normalizedKeyword)))
-                .Select(branch => new SearchResultDto
+                .ToList();
+
+            // Group branches by Vendor and return vendor-centric results
+            var vendorResults = matchingBranches
+                .GroupBy(branch => new 
+                { 
+                    branch.VendorId, 
+                    VendorName = branch.Vendor?.Name,
+                    branch.UserId,
+                    VendorIsActive = branch.Vendor?.IsActive
+                })
+                .Select(vendorGroup => new SearchResultDto
                 {
-                    BranchId = branch.BranchId,
-                    Name = branch.Name,
-                    AddressDetail = branch.AddressDetail,
-                    City = branch.City,
-                    Ward = branch.Ward,
-                    Lat = branch.Lat,
-                    Long = branch.Long,
-                    AvgRating = branch.AvgRating,
-                    IsVerified = branch.IsVerified,
-                    IsActive = branch.IsActive,
-                    Dishes = branch.Dishes
-                        .Where(d => d.IsActive && 
-                            TextNormalizer.NormalizeForSearch(d.Name).Contains(normalizedKeyword))
-                        .Select(dish => new DishSearchDto
-                        {
-                            DishId = dish.DishId,
-                            Name = dish.Name,
-                            Price = dish.Price,
-                            Description = dish.Description,
-                            ImageUrl = dish.ImageUrl,
-                            IsSoldOut = dish.IsSoldOut,
-                            CategoryName = dish.Category?.Name ?? string.Empty
-                        })
-                        .ToList()
+                    VendorId = vendorGroup.Key.VendorId,
+                    VendorName = vendorGroup.Key.VendorName ?? string.Empty,
+                    UserId = vendorGroup.Key.UserId ?? 0,
+                    IsActive = vendorGroup.Key.VendorIsActive ?? false,
+                    Branches = vendorGroup.Select(branch => new BranchSearchDto
+                    {
+                        BranchId = branch.BranchId,
+                        Name = branch.Name,
+                        AddressDetail = branch.AddressDetail,
+                        City = branch.City,
+                        Ward = branch.Ward,
+                        Lat = branch.Lat,
+                        Long = branch.Long,
+                        AvgRating = branch.AvgRating,
+                        IsVerified = branch.IsVerified,
+                        IsActive = branch.IsActive,
+                        Dishes = branch.Dishes
+                            .Where(d => d.IsActive && 
+                                TextNormalizer.NormalizeForSearch(d.Name).Contains(normalizedKeyword))
+                            .Select(dish => new DishSearchDto
+                            {
+                                DishId = dish.DishId,
+                                Name = dish.Name,
+                                Price = dish.Price,
+                                Description = dish.Description,
+                                ImageUrl = dish.ImageUrl,
+                                IsSoldOut = dish.IsSoldOut,
+                                CategoryName = dish.Category?.Name ?? string.Empty
+                            })
+                            .ToList()
+                    }).ToList()
                 })
                 .ToList();
 
-            return results;
+            return vendorResults;
         }
     }
 }

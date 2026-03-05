@@ -4,6 +4,15 @@ namespace BO.DTO.Search
 {
     public class SearchResultDto
     {
+        public int VendorId { get; set; }
+        public string VendorName { get; set; }
+        public int UserId { get; set; }
+        public bool IsActive { get; set; }
+        public List<BranchSearchDto> Branches { get; set; } = new List<BranchSearchDto>();
+    }
+
+    public class BranchSearchDto
+    {
         public int BranchId { get; set; }
         public string Name { get; set; }
         public string AddressDetail { get; set; }

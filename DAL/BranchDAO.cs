@@ -26,6 +26,8 @@ namespace DAL
         public async Task<Branch> GetByIdAsync(int branchId)
         {
             return await _context.Branches
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Include(b => b.Vendor)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
@@ -37,6 +39,8 @@ namespace DAL
         public async Task<List<Branch>> GetAllByVendorIdAsync(int vendorId)
         {
             return await _context.Branches
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Where(b => b.VendorId == vendorId)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
@@ -47,11 +51,13 @@ namespace DAL
         public async Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
         {
             var query = _context.Branches
+                .AsNoTracking()
                 .Where(b => b.VendorId == vendorId);
 
             var totalCount = await query.CountAsync();
             
             var items = await query
+                .AsSplitQuery()
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -64,11 +70,13 @@ namespace DAL
 
         public async Task<(List<Branch> items, int totalCount)> GetAllAsync(int pageNumber, int pageSize)
         {
-            var query = _context.Branches;
+            var query = _context.Branches
+                .AsNoTracking();
 
             var totalCount = await query.CountAsync();
             
             var items = await query
+                .AsSplitQuery()
                 .Include(b => b.Vendor)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
@@ -83,11 +91,13 @@ namespace DAL
         public async Task<(List<Branch> items, int totalCount)> GetActiveBranchesAsync(int pageNumber, int pageSize)
         {
             var query = _context.Branches
+                .AsNoTracking()
                 .Where(b => b.IsActive && b.IsVerified); // Only return verified and active branches
 
             var totalCount = await query.CountAsync();
             
             var items = await query
+                .AsSplitQuery()
                 .Include(b => b.Vendor)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
@@ -102,6 +112,7 @@ namespace DAL
         public async Task<List<Branch>> GetByVerificationStatusAsync(bool isVerified)
         {
             return await _context.Branches
+                .AsNoTracking()
                 .Where(b => b.IsVerified == isVerified)
                 .Include(b => b.Vendor)
                 .ToListAsync();
@@ -110,6 +121,7 @@ namespace DAL
         public async Task<(List<Branch> items, int totalCount)> GetUnverifiedBranchesAsync(int pageNumber, int pageSize)
         {
             var query = _context.Branches
+                .AsNoTracking()
                 .Where(b => !b.IsVerified);
 
             var totalCount = await query.CountAsync();
@@ -148,6 +160,7 @@ namespace DAL
         public async Task<List<WorkSchedule>> GetWorkSchedulesAsync(int branchId)
         {
             return await _context.WorkSchedules
+                .AsNoTracking()
                 .Where(ws => ws.BranchId == branchId)
                 .ToListAsync();
         }
@@ -155,6 +168,7 @@ namespace DAL
         public async Task<List<DayOff>> GetDayOffsAsync(int branchId)
         {
             return await _context.DayOffs
+                .AsNoTracking()
                 .Where(d => d.BranchId == branchId)
                 .ToListAsync();
         }
@@ -162,6 +176,7 @@ namespace DAL
         public async Task<(List<BranchImage> items, int totalCount)> GetBranchImagesAsync(int branchId, int pageNumber, int pageSize)
         {
             var query = _context.BranchImages
+                .AsNoTracking()
                 .Where(bi => bi.BranchId == branchId);
 
             var totalCount = await query.CountAsync();
@@ -247,12 +262,14 @@ namespace DAL
         public async Task<BranchRegisterRequest> GetBranchRegisterRequestAsync(int branchId)
         {
             return await _context.BranchRegisterRequests
+                .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.BranchId == branchId);
         }
 
         public async Task<(List<BranchRegisterRequest> items, int totalCount)> GetAllBranchRegisterRequestsAsync(int pageNumber, int pageSize)
         {
-            var query = _context.BranchRegisterRequests;
+            var query = _context.BranchRegisterRequests
+                .AsNoTracking();
 
             var totalCount = await query.CountAsync();
             
@@ -278,8 +295,11 @@ namespace DAL
             await _context.SaveChangesAsync();
         }
 
-        /// Search branches by keyword in branch name or dish name (case-insensitive)
-        public async Task<List<Branch>> SearchBranchesWithDishesAsync(string keyword)
+        /// <summary>
+        /// Search vendors by keyword in branch name or dish name (case-insensitive).
+        /// Returns branches grouped by vendor.
+        /// </summary>
+        public async Task<List<Branch>> SearchVendorsWithBranchesAndDishesAsync(string keyword)
         {
             if (string.IsNullOrWhiteSpace(keyword))
             {
@@ -289,9 +309,12 @@ namespace DAL
             var searchPattern = $"%{keyword}%";
 
             var branches = await _context.Branches
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified &&
                     (EF.Functions.ILike(b.Name, searchPattern) ||
                      b.Dishes.Any(d => d.IsActive && EF.Functions.ILike(d.Name, searchPattern))))
+                .Include(b => b.Vendor)
                 .Include(b => b.Dishes.Where(d => d.IsActive))
                     .ThenInclude(d => d.Category)
                 .OrderByDescending(b => b.AvgRating)
