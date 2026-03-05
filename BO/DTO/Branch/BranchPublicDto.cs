@@ -9,6 +9,7 @@ namespace BO.DTO.Branch
     {
         public int BranchId { get; set; }
         public int VendorId { get; set; }
+        public string VendorName { get; set; }
         public int? UserId { get; set; }
         public string Name { get; set; }
         public string PhoneNumber { get; set; }
@@ -23,5 +24,6 @@ namespace BO.DTO.Branch
         public bool IsVerified { get; set; }
         public double AvgRating { get; set; }
         public bool IsActive { get; set; }
+
     }
 }

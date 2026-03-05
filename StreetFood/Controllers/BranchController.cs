@@ -112,6 +112,7 @@ namespace StreetFood.Controllers
             return new BO.DTO.Branch.BranchPublicDto
             {
                 BranchId = full.BranchId,
+                VendorName = full.VendorName,
                 VendorId = full.VendorId,
                 UserId = full.UserId,
                 Name = full.Name,
@@ -127,6 +128,7 @@ namespace StreetFood.Controllers
                 IsVerified = full.IsVerified,
                 AvgRating = full.AvgRating,
                 IsActive = full.IsActive,
+
             };
         }
 

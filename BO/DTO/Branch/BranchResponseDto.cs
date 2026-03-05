@@ -21,6 +21,7 @@ namespace BO.DTO.Branch
         public double AvgRating { get; set; }
         public bool IsActive { get; set; }
         public bool IsSubscribed { get; set; }
+        public string VendorName { get; set; }
         public DateTime? SubscriptionExpiresAt { get; set; }
         public int? DaysRemaining { get; set; }
         

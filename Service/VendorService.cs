@@ -55,7 +55,7 @@ namespace Service
             {
                 VendorId = createdVendor.VendorId,
                 UserId = userId,
-                Name = !string.IsNullOrWhiteSpace(createVendorDto.BranchName) ? createVendorDto.BranchName : $"{createVendorDto.Name} 1",
+                Name = !string.IsNullOrWhiteSpace(createVendorDto.BranchName) ? createVendorDto.BranchName : "1",
                 PhoneNumber = createVendorDto.PhoneNumber,
                 Email = createVendorDto.Email,
                 AddressDetail = createVendorDto.AddressDetail,

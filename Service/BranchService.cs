@@ -334,6 +334,7 @@ namespace Service
                 AvgRating = branch.AvgRating,
                 IsActive = branch.IsActive,
                 IsSubscribed = branch.IsSubscribed,
+                VendorName = branch.Vendor?.Name,
                 SubscriptionExpiresAt = branch.SubscriptionExpiresAt,
                 DaysRemaining = branch.SubscriptionExpiresAt.HasValue 
                     ? (int)Math.Ceiling((branch.SubscriptionExpiresAt.Value - DateTime.UtcNow).TotalDays)
