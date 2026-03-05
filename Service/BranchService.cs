@@ -71,22 +71,28 @@ namespace Service
         public async Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
         {
             var (branches, totalCount) = await _branchRepository.GetByVendorIdAsync(vendorId, pageNumber, pageSize);
-            var items = await Task.WhenAll(branches.Select(MapToResponseDtoAsync));
-            return new PaginatedResponse<BranchResponseDto>(items.ToList(), totalCount, pageNumber, pageSize);
+            var items = new List<BranchResponseDto>();
+            foreach (var branch in branches)
+                items.Add(await MapToResponseDtoAsync(branch));
+            return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task<PaginatedResponse<BranchResponseDto>> GetAllBranchesAsync(int pageNumber, int pageSize)
         {
             var (branches, totalCount) = await _branchRepository.GetAllAsync(pageNumber, pageSize);
-            var items = await Task.WhenAll(branches.Select(MapToResponseDtoAsync));
-            return new PaginatedResponse<BranchResponseDto>(items.ToList(), totalCount, pageNumber, pageSize);
+            var items = new List<BranchResponseDto>();
+            foreach (var branch in branches)
+                items.Add(await MapToResponseDtoAsync(branch));
+            return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task<PaginatedResponse<BranchResponseDto>> GetActiveBranchesAsync(int pageNumber, int pageSize)
         {
             var (branches, totalCount) = await _branchRepository.GetActiveBranchesAsync(pageNumber, pageSize);
-            var items = await Task.WhenAll(branches.Select(MapToResponseDtoAsync));
-            return new PaginatedResponse<BranchResponseDto>(items.ToList(), totalCount, pageNumber, pageSize);
+            var items = new List<BranchResponseDto>();
+            foreach (var branch in branches)
+                items.Add(await MapToResponseDtoAsync(branch));
+            return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task<BranchResponseDto> UpdateBranchAsync(int branchId, UpdateBranchDto updateBranchDto, int userId)
@@ -176,13 +182,18 @@ namespace Service
         public async Task<List<BranchResponseDto>> GetVerifiedBranchesAsync()
         {
             var branches = await _branchRepository.GetByVerificationStatusAsync(true);
-            return branches.Select(MapToResponseDtoAsync).Select(t => t.Result).ToList();
+            var items = new List<BranchResponseDto>();
+            foreach (var branch in branches)
+                items.Add(await MapToResponseDtoAsync(branch));
+            return items;
         }
 
         public async Task<PaginatedResponse<BranchResponseDto>> GetUnverifiedBranchesAsync(int pageNumber, int pageSize)
         {
             var (branches, totalCount) = await _branchRepository.GetUnverifiedBranchesAsync(pageNumber, pageSize);
-            var items = branches.Select(MapToResponseDtoAsync).Select(t => t.Result).ToList();
+            var items = new List<BranchResponseDto>();
+            foreach (var branch in branches)
+                items.Add(await MapToResponseDtoAsync(branch));
             return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
