@@ -21,7 +21,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateTasteDto createDto)
         {
             if (!ModelState.IsValid)
@@ -55,7 +55,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateTasteDto updateDto)
         {
             if (!ModelState.IsValid)
@@ -72,7 +72,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);

@@ -20,7 +20,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> CreateDish([FromBody] CreateDishRequest request)
         {
             if (!ModelState.IsValid)
@@ -58,7 +58,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> UpdateDish(int id, [FromBody] UpdateDishRequest request)
         {
             if (!ModelState.IsValid)
@@ -77,7 +77,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> DeleteDish(int id)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);

@@ -28,9 +28,6 @@ namespace Service
 
         public async Task<TasteDto> CreateTasteAsync(CreateTasteDto createDto, int userId)
         {
-            // Check if user is a vendor with at least one verified branch
-            await ValidateVendorHasVerifiedBranchAsync(userId);
-
             var entity = new Taste
             {
                 Name = createDto.Name,
@@ -59,8 +56,6 @@ namespace Service
             if (existing == null)
                 throw new DomainExceptions($"Taste with id {id} not found");
 
-            await ValidateVendorHasVerifiedBranchAsync(userId);
-
             if (!string.IsNullOrEmpty(updateDto.Name))
                 existing.Name = updateDto.Name;
 
@@ -77,25 +72,8 @@ namespace Service
             if (existing == null)
                 throw new DomainExceptions($"Taste with id {id} not found");
 
-            await ValidateVendorHasVerifiedBranchAsync(userId);
-
             await _repo.DeleteAsync(id);
             return true;
-        }
-
-        private async Task ValidateVendorHasVerifiedBranchAsync(int userId)
-        {
-            var vendor = await _vendorRepository.GetByUserIdAsync(userId);
-            if (vendor == null)
-            {
-                throw new DomainExceptions("You must be a vendor to manage tastes");
-            }
-
-            var branches = await _branchRepository.GetAllByVendorIdAsync(vendor.VendorId);
-            if (!branches.Any(b => b.IsVerified))
-            {
-                throw new DomainExceptions("You must have at least one verified branch to manage tastes");
-            }
         }
 
         private static TasteDto MapToDto(Taste t)
