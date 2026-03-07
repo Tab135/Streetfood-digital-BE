@@ -12,8 +12,7 @@ namespace BO.Entities
         [ForeignKey("Branch")]
         public int BranchId { get; set; }
 
-        [Required]
-        public string LicenseUrl { get; set; }
+        public string? LicenseUrl { get; set; }
 
         [Required]
         public RegisterVendorStatusEnum Status { get; set; }

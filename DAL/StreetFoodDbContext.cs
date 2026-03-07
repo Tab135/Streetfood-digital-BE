@@ -172,7 +172,7 @@ public class StreetFoodDbContext : DbContext
         modelBuilder.Entity<BranchRegisterRequest>(entity =>
         {
             entity.HasKey(e => e.BranchRegisterRequestId);
-            entity.Property(e => e.LicenseUrl).IsRequired();
+            entity.Property(e => e.LicenseUrl).IsRequired(false);
             entity.Property(e => e.Status).IsRequired();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");

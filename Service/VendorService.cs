@@ -69,7 +69,19 @@ namespace Service
                 AvgRating = 0
             };
 
-            await _branchRepository.CreateAsync(defaultBranch);
+            var createdBranch = await _branchRepository.CreateAsync(defaultBranch);
+
+            // We fucking create this bitch ass branch request before those fucker upload license 
+            var defaultRegisterRequest = new BranchRegisterRequest
+            {
+                BranchId = createdBranch.BranchId,
+                LicenseUrl = null,
+                Status = RegisterVendorStatusEnum.Pending,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _branchRepository.AddBranchRegisterRequestAsync(defaultRegisterRequest);
 
             return createdVendor;
         }

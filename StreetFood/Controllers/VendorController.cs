@@ -79,7 +79,7 @@ namespace StreetFood.Controllers
         /// Get my vendor account (current user's vendor)
         /// </summary>
         [HttpGet("my-vendor")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> GetMyVendor()
         {
             try
