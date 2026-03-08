@@ -42,5 +42,8 @@ namespace Service.Interfaces
         Task<BranchImage> AddBranchImageAsync(int branchId, string imageUrl, int userId);
         Task<PaginatedResponse<BranchImageResponseDto>> GetBranchImagesAsync(int branchId, int pageNumber, int pageSize);
         Task DeleteBranchImageAsync(int imageId, int userId);
+
+        // Active branches with dynamic filtering
+        Task<ActiveBranchListResponseDto> GetActiveBranchesFilteredAsync(ActiveBranchFilterDto filter);
     }
 }

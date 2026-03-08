@@ -323,5 +323,126 @@ namespace DAL
 
             return branches;
         }
+
+        /// <summary>
+        /// Get active branches with dynamic filtering: distance (Haversine), dietary, taste, price range.
+        /// </summary>
+        public async Task<List<(Branch branch, double distanceKm)>> GetActiveBranchesFilteredAsync(
+            double userLat,
+            double userLong,
+            double maxDistanceKm,
+            List<int>? dietaryIds,
+            List<int>? tasteIds,
+            decimal? minPrice,
+            decimal? maxPrice)
+        {
+            var branches = await _context.Branches
+                .AsNoTracking()
+                .AsSplitQuery()
+                .Where(b => b.IsActive && b.IsVerified)
+                .Include(b => b.Vendor)
+                .Include(b => b.Dishes.Where(d => d.IsActive))
+                    .ThenInclude(d => d.Category)
+                .Include(b => b.Dishes.Where(d => d.IsActive))
+                    .ThenInclude(d => d.DishTastes)
+                        .ThenInclude(dt => dt.Taste)
+                .Include(b => b.Dishes.Where(d => d.IsActive))
+                    .ThenInclude(d => d.DishDietaryPreferences)
+                        .ThenInclude(ddp => ddp.DietaryPreference)
+                .ToListAsync();
+
+            bool hasDietaryFilter = dietaryIds != null && dietaryIds.Count > 0;
+            bool hasTasteFilter   = tasteIds   != null && tasteIds.Count   > 0;
+            bool hasPriceFilter   = minPrice.HasValue || maxPrice.HasValue;
+            bool hasAnyFilter = hasDietaryFilter || hasTasteFilter || hasPriceFilter;
+
+            var filteredBranches = new List<(Branch branch, double distanceKm)>();
+
+            foreach (var branch in branches)
+            {
+                double distanceKm = HaversineDistance(userLat, userLong, branch.Lat, branch.Long);
+
+                // Distance filter
+                if (distanceKm > maxDistanceKm)
+                    continue;
+
+                // If no filters provided, include all branches within distance
+                if (!hasAnyFilter)
+                {
+                    filteredBranches.Add((branch, distanceKm));
+                    continue;
+                }
+
+                // Check if branch has at least one qualifying dish
+                bool hasQualifyingDish = branch.Dishes.Any(dish =>
+                {
+                    // Price filter (must satisfy if provided)
+                    if (minPrice.HasValue && dish.Price < minPrice.Value) return false;
+                    if (maxPrice.HasValue && dish.Price > maxPrice.Value) return false;
+
+                    // If only price filter is provided, dish passes
+                    if (!hasDietaryFilter && !hasTasteFilter) return true;
+
+                    // GLOBAL OR LOGIC: Dish passes if it has ANY matching taste OR dietary preference
+                    bool passesFilter = false;
+
+                    if (hasTasteFilter)
+                    {
+                        var dishTasteIds = dish.DishTastes.Select(dt => dt.TasteId).ToHashSet();
+                        if (tasteIds!.Any(id => dishTasteIds.Contains(id)))
+                        {
+                            passesFilter = true;
+                        }
+                    }
+
+                    if (hasDietaryFilter)
+                    {
+                        var dishDietaryIds = dish.DishDietaryPreferences
+                            .Select(ddp => ddp.DietaryPreferenceId).ToHashSet();
+                        if (dietaryIds!.Any(id => dishDietaryIds.Contains(id)))
+                        {
+                            passesFilter = true;
+                        }
+                    }
+
+                    return passesFilter;
+                });
+
+                if (hasQualifyingDish)
+                {
+                    filteredBranches.Add((branch, distanceKm));
+                }
+            }
+
+            // Sort by distance (nearest first) and return all
+            return filteredBranches
+                .OrderBy(x => x.distanceKm)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Calculate the great-circle distance between two points using the Haversine formula.
+        /// Returns distance in kilometers.
+        /// </summary>
+        private static double HaversineDistance(double lat1, double long1, double lat2, double long2)
+        {
+            const double EarthRadiusKm = 6371.0;
+
+            double dLat = DegreesToRadians(lat2 - lat1);
+            double dLong = DegreesToRadians(long2 - long1);
+
+            double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                       Math.Cos(DegreesToRadians(lat1)) * Math.Cos(DegreesToRadians(lat2)) *
+                       Math.Sin(dLong / 2) * Math.Sin(dLong / 2);
+
+            double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+
+            return EarthRadiusKm * c;
+        }
+
+        private static double DegreesToRadians(double degrees)
+        {
+            return degrees * (Math.PI / 180.0);
+        }
     }
 }

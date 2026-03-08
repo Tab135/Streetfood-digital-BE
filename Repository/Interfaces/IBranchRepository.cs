@@ -39,5 +39,15 @@ namespace Repository.Interfaces
         
         // Search vendors with branches and dishes
         Task<List<Branch>> SearchVendorsWithBranchesAndDishesAsync(string keyword);
+
+        // Active branches with dynamic filtering - returns all matching results
+        Task<List<(Branch branch, double distanceKm)>> GetActiveBranchesFilteredAsync(
+            double userLat,
+            double userLong,
+            double maxDistanceKm,
+            List<int>? dietaryIds,
+            List<int>? tasteIds,
+            decimal? minPrice,
+            decimal? maxPrice);
     }
 }

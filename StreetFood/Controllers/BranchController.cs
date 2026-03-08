@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -192,19 +194,33 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("active")]
-        public async Task<IActionResult> GetActiveBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetActiveBranches([FromQuery] ActiveBranchFilterDto filter, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var branches = await _branchService.GetActiveBranchesAsync(pageNumber, pageSize);
-                // Convert all to public DTOs
-                var publicBranches = new BO.Common.PaginatedResponse<BO.DTO.Branch.BranchPublicDto>(
-                    branches.Items.Select(ConvertToPublicDto).ToList(),
-                    branches.TotalCount,
-                    branches.CurrentPage,
-                    branches.PageSize
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                // Get all filtered branches from service
+                var allBranches = await _branchService.GetActiveBranchesFilteredAsync(filter);
+                
+                // Apply pagination at controller level
+                var totalCount = allBranches.TotalCount;
+                var paginatedItems = allBranches.Items
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                var paginatedResponse = new BO.Common.PaginatedResponse<ActiveBranchResponseDto>(
+                    paginatedItems,
+                    totalCount,
+                    pageNumber,
+                    pageSize
                 );
-                return Ok(new { message = "Active branches retrieved successfully", data = publicBranches });
+
+                return Ok(new { message = "Active branches retrieved successfully", data = paginatedResponse });
             }
             catch (Exception ex)
             {

@@ -160,5 +160,20 @@ namespace Repository
         {
             return await _branchDAO.SearchVendorsWithBranchesAndDishesAsync(keyword);
         }
+
+        public async Task<List<(Branch branch, double distanceKm)>> GetActiveBranchesFilteredAsync(
+            double userLat,
+            double userLong,
+            double maxDistanceKm,
+            List<int>? dietaryIds,
+            List<int>? tasteIds,
+            decimal? minPrice,
+            decimal? maxPrice)
+        {
+            return await _branchDAO.GetActiveBranchesFilteredAsync(
+                userLat, userLong, maxDistanceKm,
+                dietaryIds, tasteIds,
+                minPrice, maxPrice);
+        }
     }
 }

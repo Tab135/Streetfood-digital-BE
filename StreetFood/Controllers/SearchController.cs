@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace StreetFood.Controllers
 {
-    [Route("api/search")]
+    [Route("api/searchVendorWithBranch")]
     [ApiController]
     public class SearchController : ControllerBase
     {
