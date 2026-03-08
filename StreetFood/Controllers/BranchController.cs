@@ -112,7 +112,6 @@ namespace StreetFood.Controllers
             return new BO.DTO.Branch.BranchPublicDto
             {
                 BranchId = full.BranchId,
-                VendorName = full.VendorName,
                 VendorId = full.VendorId,
                 UserId = full.UserId,
                 Name = full.Name,
@@ -439,7 +438,7 @@ namespace StreetFood.Controllers
         /// Add a work schedule to a branch
         /// </summary>
         [HttpPost("{branchId}/work-schedules")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> AddWorkSchedule(int branchId, [FromBody] AddWorkScheduleDto dto)
         {
             try
@@ -485,7 +484,7 @@ namespace StreetFood.Controllers
         /// Update a work schedule
         /// </summary>
         [HttpPut("work-schedules/{scheduleId}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> UpdateWorkSchedule(int scheduleId, [FromBody] UpdateWorkScheduleDto dto)
         {
             try
@@ -514,7 +513,7 @@ namespace StreetFood.Controllers
         /// Delete a work schedule
         /// </summary>
         [HttpDelete("work-schedules/{scheduleId}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> DeleteWorkSchedule(int scheduleId)
         {
             try
@@ -607,19 +606,15 @@ namespace StreetFood.Controllers
         }
 
         // ==================== BRANCH IMAGE OPERATIONS ====================
-
-        /// <summary>
-        /// Add an image to a branch gallery
-        /// </summary>
         [HttpPost("{branchId}/images")]
-        [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> AddBranchImage(int branchId, IFormFile image)
+        [Authorize(Roles = "Vendor,User")]
+        public async Task<IActionResult> AddBranchImage(int branchId, List<IFormFile> images)
         {
             try
             {
-                if (image == null || image.Length == 0)
+                if (images == null || images.Count == 0)
                 {
-                    return BadRequest(new { message = "Image is required" });
+                    return BadRequest(new { message = "At least one image is required" });
                 }
 
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -628,25 +623,31 @@ namespace StreetFood.Controllers
                     return Unauthorized(new { message = "User not authenticated" });
                 }
 
-                // Save the image
                 var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "branches");
                 if (!Directory.Exists(uploadsFolder))
                 {
                     Directory.CreateDirectory(uploadsFolder);
                 }
 
-                var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                var addedImages = new List<object>();
+                foreach (var image in images)
                 {
-                    await image.CopyToAsync(stream);
+                    if (image.Length == 0) continue;
+
+                    var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await image.CopyToAsync(stream);
+                    }
+
+                    var imageUrl = "http://159.223.47.89:5298" + $"/uploads/branches/{uniqueFileName}";
+                    var branchImage = await _branchService.AddBranchImageAsync(branchId, imageUrl, userId);
+                    addedImages.Add(branchImage);
                 }
 
-                var imageUrl = "http://159.223.47.89:5298" + $"/uploads/branches/{uniqueFileName}";
-
-                var branchImage = await _branchService.AddBranchImageAsync(branchId, imageUrl, userId);
-                return Ok(new { message = "Image added successfully", data = branchImage });
+                return Ok(new { message = "Images added successfully", data = addedImages });
             }
             catch (Exception ex)
             {
