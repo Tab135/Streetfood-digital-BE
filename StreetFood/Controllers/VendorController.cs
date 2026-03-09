@@ -134,8 +134,34 @@ namespace StreetFood.Controllers
         }
 
         /// <summary>
-        /// Delete vendor account
+        /// Update current user's vendor name
         /// </summary>
+        [HttpPut]
+        [Authorize(Roles = "User,Vendor")]
+        public async Task<IActionResult> UpdateMyVendor([FromBody] UpdateVendorDto updateVendorDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new ApiResponse<object>(400, "Invalid input", ModelState));
+                }
+
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                }
+
+                var vendor = await _vendorService.UpdateVendorAsync(userId, updateVendorDto);
+                return Ok(vendor);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>(400, ex.Message, "UPDATE_VENDOR_ERROR"));
+            }
+        }
+
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteVendor(int id)
@@ -153,9 +179,6 @@ namespace StreetFood.Controllers
 
         // Admin Operations
 
-        /// <summary>
-        /// Suspend vendor account (Admin only)
-        /// </summary>
         [HttpPut("{id}/suspend")]
         [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> SuspendVendor(int id)
@@ -171,11 +194,8 @@ namespace StreetFood.Controllers
             }
         }
 
-        /// <summary>
-        /// Reactivate vendor account (Admin only)
-        /// </summary>
         [HttpPut("{id}/reactivate")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> ReactivateVendor(int id)
         {
             try
