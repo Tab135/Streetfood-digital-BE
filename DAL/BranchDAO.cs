@@ -325,6 +325,30 @@ namespace DAL
         }
 
         /// <summary>
+        /// Get all active branches without any filtering (used when no filters provided).
+        /// Returns all active and verified branches with their dishes.
+        /// </summary>
+        public async Task<List<Branch>> GetAllActiveBranchesWithoutFilterAsync()
+        {
+            return await _context.Branches
+                .AsNoTracking()
+                .AsSplitQuery()
+                .Where(b => b.IsActive && b.IsVerified)
+                .Include(b => b.Vendor)
+                .Include(b => b.Dishes.Where(d => d.IsActive))
+                    .ThenInclude(d => d.Category)
+                .Include(b => b.Dishes.Where(d => d.IsActive))
+                    .ThenInclude(d => d.DishTastes)
+                        .ThenInclude(dt => dt.Taste)
+                .Include(b => b.Dishes.Where(d => d.IsActive))
+                    .ThenInclude(d => d.DishDietaryPreferences)
+                        .ThenInclude(ddp => ddp.DietaryPreference)
+                .OrderByDescending(b => b.AvgRating)
+                .ThenBy(b => b.Name)
+                .ToListAsync();
+        }
+
+        /// <summary>
         /// Get active branches with dynamic filtering: distance (Haversine), dietary, taste, price range.
         /// </summary>
         public async Task<List<(Branch branch, double distanceKm)>> GetActiveBranchesFilteredAsync(
