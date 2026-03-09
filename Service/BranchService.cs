@@ -14,13 +14,16 @@ namespace Service
     {
         private readonly IBranchRepository _branchRepository;
         private readonly IVendorRepository _vendorRepository;
+        private readonly IUserRepository _userRepository;
 
         public BranchService(
             IBranchRepository branchRepository,
-            IVendorRepository vendorRepository)
+            IVendorRepository vendorRepository,
+            IUserRepository userRepository)
         {
             _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
             _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
+            _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         }
 
         public async Task<Branch> CreateBranchAsync(CreateBranchDto createBranchDto, int vendorId, int userId)
@@ -317,6 +320,17 @@ namespace Service
                 registrationRequest.Status = RegisterVendorStatusEnum.Accept;
                 registrationRequest.UpdatedAt = DateTime.UtcNow;
                 await _branchRepository.UpdateBranchRegisterRequestAsync(registrationRequest);
+            }
+
+            // Promote user to Vendor role if this is their first branch verification
+            if (branch.UserId.HasValue)
+            {
+                var user = await _userRepository.GetUserById(branch.UserId.Value);
+                if (user != null && user.Role == Role.User)
+                {
+                    user.Role = Role.Vendor;
+                    await _userRepository.UpdateAsync(user);
+                }
             }
 
             return true;
