@@ -16,6 +16,9 @@ namespace Service.Interfaces
         Task<PaginatedResponse<VendorResponseDto>> GetActiveVendorsAsync(int pageNumber, int pageSize);
         Task DeleteVendorAsync(int vendorId);
 
+        // Update
+        Task<VendorResponseDto> UpdateVendorAsync(int userId, UpdateVendorDto updateVendorDto);
+
         // Admin operations
         Task<bool> SuspendVendorAsync(int vendorId);
         Task<bool> ReactivateVendorAsync(int vendorId);

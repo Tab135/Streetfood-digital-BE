@@ -133,6 +133,21 @@ namespace Service
             await _vendorRepository.DeleteAsync(vendorId);
         }
 
+        public async Task<VendorResponseDto> UpdateVendorAsync(int userId, UpdateVendorDto updateVendorDto)
+        {
+            var vendor = await _vendorRepository.GetByUserIdAsync(userId);
+            if (vendor == null)
+            {
+                throw new Exception($"Vendor for user ID {userId} not found");
+            }
+
+            vendor.Name = updateVendorDto.Name;
+            vendor.UpdatedAt = DateTime.UtcNow;
+            await _vendorRepository.UpdateAsync(vendor);
+
+            return await GetVendorByIdAsync(vendor.VendorId);
+        }
+
         public async Task<bool> SuspendVendorAsync(int vendorId)
         {
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
@@ -142,7 +157,21 @@ namespace Service
             }
 
             vendor.IsActive = false;
+            vendor.UpdatedAt = DateTime.UtcNow;
             await _vendorRepository.UpdateAsync(vendor);
+
+            // Deactivate all branches belonging to this vendor
+            var branches = await _branchRepository.GetAllByVendorIdAsync(vendorId);
+            foreach (var branch in branches)
+            {
+                if (branch.IsActive)
+                {
+                    branch.IsActive = false;
+                    branch.UpdatedAt = DateTime.UtcNow;
+                    await _branchRepository.UpdateAsync(branch);
+                }
+            }
+
             return true;
         }
 
@@ -155,7 +184,21 @@ namespace Service
             }
 
             vendor.IsActive = true;
+            vendor.UpdatedAt = DateTime.UtcNow;
             await _vendorRepository.UpdateAsync(vendor);
+
+            // Reactivate only branches that have an active subscription
+            var branches = await _branchRepository.GetAllByVendorIdAsync(vendorId);
+            foreach (var branch in branches)
+            {
+                if (!branch.IsActive && branch.IsSubscribed)
+                {
+                    branch.IsActive = true;
+                    branch.UpdatedAt = DateTime.UtcNow;
+                    await _branchRepository.UpdateAsync(branch);
+                }
+            }
+
             return true;
         }
 
