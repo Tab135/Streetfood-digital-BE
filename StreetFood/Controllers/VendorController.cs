@@ -157,7 +157,7 @@ namespace StreetFood.Controllers
         /// Suspend vendor account (Admin only)
         /// </summary>
         [HttpPut("{id}/suspend")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> SuspendVendor(int id)
         {
             try

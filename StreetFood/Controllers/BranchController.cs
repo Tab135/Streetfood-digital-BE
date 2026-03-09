@@ -24,7 +24,7 @@ namespace StreetFood.Controllers
         /// Create a new branch for a vendor
         /// </summary>
         [HttpPost("vendor/{vendorId}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> CreateBranch(int vendorId, [FromBody] CreateBranchDto createBranchDto)
         {
             try

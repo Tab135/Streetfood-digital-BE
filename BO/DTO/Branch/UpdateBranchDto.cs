@@ -26,7 +26,5 @@ namespace BO.DTO.Branch
         public double? Lat { get; set; }
 
         public double? Long { get; set; }
-
-        public bool? IsActive { get; set; }
     }
 }
