@@ -138,6 +138,13 @@ namespace DAL
         public async Task UpdateAsync(Branch branch)
         {
             branch.UpdatedAt = DateTime.UtcNow;
+            if (branch.Vendor != null)
+            {
+                // if there is a vendor object, detach it so it can't conflict
+                _context.Entry(branch.Vendor).State = EntityState.Detached;
+                branch.Vendor = null;
+            }
+
             _context.Branches.Update(branch);
             await _context.SaveChangesAsync();
         }

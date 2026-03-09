@@ -138,9 +138,6 @@ namespace Service
             if (updateBranchDto.Long.HasValue)
                 branch.Long = updateBranchDto.Long.Value;
 
-            if (updateBranchDto.IsActive.HasValue)
-                branch.IsActive = updateBranchDto.IsActive.Value;
-
             await _branchRepository.UpdateAsync(branch);
 
             return await MapToResponseDtoAsync(branch);
@@ -310,7 +307,6 @@ namespace Service
             }
 
             branch.IsVerified = true;
-            branch.IsActive = true; // Activate branch when verified
             await _branchRepository.UpdateAsync(branch);
 
             // Update registration request status
