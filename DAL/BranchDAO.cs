@@ -275,6 +275,7 @@ namespace DAL
             
             var items = await query
                 .Include(r => r.Branch)
+                    .ThenInclude(b => b.BranchImages)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();

@@ -254,11 +254,48 @@ namespace Service
             return registrationRequest;
         }
 
-        public async Task<PaginatedResponse<BranchRegisterRequest>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize)
+        public async Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize)
         {
             var (allRequests, totalCount) = await _branchRepository.GetAllBranchRegisterRequestsAsync(pageNumber, pageSize);
-            var items = allRequests.Where(r => r.Status == RegisterVendorStatusEnum.Pending).ToList();
-            return new PaginatedResponse<BranchRegisterRequest>(items, totalCount, pageNumber, pageSize);
+            var items = allRequests
+                .Where(r => r.Status == RegisterVendorStatusEnum.Pending)
+                .Select(r => new PendingRegistrationDto
+                {
+                    BranchRegisterRequestId = r.BranchRegisterRequestId,
+                    BranchId = r.BranchId,
+                    LicenseUrl = r.LicenseUrl,
+                    Status = r.Status,
+                    RejectReason = r.RejectReason,
+                    CreatedAt = r.CreatedAt,
+                    UpdatedAt = r.UpdatedAt,
+                    Branch = r.Branch == null ? null : new PendingRegistrationDto.PendingBranchInfo
+                    {
+                        BranchId = r.Branch.BranchId,
+                        VendorId = r.Branch.VendorId,
+                        UserId = r.Branch.UserId,
+                        Name = r.Branch.Name,
+                        PhoneNumber = r.Branch.PhoneNumber,
+                        Email = r.Branch.Email,
+                        AddressDetail = r.Branch.AddressDetail,
+                        Ward = r.Branch.Ward,
+                        City = r.Branch.City,
+                        Lat = r.Branch.Lat,
+                        Long = r.Branch.Long,
+                        CreatedAt = r.Branch.CreatedAt,
+                        UpdatedAt = r.Branch.UpdatedAt,
+                        IsVerified = r.Branch.IsVerified,
+                        AvgRating = r.Branch.AvgRating,
+                        IsActive = r.Branch.IsActive,
+                        IsSubscribed = r.Branch.IsSubscribed,
+                        SubscriptionExpiresAt = r.Branch.SubscriptionExpiresAt,
+                        BranchImages = r.Branch.BranchImages?.Select(i => new BranchImageResponseDto
+                        {
+                            BranchImageId = i.BranchImageId,
+                            ImageUrl = i.ImageUrl
+                        }).ToList() 
+                    }
+                }).ToList();
+            return new PaginatedResponse<PendingRegistrationDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task<bool> VerifyBranchAsync(int branchId)
