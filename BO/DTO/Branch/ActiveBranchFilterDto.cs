@@ -9,13 +9,11 @@ namespace BO.DTO.Branch
     /// </summary>
     public class ActiveBranchFilterDto
     {
-        /// <summary>User's current latitude (mandatory)</summary>
-        [Required(ErrorMessage = "Latitude is required")]
+        /// <summary>User's current latitude (optional, defaults to HCM center: 10.8231)</summary>
         [Range(-90, 90, ErrorMessage = "Latitude must be between -90 and 90")]
         public double? Lat { get; set; }
 
-        /// <summary>User's current longitude (mandatory)</summary>
-        [Required(ErrorMessage = "Longitude is required")]
+        /// <summary>User's current longitude (optional, defaults to HCM center: 106.6297)</summary>
         [Range(-180, 180, ErrorMessage = "Longitude must be between -180 and 180")]
         public double? Long { get; set; }
 

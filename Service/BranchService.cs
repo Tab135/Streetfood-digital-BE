@@ -582,11 +582,9 @@ namespace Service
 
         public async Task<ActiveBranchListResponseDto> GetActiveBranchesFilteredAsync(ActiveBranchFilterDto filter)
         {
-            if (!filter.Lat.HasValue || !filter.Long.HasValue)
-            {
-                throw new Exception("Latitude and Longitude are required");
-            }
-
+            // Default coordinates: Ho Chi Minh City center (if not provided)
+            double userLat = filter.Lat ?? 10.8231;  // Default: HCM latitude
+            double userLong = filter.Long ?? 106.6297;  // Default: HCM longitude
             double maxDistance = filter.Distance ?? 10.0;
 
             if (filter.MinPrice.HasValue && filter.MaxPrice.HasValue && filter.MinPrice > filter.MaxPrice)
@@ -594,7 +592,7 @@ namespace Service
 
             // DAL handles ALL filtering logic (distance, price, taste, dietary)
             var items = await _branchRepository.GetActiveBranchesFilteredAsync(
-                filter.Lat.Value, filter.Long.Value, maxDistance,
+                userLat, userLong, maxDistance,
                 filter.DietaryIds, filter.TasteIds,
                 filter.MinPrice, filter.MaxPrice);
 
