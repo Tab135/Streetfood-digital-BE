@@ -622,5 +622,74 @@ namespace Service
                 _ => "Unknown"
             };
         }
+
+        // ==================== ACTIVE BRANCHES WITH DYNAMIC FILTERING ====================
+
+        public async Task<ActiveBranchListResponseDto> GetActiveBranchesFilteredAsync(ActiveBranchFilterDto filter)
+        {
+            // Default coordinates: Ho Chi Minh City center (if not provided)
+            double userLat = filter.Lat ?? 10.8231;  // Default: HCM latitude
+            double userLong = filter.Long ?? 106.6297;  // Default: HCM longitude
+            double maxDistance = filter.Distance ?? 10.0;
+
+            if (filter.MinPrice.HasValue && filter.MaxPrice.HasValue && filter.MinPrice > filter.MaxPrice)
+                throw new Exception("MinPrice cannot be greater than MaxPrice");
+
+            // DAL handles ALL filtering logic (distance, price, taste, dietary)
+            var items = await _branchRepository.GetActiveBranchesFilteredAsync(
+                userLat, userLong, maxDistance,
+                filter.DietaryIds, filter.TasteIds,
+                filter.MinPrice, filter.MaxPrice);
+
+            // Service layer only maps to DTOs - NO additional filtering
+            var responseDtos = items.Select(item =>
+            {
+                var branch     = item.branch;
+                var distanceKm = item.distanceKm;
+
+                // Map all active dishes (already filtered by DAL)
+                var dishes = branch.Dishes.Where(d => d.IsActive);
+
+                return new ActiveBranchResponseDto
+                {
+                    BranchId      = branch.BranchId,
+                    VendorId      = branch.VendorId,
+                    VendorName    = branch.Vendor?.Name ?? string.Empty,
+                    Name          = branch.Name,
+                    PhoneNumber   = branch.PhoneNumber,
+                    Email         = branch.Email,
+                    AddressDetail = branch.AddressDetail,
+                    Ward          = branch.Ward,
+                    City          = branch.City,
+                    Lat           = branch.Lat,
+                    Long          = branch.Long,
+                    AvgRating     = branch.AvgRating,
+                    IsVerified    = branch.IsVerified,
+                    DistanceKm    = Math.Round(distanceKm, 2),
+                    Dishes = dishes.Select(dish => new ActiveDishResponseDto
+                    {
+                        DishId       = dish.DishId,
+                        Name         = dish.Name,
+                        Price        = dish.Price,
+                        Description  = dish.Description,
+                        ImageUrl     = dish.ImageUrl,
+                        IsSoldOut    = dish.IsSoldOut,
+                        CategoryName = dish.Category?.Name ?? string.Empty,
+                        TasteNames = dish.DishTastes?
+                            .Select(dt => dt.Taste?.Name ?? string.Empty)
+                            .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new(),
+                        DietaryPreferenceNames = dish.DishDietaryPreferences?
+                            .Select(ddp => ddp.DietaryPreference?.Name ?? string.Empty)
+                            .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
+                    }).ToList()
+                };
+            }).ToList();
+
+            return new ActiveBranchListResponseDto
+            {
+                Items      = responseDtos,
+                TotalCount = responseDtos.Count
+            };
+        }
     }
 }
