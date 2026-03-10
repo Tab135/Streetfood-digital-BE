@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="uploads\branches\" />
     <Folder Include="uploads\licenses\" />
   </ItemGroup>
 
