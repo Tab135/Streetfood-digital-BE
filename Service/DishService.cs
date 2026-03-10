@@ -57,6 +57,7 @@ namespace Service
                 throw new DomainExceptions("Branch must be verified before creating dishes");
             }
 
+            // TODO: (Optional) Get category instance instead of checking existence, to avoid multiple DB calls. Same for Taste and DietaryPreference.
             // Validate Category exists
             var categoryExists = await _categoryRepository.ExistsByIdAsync(request.CategoryId);
             if (!categoryExists)
@@ -64,6 +65,7 @@ namespace Service
                 throw new DomainExceptions($"Category with ID {request.CategoryId} not found");
             }
 
+            // TODO: Taste and DietaryPreference is required in CreateDishRequest
             // Validate all TasteIds exist
             if (request.TasteIds != null && request.TasteIds.Count > 0)
             {

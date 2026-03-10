@@ -308,7 +308,7 @@ namespace Service
             // Generate and store OTP associated with the phone number (stored in OtpVerify.Email field)
             var otpCode = await GenerateAndStoreOtpAsync(phoneNumber);
 
-            //Fucking implement the phonenumber send OTP here
+            //TODO: Fucking implement the phonenumber send OTP here
             return otpCode;
         }
 

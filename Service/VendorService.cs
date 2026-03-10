@@ -71,7 +71,7 @@ namespace Service
 
             var createdBranch = await _branchRepository.CreateAsync(defaultBranch);
 
-            // We fucking create this bitch ass branch request before those fucker upload license 
+            //TODO: We fucking create this bitch ass branch request before those fucker upload license 
             var defaultRegisterRequest = new BranchRegisterRequest
             {
                 BranchId = createdBranch.BranchId,
