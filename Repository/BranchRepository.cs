@@ -161,6 +161,11 @@ namespace Repository
             return await _branchDAO.SearchVendorsWithBranchesAndDishesAsync(keyword);
         }
 
+        public async Task<List<Branch>> GetAllActiveBranchesWithoutFilterAsync()
+        {
+            return await _branchDAO.GetAllActiveBranchesWithoutFilterAsync();
+        }
+
         public async Task<List<(Branch branch, double distanceKm)>> GetActiveBranchesFilteredAsync(
             double userLat,
             double userLong,
