@@ -47,7 +47,7 @@ namespace StreetFood.Controllers
                 {
                     BranchId = branch.BranchId,
                     VendorId = branch.VendorId,
-                    UserId = branch.UserId,
+                    ManagerId = branch.ManagerId,
                     Name = branch.Name,
                     PhoneNumber = branch.PhoneNumber,
                     Email = branch.Email,
@@ -91,7 +91,7 @@ namespace StreetFood.Controllers
                 bool isVendorOwner = false;
                 if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId) 
                     && roleClaim?.Value == "Vendor" 
-                    && branch.UserId == userId)
+                    && branch.ManagerId == userId)
                 {
                     isVendorOwner = true;
                 }
@@ -115,7 +115,7 @@ namespace StreetFood.Controllers
             {
                 BranchId = full.BranchId,
                 VendorId = full.VendorId,
-                UserId = full.UserId,
+                ManagerId = full.ManagerId,
                 Name = full.Name,
                 PhoneNumber = full.PhoneNumber,
                 Email = full.Email,
@@ -149,8 +149,9 @@ namespace StreetFood.Controllers
                 if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId) 
                     && roleClaim?.Value == "Vendor")
                 {
+                    // TODO: Update this logic to check if the user is the owner of the vendor
                     // Check if any branch belongs to this user
-                    isVendorOwner = branches.Items.Any(b => b.UserId == userId);
+                    isVendorOwner = branches.Items.Any(b => b.ManagerId == userId);
                 }
                 
                 // Convert to public DTOs if not vendor owner

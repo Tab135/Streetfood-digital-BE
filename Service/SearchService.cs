@@ -43,14 +43,14 @@ namespace Service
                 { 
                     branch.VendorId, 
                     VendorName = branch.Vendor?.Name,
-                    branch.UserId,
+                    branch.ManagerId,
                     VendorIsActive = branch.Vendor?.IsActive
                 })
                 .Select(vendorGroup => new SearchResultDto
                 {
                     VendorId = vendorGroup.Key.VendorId,
                     VendorName = vendorGroup.Key.VendorName ?? string.Empty,
-                    UserId = vendorGroup.Key.UserId ?? 0,
+                    ManagerId = vendorGroup.Key.ManagerId ?? 0,
                     IsActive = vendorGroup.Key.VendorIsActive ?? false,
                     Branches = vendorGroup.Select(branch => new BranchSearchDto
                     {

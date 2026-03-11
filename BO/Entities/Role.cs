@@ -11,6 +11,7 @@ namespace BO.Entities
         User = 0,
         Admin = 1,
         Moderator = 2,
-        Vendor = 3
+        Vendor = 3,
+        Manager = 4
     }
 }

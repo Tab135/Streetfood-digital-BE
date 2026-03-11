@@ -42,7 +42,7 @@ namespace Service
             var branch = new Branch
             {
                 VendorId = vendorId,
-                UserId = userId,
+                ManagerId = vendor.UserId,
                 Name = createBranchDto.Name,
                 PhoneNumber = createBranchDto.PhoneNumber,
                 Email = createBranchDto.Email,
@@ -272,7 +272,7 @@ namespace Service
                     {
                         BranchId = r.Branch.BranchId,
                         VendorId = r.Branch.VendorId,
-                        UserId = r.Branch.UserId,
+                        ManagerId = r.Branch.ManagerId,
                         Name = r.Branch.Name,
                         PhoneNumber = r.Branch.PhoneNumber,
                         Email = r.Branch.Email,
@@ -318,14 +318,15 @@ namespace Service
                 await _branchRepository.UpdateBranchRegisterRequestAsync(registrationRequest);
             }
 
-            // Promote user to Vendor role if this is their first branch verification
-            if (branch.UserId.HasValue)
+            // Promote vendor owner to Vendor role if not already
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            if (vendor != null)
             {
-                var user = await _userRepository.GetUserById(branch.UserId.Value);
-                if (user != null && user.Role == Role.User)
+                var vendorOwner = await _userRepository.GetUserById(vendor.UserId);
+                if (vendorOwner != null && vendorOwner.Role == Role.User)
                 {
-                    user.Role = Role.Vendor;
-                    await _userRepository.UpdateAsync(user);
+                    vendorOwner.Role = Role.Vendor;
+                    await _userRepository.UpdateAsync(vendorOwner);
                 }
             }
 
@@ -377,7 +378,7 @@ namespace Service
             {
                 BranchId = branch.BranchId,
                 VendorId = branch.VendorId,
-                UserId = branch.UserId,
+                ManagerId = branch.ManagerId,
                 Name = branch.Name,
                 PhoneNumber = branch.PhoneNumber,
                 Email = branch.Email,
@@ -409,7 +410,7 @@ namespace Service
             {
                 BranchId = branch.BranchId,
                 VendorId = branch.VendorId,
-                UserId = branch.UserId,
+                ManagerId = branch.ManagerId,
                 Name = branch.Name,
                 PhoneNumber = branch.PhoneNumber,
                 Email = branch.Email,

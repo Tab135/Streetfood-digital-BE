@@ -54,7 +54,7 @@ namespace Service
             var defaultBranch = new Branch
             {
                 VendorId = createdVendor.VendorId,
-                UserId = userId,
+                ManagerId = userId,
                 Name = !string.IsNullOrWhiteSpace(createVendorDto.BranchName) ? createVendorDto.BranchName : "1",
                 PhoneNumber = createVendorDto.PhoneNumber,
                 Email = createVendorDto.Email,
@@ -235,7 +235,7 @@ namespace Service
                     {
                         BranchId = b.BranchId,
                         VendorId = b.VendorId,
-                        UserId = b.UserId,
+                        ManagerId = b.ManagerId,
                         Name = b.Name,
                         PhoneNumber = b.PhoneNumber,
                         Email = b.Email,

@@ -130,9 +130,9 @@ public class StreetFoodDbContext : DbContext
                   .HasForeignKey(e => e.VendorId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(e => e.User)
+            entity.HasOne(e => e.Manager)
                   .WithMany()
-                  .HasForeignKey(e => e.UserId)
+                  .HasForeignKey(e => e.ManagerId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 

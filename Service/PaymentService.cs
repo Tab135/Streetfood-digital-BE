@@ -24,17 +24,20 @@ namespace Service.PaymentsService
         private readonly IConfiguration _configuration;
         private readonly ILogger<PaymentService> _logger;
         private readonly PayOSClient _payOS;
+        private readonly IVendorRepository _vendorRepository;
 
         public PaymentService(
             IPaymentRepository paymentRepo,
             IBranchRepository branchRepo,
             IUserRepository userRepo,
+            IVendorRepository vendorRepository,
             IConfiguration configuration,
             ILogger<PaymentService> logger)
         {
             _paymentRepo = paymentRepo;
             _branchRepo = branchRepo;
             _userRepo = userRepo;
+            _vendorRepository = vendorRepository;
             _configuration = configuration;
             _logger = logger;
 
@@ -68,11 +71,17 @@ namespace Service.PaymentsService
                     return new PaymentLinkResult { Success = false, Message = "Chi nhánh không tồn tại." };
                 }
 
-                // 2. Verify the user owns this branch
-                if (branch.UserId != userId)
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            if (vendor != null)
                 {
-                    return new PaymentLinkResult { Success = false, Message = "Bạn không có quyền thanh toán cho chi nhánh này." };
+                    var vendorOwner = await _userRepo.GetUserById(vendor.UserId);
+                  // 2. Verify the user owns this branch
+                    if (vendorOwner.Id != userId)
+                    {
+                        return new PaymentLinkResult { Success = false, Message = "Bạn không có quyền thanh toán cho chi nhánh này." };
+                    }
                 }
+             
 
                 // 3. Check that the moderator has approved the branch register request
                 var request = await _branchRepo.GetBranchRegisterRequestAsync(branchId);

@@ -9,7 +9,7 @@ namespace BO.DTO.Branch
     {
         public int BranchId { get; set; }
         public int VendorId { get; set; }
-        public int? UserId { get; set; }
+        public int? ManagerId { get; set; }
         public string Name { get; set; }
         public string PhoneNumber { get; set; }
         public string Email { get; set; }

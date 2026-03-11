@@ -6,7 +6,7 @@ namespace BO.DTO.Search
     {
         public int VendorId { get; set; }
         public string VendorName { get; set; }
-        public int UserId { get; set; }
+        public int ManagerId { get; set; }
         public bool IsActive { get; set; }
         public List<BranchSearchDto> Branches { get; set; } = new List<BranchSearchDto>();
     }

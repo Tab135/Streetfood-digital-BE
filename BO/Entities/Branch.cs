@@ -13,8 +13,8 @@ namespace BO.Entities
         [ForeignKey("Vendor")]
         public int VendorId { get; set; }
 
-        [ForeignKey("User")]
-        public int? UserId { get; set; }
+        [ForeignKey("Manager")]
+        public int? ManagerId { get; set; }
 
         [Required]
         [StringLength(255)]
@@ -59,7 +59,7 @@ namespace BO.Entities
 
         // Navigation properties
         public virtual Vendor Vendor { get; set; }
-        public virtual User User { get; set; }
+        public virtual User Manager { get; set; }
         public virtual ICollection<WorkSchedule> WorkSchedules { get; set; }
         public virtual ICollection<DayOff> DayOffs { get; set; }
         public virtual ICollection<BranchImage> BranchImages { get; set; }
