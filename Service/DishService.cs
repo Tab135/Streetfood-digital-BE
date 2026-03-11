@@ -45,10 +45,17 @@ namespace Service
                 throw new DomainExceptions($"Branch with ID {request.BranchId} not found");
             }
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
-            if (vendor == null || vendor.UserId != userId)
+            // Check if the user is the assigned Manager for this specific branch
+            bool isBranchManager = branch.ManagerId == userId;
+
+            // If they are NOT the manager, then we must check if they are the Vendor Owner
+            if (!isBranchManager)
             {
-                throw new DomainExceptions("You do not own this branch");
+                var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+                if (vendor == null || vendor.UserId != userId)
+                {
+                    throw new DomainExceptions("You do not own or manage this branch");
+                }
             }
 
             // Check if branch is verified
