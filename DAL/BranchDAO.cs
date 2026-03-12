@@ -23,7 +23,7 @@ namespace DAL
             return branch;
         }
 
-        public async Task<Branch> GetByIdAsync(int branchId)
+        public async Task<Branch?> GetByIdAsync(int branchId)
         {
             return await _context.Branches
                 .AsNoTracking()
@@ -271,6 +271,15 @@ namespace DAL
             return await _context.BranchRegisterRequests
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.BranchId == branchId);
+        }
+
+        public async Task<Dictionary<int, BranchRegisterRequest>> GetRegisterRequestsByBranchIdsAsync(List<int> branchIds)
+        {
+            var requests = await _context.BranchRegisterRequests
+                .AsNoTracking()
+                .Where(r => branchIds.Contains(r.BranchId))
+                .ToListAsync();
+            return requests.ToDictionary(r => r.BranchId);
         }
 
         public async Task<(List<BranchRegisterRequest> items, int totalCount)> GetAllBranchRegisterRequestsAsync(int pageNumber, int pageSize)

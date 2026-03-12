@@ -84,16 +84,13 @@ namespace StreetFood.Controllers
             {
                 var branch = await _branchService.GetBranchByIdAsync(id);
                 
-                // Check if current user is the vendor owner of this branch
+                // Check if current user owns this branch's vendor
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                var roleClaim = User.FindFirst(ClaimTypes.Role);
-                
+
                 bool isVendorOwner = false;
-                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId) 
-                    && roleClaim?.Value == "Vendor" 
-                    && branch.ManagerId == userId)
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    isVendorOwner = true;
+                    isVendorOwner = await _branchService.IsVendorOwnedByUserAsync(branch.VendorId, userId);
                 }
                 
                 // Return appropriate DTO based on ownership
@@ -141,17 +138,13 @@ namespace StreetFood.Controllers
             {
                 var branches = await _branchService.GetBranchesByVendorIdAsync(vendorId, pageNumber, pageSize);
                 
-                // Check if current user is the vendor owner
+                // Check if current user owns this vendor
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                var roleClaim = User.FindFirst(ClaimTypes.Role);
-                
+
                 bool isVendorOwner = false;
-                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId) 
-                    && roleClaim?.Value == "Vendor")
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int userId))
                 {
-                    // TODO: Update this logic to check if the user is the owner of the vendor
-                    // Check if any branch belongs to this user
-                    isVendorOwner = branches.Items.Any(b => b.ManagerId == userId);
+                    isVendorOwner = await _branchService.IsVendorOwnedByUserAsync(vendorId, userId);
                 }
                 
                 // Convert to public DTOs if not vendor owner
@@ -229,7 +222,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> UpdateBranch(int id, [FromBody] UpdateBranchDto updateBranchDto)
         {
             try
@@ -255,7 +248,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> DeleteBranch(int id)
         {
             try
@@ -279,7 +272,7 @@ namespace StreetFood.Controllers
 
 
         [HttpPost("{id}/submit-license")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> SubmitBranchLicense(int id, List<IFormFile> licenseImages)
         {
             try
@@ -334,12 +327,18 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("{id}/license-status")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> GetBranchLicenseStatus(int id)
         {
             try
             {
-                var result = await _branchService.GetBranchLicenseStatusAsync(id);
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var result = await _branchService.GetBranchLicenseStatusAsync(id, userId);
                 
                 var licenseUrls = new System.Collections.Generic.List<string>();
                 if (!string.IsNullOrEmpty(result.LicenseUrl))
@@ -556,7 +555,7 @@ namespace StreetFood.Controllers
         /// Add a day off to a branch
         /// </summary>
         [HttpPost("{branchId}/day-offs")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> AddDayOff(int branchId, [FromBody] AddDayOffDto dto)
         {
             try
@@ -602,7 +601,7 @@ namespace StreetFood.Controllers
         /// Delete a day off
         /// </summary>
         [HttpDelete("day-offs/{dayOffId}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> DeleteDayOff(int dayOffId)
         {
             try
@@ -693,7 +692,7 @@ namespace StreetFood.Controllers
         /// Delete a branch image
         /// </summary>
         [HttpDelete("images/{imageId}")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,User")]
         public async Task<IActionResult> DeleteBranchImage(int imageId)
         {
             try
