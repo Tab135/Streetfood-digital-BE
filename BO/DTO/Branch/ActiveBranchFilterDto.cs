@@ -34,5 +34,8 @@ namespace BO.DTO.Branch
         /// <summary>Maximum dish price filter. Ignored if null.</summary>
         [Range(0, double.MaxValue, ErrorMessage = "MaxPrice must be a positive value")]
         public decimal? MaxPrice { get; set; }
+
+        /// <summary>Array of category IDs to filter dishes. Ignored if null or empty.</summary>
+        public List<int>? CategoryIds { get; set; }
     }
 }

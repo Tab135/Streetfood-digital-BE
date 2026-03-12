@@ -173,12 +173,14 @@ namespace Repository
             List<int>? dietaryIds,
             List<int>? tasteIds,
             decimal? minPrice,
-            decimal? maxPrice)
+            decimal? maxPrice,
+            List<int>? categoryIds)
         {
             return await _branchDAO.GetActiveBranchesFilteredAsync(
                 userLat, userLong, maxDistanceKm,
                 dietaryIds, tasteIds,
-                minPrice, maxPrice);
+                minPrice, maxPrice,
+                categoryIds);
         }
     }
 }

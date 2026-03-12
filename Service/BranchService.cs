@@ -588,7 +588,8 @@ namespace Service
             bool hasPrice = filter.MinPrice.HasValue || filter.MaxPrice.HasValue;
             bool hasTaste = filter.TasteIds != null && filter.TasteIds.Count > 0;
             bool hasDietary = filter.DietaryIds != null && filter.DietaryIds.Count > 0;
-            bool hasAnyFilter = hasLatLong || hasDistance || hasPrice || hasTaste || hasDietary;
+            bool hasCategory = filter.CategoryIds != null && filter.CategoryIds.Count > 0;
+            bool hasAnyFilter = hasLatLong || hasDistance || hasPrice || hasTaste || hasDietary || hasCategory;
 
             // If NO filters provided, return all active branches without filtering
             if (!hasAnyFilter)
@@ -650,11 +651,12 @@ namespace Service
             double userLong = filter.Long ?? 106.6297;  // Default: HCM longitude
             double maxDistance = filter.Distance ?? 10.0;
 
-            // DAL handles ALL filtering logic (distance, price, taste, dietary)
+            // DAL handles ALL filtering logic (distance, price, taste, dietary, category)
             var items = await _branchRepository.GetActiveBranchesFilteredAsync(
                 userLat, userLong, maxDistance,
                 filter.DietaryIds, filter.TasteIds,
-                filter.MinPrice, filter.MaxPrice);
+                filter.MinPrice, filter.MaxPrice,
+                filter.CategoryIds);
 
             // Service layer only maps to DTOs - NO additional filtering
             var responseDtos = items.Select(item =>

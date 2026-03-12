@@ -51,6 +51,7 @@ namespace Repository.Interfaces
             List<int>? dietaryIds,
             List<int>? tasteIds,
             decimal? minPrice,
-            decimal? maxPrice);
+            decimal? maxPrice,
+            List<int>? categoryIds);
     }
 }
