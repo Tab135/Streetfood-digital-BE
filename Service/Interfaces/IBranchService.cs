@@ -14,7 +14,6 @@ namespace Service.Interfaces
         Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize);
         Task<PaginatedResponse<BranchResponseDto>> GetAllBranchesAsync(int pageNumber, int pageSize);
         Task<PaginatedResponse<BranchResponseDto>> GetActiveBranchesAsync(int pageNumber, int pageSize);
-        Task<List<BranchResponseDto>> GetVerifiedBranchesAsync();
         Task<PaginatedResponse<BranchResponseDto>> GetUnverifiedBranchesAsync(int pageNumber, int pageSize);
         Task<BranchResponseDto> UpdateBranchAsync(int branchId, UpdateBranchDto updateBranchDto, int userId);
         Task DeleteBranchAsync(int branchId, int userId);
@@ -22,7 +21,7 @@ namespace Service.Interfaces
         
         // License submission and verification
         Task<BranchRegisterRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId);
-        Task<BranchRegisterRequest> GetBranchLicenseStatusAsync(int branchId);
+        Task<BranchRegisterRequest> GetBranchLicenseStatusAsync(int branchId, int userId);
         Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize);
         Task<bool> VerifyBranchAsync(int branchId);
         Task<bool> RejectBranchRegistrationAsync(int branchId, string rejectionReason);
@@ -45,5 +44,8 @@ namespace Service.Interfaces
 
         // Active branches with dynamic filtering
         Task<ActiveBranchListResponseDto> GetActiveBranchesFilteredAsync(ActiveBranchFilterDto filter);
+
+        // Vendor ownership check
+        Task<bool> IsVendorOwnedByUserAsync(int vendorId, int userId);
     }
 }
