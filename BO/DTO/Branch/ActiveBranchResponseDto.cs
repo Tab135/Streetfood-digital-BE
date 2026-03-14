@@ -22,8 +22,8 @@ namespace BO.DTO.Branch
         public double AvgRating { get; set; }
         public bool IsVerified { get; set; }
 
-        /// <summary>Distance in kilometers from user's location</summary>
-        public double DistanceKm { get; set; }
+        /// <summary>Distance in kilometers from user's location (null if no location provided)</summary>
+        public double? DistanceKm { get; set; }
 
         /// <summary>Active dishes that match the filter criteria</summary>
         public List<ActiveDishResponseDto> Dishes { get; set; } = new List<ActiveDishResponseDto>();

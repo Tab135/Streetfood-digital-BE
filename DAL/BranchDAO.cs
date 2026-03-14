@@ -366,7 +366,8 @@ namespace DAL
             List<int>? dietaryIds,
             List<int>? tasteIds,
             decimal? minPrice,
-            decimal? maxPrice)
+            decimal? maxPrice,
+            List<int>? categoryIds)
         {
             var branches = await _context.Branches
                 .AsNoTracking()
@@ -383,10 +384,11 @@ namespace DAL
                         .ThenInclude(ddp => ddp.DietaryPreference)
                 .ToListAsync();
 
-            bool hasDietaryFilter = dietaryIds != null && dietaryIds.Count > 0;
-            bool hasTasteFilter   = tasteIds   != null && tasteIds.Count   > 0;
-            bool hasPriceFilter   = minPrice.HasValue || maxPrice.HasValue;
-            bool hasAnyFilter = hasDietaryFilter || hasTasteFilter || hasPriceFilter;
+            bool hasDietaryFilter  = dietaryIds  != null && dietaryIds.Count  > 0;
+            bool hasTasteFilter    = tasteIds    != null && tasteIds.Count    > 0;
+            bool hasPriceFilter    = minPrice.HasValue || maxPrice.HasValue;
+            bool hasCategoryFilter = categoryIds != null && categoryIds.Count > 0;
+            bool hasAnyFilter = hasDietaryFilter || hasTasteFilter || hasPriceFilter || hasCategoryFilter;
 
             var filteredBranches = new List<(Branch branch, double distanceKm)>();
 
@@ -412,7 +414,10 @@ namespace DAL
                     if (minPrice.HasValue && dish.Price < minPrice.Value) return false;
                     if (maxPrice.HasValue && dish.Price > maxPrice.Value) return false;
 
-                    // If only price filter is provided, dish passes
+                    // Category filter (must satisfy if provided)
+                    if (hasCategoryFilter && !categoryIds!.Contains(dish.CategoryId)) return false;
+
+                    // If only price/category filters are provided, dish passes
                     if (!hasDietaryFilter && !hasTasteFilter) return true;
 
                     // GLOBAL OR LOGIC: Dish passes if it has ANY matching taste OR dietary preference
