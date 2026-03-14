@@ -214,14 +214,7 @@ namespace Service
                 CreatedAt = vendor.CreatedAt,
                 UpdatedAt = vendor.UpdatedAt,
                 IsActive = vendor.IsActive,
-                VendorOwner = vendor.VendorOwner != null ? new BO.DTO.Vendor.VendorOwnerDto
-                {
-                    FirstName = vendor.VendorOwner.FirstName,
-                    LastName = vendor.VendorOwner.LastName,
-                    Email = vendor.VendorOwner.Email,
-                    PhoneNumber = vendor.VendorOwner.PhoneNumber,
-                    AvatarUrl = vendor.VendorOwner.AvatarUrl,
-                } : null,
+                VendorOwnerName = vendor.VendorOwner != null ? $"{vendor.VendorOwner.FirstName} {vendor.VendorOwner.LastName}".Trim() : "",
                 Branches = branches.Select(b =>
                 {
                     var licenseRequest = _branchRepository.GetBranchRegisterRequestAsync(b.BranchId).Result;

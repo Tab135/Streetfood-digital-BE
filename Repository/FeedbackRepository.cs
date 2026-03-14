@@ -27,9 +27,10 @@ namespace Repository
             return await _feedbackDAO.GetByIdAsync(feedbackId);
         }
 
-        public async Task<(List<Feedback> items, int totalCount)> GetByBranchId(int branchId, int pageNumber, int pageSize)
+        public async Task<(List<Feedback> items, int totalCount)> GetByBranchId(
+            int branchId, int pageNumber, int pageSize, string? sortBy = null)
         {
-            return await _feedbackDAO.GetByBranchIdAsync(branchId, pageNumber, pageSize);
+            return await _feedbackDAO.GetByBranchIdAsync(branchId, pageNumber, pageSize, sortBy);
         }
 
         public async Task<(List<Feedback> items, int totalCount)> GetByUserId(int userId, int pageNumber, int pageSize)
@@ -50,6 +51,16 @@ namespace Repository
         public async Task<bool> Exists(int feedbackId)
         {
             return await _feedbackDAO.ExistsAsync(feedbackId);
+        }
+
+        public async Task<bool> HasUserFeedbackOnBranch(int branchId, int userId)
+        {
+            return await _feedbackDAO.HasUserFeedbackOnBranchAsync(branchId, userId);
+        }
+
+        public async Task<bool> HasFeedbackForOrder(int userId, int orderId)
+        {
+            return await _feedbackDAO.HasFeedbackForOrderAsync(userId, orderId);
         }
 
         // Rating and Statistics

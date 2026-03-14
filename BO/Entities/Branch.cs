@@ -50,6 +50,9 @@ namespace BO.Entities
 
         public double AvgRating { get; set; }
 
+        public int TotalReviewCount { get; set; } = 0;
+        public int TotalRatingSum { get; set; } = 0;
+
         public bool IsActive { get; set; }
 
         public bool IsSubscribed { get; set; }

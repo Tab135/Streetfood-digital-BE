@@ -9,11 +9,13 @@ namespace Repository.Interfaces
         // Feedback CRUD
         Task<Feedback> Create(Feedback feedback, List<string> imageUrls = null, List<int> tagIds = null);
         Task<Feedback> GetById(int feedbackId);
-        Task<(List<Feedback> items, int totalCount)> GetByBranchId(int branchId, int pageNumber, int pageSize);
+        Task<(List<Feedback> items, int totalCount)> GetByBranchId(int branchId, int pageNumber, int pageSize, string? sortBy = null);
         Task<(List<Feedback> items, int totalCount)> GetByUserId(int userId, int pageNumber, int pageSize);
         Task<Feedback> Update(Feedback feedback);
         Task<bool> Delete(int feedbackId);
         Task<bool> Exists(int feedbackId);
+        Task<bool> HasUserFeedbackOnBranch(int branchId, int userId);
+        Task<bool> HasFeedbackForOrder(int userId, int orderId);
 
         // Rating and Statistics
         Task<double> GetAverageRatingByBranchId(int branchId);

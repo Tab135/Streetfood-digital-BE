@@ -65,6 +65,9 @@ namespace DAL
                 .Include(f => f.FeedbackImages)
                 .Include(f => f.FeedbackTagAssociations)
                     .ThenInclude(fta => fta.FeedbackTag)
+                .Include(f => f.VendorReply)
+                    .ThenInclude(r => r.User)
+                .Include(f => f.Votes)
                 .FirstOrDefaultAsync(f => f.FeedbackId == feedbackId);
         }
 
@@ -86,20 +89,42 @@ namespace DAL
             }
         }
 
-        // Get feedback by branch ID
-        public async Task<(List<Feedback> items, int totalCount)> GetByBranchIdAsync(int branchId, int pageNumber, int pageSize)
+        // Get feedback by branch ID with sorting
+        public async Task<(List<Feedback> items, int totalCount)> GetByBranchIdAsync(
+            int branchId, int pageNumber, int pageSize, string? sortBy = null)
         {
             var query = _context.Feedbacks
                 .Where(f => f.BranchId == branchId);
 
             var totalCount = await query.CountAsync();
-            
-            var items = await query
+
+            var orderedQuery = query
                 .Include(f => f.User)
                 .Include(f => f.FeedbackImages)
                 .Include(f => f.FeedbackTagAssociations)
                     .ThenInclude(fta => fta.FeedbackTag)
-                .OrderByDescending(f => f.CreatedAt)
+                .Include(f => f.VendorReply)
+                    .ThenInclude(r => r.User)
+                .Include(f => f.Votes)
+                .AsQueryable();
+
+            orderedQuery = sortBy switch
+            {
+                "most_helpful" => orderedQuery
+                    .OrderByDescending(f => f.Votes.Count(v => v.VoteType == VoteType.Up) -
+                                            f.Votes.Count(v => v.VoteType == VoteType.Down))
+                    .ThenByDescending(f => f.CreatedAt),
+                "highest_rating" => orderedQuery
+                    .OrderByDescending(f => f.Rating)
+                    .ThenByDescending(f => f.CreatedAt),
+                "lowest_rating" => orderedQuery
+                    .OrderBy(f => f.Rating)
+                    .ThenByDescending(f => f.CreatedAt),
+                _ => orderedQuery // "newest" or default
+                    .OrderByDescending(f => f.CreatedAt)
+            };
+
+            var items = await orderedQuery
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -171,6 +196,20 @@ namespace DAL
         public async Task<bool> ExistsAsync(int feedbackId)
         {
             return await _context.Feedbacks.AnyAsync(f => f.FeedbackId == feedbackId);
+        }
+
+        // Check if user has feedback on a branch
+        public async Task<bool> HasUserFeedbackOnBranchAsync(int branchId, int userId)
+        {
+            return await _context.Feedbacks
+                .AnyAsync(f => f.BranchId == branchId && f.UserId == userId);
+        }
+
+        // Check if user already left feedback for an order
+        public async Task<bool> HasFeedbackForOrderAsync(int userId, int orderId)
+        {
+            return await _context.Feedbacks
+                .AnyAsync(f => f.UserId == userId && f.OrderId == orderId);
         }
 
         // ===== Feedback Image Management =====
