@@ -34,7 +34,7 @@ namespace Service
             var matchingBranches = branches
                 .Where(branch => 
                     TextNormalizer.NormalizeForSearch(branch.Name).Contains(normalizedKeyword) ||
-                    branch.Dishes.Any(d => TextNormalizer.NormalizeForSearch(d.Name).Contains(normalizedKeyword)))
+                    branch.BranchDishes.Any(bd => TextNormalizer.NormalizeForSearch(bd.Dish.Name).Contains(normalizedKeyword)))
                 .ToList();
 
             // Group branches by Vendor and return vendor-centric results
@@ -64,18 +64,18 @@ namespace Service
                         AvgRating = branch.AvgRating,
                         IsVerified = branch.IsVerified,
                         IsActive = branch.IsActive,
-                        Dishes = branch.Dishes
-                            .Where(d => d.IsActive && 
-                                TextNormalizer.NormalizeForSearch(d.Name).Contains(normalizedKeyword))
-                            .Select(dish => new DishSearchDto
+                        Dishes = branch.BranchDishes
+                            .Where(bd => bd.Dish != null && bd.Dish.IsActive &&
+                                TextNormalizer.NormalizeForSearch(bd.Dish.Name).Contains(normalizedKeyword))
+                            .Select(bd => new DishSearchDto
                             {
-                                DishId = dish.DishId,
-                                Name = dish.Name,
-                                Price = dish.Price,
-                                Description = dish.Description,
-                                ImageUrl = dish.ImageUrl,
-                                IsSoldOut = dish.IsSoldOut,
-                                CategoryName = dish.Category?.Name ?? string.Empty
+                                DishId = bd.Dish.DishId,
+                                Name = bd.Dish.Name,
+                                Price = bd.Dish.Price,
+                                Description = bd.Dish.Description,
+                                ImageUrl = bd.Dish.ImageUrl,
+                                IsSoldOut = !bd.IsAvailable,
+                                CategoryName = bd.Dish.Category?.Name ?? string.Empty
                             })
                             .ToList()
                     }).ToList()

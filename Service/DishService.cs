@@ -36,32 +36,17 @@ namespace Service
             _dietaryPreferenceRepository = dietaryPreferenceRepository ?? throw new ArgumentNullException(nameof(dietaryPreferenceRepository));
         }
 
-        public async Task<DishResponse> CreateDishAsync(CreateDishRequest request, int userId)
+        public async Task<DishResponse> CreateDishAsync(int vendorId, CreateDishRequest request, int userId)
         {
-            // Validate branch exists and user owns the branch
-            var branch = await _branchRepository.GetByIdAsync(request.BranchId);
-            if (branch == null)
+            // Validate vendor exists and user owns it
+            var vendor = await _vendorRepository.GetByIdAsync(vendorId);
+            if (vendor == null)
             {
-                throw new DomainExceptions($"Branch with ID {request.BranchId} not found");
+                throw new DomainExceptions($"Vendor with ID {vendorId} not found");
             }
-
-            // Check if the user is the assigned Manager for this specific branch
-            bool isBranchManager = branch.ManagerId == userId;
-
-            // If they are NOT the manager, then we must check if they are the Vendor Owner
-            if (!isBranchManager)
+            if (vendor.UserId != userId)
             {
-                var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
-                if (vendor == null || vendor.UserId != userId)
-                {
-                    throw new DomainExceptions("You do not own or manage this branch");
-                }
-            }
-
-            // Check if branch is verified
-            if (!branch.IsVerified)
-            {
-                throw new DomainExceptions("Branch must be verified before creating dishes");
+                throw new DomainExceptions("You do not own this vendor");
             }
 
             // TODO: (Optional) Get category instance instead of checking existence, to avoid multiple DB calls. Same for Taste and DietaryPreference.
@@ -103,7 +88,7 @@ namespace Service
                 Description = request.Description,
                 ImageUrl = request.ImageUrl,
                 IsActive = request.IsActive,
-                BranchId = request.BranchId,
+                VendorId = vendorId,
                 CategoryId = request.CategoryId
             };
 
@@ -149,15 +134,27 @@ namespace Service
             return MapToResponse(dish);
         }
 
-        public async Task<PaginatedResponse<DishResponse>> GetDishesAsync(
-            int? branchId,
+        public async Task<PaginatedResponse<DishResponse>> GetDishesByVendorAsync(
+            int vendorId,
             int? categoryId,
             string? keyword,
             int pageNumber,
             int pageSize)
         {
-            var (dishes, totalCount) = await _dishRepository.GetDishesAsync(branchId, categoryId, keyword, pageNumber, pageSize);
+            var (dishes, totalCount) = await _dishRepository.GetDishesAsync(vendorId, categoryId, keyword, pageNumber, pageSize);
             var items = dishes.Select(MapToResponse).ToList();
+            return new PaginatedResponse<DishResponse>(items, totalCount, pageNumber, pageSize);
+        }
+
+        public async Task<PaginatedResponse<DishResponse>> GetDishesByBranchAsync(
+            int branchId,
+            int? categoryId,
+            string? keyword,
+            int pageNumber,
+            int pageSize)
+        {
+            var (dishes, totalCount) = await _dishRepository.GetDishesByBranchAsync(branchId, categoryId, keyword, pageNumber, pageSize);
+            var items = dishes.Select(d => MapToResponseForBranch(d, branchId)).ToList();
             return new PaginatedResponse<DishResponse>(items, totalCount, pageNumber, pageSize);
         }
 
@@ -170,23 +167,11 @@ namespace Service
                 throw new DomainExceptions($"Dish with ID {dishId} not found");
             }
 
-            // Validate user owns the branch
-            var branch = await _branchRepository.GetByIdAsync(dish.BranchId);
-            if (branch == null)
-            {
-                throw new DomainExceptions($"Branch with ID {dish.BranchId} not found");
-            }
-
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            // Validate user owns the vendor
+            var vendor = await _vendorRepository.GetByIdAsync(dish.VendorId);
             if (vendor == null || vendor.UserId != userId)
             {
-                throw new DomainExceptions("You do not own this branch");
-            }
-
-            // Check if branch is verified
-            if (!branch.IsVerified)
-            {
-                throw new DomainExceptions("Branch must be verified before updating dishes");
+                throw new DomainExceptions("You do not own this vendor");
             }
 
             // Validate CategoryId if provided
@@ -211,9 +196,6 @@ namespace Service
 
             if (request.ImageUrl != null)
                 dish.ImageUrl = request.ImageUrl;
-
-            if (request.IsSoldOut.HasValue)
-                dish.IsSoldOut = request.IsSoldOut.Value;
 
             if (request.IsActive.HasValue)
                 dish.IsActive = request.IsActive.Value;
@@ -294,26 +276,100 @@ namespace Service
                 throw new DomainExceptions($"Dish with ID {dishId} not found");
             }
 
-            // Validate user owns the branch
-            var branch = await _branchRepository.GetByIdAsync(dish.BranchId);
-            if (branch == null)
-            {
-                throw new DomainExceptions($"Branch with ID {dish.BranchId} not found");
-            }
-
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            // Validate user owns the vendor
+            var vendor = await _vendorRepository.GetByIdAsync(dish.VendorId);
             if (vendor == null || vendor.UserId != userId)
             {
-                throw new DomainExceptions("You do not own this branch");
-            }
-
-            // Check if branch is verified
-            if (!branch.IsVerified)
-            {
-                throw new DomainExceptions("Branch must be verified before deleting dishes");
+                throw new DomainExceptions("You do not own this vendor");
             }
 
             await _dishRepository.DeleteAsync(dishId);
+        }
+
+        public async Task AddDishToBranchAsync(int dishId, int branchId, int userId)
+        {
+            var dish = await _dishRepository.GetByIdAsync(dishId);
+            if (dish == null)
+                throw new DomainExceptions($"Dish with ID {dishId} not found");
+
+            var vendor = await _vendorRepository.GetByIdAsync(dish.VendorId);
+            if (vendor == null || vendor.UserId != userId)
+                throw new DomainExceptions("You do not own this vendor");
+
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null)
+                throw new DomainExceptions($"Branch with ID {branchId} not found");
+
+            if (branch.VendorId != dish.VendorId)
+                throw new DomainExceptions("Branch does not belong to the same vendor as this dish");
+
+            var existing = await _dishRepository.GetBranchDishAsync(branchId, dishId);
+            if (existing != null)
+            {
+                if (!existing.IsAvailable)
+                {
+                    await _dishRepository.UpdateBranchDishAvailabilityAsync(branchId, dishId, true);
+                    return;
+                }
+
+                throw new DomainExceptions("Dish is already assigned to this branch");
+            }
+
+            await _dishRepository.AddBranchDishAsync(new BranchDish
+            {
+                BranchId = branchId,
+                DishId = dishId,
+                IsAvailable = true
+            });
+        }
+
+        public async Task RemoveDishFromBranchAsync(int dishId, int branchId, int userId)
+        {
+            var dish = await _dishRepository.GetByIdAsync(dishId);
+            if (dish == null)
+                throw new DomainExceptions($"Dish with ID {dishId} not found");
+
+            var vendor = await _vendorRepository.GetByIdAsync(dish.VendorId);
+            if (vendor == null || vendor.UserId != userId)
+                throw new DomainExceptions("You do not own this vendor");
+
+            await _dishRepository.RemoveBranchDishAsync(branchId, dishId);
+        }
+
+        public async Task UpdateDishAvailabilityAsync(int dishId, int branchId, bool isAvailable, int userId)
+        {
+            var dish = await _dishRepository.GetByIdAsync(dishId);
+            if (dish == null)
+                throw new DomainExceptions($"Dish with ID {dishId} not found");
+
+            var vendor = await _vendorRepository.GetByIdAsync(dish.VendorId);
+            if (vendor == null || vendor.UserId != userId)
+                throw new DomainExceptions("You do not own this vendor");
+
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null)
+                throw new DomainExceptions($"Branch with ID {branchId} not found");
+
+            if (branch.VendorId != dish.VendorId)
+                throw new DomainExceptions("Branch does not belong to the same vendor as this dish");
+
+            var branchDish = await _dishRepository.GetBranchDishAsync(branchId, dishId);
+            if (branchDish == null)
+                throw new DomainExceptions("Dish is not assigned to this branch");
+
+            await _dishRepository.UpdateBranchDishAvailabilityAsync(branchId, dishId, isAvailable);
+        }
+
+        private static DishResponse MapToResponseForBranch(Dish dish, int branchId)
+        {
+            var response = MapToResponse(dish);
+            var branchDish = dish.BranchDishes?.FirstOrDefault(bd => bd.BranchId == branchId);
+            if (branchDish != null)
+            {
+                response.IsSoldOut = !branchDish.IsAvailable;
+            }
+
+            return response;
         }
 
         private static DishResponse MapToResponse(Dish dish)
@@ -329,7 +385,7 @@ namespace Service
                 IsActive = dish.IsActive,
                 CreatedAt = dish.CreatedAt,
                 UpdatedAt = dish.UpdatedAt,
-                BranchId = dish.BranchId,
+                VendorId = dish.VendorId,
                 CategoryId = dish.CategoryId,
                 CategoryName = dish.Category?.Name ?? string.Empty,
                 TasteNames = dish.DishTastes?

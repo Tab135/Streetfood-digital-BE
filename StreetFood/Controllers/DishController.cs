@@ -19,22 +19,22 @@ namespace StreetFood.Controllers
             _dishService = dishService ?? throw new ArgumentNullException(nameof(dishService));
         }
 
-        [HttpPost]
+        [HttpPost("vendor/{vendorId}")]
         [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> CreateDish([FromBody] CreateDishRequest request)
+        public async Task<IActionResult> CreateDish([FromRoute] int vendorId, [FromBody] CreateDishRequest request)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new {message = "Model is not valid" });
+                return BadRequest(new { message = "Model is not valid" });
             }
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return Unauthorized(new {message = "User not authenticated"});
+                return Unauthorized(new { message = "User not authenticated" });
             }
 
-            var result = await _dishService.CreateDishAsync(request, userId);
+            var result = await _dishService.CreateDishAsync(vendorId, request, userId);
             return CreatedAtAction(nameof(GetDishById), new { id = result.DishId }, result);
         }
 
@@ -45,15 +45,27 @@ namespace StreetFood.Controllers
             return Ok(result);
         }
 
-        [HttpGet]
+        [HttpGet("branch/{branchId}")]
         public async Task<IActionResult> GetDishes(
-            [FromQuery] int? branchId,
+            [FromRoute] int branchId,
             [FromQuery] int? categoryId,
             [FromQuery] string? keyword,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10)
         {
-            var result = await _dishService.GetDishesAsync(branchId, categoryId, keyword, pageNumber, pageSize);
+            var result = await _dishService.GetDishesByBranchAsync(branchId, categoryId, keyword, pageNumber, pageSize);
+            return Ok(result);
+        }
+
+        [HttpGet("vendor/{vendorId}")]
+        public async Task<IActionResult> GetDishesByVendor(
+            [FromRoute] int vendorId,
+            [FromQuery] int? categoryId,
+            [FromQuery] string? keyword,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var result = await _dishService.GetDishesByVendorAsync(vendorId, categoryId, keyword, pageNumber, pageSize);
             return Ok(result);
         }
 
@@ -83,11 +95,51 @@ namespace StreetFood.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return BadRequest(new { message = "Model is not valid" });
+                return Unauthorized(new { message = "User not authenticated" });
             }
 
             await _dishService.DeleteDishAsync(id, userId);
             return Ok("Dish deleted successfully");
         }
+
+        [HttpPost("{dishId}/branch/{branchId}")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> AddDishToBranch([FromRoute] int dishId, [FromRoute] int branchId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                return Unauthorized(new { message = "User not authenticated" });
+
+            await _dishService.AddDishToBranchAsync(dishId, branchId, userId);
+            return Ok(new { message = "Dish assigned to branch successfully" });
+        }
+
+        [HttpDelete("{dishId}/branch/{branchId}")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> RemoveDishFromBranch([FromRoute] int dishId, [FromRoute] int branchId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                return Unauthorized(new { message = "User not authenticated" });
+
+            await _dishService.RemoveDishFromBranchAsync(dishId, branchId, userId);
+            return Ok(new { message = "Dish removed from branch successfully" });
+        }
+
+        [HttpPatch("{dishId}/branch/{branchId}/availability")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> UpdateDishAvailability(
+            [FromRoute] int dishId,
+            [FromRoute] int branchId,
+            [FromBody] UpdateDishAvailabilityRequest request)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                return Unauthorized(new { message = "User not authenticated" });
+
+            await _dishService.UpdateDishAvailabilityAsync(dishId, branchId, request.IsAvailable, userId);
+            return Ok(new { message = "Dish availability updated successfully" });
+        }
     }
 }
+
