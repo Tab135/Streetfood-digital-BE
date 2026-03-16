@@ -67,7 +67,8 @@ namespace Service
                 }
 
                 // Validate dish belongs to the specified branch
-                if (dish.BranchId != createFeedbackDto.BranchId)
+                var branchDish = await _dishRepository.GetBranchDishAsync(createFeedbackDto.BranchId, createFeedbackDto.DishId.Value);
+                if (branchDish == null)
                 {
                     throw new Exception($"Dish with ID {createFeedbackDto.DishId.Value} does not belong to Branch with ID {createFeedbackDto.BranchId}");
                 }
@@ -233,7 +234,8 @@ namespace Service
                 }
 
                 // Validate dish belongs to the feedback's branch
-                if (dish.BranchId != feedback.BranchId)
+                var branchDish = await _dishRepository.GetBranchDishAsync(feedback.BranchId, updateFeedbackDto.DishId.Value);
+                if (branchDish == null)
                 {
                     throw new Exception($"Dish with ID {updateFeedbackDto.DishId.Value} does not belong to the same branch as the feedback");
                 }

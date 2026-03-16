@@ -46,6 +46,7 @@ public class StreetFoodDbContext : DbContext
     public DbSet<DishTaste> DishTastes { get; set; }
     public DbSet<DishDietaryPreference> DishDietaryPreferences { get; set; }
     public DbSet<Payment> Payments { get; set; }
+    public DbSet<BranchDish> BranchDishes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -265,10 +266,10 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-            entity.HasOne(e => e.Branch)
-                  .WithMany(b => b.Dishes)
-                  .HasForeignKey(e => e.BranchId)
-                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Vendor)
+                .WithMany(v => v.Dishes)
+                .HasForeignKey(e => e.VendorId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.Category)
                   .WithMany(c => c.Dishes)
@@ -398,6 +399,22 @@ public class StreetFoodDbContext : DbContext
         {
             entity.Property(e => e.TotalReviewCount).HasDefaultValue(0);
             entity.Property(e => e.TotalRatingSum).HasDefaultValue(0);
+        });
+        // BranchDish
+        modelBuilder.Entity<BranchDish>(entity =>
+        {
+            entity.HasKey(e => new { e.BranchId, e.DishId });
+            entity.Property(e => e.IsSoldOut).HasDefaultValue(false);
+
+            entity.HasOne(e => e.Branch)
+                  .WithMany(b => b.BranchDishes)
+                  .HasForeignKey(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Dish)
+                  .WithMany(d => d.BranchDishes)
+                  .HasForeignKey(e => e.DishId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

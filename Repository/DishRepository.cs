@@ -37,13 +37,13 @@ namespace Repository
         }
 
         public async Task<(List<Dish> items, int totalCount)> GetDishesAsync(
-            int? branchId,
+            int? vendorId,
             int? categoryId,
             string? keyword,
             int pageNumber,
             int pageSize)
         {
-            return await _dishDAO.GetDishesAsync(branchId, categoryId, keyword, pageNumber, pageSize);
+            return await _dishDAO.GetDishesAsync(vendorId, categoryId, keyword, pageNumber, pageSize);
         }
 
         public async Task UpdateAsync(Dish dish)
@@ -64,6 +64,31 @@ namespace Repository
         public async Task RemoveDishDietaryPreferencesAsync(int dishId)
         {
             await _dishDAO.RemoveDishDietaryPreferencesAsync(dishId);
+        }
+
+        public async Task<(List<Dish> items, int totalCount)> GetDishesByBranchAsync(int branchId, int? categoryId, string? keyword, int pageNumber, int pageSize)
+        {
+            return await _dishDAO.GetDishesByBranchAsync(branchId, categoryId, keyword, pageNumber, pageSize);
+        }
+
+        public async Task AddBranchDishAsync(BranchDish branchDish)
+        {
+            await _dishDAO.AddBranchDishAsync(branchDish);
+        }
+
+        public async Task RemoveBranchDishAsync(int branchId, int dishId)
+        {
+            await _dishDAO.RemoveBranchDishAsync(branchId, dishId);
+        }
+
+        public async Task<BranchDish?> GetBranchDishAsync(int branchId, int dishId)
+        {
+            return await _dishDAO.GetBranchDishAsync(branchId, dishId);
+        }
+
+        public async Task UpdateBranchDishStatusAsync(int branchId, int dishId, bool isSoldOut)
+        {
+            await _dishDAO.UpdateBranchDishStatusAsync(branchId, dishId, isSoldOut);
         }
     }
 }

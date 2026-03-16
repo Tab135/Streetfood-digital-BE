@@ -22,9 +22,6 @@ namespace BO.DTO.Dish
         public bool IsActive { get; set; } = true;
 
         [Required]
-        public int BranchId { get; set; }
-
-        [Required]
         public int CategoryId { get; set; }
 
         /// <summary>

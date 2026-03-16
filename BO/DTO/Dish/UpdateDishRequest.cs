@@ -17,8 +17,6 @@ namespace BO.DTO.Dish
         [StringLength(500)]
         public string? ImageUrl { get; set; }
 
-        public bool? IsSoldOut { get; set; }
-
         public bool? IsActive { get; set; }
 
         public int? CategoryId { get; set; }

@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260315101038_VendorDishBranchAvailability")]
+    partial class VendorDishBranchAvailability
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -116,16 +119,6 @@ namespace DAL.Migrations
 
                     b.Property<DateTime?>("SubscriptionExpiresAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("TotalRatingSum")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
-                    b.Property<int>("TotalReviewCount")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -464,9 +457,6 @@ namespace DAL.Migrations
                     b.Property<int?>("DishId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("OrderId")
-                        .HasColumnType("integer");
-
                     b.Property<int>("Rating")
                         .HasColumnType("integer");
 
@@ -481,8 +471,6 @@ namespace DAL.Migrations
                     b.HasIndex("BranchId");
 
                     b.HasIndex("DishId");
-
-                    b.HasIndex("OrderId");
 
                     b.HasIndex("UserId");
 
@@ -555,117 +543,6 @@ namespace DAL.Migrations
                     b.HasIndex("TagId");
 
                     b.ToTable("FeedbackTagAssociations");
-                });
-
-            modelBuilder.Entity("BO.Entities.FeedbackVote", b =>
-                {
-                    b.Property<int>("FeedbackVoteId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("FeedbackVoteId"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("FeedbackId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("VoteType")
-                        .HasColumnType("integer");
-
-                    b.HasKey("FeedbackVoteId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("FeedbackId", "UserId")
-                        .IsUnique();
-
-                    b.ToTable("FeedbackVotes");
-                });
-
-            modelBuilder.Entity("BO.Entities.Notification", b =>
-                {
-                    b.Property<int>("NotificationId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("NotificationId"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<bool>("IsRead")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int?>("ReferenceId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("NotificationId");
-
-                    b.HasIndex("UserId", "IsRead");
-
-                    b.ToTable("Notifications");
-                });
-
-            modelBuilder.Entity("BO.Entities.Order", b =>
-                {
-                    b.Property<int>("OrderId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("OrderId"));
-
-                    b.Property<int>("BranchId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("OrderId");
-
-                    b.HasIndex("BranchId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Orders");
                 });
 
             modelBuilder.Entity("BO.Entities.OtpVerify", b =>
@@ -927,43 +804,6 @@ namespace DAL.Migrations
                     b.ToTable("Vendors");
                 });
 
-            modelBuilder.Entity("BO.Entities.VendorReply", b =>
-                {
-                    b.Property<int>("VendorReplyId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VendorReplyId"));
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("FeedbackId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("VendorReplyId");
-
-                    b.HasIndex("FeedbackId")
-                        .IsUnique();
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("VendorReplies");
-                });
-
             modelBuilder.Entity("BO.Entities.WorkSchedule", b =>
                 {
                     b.Property<int>("WorkScheduleId")
@@ -1130,11 +970,6 @@ namespace DAL.Migrations
                         .WithMany()
                         .HasForeignKey("DishId");
 
-                    b.HasOne("BO.Entities.Order", "Order")
-                        .WithMany("Feedbacks")
-                        .HasForeignKey("OrderId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("BO.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -1144,8 +979,6 @@ namespace DAL.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("Dish");
-
-                    b.Navigation("Order");
 
                     b.Navigation("User");
                 });
@@ -1178,55 +1011,6 @@ namespace DAL.Migrations
                     b.Navigation("Feedback");
 
                     b.Navigation("FeedbackTag");
-                });
-
-            modelBuilder.Entity("BO.Entities.FeedbackVote", b =>
-                {
-                    b.HasOne("BO.Entities.Feedback", "Feedback")
-                        .WithMany("Votes")
-                        .HasForeignKey("FeedbackId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BO.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Feedback");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("BO.Entities.Notification", b =>
-                {
-                    b.HasOne("BO.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("BO.Entities.Order", b =>
-                {
-                    b.HasOne("BO.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BO.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BO.Entities.Payment", b =>
@@ -1268,25 +1052,6 @@ namespace DAL.Migrations
                         .IsRequired();
 
                     b.Navigation("VendorOwner");
-                });
-
-            modelBuilder.Entity("BO.Entities.VendorReply", b =>
-                {
-                    b.HasOne("BO.Entities.Feedback", "Feedback")
-                        .WithOne("VendorReply")
-                        .HasForeignKey("BO.Entities.VendorReply", "FeedbackId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BO.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Feedback");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BO.Entities.WorkSchedule", b =>
@@ -1337,20 +1102,11 @@ namespace DAL.Migrations
                     b.Navigation("FeedbackImages");
 
                     b.Navigation("FeedbackTagAssociations");
-
-                    b.Navigation("VendorReply");
-
-                    b.Navigation("Votes");
                 });
 
             modelBuilder.Entity("BO.Entities.FeedbackTag", b =>
                 {
                     b.Navigation("FeedbackTagAssociations");
-                });
-
-            modelBuilder.Entity("BO.Entities.Order", b =>
-                {
-                    b.Navigation("Feedbacks");
                 });
 
             modelBuilder.Entity("BO.Entities.Taste", b =>

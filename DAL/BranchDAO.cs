@@ -330,10 +330,11 @@ namespace DAL
                 .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified &&
                     (EF.Functions.ILike(b.Name, searchPattern) ||
-                     b.Dishes.Any(d => d.IsActive && EF.Functions.ILike(d.Name, searchPattern))))
+                     b.BranchDishes.Any(bd => bd.Dish.IsActive && EF.Functions.ILike(bd.Dish.Name, searchPattern))))
                 .Include(b => b.Vendor)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.Category)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.Category)
                 .OrderByDescending(b => b.AvgRating)
                 .ThenBy(b => b.Name)
                 .ToListAsync();
@@ -352,14 +353,17 @@ namespace DAL
                 .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.Category)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.DishTastes)
-                        .ThenInclude(dt => dt.Taste)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.DishDietaryPreferences)
-                        .ThenInclude(ddp => ddp.DietaryPreference)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.Category)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.DishTastes)
+                            .ThenInclude(dt => dt.Taste)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.DishDietaryPreferences)
+                            .ThenInclude(ddp => ddp.DietaryPreference)
                 .OrderByDescending(b => b.AvgRating)
                 .ThenBy(b => b.Name)
                 .ToListAsync();
@@ -383,14 +387,17 @@ namespace DAL
                 .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.Category)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.DishTastes)
-                        .ThenInclude(dt => dt.Taste)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.DishDietaryPreferences)
-                        .ThenInclude(ddp => ddp.DietaryPreference)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.Category)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.DishTastes)
+                            .ThenInclude(dt => dt.Taste)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.DishDietaryPreferences)
+                            .ThenInclude(ddp => ddp.DietaryPreference)
                 .ToListAsync();
 
             bool hasDietaryFilter  = dietaryIds  != null && dietaryIds.Count  > 0;
@@ -417,7 +424,9 @@ namespace DAL
                 }
 
                 // Check if branch has at least one qualifying dish
-                bool hasQualifyingDish = branch.Dishes.Any(dish =>
+                bool hasQualifyingDish = branch.BranchDishes
+                    .Select(bd => bd.Dish)
+                    .Any(dish =>
                 {
                     // Price filter (must satisfy if provided)
                     if (minPrice.HasValue && dish.Price < minPrice.Value) return false;
