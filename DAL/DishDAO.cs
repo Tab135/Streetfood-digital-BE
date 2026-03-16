@@ -154,14 +154,14 @@ namespace DAL
                 .FirstOrDefaultAsync(x => x.BranchId == branchId && x.DishId == dishId);
         }
 
-        public async Task UpdateBranchDishAvailabilityAsync(int branchId, int dishId, bool isAvailable)
+        public async Task UpdateBranchDishStatusAsync(int branchId, int dishId, bool isSoldOut)
         {
             var branchDish = await _context.BranchDishes
                 .FirstOrDefaultAsync(x => x.BranchId == branchId && x.DishId == dishId);
 
             if (branchDish != null)
             {
-                branchDish.IsAvailable = isAvailable;
+                branchDish.IsSoldOut = isSoldOut;
                 branchDish.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
             }

@@ -307,7 +307,7 @@ public class StreetFoodDbContext : DbContext
         modelBuilder.Entity<BranchDish>(entity =>
         {
             entity.HasKey(e => new { e.BranchId, e.DishId });
-            entity.Property(e => e.IsAvailable).HasDefaultValue(true);
+            entity.Property(e => e.IsSoldOut).HasDefaultValue(false);
 
             entity.HasOne(e => e.Branch)
                   .WithMany(b => b.BranchDishes)

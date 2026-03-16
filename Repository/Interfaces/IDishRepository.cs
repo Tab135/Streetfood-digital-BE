@@ -19,6 +19,6 @@ namespace Repository.Interfaces
         Task AddBranchDishAsync(BranchDish branchDish);
         Task RemoveBranchDishAsync(int branchId, int dishId);
         Task<BranchDish?> GetBranchDishAsync(int branchId, int dishId);
-        Task UpdateBranchDishAvailabilityAsync(int branchId, int dishId, bool isAvailable);
+        Task UpdateBranchDishStatusAsync(int branchId, int dishId, bool isSoldOut);
     }
 }

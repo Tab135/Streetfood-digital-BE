@@ -102,28 +102,28 @@ namespace StreetFood.Controllers
             return Ok("Dish deleted successfully");
         }
 
-        [HttpPost("{dishId}/branch/{branchId}")]
+        [HttpPost("branch/{branchId}")]
         [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> AddDishToBranch([FromRoute] int dishId, [FromRoute] int branchId)
+        public async Task<IActionResult> AddDishesToBranch([FromBody] AssignDishesRequest request, [FromRoute] int branchId)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 return Unauthorized(new { message = "User not authenticated" });
 
-            await _dishService.AddDishToBranchAsync(dishId, branchId, userId);
-            return Ok(new { message = "Dish assigned to branch successfully" });
+            await _dishService.AddDishesToBranchAsync(request.DishIds, branchId, userId);
+            return Ok(new { message = "Dishes assigned to branch successfully" });
         }
 
-        [HttpDelete("{dishId}/branch/{branchId}")]
+        [HttpDelete("branch/{branchId}")]
         [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> RemoveDishFromBranch([FromRoute] int dishId, [FromRoute] int branchId)
+        public async Task<IActionResult> RemoveDishesFromBranch([FromBody] AssignDishesRequest request, [FromRoute] int branchId)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 return Unauthorized(new { message = "User not authenticated" });
 
-            await _dishService.RemoveDishFromBranchAsync(dishId, branchId, userId);
-            return Ok(new { message = "Dish removed from branch successfully" });
+            await _dishService.RemoveDishesFromBranchAsync(request.DishIds, branchId, userId);
+            return Ok(new { message = "Dishes removed from branch successfully" });
         }
 
         [HttpPatch("{dishId}/branch/{branchId}/availability")]
@@ -137,7 +137,7 @@ namespace StreetFood.Controllers
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 return Unauthorized(new { message = "User not authenticated" });
 
-            await _dishService.UpdateDishAvailabilityAsync(dishId, branchId, request.IsAvailable, userId);
+            await _dishService.UpdateDishAvailabilityAsync(dishId, branchId, request.IsSoldOut, userId);
             return Ok(new { message = "Dish availability updated successfully" });
         }
     }

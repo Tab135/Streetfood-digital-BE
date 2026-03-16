@@ -645,7 +645,7 @@ namespace Service
                 {
                     var dishes = branch.BranchDishes
                         .Where(bd => bd.Dish != null && bd.Dish.IsActive)
-                        .Select(bd => new { bd.Dish, bd.IsAvailable });
+                        .Select(bd => new { bd.Dish, bd.IsSoldOut });
 
                     return new ActiveBranchResponseDto
                     {
@@ -670,7 +670,7 @@ namespace Service
                             Price        = x.Dish.Price,
                             Description  = x.Dish.Description,
                             ImageUrl     = x.Dish.ImageUrl,
-                            IsSoldOut    = !x.IsAvailable,
+                            IsSoldOut    = x.IsSoldOut,
                             CategoryName = x.Dish.Category?.Name ?? string.Empty,
                             TasteNames = x.Dish.DishTastes?
                                 .Select(dt => dt.Taste?.Name ?? string.Empty)
@@ -714,7 +714,7 @@ namespace Service
                 // Map all active dishes (already filtered by DAL)
                 var dishes = branch.BranchDishes
                     .Where(bd => bd.Dish != null && bd.Dish.IsActive)
-                    .Select(bd => new { bd.Dish, bd.IsAvailable });
+                    .Select(bd => new { bd.Dish, bd.IsSoldOut });
 
                 return new ActiveBranchResponseDto
                 {
@@ -739,7 +739,7 @@ namespace Service
                         Price        = x.Dish.Price,
                         Description  = x.Dish.Description,
                         ImageUrl     = x.Dish.ImageUrl,
-                        IsSoldOut    = !x.IsAvailable,
+                        IsSoldOut    = x.IsSoldOut,
                         CategoryName = x.Dish.Category?.Name ?? string.Empty,
                         TasteNames = x.Dish.DishTastes?
                             .Select(dt => dt.Taste?.Name ?? string.Empty)

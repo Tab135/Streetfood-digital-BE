@@ -11,7 +11,7 @@ namespace BO.Entities
         public int DishId { get; set; }
 
         // Branch-level availability for this vendor-owned dish.
-        public bool IsAvailable { get; set; } = true;
+        public bool IsSoldOut { get; set; } = false;
 
         public System.DateTime? UpdatedAt { get; set; }
 

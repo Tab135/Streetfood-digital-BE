@@ -74,7 +74,7 @@ namespace Service
                                 Price = bd.Dish.Price,
                                 Description = bd.Dish.Description,
                                 ImageUrl = bd.Dish.ImageUrl,
-                                IsSoldOut = !bd.IsAvailable,
+                                IsSoldOut = bd.IsSoldOut,
                                 CategoryName = bd.Dish.Category?.Name ?? string.Empty
                             })
                             .ToList()

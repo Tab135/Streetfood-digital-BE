@@ -286,57 +286,62 @@ namespace Service
             await _dishRepository.DeleteAsync(dishId);
         }
 
-        public async Task AddDishToBranchAsync(int dishId, int branchId, int userId)
+        public async Task AddDishesToBranchAsync(List<int> dishIds, int branchId, int userId)
         {
-            var dish = await _dishRepository.GetByIdAsync(dishId);
-            if (dish == null)
-                throw new DomainExceptions($"Dish with ID {dishId} not found");
-
-            var vendor = await _vendorRepository.GetByIdAsync(dish.VendorId);
-            if (vendor == null || vendor.UserId != userId)
-                throw new DomainExceptions("You do not own this vendor");
-
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
                 throw new DomainExceptions($"Branch with ID {branchId} not found");
 
-            if (branch.VendorId != dish.VendorId)
-                throw new DomainExceptions("Branch does not belong to the same vendor as this dish");
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            if (vendor == null || vendor.UserId != userId)
+                throw new DomainExceptions("You do not own this branch");
 
-            var existing = await _dishRepository.GetBranchDishAsync(branchId, dishId);
-            if (existing != null)
+            foreach (var dishId in dishIds)
             {
-                if (!existing.IsAvailable)
+                var dish = await _dishRepository.GetByIdAsync(dishId);
+                if (dish == null || dish.VendorId != branch.VendorId)
+                    continue; // Skip invalid dishes or dishes not belonging to the same vendor
+
+                var existing = await _dishRepository.GetBranchDishAsync(branchId, dishId);
+                if (existing != null)
                 {
-                    await _dishRepository.UpdateBranchDishAvailabilityAsync(branchId, dishId, true);
-                    return;
+                    if (existing.IsSoldOut)
+                    {
+                        await _dishRepository.UpdateBranchDishStatusAsync(branchId, dishId, false);
+                    }
+                    continue;
                 }
 
-                throw new DomainExceptions("Dish is already assigned to this branch");
+                await _dishRepository.AddBranchDishAsync(new BranchDish
+                {
+                    BranchId = branchId,
+                    DishId = dishId,
+                    IsSoldOut = false
+                });
             }
-
-            await _dishRepository.AddBranchDishAsync(new BranchDish
-            {
-                BranchId = branchId,
-                DishId = dishId,
-                IsAvailable = true
-            });
         }
 
-        public async Task RemoveDishFromBranchAsync(int dishId, int branchId, int userId)
+        public async Task RemoveDishesFromBranchAsync(List<int> dishIds, int branchId, int userId)
         {
-            var dish = await _dishRepository.GetByIdAsync(dishId);
-            if (dish == null)
-                throw new DomainExceptions($"Dish with ID {dishId} not found");
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null)
+                throw new DomainExceptions($"Branch with ID {branchId} not found");
 
-            var vendor = await _vendorRepository.GetByIdAsync(dish.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
             if (vendor == null || vendor.UserId != userId)
-                throw new DomainExceptions("You do not own this vendor");
+                throw new DomainExceptions("You do not own this branch");
 
-            await _dishRepository.RemoveBranchDishAsync(branchId, dishId);
+            foreach (var dishId in dishIds)
+            {
+                var dish = await _dishRepository.GetByIdAsync(dishId);
+                if (dish == null || dish.VendorId != branch.VendorId)
+                    continue;
+
+                await _dishRepository.RemoveBranchDishAsync(branchId, dishId);
+            }
         }
 
-        public async Task UpdateDishAvailabilityAsync(int dishId, int branchId, bool isAvailable, int userId)
+        public async Task UpdateDishAvailabilityAsync(int dishId, int branchId, bool isSoldOut, int userId)
         {
             var dish = await _dishRepository.GetByIdAsync(dishId);
             if (dish == null)
@@ -357,7 +362,7 @@ namespace Service
             if (branchDish == null)
                 throw new DomainExceptions("Dish is not assigned to this branch");
 
-            await _dishRepository.UpdateBranchDishAvailabilityAsync(branchId, dishId, isAvailable);
+            await _dishRepository.UpdateBranchDishStatusAsync(branchId, dishId, isSoldOut);
         }
 
         private static DishResponse MapToResponseForBranch(Dish dish, int branchId)
@@ -366,7 +371,7 @@ namespace Service
             var branchDish = dish.BranchDishes?.FirstOrDefault(bd => bd.BranchId == branchId);
             if (branchDish != null)
             {
-                response.IsSoldOut = !branchDish.IsAvailable;
+                response.IsSoldOut = branchDish.IsSoldOut;
             }
 
             return response;

@@ -86,9 +86,9 @@ namespace Repository
             return await _dishDAO.GetBranchDishAsync(branchId, dishId);
         }
 
-        public async Task UpdateBranchDishAvailabilityAsync(int branchId, int dishId, bool isAvailable)
+        public async Task UpdateBranchDishStatusAsync(int branchId, int dishId, bool isSoldOut)
         {
-            await _dishDAO.UpdateBranchDishAvailabilityAsync(branchId, dishId, isAvailable);
+            await _dishDAO.UpdateBranchDishStatusAsync(branchId, dishId, isSoldOut);
         }
     }
 }

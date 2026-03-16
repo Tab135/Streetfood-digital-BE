@@ -12,8 +12,8 @@ namespace Service.Interfaces
         Task<PaginatedResponse<DishResponse>> GetDishesByBranchAsync(int branchId, int? categoryId, string? keyword, int pageNumber, int pageSize);
         Task<DishResponse> UpdateDishAsync(int dishId, UpdateDishRequest request, int userId);
         Task DeleteDishAsync(int dishId, int userId);
-        Task AddDishToBranchAsync(int dishId, int branchId, int userId);
-        Task RemoveDishFromBranchAsync(int dishId, int branchId, int userId);
-        Task UpdateDishAvailabilityAsync(int dishId, int branchId, bool isAvailable, int userId);
+        Task AddDishesToBranchAsync(List<int> dishIds, int branchId, int userId);
+        Task RemoveDishesFromBranchAsync(List<int> dishIds, int branchId, int userId);
+        Task UpdateDishAvailabilityAsync(int dishId, int branchId, bool isSoldOut, int userId);
     }
 }
