@@ -16,9 +16,6 @@ namespace BO.DTO.Dish
         [StringLength(1000)]
         public string? Description { get; set; }
 
-        [StringLength(500)]
-        public string? ImageUrl { get; set; }
-
         public bool IsActive { get; set; } = true;
 
         [Required]

@@ -36,7 +36,7 @@ namespace Service
             _dietaryPreferenceRepository = dietaryPreferenceRepository ?? throw new ArgumentNullException(nameof(dietaryPreferenceRepository));
         }
 
-        public async Task<DishResponse> CreateDishAsync(int vendorId, CreateDishRequest request, int userId)
+        public async Task<DishResponse> CreateDishAsync(int vendorId, CreateDishRequest request, int userId, string imageUrl)
         {
             // Validate vendor exists and user owns it
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
@@ -86,7 +86,7 @@ namespace Service
                 Name = request.Name,
                 Price = request.Price,
                 Description = request.Description,
-                ImageUrl = request.ImageUrl,
+                ImageUrl = imageUrl,
                 IsActive = request.IsActive,
                 VendorId = vendorId,
                 CategoryId = request.CategoryId
@@ -158,7 +158,7 @@ namespace Service
             return new PaginatedResponse<DishResponse>(items, totalCount, pageNumber, pageSize);
         }
 
-        public async Task<DishResponse> UpdateDishAsync(int dishId, UpdateDishRequest request, int userId)
+        public async Task<DishResponse> UpdateDishAsync(int dishId, UpdateDishRequest request, int userId, string? imageUrl)
         {
             // Get existing dish
             var dish = await _dishRepository.GetByIdAsync(dishId);
@@ -194,8 +194,8 @@ namespace Service
             if (request.Description != null)
                 dish.Description = request.Description;
 
-            if (request.ImageUrl != null)
-                dish.ImageUrl = request.ImageUrl;
+            if (!string.IsNullOrWhiteSpace(imageUrl))
+                dish.ImageUrl = imageUrl;
 
             if (request.IsActive.HasValue)
                 dish.IsActive = request.IsActive.Value;

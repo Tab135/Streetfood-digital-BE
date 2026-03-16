@@ -21,11 +21,17 @@ namespace StreetFood.Controllers
 
         [HttpPost("vendor/{vendorId}")]
         [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> CreateDish([FromRoute] int vendorId, [FromBody] CreateDishRequest request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> CreateDish([FromRoute] int vendorId, [FromForm] CreateDishRequest request, IFormFile imageFile)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(new { message = "Model is not valid" });
+            }
+
+            if (imageFile == null || imageFile.Length == 0)
+            {
+                return BadRequest(new { message = "Dish image is required" });
             }
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -34,7 +40,9 @@ namespace StreetFood.Controllers
                 return Unauthorized(new { message = "User not authenticated" });
             }
 
-            var result = await _dishService.CreateDishAsync(vendorId, request, userId);
+            var imageUrl = await SaveDishImageAsync(imageFile);
+
+            var result = await _dishService.CreateDishAsync(vendorId, request, userId, imageUrl);
             return CreatedAtAction(nameof(GetDishById), new { id = result.DishId }, result);
         }
 
@@ -71,7 +79,8 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> UpdateDish(int id, [FromBody] UpdateDishRequest request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateDish(int id, [FromForm] UpdateDishRequest request, IFormFile? imageFile)
         {
             if (!ModelState.IsValid)
             {
@@ -84,7 +93,13 @@ namespace StreetFood.Controllers
                 return Unauthorized(new { message = "User not authenticated" });
             }
 
-            var result = await _dishService.UpdateDishAsync(id, request, userId);
+            string? imageUrl = null;
+            if (imageFile != null && imageFile.Length > 0)
+            {
+                imageUrl = await SaveDishImageAsync(imageFile);
+            }
+
+            var result = await _dishService.UpdateDishAsync(id, request, userId, imageUrl);
             return Ok(result);
         }
 
@@ -139,6 +154,25 @@ namespace StreetFood.Controllers
 
             await _dishService.UpdateDishAvailabilityAsync(dishId, branchId, request.IsSoldOut, userId);
             return Ok(new { message = "Dish availability updated successfully" });
+        }
+
+        private static async Task<string> SaveDishImageAsync(IFormFile imageFile)
+        {
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "dishes");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var uniqueFileName = $"{Guid.NewGuid()}_{imageFile.FileName}";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            await using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await imageFile.CopyToAsync(stream);
+            }
+
+            return "http://159.223.47.89:5298" + $"/uploads/dishes/{uniqueFileName}";
         }
     }
 }
