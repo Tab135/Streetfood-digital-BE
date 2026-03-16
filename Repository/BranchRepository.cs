@@ -185,5 +185,25 @@ namespace Repository
                 dietaryIds, tasteIds,
                 minPrice, maxPrice);
         }
+
+        public async Task UpdateBranchMetricsOnFeedbackCreatedAsync(int branchId, int rating)
+        {
+            await _branchDAO.UpdateBranchMetricsOnFeedbackCreatedAsync(branchId, rating);
+        }
+
+        public async Task UpdateBranchMetricsOnFeedbackUpdatedAsync(int branchId, int oldRating, int newRating)
+        {
+            await _branchDAO.UpdateBranchMetricsOnFeedbackUpdatedAsync(branchId, oldRating, newRating);
+        }
+
+        public async Task UpdateBranchMetricsOnFeedbackDeletedAsync(int branchId, int rating)
+        {
+            await _branchDAO.UpdateBranchMetricsOnFeedbackDeletedAsync(branchId, rating);
+        }
+
+        public async Task RecalculateBranchMetricsAsync(int branchId)
+        {
+            await _branchDAO.RecalculateBranchMetricsAsync(branchId);
+        }
     }
 }

@@ -57,7 +57,21 @@ namespace Service
                 AvgRating = 0
             };
 
-            return await _branchRepository.CreateAsync(branch);
+            var createdBranch = await _branchRepository.CreateAsync(branch);
+
+            // Auto-create a pending register request for the new branch
+            var branchRegisterRequest = new BranchRegisterRequest
+            {
+                BranchId = createdBranch.BranchId,
+                LicenseUrl = null,
+                Status = RegisterVendorStatusEnum.Pending,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _branchRepository.AddBranchRegisterRequestAsync(branchRegisterRequest);
+
+            return createdBranch;
         }
 
         public async Task<BranchResponseDto> GetBranchByIdAsync(int branchId)
@@ -299,6 +313,7 @@ namespace Service
             }
 
             branch.IsVerified = true;
+            branch.IsActive = true;
             await _branchRepository.UpdateAsync(branch);
 
             // Update registration request status
