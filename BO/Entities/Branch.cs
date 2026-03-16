@@ -50,6 +50,9 @@ namespace BO.Entities
 
         public double AvgRating { get; set; }
 
+        public int TotalReviewCount { get; set; } = 0;
+        public int TotalRatingSum { get; set; } = 0;
+
         public bool IsActive { get; set; }
 
         public bool IsSubscribed { get; set; }
@@ -63,6 +66,6 @@ namespace BO.Entities
         public virtual ICollection<WorkSchedule> WorkSchedules { get; set; }
         public virtual ICollection<DayOff> DayOffs { get; set; }
         public virtual ICollection<BranchImage> BranchImages { get; set; }
-        public virtual ICollection<Dish> Dishes { get; set; } = new List<Dish>();
+        public virtual ICollection<BranchDish> BranchDishes { get; set; } = new List<BranchDish>();
     }
 }

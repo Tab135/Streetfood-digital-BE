@@ -57,7 +57,21 @@ namespace Service
                 AvgRating = 0
             };
 
-            return await _branchRepository.CreateAsync(branch);
+            var createdBranch = await _branchRepository.CreateAsync(branch);
+
+            // Auto-create a pending register request for the new branch
+            var branchRegisterRequest = new BranchRegisterRequest
+            {
+                BranchId = createdBranch.BranchId,
+                LicenseUrl = null,
+                Status = RegisterVendorStatusEnum.Pending,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _branchRepository.AddBranchRegisterRequestAsync(branchRegisterRequest);
+
+            return createdBranch;
         }
 
         public async Task<BranchResponseDto> GetBranchByIdAsync(int branchId)
@@ -299,6 +313,7 @@ namespace Service
             }
 
             branch.IsVerified = true;
+            branch.IsActive = true;
             await _branchRepository.UpdateAsync(branch);
 
             // Update registration request status
@@ -633,7 +648,8 @@ namespace Service
             bool hasPrice = filter.MinPrice.HasValue || filter.MaxPrice.HasValue;
             bool hasTaste = filter.TasteIds != null && filter.TasteIds.Count > 0;
             bool hasDietary = filter.DietaryIds != null && filter.DietaryIds.Count > 0;
-            bool hasAnyFilter = hasLatLong || hasDistance || hasPrice || hasTaste || hasDietary;
+            bool hasCategory = filter.CategoryIds != null && filter.CategoryIds.Count > 0;
+            bool hasAnyFilter = hasLatLong || hasDistance || hasPrice || hasTaste || hasDietary || hasCategory;
 
             // If NO filters provided, return all active branches without filtering
             if (!hasAnyFilter)
@@ -642,7 +658,9 @@ namespace Service
                 
                 var allResponseDtos = allBranches.Select(branch =>
                 {
-                    var dishes = branch.Dishes.Where(d => d.IsActive);
+                    var dishes = branch.BranchDishes
+                        .Where(bd => bd.Dish != null && bd.Dish.IsActive)
+                        .Select(bd => new { bd.Dish, bd.IsSoldOut });
 
                     return new ActiveBranchResponseDto
                     {
@@ -660,19 +678,19 @@ namespace Service
                         AvgRating     = branch.AvgRating,
                         IsVerified    = branch.IsVerified,
                         DistanceKm    = null, // No distance calculation when no lat/long provided
-                        Dishes = dishes.Select(dish => new ActiveDishResponseDto
+                        Dishes = dishes.Select(x => new ActiveDishResponseDto
                         {
-                            DishId       = dish.DishId,
-                            Name         = dish.Name,
-                            Price        = dish.Price,
-                            Description  = dish.Description,
-                            ImageUrl     = dish.ImageUrl,
-                            IsSoldOut    = dish.IsSoldOut,
-                            CategoryName = dish.Category?.Name ?? string.Empty,
-                            TasteNames = dish.DishTastes?
+                            DishId       = x.Dish.DishId,
+                            Name         = x.Dish.Name,
+                            Price        = x.Dish.Price,
+                            Description  = x.Dish.Description,
+                            ImageUrl     = x.Dish.ImageUrl,
+                            IsSoldOut    = x.IsSoldOut,
+                            CategoryName = x.Dish.Category?.Name ?? string.Empty,
+                            TasteNames = x.Dish.DishTastes?
                                 .Select(dt => dt.Taste?.Name ?? string.Empty)
                                 .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new(),
-                            DietaryPreferenceNames = dish.DishDietaryPreferences?
+                            DietaryPreferenceNames = x.Dish.DishDietaryPreferences?
                                 .Select(ddp => ddp.DietaryPreference?.Name ?? string.Empty)
                                 .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
                         }).ToList()
@@ -695,11 +713,12 @@ namespace Service
             double userLong = filter.Long ?? 106.6297;  // Default: HCM longitude
             double maxDistance = filter.Distance ?? 10.0;
 
-            // DAL handles ALL filtering logic (distance, price, taste, dietary)
+            // DAL handles ALL filtering logic (distance, price, taste, dietary, category)
             var items = await _branchRepository.GetActiveBranchesFilteredAsync(
                 userLat, userLong, maxDistance,
                 filter.DietaryIds, filter.TasteIds,
-                filter.MinPrice, filter.MaxPrice);
+                filter.MinPrice, filter.MaxPrice,
+                filter.CategoryIds);
 
             // Service layer only maps to DTOs - NO additional filtering
             var responseDtos = items.Select(item =>
@@ -708,7 +727,9 @@ namespace Service
                 var distanceKm = item.distanceKm;
 
                 // Map all active dishes (already filtered by DAL)
-                var dishes = branch.Dishes.Where(d => d.IsActive);
+                var dishes = branch.BranchDishes
+                    .Where(bd => bd.Dish != null && bd.Dish.IsActive)
+                    .Select(bd => new { bd.Dish, bd.IsSoldOut });
 
                 return new ActiveBranchResponseDto
                 {
@@ -726,19 +747,19 @@ namespace Service
                     AvgRating     = branch.AvgRating,
                     IsVerified    = branch.IsVerified,
                     DistanceKm    = Math.Round(distanceKm, 2),
-                    Dishes = dishes.Select(dish => new ActiveDishResponseDto
+                    Dishes = dishes.Select(x => new ActiveDishResponseDto
                     {
-                        DishId       = dish.DishId,
-                        Name         = dish.Name,
-                        Price        = dish.Price,
-                        Description  = dish.Description,
-                        ImageUrl     = dish.ImageUrl,
-                        IsSoldOut    = dish.IsSoldOut,
-                        CategoryName = dish.Category?.Name ?? string.Empty,
-                        TasteNames = dish.DishTastes?
+                        DishId       = x.Dish.DishId,
+                        Name         = x.Dish.Name,
+                        Price        = x.Dish.Price,
+                        Description  = x.Dish.Description,
+                        ImageUrl     = x.Dish.ImageUrl,
+                        IsSoldOut    = x.IsSoldOut,
+                        CategoryName = x.Dish.Category?.Name ?? string.Empty,
+                        TasteNames = x.Dish.DishTastes?
                             .Select(dt => dt.Taste?.Name ?? string.Empty)
                             .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new(),
-                        DietaryPreferenceNames = dish.DishDietaryPreferences?
+                        DietaryPreferenceNames = x.Dish.DishDietaryPreferences?
                             .Select(ddp => ddp.DietaryPreference?.Name ?? string.Empty)
                             .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
                     }).ToList()

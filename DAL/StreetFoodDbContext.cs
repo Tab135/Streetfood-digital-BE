@@ -33,6 +33,12 @@ public class StreetFoodDbContext : DbContext
     public DbSet<FeedbackTag> FeedbackTags { get; set; }
     public DbSet<FeedbackTagAssociation> FeedbackTagAssociations { get; set; }
 
+    // Flow 2: Review & Rating enhancements
+    public DbSet<Order> Orders { get; set; }
+    public DbSet<FeedbackVote> FeedbackVotes { get; set; }
+    public DbSet<VendorReply> VendorReplies { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+
     // Menu Management DbSets
     public DbSet<Category> Categories { get; set; }
     public DbSet<Taste> Tastes { get; set; }
@@ -40,6 +46,7 @@ public class StreetFoodDbContext : DbContext
     public DbSet<DishTaste> DishTastes { get; set; }
     public DbSet<DishDietaryPreference> DishDietaryPreferences { get; set; }
     public DbSet<Payment> Payments { get; set; }
+    public DbSet<BranchDish> BranchDishes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -259,10 +266,10 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-            entity.HasOne(e => e.Branch)
-                  .WithMany(b => b.Dishes)
-                  .HasForeignKey(e => e.BranchId)
-                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Vendor)
+                .WithMany(v => v.Dishes)
+                .HasForeignKey(e => e.VendorId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.Category)
                   .WithMany(c => c.Dishes)
@@ -299,6 +306,114 @@ public class StreetFoodDbContext : DbContext
             entity.HasOne(e => e.DietaryPreference)
                   .WithMany(dp => dp.DishDietaryPreferences)
                   .HasForeignKey(e => e.DietaryPreferenceId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ==================== FLOW 2: REVIEW & RATING ENTITIES ====================
+
+        // Order (minimal for Flow 2)
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.HasKey(e => e.OrderId);
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Branch)
+                  .WithMany()
+                  .HasForeignKey(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Feedback → Order FK
+        modelBuilder.Entity<Feedback>(entity =>
+        {
+            entity.HasOne(e => e.Order)
+                  .WithMany(o => o.Feedbacks)
+                  .HasForeignKey(e => e.OrderId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // FeedbackVote
+        modelBuilder.Entity<FeedbackVote>(entity =>
+        {
+            entity.HasKey(e => e.FeedbackVoteId);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => new { e.FeedbackId, e.UserId }).IsUnique();
+
+            entity.HasOne(e => e.Feedback)
+                  .WithMany(f => f.Votes)
+                  .HasForeignKey(e => e.FeedbackId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // VendorReply
+        modelBuilder.Entity<VendorReply>(entity =>
+        {
+            entity.HasKey(e => e.VendorReplyId);
+            entity.Property(e => e.Content).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => e.FeedbackId).IsUnique();
+
+            entity.HasOne(e => e.Feedback)
+                  .WithOne(f => f.VendorReply)
+                  .HasForeignKey<VendorReply>(e => e.FeedbackId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Notification
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(e => e.NotificationId);
+            entity.Property(e => e.Title).IsRequired();
+            entity.Property(e => e.Message).IsRequired();
+            entity.Property(e => e.IsRead).HasDefaultValue(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => new { e.UserId, e.IsRead });
+
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Branch metrics defaults
+        modelBuilder.Entity<Branch>(entity =>
+        {
+            entity.Property(e => e.TotalReviewCount).HasDefaultValue(0);
+            entity.Property(e => e.TotalRatingSum).HasDefaultValue(0);
+        });
+        // BranchDish
+        modelBuilder.Entity<BranchDish>(entity =>
+        {
+            entity.HasKey(e => new { e.BranchId, e.DishId });
+            entity.Property(e => e.IsSoldOut).HasDefaultValue(false);
+
+            entity.HasOne(e => e.Branch)
+                  .WithMany(b => b.BranchDishes)
+                  .HasForeignKey(e => e.BranchId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Dish)
+                  .WithMany(d => d.BranchDishes)
+                  .HasForeignKey(e => e.DishId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
     }

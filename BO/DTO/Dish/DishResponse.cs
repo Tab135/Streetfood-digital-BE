@@ -16,7 +16,7 @@ namespace BO.DTO.Dish
         public DateTime? UpdatedAt { get; set; }
 
         // Foreign Key IDs
-        public int BranchId { get; set; }
+        public int VendorId { get; set; }
         public int CategoryId { get; set; }
 
         // Flattened data for FE display

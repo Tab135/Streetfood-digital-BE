@@ -52,6 +52,12 @@ namespace Repository.Interfaces
             List<int>? dietaryIds,
             List<int>? tasteIds,
             decimal? minPrice,
-            decimal? maxPrice);
+            decimal? maxPrice,
+            List<int>? categoryIds);
+
+        Task UpdateBranchMetricsOnFeedbackCreatedAsync(int branchId, int rating);
+        Task UpdateBranchMetricsOnFeedbackUpdatedAsync(int branchId, int oldRating, int newRating);
+        Task UpdateBranchMetricsOnFeedbackDeletedAsync(int branchId, int rating);
+        Task RecalculateBranchMetricsAsync(int branchId);
     }
 }

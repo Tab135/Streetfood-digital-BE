@@ -330,10 +330,11 @@ namespace DAL
                 .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified &&
                     (EF.Functions.ILike(b.Name, searchPattern) ||
-                     b.Dishes.Any(d => d.IsActive && EF.Functions.ILike(d.Name, searchPattern))))
+                     b.BranchDishes.Any(bd => bd.Dish.IsActive && EF.Functions.ILike(bd.Dish.Name, searchPattern))))
                 .Include(b => b.Vendor)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.Category)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.Category)
                 .OrderByDescending(b => b.AvgRating)
                 .ThenBy(b => b.Name)
                 .ToListAsync();
@@ -352,14 +353,17 @@ namespace DAL
                 .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.Category)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.DishTastes)
-                        .ThenInclude(dt => dt.Taste)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.DishDietaryPreferences)
-                        .ThenInclude(ddp => ddp.DietaryPreference)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.Category)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.DishTastes)
+                            .ThenInclude(dt => dt.Taste)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.DishDietaryPreferences)
+                            .ThenInclude(ddp => ddp.DietaryPreference)
                 .OrderByDescending(b => b.AvgRating)
                 .ThenBy(b => b.Name)
                 .ToListAsync();
@@ -375,27 +379,32 @@ namespace DAL
             List<int>? dietaryIds,
             List<int>? tasteIds,
             decimal? minPrice,
-            decimal? maxPrice)
+            decimal? maxPrice,
+            List<int>? categoryIds)
         {
             var branches = await _context.Branches
                 .AsNoTracking()
                 .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.Category)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.DishTastes)
-                        .ThenInclude(dt => dt.Taste)
-                .Include(b => b.Dishes.Where(d => d.IsActive))
-                    .ThenInclude(d => d.DishDietaryPreferences)
-                        .ThenInclude(ddp => ddp.DietaryPreference)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.Category)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.DishTastes)
+                            .ThenInclude(dt => dt.Taste)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                        .ThenInclude(d => d.DishDietaryPreferences)
+                            .ThenInclude(ddp => ddp.DietaryPreference)
                 .ToListAsync();
 
-            bool hasDietaryFilter = dietaryIds != null && dietaryIds.Count > 0;
-            bool hasTasteFilter   = tasteIds   != null && tasteIds.Count   > 0;
-            bool hasPriceFilter   = minPrice.HasValue || maxPrice.HasValue;
-            bool hasAnyFilter = hasDietaryFilter || hasTasteFilter || hasPriceFilter;
+            bool hasDietaryFilter  = dietaryIds  != null && dietaryIds.Count  > 0;
+            bool hasTasteFilter    = tasteIds    != null && tasteIds.Count    > 0;
+            bool hasPriceFilter    = minPrice.HasValue || maxPrice.HasValue;
+            bool hasCategoryFilter = categoryIds != null && categoryIds.Count > 0;
+            bool hasAnyFilter = hasDietaryFilter || hasTasteFilter || hasPriceFilter || hasCategoryFilter;
 
             var filteredBranches = new List<(Branch branch, double distanceKm)>();
 
@@ -415,13 +424,18 @@ namespace DAL
                 }
 
                 // Check if branch has at least one qualifying dish
-                bool hasQualifyingDish = branch.Dishes.Any(dish =>
+                bool hasQualifyingDish = branch.BranchDishes
+                    .Select(bd => bd.Dish)
+                    .Any(dish =>
                 {
                     // Price filter (must satisfy if provided)
                     if (minPrice.HasValue && dish.Price < minPrice.Value) return false;
                     if (maxPrice.HasValue && dish.Price > maxPrice.Value) return false;
 
-                    // If only price filter is provided, dish passes
+                    // Category filter (must satisfy if provided)
+                    if (hasCategoryFilter && !categoryIds!.Contains(dish.CategoryId)) return false;
+
+                    // If only price/category filters are provided, dish passes
                     if (!hasDietaryFilter && !hasTasteFilter) return true;
 
                     // GLOBAL OR LOGIC: Dish passes if it has ANY matching taste OR dietary preference
@@ -459,6 +473,66 @@ namespace DAL
             return filteredBranches
                 .OrderBy(x => x.distanceKm)
                 .ToList();
+        }
+
+        public async Task UpdateBranchMetricsOnFeedbackCreatedAsync(int branchId, int rating)
+        {
+            await _context.Branches
+                .Where(b => b.BranchId == branchId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(b => b.TotalReviewCount, b => b.TotalReviewCount + 1)
+                    .SetProperty(b => b.TotalRatingSum, b => b.TotalRatingSum + rating)
+                    .SetProperty(b => b.AvgRating, b => (double)(b.TotalRatingSum + rating) / (b.TotalReviewCount + 1))
+                );
+        }
+
+        public async Task UpdateBranchMetricsOnFeedbackUpdatedAsync(int branchId, int oldRating, int newRating)
+        {
+            if (oldRating == newRating) return;
+            int delta = newRating - oldRating;
+
+            await _context.Branches
+                .Where(b => b.BranchId == branchId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(b => b.TotalRatingSum, b => b.TotalRatingSum + delta)
+                    .SetProperty(b => b.AvgRating, b => b.TotalReviewCount > 0 
+                        ? (double)(b.TotalRatingSum + delta) / b.TotalReviewCount 
+                        : 0)
+                );
+        }
+
+        public async Task UpdateBranchMetricsOnFeedbackDeletedAsync(int branchId, int rating)
+        {
+            await _context.Branches
+                .Where(b => b.BranchId == branchId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(b => b.TotalReviewCount, b => b.TotalReviewCount - 1 < 0 ? 0 : b.TotalReviewCount - 1)
+                    .SetProperty(b => b.TotalRatingSum, b => b.TotalRatingSum - rating < 0 ? 0 : b.TotalRatingSum - rating)
+                    .SetProperty(b => b.AvgRating, b => b.TotalReviewCount - 1 > 0 
+                        ? (double)(b.TotalRatingSum - rating) / (b.TotalReviewCount - 1) 
+                        : 0)
+                );
+        }
+
+        public async Task RecalculateBranchMetricsAsync(int branchId)
+        {
+            var metrics = await _context.Feedbacks
+                .Where(f => f.BranchId == branchId)
+                .GroupBy(f => f.BranchId)
+                .Select(g => new { Count = g.Count(), Total = g.Sum(x => (int?)x.Rating) ?? 0 })
+                .FirstOrDefaultAsync();
+
+            int newCount = metrics?.Count ?? 0;
+            int newTotal = metrics?.Total ?? 0;
+            double newAvg = newCount > 0 ? (double)newTotal / newCount : 0;
+
+            await _context.Branches
+                .Where(b => b.BranchId == branchId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(b => b.TotalReviewCount, newCount)
+                    .SetProperty(b => b.TotalRatingSum, newTotal)
+                    .SetProperty(b => b.AvgRating, newAvg)
+                );
         }
 
         /// <summary>

@@ -12,7 +12,7 @@ namespace Service.Interfaces
         Task<FeedbackResponseDto> CreateFeedback(CreateFeedbackDto createFeedbackDto, int userId);
         Task<FeedbackResponseDto> GetFeedbackById(int feedbackId);
         Task<FeedbackResponseDto> AddImagesToFeedback(int feedbackId, List<string> imageUrls, int userId);
-        Task<PaginatedResponse<FeedbackResponseDto>> GetFeedbackByBranchId(int branchId, int pageNumber, int pageSize);
+        Task<PaginatedResponse<FeedbackResponseDto>> GetFeedbackByBranchId(int branchId, int pageNumber, int pageSize, string? sortBy = null, int? currentUserId = null);
         Task<PaginatedResponse<FeedbackResponseDto>> GetFeedbackByUserId(int userId, int pageNumber, int pageSize);
         Task<FeedbackResponseDto> UpdateFeedback(int feedbackId, UpdateFeedbackDto updateFeedbackDto, int userId);
         Task<bool> DeleteFeedback(int feedbackId, int userId);

@@ -38,6 +38,8 @@ namespace DAL
         public async Task<Dish?> GetByIdAsync(int dishId)
         {
             return await _context.Dishes
+                .Include(d => d.BranchDishes)
+                .Include(d => d.Vendor)
                 .Include(d => d.Category)
                 .Include(d => d.DishTastes)
                     .ThenInclude(dt => dt.Taste)
@@ -47,13 +49,15 @@ namespace DAL
         }
 
         public async Task<(List<Dish> items, int totalCount)> GetDishesAsync(
-            int? branchId,
+            int? vendorId,
             int? categoryId,
             string? keyword,
             int pageNumber,
             int pageSize)
         {
             var query = _context.Dishes
+                .Include(d => d.BranchDishes)
+                .Include(d => d.Vendor)
                 .Include(d => d.Category)
                 .Include(d => d.DishTastes)
                     .ThenInclude(dt => dt.Taste)
@@ -61,9 +65,9 @@ namespace DAL
                     .ThenInclude(ddp => ddp.DietaryPreference)
                 .AsQueryable();
 
-            if (branchId.HasValue)
+            if (vendorId.HasValue)
             {
-                query = query.Where(d => d.BranchId == branchId.Value);
+                query = query.Where(d => d.VendorId == vendorId.Value);
             }
 
             if (categoryId.HasValue)
@@ -87,6 +91,80 @@ namespace DAL
                 .ToListAsync();
 
             return (items, totalCount);
+        }
+
+        public async Task<(List<Dish> items, int totalCount)> GetDishesByBranchAsync(
+            int branchId,
+            int? categoryId,
+            string? keyword,
+            int pageNumber,
+            int pageSize)
+        {
+            var query = _context.Dishes
+                .Where(d => d.BranchDishes.Any(bd => bd.BranchId == branchId))
+                .Include(d => d.BranchDishes)
+                .Include(d => d.Vendor)
+                .Include(d => d.Category)
+                .Include(d => d.DishTastes)
+                    .ThenInclude(dt => dt.Taste)
+                .Include(d => d.DishDietaryPreferences)
+                    .ThenInclude(ddp => ddp.DietaryPreference)
+                .AsQueryable();
+
+            if (categoryId.HasValue)
+                query = query.Where(d => d.CategoryId == categoryId.Value);
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                var lower = keyword.ToLower();
+                query = query.Where(d => d.Name.ToLower().Contains(lower)
+                    || (d.Description != null && d.Description.ToLower().Contains(lower)));
+            }
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(d => d.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
+        public async Task AddBranchDishAsync(BranchDish branchDish)
+        {
+            _context.BranchDishes.Add(branchDish);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task RemoveBranchDishAsync(int branchId, int dishId)
+        {
+            var bd = await _context.BranchDishes
+                .FirstOrDefaultAsync(x => x.BranchId == branchId && x.DishId == dishId);
+            if (bd != null)
+            {
+                _context.BranchDishes.Remove(bd);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        public async Task<BranchDish?> GetBranchDishAsync(int branchId, int dishId)
+        {
+            return await _context.BranchDishes
+                .FirstOrDefaultAsync(x => x.BranchId == branchId && x.DishId == dishId);
+        }
+
+        public async Task UpdateBranchDishStatusAsync(int branchId, int dishId, bool isSoldOut)
+        {
+            var branchDish = await _context.BranchDishes
+                .FirstOrDefaultAsync(x => x.BranchId == branchId && x.DishId == dishId);
+
+            if (branchDish != null)
+            {
+                branchDish.IsSoldOut = isSoldOut;
+                branchDish.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
         }
 
         public async Task UpdateAsync(Dish dish)

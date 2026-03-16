@@ -31,16 +31,17 @@ namespace BO.Entities
         public DateTime? UpdatedAt { get; set; }
 
         // Foreign Keys
-        [ForeignKey("Branch")]
-        public int BranchId { get; set; }
+        [ForeignKey("Vendor")]
+        public int VendorId { get; set; }
 
         [ForeignKey("Category")]
         public int CategoryId { get; set; }
 
         // Navigation Properties
-        public virtual Branch Branch { get; set; }
+        public virtual Vendor Vendor { get; set; }
         public virtual Category Category { get; set; }
         public virtual ICollection<DishTaste> DishTastes { get; set; } = new List<DishTaste>();
         public virtual ICollection<DishDietaryPreference> DishDietaryPreferences { get; set; } = new List<DishDietaryPreference>();
+        public virtual ICollection<BranchDish> BranchDishes { get; set; } = new List<BranchDish>();
     }
 }

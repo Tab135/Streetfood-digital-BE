@@ -13,6 +13,8 @@ using Service;
 using Service.Interfaces;
 using Service.JWT;
 using Service.PaymentsService;
+using StreetFood.Hubs;
+using StreetFood.Services;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -37,6 +39,8 @@ namespace StreetFood
                 options.JsonSerializerOptions.WriteIndented = true;
                 // options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
             });
+
+            builder.Services.AddSignalR();
 
             builder.Services.AddCors(options =>
             {
@@ -72,6 +76,11 @@ namespace StreetFood
             builder.Services.AddScoped<BranchDAO>();
             builder.Services.AddScoped<FeedbackTagDAO>();
             builder.Services.AddScoped<FeedbackDAO>();
+            // Flow 2: Review & Rating DAOs
+            builder.Services.AddScoped<OrderDAO>();
+            builder.Services.AddScoped<FeedbackVoteDAO>();
+            builder.Services.AddScoped<VendorReplyDAO>();
+            builder.Services.AddScoped<NotificationDAO>();
             // Menu Management DAOs
             builder.Services.AddScoped<CategoryDAO>();
             builder.Services.AddScoped<TasteDAO>();
@@ -88,6 +97,11 @@ namespace StreetFood
             builder.Services.AddScoped<IBranchRepository, BranchRepository>();
             builder.Services.AddScoped<IFeedbackTagRepository, FeedbackTagRepository>();
             builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+            // Flow 2: Review & Rating Repositories
+            builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+            builder.Services.AddScoped<IFeedbackVoteRepository, FeedbackVoteRepository>();
+            builder.Services.AddScoped<IVendorReplyRepository, VendorReplyRepository>();
+            builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
             // Menu Management Repositories
             builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
             builder.Services.AddScoped<ITasteRepository, TasteRepository>();
@@ -105,6 +119,12 @@ namespace StreetFood
             builder.Services.AddScoped<IBranchService, BranchService>();
             builder.Services.AddScoped<IFeedbackService, FeedbackService>();
             builder.Services.AddScoped<IFeedbackTagService, FeedbackTagService>();
+            // Flow 2: Review & Rating Services
+            builder.Services.AddScoped<IBranchMetricsService, BranchMetricsService>();
+            builder.Services.AddScoped<INotificationService, NotificationService>();
+            builder.Services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
+            builder.Services.AddScoped<IFeedbackVoteService, FeedbackVoteService>();
+            builder.Services.AddScoped<IVendorReplyService, VendorReplyService>();
             // Menu Management Services
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITasteService, TasteService>();
@@ -137,6 +157,19 @@ namespace StreetFood
                     ClockSkew = TimeSpan.Zero,
                     IssuerSigningKey = new SymmetricSecurityKey(
                             Encoding.UTF8.GetBytes(jwtKey))
+                };
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
+                    }
                 };
             });
 
@@ -209,6 +242,7 @@ namespace StreetFood
 
             app.UseStaticFiles();
             app.MapControllers();
+            app.MapHub<NotificationHub>("/hubs/notifications");
 
             app.Run();
         }
