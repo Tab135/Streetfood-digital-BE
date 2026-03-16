@@ -46,9 +46,9 @@ namespace Repository.Interfaces
 
         // Active branches with dynamic filtering - returns all matching results
         Task<List<(Branch branch, double distanceKm)>> GetActiveBranchesFilteredAsync(
-            double userLat,
-            double userLong,
-            double maxDistanceKm,
+            double? userLat,
+            double? userLong,
+            double? maxDistanceKm,
             List<int>? dietaryIds,
             List<int>? tasteIds,
             decimal? minPrice,

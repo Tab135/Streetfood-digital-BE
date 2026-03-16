@@ -373,9 +373,9 @@ namespace DAL
         /// Get active branches with dynamic filtering: distance (Haversine), dietary, taste, price range.
         /// </summary>
         public async Task<List<(Branch branch, double distanceKm)>> GetActiveBranchesFilteredAsync(
-            double userLat,
-            double userLong,
-            double maxDistanceKm,
+            double? userLat,
+            double? userLong,
+            double? maxDistanceKm,
             List<int>? dietaryIds,
             List<int>? tasteIds,
             decimal? minPrice,
@@ -410,11 +410,18 @@ namespace DAL
 
             foreach (var branch in branches)
             {
-                double distanceKm = HaversineDistance(userLat, userLong, branch.Lat, branch.Long);
+                double distanceKm = 0;
+                bool hasGps = userLat.HasValue && userLong.HasValue;
 
-                // Distance filter
-                if (distanceKm > maxDistanceKm)
-                    continue;
+                if (hasGps)
+                {
+                    distanceKm = HaversineDistance(userLat.Value, userLong.Value, branch.Lat, branch.Long);
+
+                    // Distance filter
+                    double maxDist = maxDistanceKm ?? 10.0;
+                    if (distanceKm > maxDist)
+                        continue;
+                }
 
                 // If no filters provided, include all branches within distance
                 if (!hasAnyFilter)

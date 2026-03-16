@@ -708,10 +708,10 @@ namespace Service
             if (filter.MinPrice.HasValue && filter.MaxPrice.HasValue && filter.MinPrice > filter.MaxPrice)
                 throw new Exception("MinPrice cannot be greater than MaxPrice");
 
-            // Default coordinates: Ho Chi Minh City center (if not provided)
-            double userLat = filter.Lat ?? 10.8231;  // Default: HCM latitude
-            double userLong = filter.Long ?? 106.6297;  // Default: HCM longitude
-            double maxDistance = filter.Distance ?? 10.0;
+            // User coordinates (nullable)
+            double? userLat = filter.Lat;
+            double? userLong = filter.Long;
+            double? maxDistance = filter.Distance;
 
             // DAL handles ALL filtering logic (distance, price, taste, dietary, category)
             var items = await _branchRepository.GetActiveBranchesFilteredAsync(
