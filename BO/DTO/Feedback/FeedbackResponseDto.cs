@@ -12,6 +12,11 @@ public class FeedbackResponseDto
     public DateTime? UpdatedAt { get; set; }
     public List<FeedbackImageDto>? Images { get; set; }
     public List<FeedbackTagDto>? Tags { get; set; }
+    public int UpVotes { get; set; }
+    public int DownVotes { get; set; }
+    public int NetScore { get; set; }
+    public string? UserVote { get; set; }
+    public VendorReplyDto? VendorReply { get; set; }
 }
 
 public class FeedbackUserDto

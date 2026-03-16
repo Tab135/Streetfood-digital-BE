@@ -19,6 +19,9 @@ namespace BO.Entities
         [ForeignKey("Dish")]
         public int? DishId { get; set; }
 
+        [ForeignKey("Order")]
+        public int? OrderId { get; set; }
+
         public int Rating { get; set; }
 
         [StringLength(1000)]
@@ -31,6 +34,9 @@ namespace BO.Entities
         public virtual User User { get; set; }
         public virtual Branch Branch { get; set; }
         public virtual Dish? Dish { get; set; }
+        public virtual Order? Order { get; set; }
+        public virtual VendorReply? VendorReply { get; set; }
+        public virtual ICollection<FeedbackVote> Votes { get; set; } = new List<FeedbackVote>();
         public virtual ICollection<FeedbackImage> FeedbackImages { get; set; } = new List<FeedbackImage>();
         public virtual ICollection<FeedbackTagAssociation> FeedbackTagAssociations { get; set; } = new List<FeedbackTagAssociation>();
     }

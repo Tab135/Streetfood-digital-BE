@@ -13,10 +13,17 @@ namespace StreetFood.Controllers
     public class FeedbackController : ControllerBase
     {
         private readonly IFeedbackService _feedbackService;
+        private readonly IFeedbackVoteService _feedbackVoteService;
+        private readonly IVendorReplyService _vendorReplyService;
 
-        public FeedbackController(IFeedbackService feedbackService)
+        public FeedbackController(
+            IFeedbackService feedbackService,
+            IFeedbackVoteService feedbackVoteService,
+            IVendorReplyService vendorReplyService)
         {
             _feedbackService = feedbackService ?? throw new ArgumentNullException(nameof(feedbackService));
+            _feedbackVoteService = feedbackVoteService ?? throw new ArgumentNullException(nameof(feedbackVoteService));
+            _vendorReplyService = vendorReplyService ?? throw new ArgumentNullException(nameof(vendorReplyService));
         }
 
         [HttpPost]
@@ -113,11 +120,22 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("branch/{branchId}")]
-        public async Task<IActionResult> GetFeedbackByBranch(int branchId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetFeedbackByBranch(
+            int branchId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? sortBy = null)
         {
             try
             {
-                var feedbacks = await _feedbackService.GetFeedbackByBranchId(branchId, pageNumber, pageSize);
+                int? currentUserId = null;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int uid))
+                {
+                    currentUserId = uid;
+                }
+
+                var feedbacks = await _feedbackService.GetFeedbackByBranchId(branchId, pageNumber, pageSize, sortBy, currentUserId);
                 return Ok(new
                 {
                     message = "Successfully get feedback from branch",
@@ -273,6 +291,98 @@ namespace StreetFood.Controllers
             catch (Exception ex)
             {
                 return NotFound(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{feedbackId}/vote")]
+        [Authorize(Roles = "User")]
+        public async Task<IActionResult> VoteFeedback(int feedbackId, [FromBody] VoteRequestDto voteRequest)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                    return Unauthorized(new { message = "User not authenticated" });
+
+                var result = await _feedbackVoteService.Vote(feedbackId, voteRequest.VoteType, userId);
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{feedbackId}/reply")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> CreateReply(int feedbackId, [FromBody] CreateVendorReplyDto dto)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                    return Unauthorized(new { message = "User not authenticated" });
+
+                var reply = await _vendorReplyService.CreateReply(feedbackId, dto, userId);
+                return CreatedAtAction(nameof(GetFeedbackById), new { id = feedbackId }, reply);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("{feedbackId}/reply")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> UpdateReply(int feedbackId, [FromBody] UpdateVendorReplyDto dto)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                    return Unauthorized(new { message = "User not authenticated" });
+
+                var reply = await _vendorReplyService.UpdateReply(feedbackId, dto, userId);
+                return Ok(reply);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpDelete("{feedbackId}/reply")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> DeleteReply(int feedbackId)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                    return Unauthorized(new { message = "User not authenticated" });
+
+                await _vendorReplyService.DeleteReply(feedbackId, userId);
+                return Ok(new { message = "Reply deleted successfully" });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(403, new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
     }

@@ -17,19 +17,28 @@ namespace Service
         private readonly IBranchRepository _branchRepository;
         private readonly IFeedbackTagRepository _feedbackTagRepository;
         private readonly IDishRepository _dishRepository;
+        private readonly IBranchMetricsService _branchMetricsService;
+        private readonly INotificationService _notificationService;
+        private readonly IOrderRepository _orderRepository;
 
         public FeedbackService(
             IFeedbackRepository feedbackRepository,
             IUserRepository userRepository,
             IBranchRepository branchRepository,
             IFeedbackTagRepository feedbackTagRepository,
-            IDishRepository dishRepository)
+            IDishRepository dishRepository,
+            IBranchMetricsService branchMetricsService,
+            INotificationService notificationService,
+            IOrderRepository orderRepository)
         {
             _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
             _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
             _feedbackTagRepository = feedbackTagRepository ?? throw new ArgumentNullException(nameof(feedbackTagRepository));
             _dishRepository = dishRepository ?? throw new ArgumentNullException(nameof(dishRepository));
+            _branchMetricsService = branchMetricsService ?? throw new ArgumentNullException(nameof(branchMetricsService));
+            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
         }
 
         public async Task<FeedbackResponseDto> CreateFeedback(CreateFeedbackDto createFeedbackDto, int userId)
@@ -64,6 +73,25 @@ namespace Service
                 }
             }
 
+            // Validate order if provided
+            if (createFeedbackDto.OrderId.HasValue)
+            {
+                var order = await _orderRepository.GetById(createFeedbackDto.OrderId.Value);
+                if (order == null)
+                    throw new Exception("Order not found");
+                if (order.UserId != userId)
+                    throw new Exception("Order does not belong to this user");
+                if (order.BranchId != createFeedbackDto.BranchId)
+                    throw new Exception("Order does not belong to this branch");
+                if (order.Status != OrderStatus.Paid)
+                    throw new Exception("Order must be paid before leaving feedback");
+
+                // One review per order
+                var hasFeedback = await _feedbackRepository.HasFeedbackForOrder(userId, createFeedbackDto.OrderId.Value);
+                if (hasFeedback)
+                    throw new Exception("You have already reviewed this order");
+            }
+
             // Validate rating
             if (createFeedbackDto.Rating < 1 || createFeedbackDto.Rating > 5)
             {
@@ -75,6 +103,7 @@ namespace Service
                 UserId = userId,
                 BranchId = createFeedbackDto.BranchId,
                 DishId = createFeedbackDto.DishId,
+                OrderId = createFeedbackDto.OrderId,
                 Rating = createFeedbackDto.Rating,
                 Comment = createFeedbackDto.Comment,
                 CreatedAt = DateTime.UtcNow
@@ -84,6 +113,24 @@ namespace Service
                 feedback,
                 null,
                 createFeedbackDto.TagIds);
+
+            // Recalculate branch metrics
+            await _branchMetricsService.OnFeedbackCreated(createFeedbackDto.BranchId, createFeedbackDto.Rating);
+
+            // Notify vendor
+            if (branch != null)
+            {
+                int? recipientId = branch.ManagerId;
+                if (recipientId.HasValue)
+                {
+                    await _notificationService.NotifyAsync(
+                        recipientId.Value,
+                        NotificationType.NewFeedback,
+                        "New Review",
+                        $"New {createFeedbackDto.Rating}-star review on your branch '{branch.Name}'",
+                        createdFeedback.FeedbackId);
+                }
+            }
 
             return await MapToResponseDtoAsync(createdFeedback);
         }
@@ -121,7 +168,8 @@ namespace Service
             return await MapToResponseDtoAsync(feedback);
         }
 
-        public async Task<PaginatedResponse<FeedbackResponseDto>> GetFeedbackByBranchId(int branchId, int pageNumber, int pageSize)
+        public async Task<PaginatedResponse<FeedbackResponseDto>> GetFeedbackByBranchId(
+            int branchId, int pageNumber, int pageSize, string? sortBy = null, int? currentUserId = null)
         {
             // Verify branch exists
             var branch = await _branchRepository.GetByIdAsync(branchId);
@@ -130,12 +178,12 @@ namespace Service
                 throw new Exception($"Branch with ID {branchId} not found");
             }
 
-            var (feedbacks, totalCount) = await _feedbackRepository.GetByBranchId(branchId, pageNumber, pageSize);
+            var (feedbacks, totalCount) = await _feedbackRepository.GetByBranchId(branchId, pageNumber, pageSize, sortBy);
             var items = new List<FeedbackResponseDto>();
-            
+
             foreach (var feedback in feedbacks)
             {
-                items.Add(await MapToResponseDtoAsync(feedback));
+                items.Add(await MapToResponseDtoAsync(feedback, currentUserId));
             }
 
             return new PaginatedResponse<FeedbackResponseDto>(items, totalCount, pageNumber, pageSize);
@@ -199,11 +247,20 @@ namespace Service
                 throw new Exception("Rating must be between 1 and 5");
             }
 
+            // Capture old rating for metrics
+            int oldRating = feedback.Rating;
+
             // Update feedback basic info
             feedback.Rating = updateFeedbackDto.Rating;
             feedback.Comment = updateFeedbackDto.Comment;
             feedback.UpdatedAt = DateTime.UtcNow;
             await _feedbackRepository.Update(feedback);
+
+            // Recalculate metrics if rating changed
+            if (oldRating != updateFeedbackDto.Rating)
+            {
+                await _branchMetricsService.OnFeedbackUpdated(feedback.BranchId, oldRating, updateFeedbackDto.Rating);
+            }
 
             // Handle image updates (if ImageUrls is provided)
             if (updateFeedbackDto.ImageUrls != null)
@@ -268,7 +325,17 @@ namespace Service
                 throw new Exception("User does not own this feedback");
             }
 
-            return await _feedbackRepository.Delete(feedbackId);
+            int rating = feedback.Rating;
+            int branchId = feedback.BranchId;
+
+            var result = await _feedbackRepository.Delete(feedbackId);
+
+            if (result)
+            {
+                await _branchMetricsService.OnFeedbackDeleted(branchId, rating);
+            }
+
+            return result;
         }
 
         public async Task<double> GetAverageRatingByBranch(int branchId)
@@ -339,7 +406,7 @@ namespace Service
         }
 
         // Helper method to map Feedback entity to ResponseDto
-        private async Task<FeedbackResponseDto> MapToResponseDtoAsync(Feedback feedback)
+        private async Task<FeedbackResponseDto> MapToResponseDtoAsync(Feedback feedback, int? currentUserId = null)
         {
             var images = feedback.FeedbackImages?.Select(img => new FeedbackImageDto
             {
@@ -376,6 +443,33 @@ namespace Service
                 };
             }
 
+            // Vote counts
+            int upVotes = feedback.Votes?.Count(v => v.VoteType == VoteType.Up) ?? 0;
+            int downVotes = feedback.Votes?.Count(v => v.VoteType == VoteType.Down) ?? 0;
+
+            string? userVote = null;
+            if (currentUserId.HasValue && feedback.Votes != null)
+            {
+                var vote = feedback.Votes.FirstOrDefault(v => v.UserId == currentUserId.Value);
+                userVote = vote?.VoteType == VoteType.Up ? "up" :
+                           vote?.VoteType == VoteType.Down ? "down" : null;
+            }
+
+            // Vendor reply
+            VendorReplyDto? vendorReplyDto = null;
+            if (feedback.VendorReply != null)
+            {
+                var replyUser = feedback.VendorReply.User;
+                vendorReplyDto = new VendorReplyDto
+                {
+                    VendorReplyId = feedback.VendorReply.VendorReplyId,
+                    Content = feedback.VendorReply.Content,
+                    RepliedBy = replyUser != null ? $"{replyUser.FirstName} {replyUser.LastName}".Trim() : "Vendor",
+                    CreatedAt = feedback.VendorReply.CreatedAt,
+                    UpdatedAt = feedback.VendorReply.UpdatedAt
+                };
+            }
+
             return new FeedbackResponseDto
             {
                 Id = feedback.FeedbackId,
@@ -387,7 +481,12 @@ namespace Service
                 CreatedAt = feedback.CreatedAt,
                 UpdatedAt = feedback.UpdatedAt,
                 Images = images,
-                Tags = tags
+                Tags = tags,
+                UpVotes = upVotes,
+                DownVotes = downVotes,
+                NetScore = upVotes - downVotes,
+                UserVote = userVote,
+                VendorReply = vendorReplyDto
             };
         }
     }

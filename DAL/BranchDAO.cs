@@ -466,6 +466,66 @@ namespace DAL
                 .ToList();
         }
 
+        public async Task UpdateBranchMetricsOnFeedbackCreatedAsync(int branchId, int rating)
+        {
+            await _context.Branches
+                .Where(b => b.BranchId == branchId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(b => b.TotalReviewCount, b => b.TotalReviewCount + 1)
+                    .SetProperty(b => b.TotalRatingSum, b => b.TotalRatingSum + rating)
+                    .SetProperty(b => b.AvgRating, b => (double)(b.TotalRatingSum + rating) / (b.TotalReviewCount + 1))
+                );
+        }
+
+        public async Task UpdateBranchMetricsOnFeedbackUpdatedAsync(int branchId, int oldRating, int newRating)
+        {
+            if (oldRating == newRating) return;
+            int delta = newRating - oldRating;
+
+            await _context.Branches
+                .Where(b => b.BranchId == branchId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(b => b.TotalRatingSum, b => b.TotalRatingSum + delta)
+                    .SetProperty(b => b.AvgRating, b => b.TotalReviewCount > 0 
+                        ? (double)(b.TotalRatingSum + delta) / b.TotalReviewCount 
+                        : 0)
+                );
+        }
+
+        public async Task UpdateBranchMetricsOnFeedbackDeletedAsync(int branchId, int rating)
+        {
+            await _context.Branches
+                .Where(b => b.BranchId == branchId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(b => b.TotalReviewCount, b => b.TotalReviewCount - 1 < 0 ? 0 : b.TotalReviewCount - 1)
+                    .SetProperty(b => b.TotalRatingSum, b => b.TotalRatingSum - rating < 0 ? 0 : b.TotalRatingSum - rating)
+                    .SetProperty(b => b.AvgRating, b => b.TotalReviewCount - 1 > 0 
+                        ? (double)(b.TotalRatingSum - rating) / (b.TotalReviewCount - 1) 
+                        : 0)
+                );
+        }
+
+        public async Task RecalculateBranchMetricsAsync(int branchId)
+        {
+            var metrics = await _context.Feedbacks
+                .Where(f => f.BranchId == branchId)
+                .GroupBy(f => f.BranchId)
+                .Select(g => new { Count = g.Count(), Total = g.Sum(x => (int?)x.Rating) ?? 0 })
+                .FirstOrDefaultAsync();
+
+            int newCount = metrics?.Count ?? 0;
+            int newTotal = metrics?.Total ?? 0;
+            double newAvg = newCount > 0 ? (double)newTotal / newCount : 0;
+
+            await _context.Branches
+                .Where(b => b.BranchId == branchId)
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(b => b.TotalReviewCount, newCount)
+                    .SetProperty(b => b.TotalRatingSum, newTotal)
+                    .SetProperty(b => b.AvgRating, newAvg)
+                );
+        }
+
         /// <summary>
         /// Calculate the great-circle distance between two points using the Haversine formula.
         /// Returns distance in kilometers.
