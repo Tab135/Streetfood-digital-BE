@@ -320,8 +320,7 @@ namespace Service.PaymentsService
                 return;
             }
 
-            // verification is handled by moderator separately; payment marks subscription and activates
-            branch.IsActive = true;
+            // verification and activation are handled by moderator separately; payment marks subscription
             branch.IsSubscribed = true;
             branch.SubscriptionExpiresAt = DateTime.UtcNow.AddDays(SUBSCRIPTION_DURATION_DAYS);
             await _branchRepo.UpdateAsync(branch);
