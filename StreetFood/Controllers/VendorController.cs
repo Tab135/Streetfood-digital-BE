@@ -51,6 +51,8 @@ namespace StreetFood.Controllers
                 }
 
                 var vendor = await _vendorService.CreateVendorAsync(createVendorDto, userId);
+                await _vendorDietaryPreferenceService.AssignPreferencesToVendor(vendor.VendorId, createVendorDto.DietaryPreferenceIds);
+
                 var vendorResponse = await _vendorService.GetVendorByIdAsync(vendor.VendorId);
 
                 return CreatedAtAction(nameof(GetVendorById), new { id = vendor.VendorId }, vendorResponse);
