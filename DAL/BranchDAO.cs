@@ -386,6 +386,7 @@ namespace DAL
                 .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
                     .ThenInclude(v => v.VendorDietaryPreferences)
+                        .ThenInclude(vdp => vdp.DietaryPreference)
                 .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.Category)
