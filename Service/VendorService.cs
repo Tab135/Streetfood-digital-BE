@@ -234,7 +234,7 @@ namespace Service
                     return new BO.DTO.Branch.BranchResponseDto
                     {
                         BranchId = b.BranchId,
-                        VendorId = b.VendorId,
+                        VendorId = b.VendorId ?? 0,
                         ManagerId = b.ManagerId,
                         Name = b.Name,
                         PhoneNumber = b.PhoneNumber,

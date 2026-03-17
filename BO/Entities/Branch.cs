@@ -11,7 +11,7 @@ namespace BO.Entities
         public int BranchId { get; set; }
 
         [ForeignKey("Vendor")]
-        public int VendorId { get; set; }
+        public int? VendorId { get; set; }
 
         [ForeignKey("Manager")]
         public int? ManagerId { get; set; }

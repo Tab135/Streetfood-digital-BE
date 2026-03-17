@@ -48,7 +48,7 @@ namespace Service
                 })
                 .Select(vendorGroup => new SearchResultDto
                 {
-                    VendorId = vendorGroup.Key.VendorId,
+                    VendorId = vendorGroup.Key.VendorId ?? 0,
                     VendorName = vendorGroup.Key.VendorName ?? string.Empty,
                     ManagerId = vendorGroup.Key.ManagerId ?? 0,
                     IsActive = vendorGroup.Key.VendorIsActive ?? false,

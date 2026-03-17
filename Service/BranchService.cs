@@ -118,7 +118,7 @@ namespace Service
             }
 
             // Verify vendor exists and user owns it
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             if (vendor == null || vendor.UserId != userId)
             {
                 throw new Exception("User does not own this vendor");
@@ -162,14 +162,14 @@ namespace Service
                 throw new Exception($"Branch with ID {branchId} not found");
             }
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             if (vendor == null || vendor.UserId != userId)
             {
                 throw new Exception("User does not own this vendor");
             }
 
             // Check if this is the only branch
-            var branches = await _branchRepository.GetAllByVendorIdAsync(branch.VendorId);
+            var branches = await _branchRepository.GetAllByVendorIdAsync(branch.VendorId ?? 0);
             if (branches.Count <= 1)
             {
                 throw new Exception("Cannot delete the last branch. A vendor must have at least one branch.");
@@ -186,7 +186,7 @@ namespace Service
                 return false;
             }
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             return vendor != null && vendor.UserId == userId;
         }
 
@@ -277,7 +277,7 @@ namespace Service
                     Branch = r.Branch == null ? null : new PendingRegistrationDto.PendingBranchInfo
                     {
                         BranchId = r.Branch.BranchId,
-                        VendorId = r.Branch.VendorId,
+                        VendorId = r.Branch.VendorId ?? 0,
                         ManagerId = r.Branch.ManagerId,
                         Name = r.Branch.Name,
                         PhoneNumber = r.Branch.PhoneNumber,
@@ -326,7 +326,7 @@ namespace Service
             }
 
             // Promote vendor owner to Vendor role if not already
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             if (vendor != null)
             {
                 var vendorOwner = await _userRepository.GetUserById(vendor.UserId);
@@ -391,7 +391,7 @@ namespace Service
             return new BranchResponseDto
             {
                 BranchId = branch.BranchId,
-                VendorId = branch.VendorId,
+                VendorId = branch.VendorId ?? 0,
                 ManagerId = branch.ManagerId,
                 Name = branch.Name,
                 PhoneNumber = branch.PhoneNumber,
@@ -665,7 +665,7 @@ namespace Service
                     return new ActiveBranchResponseDto
                     {
                         BranchId      = branch.BranchId,
-                        VendorId      = branch.VendorId,
+                        VendorId      = branch.VendorId ?? 0,
                         VendorName    = branch.Vendor?.Name ?? string.Empty,
                         Name          = branch.Name,
                         PhoneNumber   = branch.PhoneNumber,
@@ -734,7 +734,7 @@ namespace Service
                 return new ActiveBranchResponseDto
                 {
                     BranchId      = branch.BranchId,
-                    VendorId      = branch.VendorId,
+                    VendorId      = branch.VendorId ?? 0,
                     VendorName    = branch.Vendor?.Name ?? string.Empty,
                     Name          = branch.Name,
                     PhoneNumber   = branch.PhoneNumber,

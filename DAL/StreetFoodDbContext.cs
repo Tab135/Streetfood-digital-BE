@@ -22,6 +22,7 @@ public class StreetFoodDbContext : DbContext
     // Vendor-related DbSets
     public DbSet<Vendor> Vendors { get; set; }
     public DbSet<Branch> Branches { get; set; }
+    public DbSet<GhostPin> GhostPins { get; set; }
     public DbSet<BranchImage> BranchImages { get; set; }
     public DbSet<BranchRegisterRequest> BranchRegisterRequests { get; set; }
     public DbSet<WorkSchedule> WorkSchedules { get; set; }

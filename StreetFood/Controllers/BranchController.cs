@@ -46,7 +46,7 @@ namespace StreetFood.Controllers
                 var branchResponse = new BranchResponseDto
                 {
                     BranchId = branch.BranchId,
-                    VendorId = branch.VendorId,
+                    VendorId = branch.VendorId ?? 0,
                     ManagerId = branch.ManagerId,
                     Name = branch.Name,
                     PhoneNumber = branch.PhoneNumber,

@@ -71,7 +71,7 @@ namespace Service.PaymentsService
                     return new PaymentLinkResult { Success = false, Message = "Chi nhánh không tồn tại." };
                 }
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = branch.VendorId.HasValue ? await _vendorRepository.GetByIdAsync(branch.VendorId.Value) : null; 
             if (vendor != null)
                 {
                     var vendorOwner = await _userRepo.GetUserById(vendor.UserId);
@@ -321,6 +321,17 @@ namespace Service.PaymentsService
             }
 
             // verification and activation are handled by moderator separately; payment marks subscription
+            
+            if (branch.VendorId == null || branch.VendorId == 0)
+            {
+                var vendor = await _vendorRepository.GetByUserIdAsync(payment.UserId);
+                if (vendor == null)
+                {
+                    vendor = new BO.Entities.Vendor { UserId = payment.UserId };
+                    vendor = await _vendorRepository.CreateAsync(vendor);
+                }
+                branch.VendorId = vendor.VendorId;
+            }
             branch.IsSubscribed = true;
             branch.SubscriptionExpiresAt = DateTime.UtcNow.AddDays(SUBSCRIPTION_DURATION_DAYS);
             await _branchRepo.UpdateAsync(branch);

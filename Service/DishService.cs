@@ -292,7 +292,7 @@ namespace Service
             if (branch == null)
                 throw new DomainExceptions($"Branch with ID {branchId} not found");
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             if (vendor == null || vendor.UserId != userId)
                 throw new DomainExceptions("You do not own this branch");
 
@@ -329,7 +329,7 @@ namespace Service
             if (branch == null)
                 throw new DomainExceptions($"Branch with ID {branchId} not found");
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             if (vendor == null || vendor.UserId != userId)
                 throw new DomainExceptions("You do not own this branch");
 
