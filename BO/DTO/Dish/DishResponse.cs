@@ -22,6 +22,5 @@ namespace BO.DTO.Dish
         // Flattened data for FE display
         public string CategoryName { get; set; }
         public List<string> TasteNames { get; set; } = new List<string>();
-        public List<string> DietaryPreferenceNames { get; set; } = new List<string>();
     }
 }

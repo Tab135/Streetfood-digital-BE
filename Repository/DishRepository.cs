@@ -26,11 +26,6 @@ namespace Repository
             await _dishDAO.AddDishTastesAsync(dishTastes);
         }
 
-        public async Task AddDishDietaryPreferencesAsync(List<DishDietaryPreference> dishDietaryPreferences)
-        {
-            await _dishDAO.AddDishDietaryPreferencesAsync(dishDietaryPreferences);
-        }
-
         public async Task<Dish?> GetByIdAsync(int dishId)
         {
             return await _dishDAO.GetByIdAsync(dishId);
@@ -59,11 +54,6 @@ namespace Repository
         public async Task RemoveDishTastesAsync(int dishId)
         {
             await _dishDAO.RemoveDishTastesAsync(dishId);
-        }
-
-        public async Task RemoveDishDietaryPreferencesAsync(int dishId)
-        {
-            await _dishDAO.RemoveDishDietaryPreferencesAsync(dishId);
         }
 
         public async Task<(List<Dish> items, int totalCount)> GetDishesByBranchAsync(int branchId, int? categoryId, string? keyword, int pageNumber, int pageSize)

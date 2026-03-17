@@ -29,12 +29,6 @@ namespace DAL
             await _context.SaveChangesAsync();
         }
 
-        public async Task AddDishDietaryPreferencesAsync(List<DishDietaryPreference> dishDietaryPreferences)
-        {
-            _context.DishDietaryPreferences.AddRange(dishDietaryPreferences);
-            await _context.SaveChangesAsync();
-        }
-
         public async Task<Dish?> GetByIdAsync(int dishId)
         {
             return await _context.Dishes
@@ -43,8 +37,6 @@ namespace DAL
                 .Include(d => d.Category)
                 .Include(d => d.DishTastes)
                     .ThenInclude(dt => dt.Taste)
-                .Include(d => d.DishDietaryPreferences)
-                    .ThenInclude(ddp => ddp.DietaryPreference)
                 .FirstOrDefaultAsync(d => d.DishId == dishId);
         }
 
@@ -61,8 +53,6 @@ namespace DAL
                 .Include(d => d.Category)
                 .Include(d => d.DishTastes)
                     .ThenInclude(dt => dt.Taste)
-                .Include(d => d.DishDietaryPreferences)
-                    .ThenInclude(ddp => ddp.DietaryPreference)
                 .AsQueryable();
 
             if (vendorId.HasValue)
@@ -107,8 +97,6 @@ namespace DAL
                 .Include(d => d.Category)
                 .Include(d => d.DishTastes)
                     .ThenInclude(dt => dt.Taste)
-                .Include(d => d.DishDietaryPreferences)
-                    .ThenInclude(ddp => ddp.DietaryPreference)
                 .AsQueryable();
 
             if (categoryId.HasValue)
@@ -193,13 +181,5 @@ namespace DAL
             await _context.SaveChangesAsync();
         }
 
-        public async Task RemoveDishDietaryPreferencesAsync(int dishId)
-        {
-            var dishDietaryPreferences = await _context.DishDietaryPreferences
-                .Where(ddp => ddp.DishId == dishId)
-                .ToListAsync();
-            _context.DishDietaryPreferences.RemoveRange(dishDietaryPreferences);
-            await _context.SaveChangesAsync();
-        }
     }
 }

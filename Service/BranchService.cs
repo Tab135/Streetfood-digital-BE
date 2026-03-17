@@ -690,10 +690,10 @@ namespace Service
                             TasteNames = x.Dish.DishTastes?
                                 .Select(dt => dt.Taste?.Name ?? string.Empty)
                                 .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new(),
-                            DietaryPreferenceNames = x.Dish.DishDietaryPreferences?
-                                .Select(ddp => ddp.DietaryPreference?.Name ?? string.Empty)
-                                .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
-                        }).ToList()
+                        }).ToList(),
+                        DietaryPreferenceNames = branch.Vendor?.VendorDietaryPreferences?
+                            .Select(vdp => vdp.DietaryPreference?.Name ?? string.Empty)
+                            .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
                     };
                 }).ToList();
 
@@ -759,10 +759,10 @@ namespace Service
                         TasteNames = x.Dish.DishTastes?
                             .Select(dt => dt.Taste?.Name ?? string.Empty)
                             .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new(),
-                        DietaryPreferenceNames = x.Dish.DishDietaryPreferences?
-                            .Select(ddp => ddp.DietaryPreference?.Name ?? string.Empty)
-                            .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
-                    }).ToList()
+                    }).ToList(),
+                    DietaryPreferenceNames = branch.Vendor?.VendorDietaryPreferences?
+                        .Select(vdp => vdp.DietaryPreference?.Name ?? string.Empty)
+                        .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
                 };
             }).ToList();
 
