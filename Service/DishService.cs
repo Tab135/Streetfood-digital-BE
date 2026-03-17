@@ -299,8 +299,10 @@ namespace Service
             foreach (var dishId in dishIds)
             {
                 var dish = await _dishRepository.GetByIdAsync(dishId);
-                if (dish == null || dish.VendorId != branch.VendorId)
-                    continue; // Skip invalid dishes or dishes not belonging to the same vendor
+                if (dish == null)
+                    throw new DomainExceptions($"Dish with ID {dishId} not found");
+                if (dish.VendorId != branch.VendorId)
+                    throw new DomainExceptions($"Dish with ID {dishId} does not belong to your vendor");
 
                 var existing = await _dishRepository.GetBranchDishAsync(branchId, dishId);
                 if (existing != null)
