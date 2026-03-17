@@ -20,6 +20,8 @@ namespace BO.DTO.Branch
         public double Lat { get; set; }
         public double Long { get; set; }
         public double AvgRating { get; set; }
+        public int TotalReviewCount { get; set; }
+        public int TotalRatingSum { get; set; }
         public bool IsVerified { get; set; }
 
         /// <summary>Distance in kilometers from user's location (null if no location provided)</summary>
