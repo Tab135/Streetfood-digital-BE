@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260317174426_AddTierEntity")]
+    partial class AddTierEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -139,7 +142,7 @@ namespace DAL.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("VendorId")
+                    b.Property<int>("VendorId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Ward")
@@ -601,56 +604,6 @@ namespace DAL.Migrations
                         .IsUnique();
 
                     b.ToTable("FeedbackVotes");
-                });
-
-            modelBuilder.Entity("BO.Entities.GhostPin", b =>
-                {
-                    b.Property<int>("GhostPinId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("GhostPinId"));
-
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("CreatorId")
-                        .HasColumnType("integer");
-
-                    b.Property<double>("Lat")
-                        .HasColumnType("double precision");
-
-                    b.Property<int?>("LinkedBranchId")
-                        .HasColumnType("integer");
-
-                    b.Property<double>("Long")
-                        .HasColumnType("double precision");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("RejectReason")
-                        .HasColumnType("text");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("GhostPinId");
-
-                    b.HasIndex("CreatorId");
-
-                    b.HasIndex("LinkedBranchId");
-
-                    b.ToTable("GhostPins");
                 });
 
             modelBuilder.Entity("BO.Entities.Notification", b =>
@@ -1115,7 +1068,8 @@ namespace DAL.Migrations
                     b.HasOne("BO.Entities.Vendor", "Vendor")
                         .WithMany("Branches")
                         .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Manager");
 
@@ -1312,23 +1266,6 @@ namespace DAL.Migrations
                     b.Navigation("Feedback");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("BO.Entities.GhostPin", b =>
-                {
-                    b.HasOne("BO.Entities.User", "Creator")
-                        .WithMany()
-                        .HasForeignKey("CreatorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BO.Entities.Branch", "LinkedBranch")
-                        .WithMany()
-                        .HasForeignKey("LinkedBranchId");
-
-                    b.Navigation("Creator");
-
-                    b.Navigation("LinkedBranch");
                 });
 
             modelBuilder.Entity("BO.Entities.Notification", b =>

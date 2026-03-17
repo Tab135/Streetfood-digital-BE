@@ -291,9 +291,15 @@ namespace Service
                         UpdatedAt = r.Branch.UpdatedAt,
                         IsVerified = r.Branch.IsVerified,
                         AvgRating = r.Branch.AvgRating,
+                        TotalReviewCount = r.Branch.TotalReviewCount,
+                        TotalRatingSum = r.Branch.TotalRatingSum,
+                        BatchReviewCount = r.Branch.BatchReviewCount,
+                        BatchRatingSum = r.Branch.BatchRatingSum,
                         IsActive = r.Branch.IsActive,
                         IsSubscribed = r.Branch.IsSubscribed,
                         SubscriptionExpiresAt = r.Branch.SubscriptionExpiresAt,
+                        TierId = r.Branch.TierId,
+                        TierName = r.Branch.Tier?.Name ?? "Silver",
                         BranchImages = r.Branch.BranchImages?.Select(i => new BranchImageResponseDto
                         {
                             BranchImageId = i.BranchImageId,
@@ -314,6 +320,9 @@ namespace Service
 
             branch.IsVerified = true;
             branch.IsActive = true;
+            branch.TierId = 2; // Silver
+            branch.BatchReviewCount = 0;
+            branch.BatchRatingSum = 0;
             await _branchRepository.UpdateAsync(branch);
 
             // Update registration request status
@@ -405,12 +414,18 @@ namespace Service
                 UpdatedAt = branch.UpdatedAt,
                 IsVerified = branch.IsVerified,
                 AvgRating = branch.AvgRating,
+                TotalReviewCount = branch.TotalReviewCount,
+                TotalRatingSum = branch.TotalRatingSum,
+                BatchReviewCount = branch.BatchReviewCount,
+                BatchRatingSum = branch.BatchRatingSum,
                 IsActive = branch.IsActive,
                 IsSubscribed = branch.IsSubscribed,
                 SubscriptionExpiresAt = branch.SubscriptionExpiresAt,
                 DaysRemaining = branch.SubscriptionExpiresAt.HasValue
                     ? (int)Math.Ceiling((branch.SubscriptionExpiresAt.Value - DateTime.UtcNow).TotalDays)
                     : null,
+                TierId = branch.TierId,
+                TierName = branch.Tier?.Name ?? "Silver", // Default to Silver if null
                 LicenseUrls = licenseUrls,
                 LicenseStatus = licenseRequest?.Status.ToString(),
                 LicenseRejectReason = licenseRequest?.RejectReason
@@ -676,7 +691,10 @@ namespace Service
                         Lat           = branch.Lat,
                         Long          = branch.Long,
                         AvgRating     = branch.AvgRating,
+                        TotalReviewCount = branch.TotalReviewCount,
                         IsVerified    = branch.IsVerified,
+                        TierId        = branch.TierId,
+                        TierName      = branch.Tier?.Name ?? "Silver",
                         DistanceKm    = null, // No distance calculation when no lat/long provided
                         Dishes = dishes.Select(x => new ActiveDishResponseDto
                         {
@@ -745,7 +763,10 @@ namespace Service
                     Lat           = branch.Lat,
                     Long          = branch.Long,
                     AvgRating     = branch.AvgRating,
+                    TotalReviewCount = branch.TotalReviewCount,
                     IsVerified    = branch.IsVerified,
+                    TierId        = branch.TierId,
+                    TierName      = branch.Tier?.Name ?? "Silver",
                     DistanceKm    = Math.Round(distanceKm, 2),
                     Dishes = dishes.Select(x => new ActiveDishResponseDto
                     {

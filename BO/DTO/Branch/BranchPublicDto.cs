@@ -22,7 +22,10 @@ namespace BO.DTO.Branch
         public DateTime? UpdatedAt { get; set; }
         public bool IsVerified { get; set; }
         public double AvgRating { get; set; }
+        public int TotalReviewCount { get; set; }
         public bool IsActive { get; set; }
 
+        public int TierId { get; set; }
+        public string TierName { get; set; }
     }
 }

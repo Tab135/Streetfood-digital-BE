@@ -60,7 +60,17 @@ namespace BO.Entities
         /// <summary>Date when the paid subscription expires (null = never paid)</summary>
         public DateTime? SubscriptionExpiresAt { get; set; }
 
+        // --- Tier Configuration ---
+        public int TierId { get; set; } = 2; // Default to Silver (2)
+
+        public int BatchReviewCount { get; set; } = 0;
+
+        public int BatchRatingSum { get; set; } = 0;
+
         // Navigation properties
+        [ForeignKey("TierId")]
+        public virtual Tier Tier { get; set; }
+        
         public virtual Vendor Vendor { get; set; }
         public virtual User Manager { get; set; }
         public virtual ICollection<WorkSchedule> WorkSchedules { get; set; }
