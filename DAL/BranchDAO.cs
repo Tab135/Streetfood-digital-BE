@@ -353,6 +353,8 @@ namespace DAL
                 .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
+                    .ThenInclude(v => v.VendorDietaryPreferences)
+                        .ThenInclude(vdp => vdp.DietaryPreference)
                 .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.Category)
@@ -360,10 +362,6 @@ namespace DAL
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.DishTastes)
                             .ThenInclude(dt => dt.Taste)
-                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
-                    .ThenInclude(bd => bd.Dish)
-                        .ThenInclude(d => d.DishDietaryPreferences)
-                            .ThenInclude(ddp => ddp.DietaryPreference)
                 .OrderByDescending(b => b.AvgRating)
                 .ThenBy(b => b.Name)
                 .ToListAsync();
@@ -387,6 +385,8 @@ namespace DAL
                 .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
+                    .ThenInclude(v => v.VendorDietaryPreferences)
+                        .ThenInclude(vdp => vdp.DietaryPreference)
                 .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.Category)
@@ -394,10 +394,6 @@ namespace DAL
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.DishTastes)
                             .ThenInclude(dt => dt.Taste)
-                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
-                    .ThenInclude(bd => bd.Dish)
-                        .ThenInclude(d => d.DishDietaryPreferences)
-                            .ThenInclude(ddp => ddp.DietaryPreference)
                 .ToListAsync();
 
             bool hasDietaryFilter  = dietaryIds  != null && dietaryIds.Count  > 0;
@@ -430,50 +426,37 @@ namespace DAL
                     continue;
                 }
 
-                // Check if branch has at least one qualifying dish
-                bool hasQualifyingDish = branch.BranchDishes
-                    .Select(bd => bd.Dish)
-                    .Any(dish =>
+                // Dietary filter: checked at vendor level (not dish level)
+                if (hasDietaryFilter)
                 {
-                    // Price filter (must satisfy if provided)
-                    if (minPrice.HasValue && dish.Price < minPrice.Value) return false;
-                    if (maxPrice.HasValue && dish.Price > maxPrice.Value) return false;
-
-                    // Category filter (must satisfy if provided)
-                    if (hasCategoryFilter && !categoryIds!.Contains(dish.CategoryId)) return false;
-
-                    // If only price/category filters are provided, dish passes
-                    if (!hasDietaryFilter && !hasTasteFilter) return true;
-
-                    // GLOBAL OR LOGIC: Dish passes if it has ANY matching taste OR dietary preference
-                    bool passesFilter = false;
-
-                    if (hasTasteFilter)
-                    {
-                        var dishTasteIds = dish.DishTastes.Select(dt => dt.TasteId).ToHashSet();
-                        if (tasteIds!.Any(id => dishTasteIds.Contains(id)))
-                        {
-                            passesFilter = true;
-                        }
-                    }
-
-                    if (hasDietaryFilter)
-                    {
-                        var dishDietaryIds = dish.DishDietaryPreferences
-                            .Select(ddp => ddp.DietaryPreferenceId).ToHashSet();
-                        if (dietaryIds!.Any(id => dishDietaryIds.Contains(id)))
-                        {
-                            passesFilter = true;
-                        }
-                    }
-
-                    return passesFilter;
-                });
-
-                if (hasQualifyingDish)
-                {
-                    filteredBranches.Add((branch, distanceKm));
+                    var vendorDietaryIds = branch.Vendor.VendorDietaryPreferences
+                        .Select(vdp => vdp.DietaryPreferenceId).ToHashSet();
+                    if (!dietaryIds!.Any(vendorDietaryIds.Contains))
+                        continue;
                 }
+
+                // Dish-level filters: taste, price, category
+                bool hasDishLevelFilter = hasTasteFilter || hasPriceFilter || hasCategoryFilter;
+                if (hasDishLevelFilter)
+                {
+                    bool hasQualifyingDish = branch.BranchDishes
+                        .Select(bd => bd.Dish)
+                        .Any(dish =>
+                        {
+                            if (minPrice.HasValue && dish.Price < minPrice.Value) return false;
+                            if (maxPrice.HasValue && dish.Price > maxPrice.Value) return false;
+                            if (hasCategoryFilter && !categoryIds!.Contains(dish.CategoryId)) return false;
+                            if (!hasTasteFilter) return true;
+
+                            var dishTasteIds = dish.DishTastes.Select(dt => dt.TasteId).ToHashSet();
+                            return tasteIds!.Any(id => dishTasteIds.Contains(id));
+                        });
+
+                    if (!hasQualifyingDish)
+                        continue;
+                }
+
+                filteredBranches.Add((branch, distanceKm));
             }
 
             // Sort by distance (nearest first) and return all

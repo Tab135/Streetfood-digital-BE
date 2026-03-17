@@ -20,6 +20,8 @@ namespace BO.DTO.Branch
         public double Lat { get; set; }
         public double Long { get; set; }
         public double AvgRating { get; set; }
+        public int TotalReviewCount { get; set; }
+        public int TotalRatingSum { get; set; }
         public bool IsVerified { get; set; }
 
         /// <summary>Distance in kilometers from user's location (null if no location provided)</summary>
@@ -27,6 +29,8 @@ namespace BO.DTO.Branch
 
         /// <summary>Active dishes that match the filter criteria</summary>
         public List<ActiveDishResponseDto> Dishes { get; set; } = new List<ActiveDishResponseDto>();
+
+        public List<string> DietaryPreferenceNames { get; set; } = new List<string>();
     }
 
     /// <summary>
@@ -42,6 +46,5 @@ namespace BO.DTO.Branch
         public bool IsSoldOut { get; set; }
         public string CategoryName { get; set; } = string.Empty;
         public List<string> TasteNames { get; set; } = new List<string>();
-        public List<string> DietaryPreferenceNames { get; set; } = new List<string>();
     }
 }

@@ -405,6 +405,8 @@ namespace Service
                 UpdatedAt = branch.UpdatedAt,
                 IsVerified = branch.IsVerified,
                 AvgRating = branch.AvgRating,
+                TotalReviewCount = branch.TotalReviewCount,
+                TotalRatingSum = branch.TotalRatingSum,
                 IsActive = branch.IsActive,
                 IsSubscribed = branch.IsSubscribed,
                 SubscriptionExpiresAt = branch.SubscriptionExpiresAt,
@@ -675,9 +677,11 @@ namespace Service
                         City          = branch.City,
                         Lat           = branch.Lat,
                         Long          = branch.Long,
-                        AvgRating     = branch.AvgRating,
-                        IsVerified    = branch.IsVerified,
-                        DistanceKm    = null, // No distance calculation when no lat/long provided
+                        AvgRating        = branch.AvgRating,
+                        TotalReviewCount = branch.TotalReviewCount,
+                        TotalRatingSum   = branch.TotalRatingSum,
+                        IsVerified       = branch.IsVerified,
+                        DistanceKm       = null, // No distance calculation when no lat/long provided
                         Dishes = dishes.Select(x => new ActiveDishResponseDto
                         {
                             DishId       = x.Dish.DishId,
@@ -690,10 +694,10 @@ namespace Service
                             TasteNames = x.Dish.DishTastes?
                                 .Select(dt => dt.Taste?.Name ?? string.Empty)
                                 .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new(),
-                            DietaryPreferenceNames = x.Dish.DishDietaryPreferences?
-                                .Select(ddp => ddp.DietaryPreference?.Name ?? string.Empty)
-                                .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
-                        }).ToList()
+                        }).ToList(),
+                        DietaryPreferenceNames = branch.Vendor?.VendorDietaryPreferences?
+                            .Select(vdp => vdp.DietaryPreference?.Name ?? string.Empty)
+                            .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
                     };
                 }).ToList();
 
@@ -744,9 +748,11 @@ namespace Service
                     City          = branch.City,
                     Lat           = branch.Lat,
                     Long          = branch.Long,
-                    AvgRating     = branch.AvgRating,
-                    IsVerified    = branch.IsVerified,
-                    DistanceKm    = Math.Round(distanceKm, 2),
+                    AvgRating        = branch.AvgRating,
+                    TotalReviewCount = branch.TotalReviewCount,
+                    TotalRatingSum   = branch.TotalRatingSum,
+                    IsVerified       = branch.IsVerified,
+                    DistanceKm       = Math.Round(distanceKm, 2),
                     Dishes = dishes.Select(x => new ActiveDishResponseDto
                     {
                         DishId       = x.Dish.DishId,
@@ -759,10 +765,10 @@ namespace Service
                         TasteNames = x.Dish.DishTastes?
                             .Select(dt => dt.Taste?.Name ?? string.Empty)
                             .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new(),
-                        DietaryPreferenceNames = x.Dish.DishDietaryPreferences?
-                            .Select(ddp => ddp.DietaryPreference?.Name ?? string.Empty)
-                            .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
-                    }).ToList()
+                    }).ToList(),
+                    DietaryPreferenceNames = branch.Vendor?.VendorDietaryPreferences?
+                        .Select(vdp => vdp.DietaryPreference?.Name ?? string.Empty)
+                        .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
                 };
             }).ToList();
 
