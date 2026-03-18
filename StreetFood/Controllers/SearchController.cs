@@ -17,7 +17,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Search([FromQuery] string? keyword)
+        public async Task<IActionResult> Search([FromQuery] string? keyword, [FromQuery] double? userLat = null, [FromQuery] double? userLong = null)
         {
             if (string.IsNullOrWhiteSpace(keyword))
             {
@@ -40,7 +40,7 @@ namespace StreetFood.Controllers
                 });
             }
 
-            var results = await _searchService.SearchAsync(trimmedKeyword);
+            var results = await _searchService.SearchAsync(trimmedKeyword, userLat, userLong);
 
             return Ok(new
             {

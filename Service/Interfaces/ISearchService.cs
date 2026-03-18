@@ -6,6 +6,6 @@ namespace Service.Interfaces
 {
     public interface ISearchService
     {
-        Task<List<SearchResultDto>> SearchAsync(string keyword);
+        Task<List<SearchResultDto>> SearchAsync(string keyword, double? userLat = null, double? userLong = null);
     }
 }

@@ -332,6 +332,7 @@ namespace DAL
                     (EF.Functions.ILike(b.Name, searchPattern) ||
                      b.BranchDishes.Any(bd => bd.Dish.IsActive && EF.Functions.ILike(bd.Dish.Name, searchPattern))))
                 .Include(b => b.Vendor)
+                .Include(b => b.Tier)
                 .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.Category)
