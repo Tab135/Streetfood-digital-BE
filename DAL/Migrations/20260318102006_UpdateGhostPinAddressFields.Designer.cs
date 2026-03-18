@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260318102006_UpdateGhostPinAddressFields")]
+    partial class UpdateGhostPinAddressFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -616,15 +619,6 @@ namespace DAL.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<double>("AvgRating")
-                        .HasColumnType("double precision");
-
-                    b.Property<int>("BatchRatingSum")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("BatchReviewCount")
-                        .HasColumnType("integer");
-
                     b.Property<string>("City")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -635,12 +629,6 @@ namespace DAL.Migrations
 
                     b.Property<int>("CreatorId")
                         .HasColumnType("integer");
-
-                    b.Property<bool>("IsVerified")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastTierResetAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<double>("Lat")
                         .HasColumnType("double precision");
@@ -659,13 +647,7 @@ namespace DAL.Migrations
                     b.Property<string>("RejectReason")
                         .HasColumnType("text");
 
-                    b.Property<int>("TierId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalRatingSum")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("TotalReviewCount")
+                    b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -680,8 +662,6 @@ namespace DAL.Migrations
                     b.HasIndex("CreatorId");
 
                     b.HasIndex("LinkedBranchId");
-
-                    b.HasIndex("TierId");
 
                     b.ToTable("GhostPins");
                 });
@@ -1359,17 +1339,9 @@ namespace DAL.Migrations
                         .WithMany()
                         .HasForeignKey("LinkedBranchId");
 
-                    b.HasOne("BO.Entities.Tier", "Tier")
-                        .WithMany()
-                        .HasForeignKey("TierId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Creator");
 
                     b.Navigation("LinkedBranch");
-
-                    b.Navigation("Tier");
                 });
 
             modelBuilder.Entity("BO.Entities.Notification", b =>

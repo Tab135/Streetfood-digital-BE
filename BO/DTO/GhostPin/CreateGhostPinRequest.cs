@@ -8,7 +8,12 @@ namespace BO.DTO.GhostPin
         public string Name { get; set; }
 
         [Required]
-        public string Address { get; set; }
+        public string AddressDetail { get; set; }
+
+        public string? Ward { get; set; }
+
+        [Required]
+        public string City { get; set; }
 
         public double Lat { get; set; }
 

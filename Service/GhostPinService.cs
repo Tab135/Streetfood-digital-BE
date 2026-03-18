@@ -1,10 +1,12 @@
-﻿using BO.DTO.GhostPin;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using BO.DTO.GhostPin;
 using BO.Entities;
-using BO.Enums;
 using Repository.Interfaces;
 using Service.Interfaces;
-using System;
-using System.Threading.Tasks;
+
 
 namespace Service
 {
@@ -12,42 +14,34 @@ namespace Service
     {
         private readonly IGhostPinRepository _ghostPinRepo;
         private readonly IBranchRepository _branchRepo;
-        private readonly IVendorRepository _vendorRepo;
 
-        public GhostPinService(
-            IGhostPinRepository ghostPinRepo,
-            IBranchRepository branchRepo,
-            IVendorRepository vendorRepo)
+        public GhostPinService(IGhostPinRepository ghostPinRepo, IBranchRepository branchRepo)
         {
             _ghostPinRepo = ghostPinRepo;
             _branchRepo = branchRepo;
-            _vendorRepo = vendorRepo;
         }
 
         public async Task<GhostPinResponseDto> CreateGhostPinAsync(int creatorId, CreateGhostPinRequest request)
         {
-            var pin = new GhostPin
+            var ghostPin = new GhostPin
             {
                 CreatorId = creatorId,
                 Name = request.Name,
-                Address = request.Address,
+                AddressDetail = request.AddressDetail, Ward = request.Ward, City = request.City,
                 Lat = request.Lat,
                 Long = request.Long,
-                Status = GhostPinStatusEnum.Pending,
+                IsVerified = false,
                 CreatedAt = DateTime.UtcNow
             };
 
-            var created = await _ghostPinRepo.CreateAsync(pin);
-            return MapToDto(created);
+            await _ghostPinRepo.CreateAsync(ghostPin);
+            return MapToDto(ghostPin);
         }
 
-        public async Task<GhostPinResponseDto> GetGhostPinByIdAsync(int id, int userId, string userRole)
+        public async Task<GhostPinResponseDto> GetGhostPinByIdAsync(int id, int userId, string role)
         {
             var pin = await _ghostPinRepo.GetByIdAsync(id);
             if (pin == null) throw new Exception("Ghost pin not found");
-
-            if (userRole != "Moderator" && pin.CreatorId != userId)
-                throw new Exception("Access denied.");
 
             return MapToDto(pin);
         }
@@ -57,10 +51,11 @@ namespace Service
             var pin = await _ghostPinRepo.GetByIdAsync(id);
             if (pin == null) throw new Exception("Ghost pin not found");
 
-            if (pin.Status != GhostPinStatusEnum.Pending)
-                throw new Exception("Only pending pins can be approved.");
+            if (pin.IsVerified)
+                throw new Exception("Pin is already verified.");
 
-            pin.Status = GhostPinStatusEnum.Approved;
+            // Reset any reject reasons if it's being "approved" for further audit
+            pin.RejectReason = null;
             pin.UpdatedAt = DateTime.UtcNow;
             await _ghostPinRepo.UpdateAsync(pin);
 
@@ -72,10 +67,9 @@ namespace Service
             var pin = await _ghostPinRepo.GetByIdAsync(id);
             if (pin == null) throw new Exception("Ghost pin not found");
 
-            if (pin.Status != GhostPinStatusEnum.Pending)
-                throw new Exception("Only pending pins can be rejected.");
+            if (pin.IsVerified)
+                throw new Exception("Verified pins cannot be rejected.");
 
-            pin.Status = GhostPinStatusEnum.Rejected;
             pin.RejectReason = request.Reason;
             pin.UpdatedAt = DateTime.UtcNow;
             await _ghostPinRepo.UpdateAsync(pin);
@@ -88,32 +82,40 @@ namespace Service
             var pin = await _ghostPinRepo.GetByIdAsync(id);
             if (pin == null) throw new Exception("Ghost pin not found");
 
-            if (pin.Status != GhostPinStatusEnum.Approved)
-                throw new Exception("Ghost pin must be approved before audit.");
+            if (pin.IsVerified)
+                throw new Exception("Ghost pin is already verified.");
+            
+            if (!string.IsNullOrEmpty(pin.RejectReason))
+                throw new Exception("Ghost pin was rejected.");
 
             double dist = CalculateDistance(pin.Lat, pin.Long, request.ModLat, request.ModLong);
-            if (dist > 10.0)
-                throw new Exception($"Moderator is too far from location (distance: {dist} m).");
+            if (dist > 50.0) 
+            {
+                throw new Exception($"Moderator is too far from location. Distance: {dist:F1}m (Max allowed: 50m)");
+            }
 
             var newBranch = new Branch
             {
                 Name = pin.Name,
-                AddressDetail = pin.Address,
-                City = "Unknown", // Will be filled by vendor later
+                AddressDetail = pin.AddressDetail, Ward = pin.Ward, City = pin.City,
+                PhoneNumber = null,
+                Email = null,
                 Lat = pin.Lat,
                 Long = pin.Long,
-                VendorId = null, // Ownerless
+                VendorId = null,
                 IsVerified = true,
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                TierId = 2, // Tier Silver default for Ghost pin
+                AvgRating = 0,
+                TotalReviewCount = 0,
+                TotalRatingSum = 0,
                 BatchReviewCount = 0,
-                BatchRatingSum = 0
+                BatchRatingSum = 0,
+                TierId = 2, // DEFAULT SILVER
+                CreatedAt = DateTime.UtcNow
             };
 
             await _branchRepo.CreateAsync(newBranch);
 
-            pin.Status = GhostPinStatusEnum.Verified;
+            pin.IsVerified = true;
             pin.LinkedBranchId = newBranch.BranchId;
             pin.UpdatedAt = DateTime.UtcNow;
             await _ghostPinRepo.UpdateAsync(pin);
@@ -126,40 +128,47 @@ namespace Service
             var pin = await _ghostPinRepo.GetByIdAsync(id);
             if (pin == null) throw new Exception("Ghost pin not found");
 
-            if (pin.Status != GhostPinStatusEnum.Verified)
-                throw new Exception("Only verified pins can be claimed.");
+            if (!pin.IsVerified || pin.LinkedBranchId == null)
+                throw new Exception("Only verified and audited pins can be claimed.");
+
+            var unownedBranch = await _branchRepo.GetByIdAsync(pin.LinkedBranchId.Value);
+            if (unownedBranch != null && unownedBranch.VendorId != null)
+                throw new Exception("This branch has already been claimed.");
 
             if (request.ExistingBranchId.HasValue)
             {
                 var branch = await _branchRepo.GetByIdAsync(request.ExistingBranchId.Value);
                 if (branch == null || branch.VendorId != vendorId)
-                    throw new Exception("Invalid Branch ID.");
-
+                    throw new Exception("Invalid or unauthorized existing branch.");
+                
                 branch.Lat = pin.Lat;
                 branch.Long = pin.Long;
-                branch.AddressDetail = pin.Address;
+                branch.AddressDetail = pin.AddressDetail; branch.Ward = pin.Ward; branch.City = pin.City;
                 await _branchRepo.UpdateAsync(branch);
 
-                if (pin.LinkedBranchId.HasValue)
+                if (pin.LinkedBranchId.HasValue && pin.LinkedBranchId.Value != branch.BranchId)
                 {
                     await _branchRepo.DeleteAsync(pin.LinkedBranchId.Value);
                 }
 
-                pin.Status = GhostPinStatusEnum.Claimed;
                 pin.LinkedBranchId = branch.BranchId;
                 pin.UpdatedAt = DateTime.UtcNow;
                 await _ghostPinRepo.UpdateAsync(pin);
 
-                return new { Message = "Merged with existing branch", BranchId = branch.BranchId };
+                return new { Message = "Merged with existing branch. Generating payment link...", BranchId = branch.BranchId };
             }
             else
             {
-                pin.Status = GhostPinStatusEnum.Claimed;
                 pin.UpdatedAt = DateTime.UtcNow;
                 await _ghostPinRepo.UpdateAsync(pin);
-
-                return new { Message = "Claimed successfully, proceed to payment", BranchId = pin.LinkedBranchId };
+                return new { Message = "Claiming new branch. Generating payment link...", BranchId = pin.LinkedBranchId.Value };
             }
+        }
+
+        public async Task<IEnumerable<GhostPinResponseDto>> GetAllGhostPinsAsync()
+        {
+            var pins = await _ghostPinRepo.GetAllAsync();
+            return pins.Select(MapToDto).ToList();
         }
 
         private GhostPinResponseDto MapToDto(GhostPin p)
@@ -169,10 +178,17 @@ namespace Service
                 GhostPinId = p.GhostPinId,
                 CreatorId = p.CreatorId,
                 Name = p.Name,
-                Address = p.Address,
+                AddressDetail = p.AddressDetail, Ward = p.Ward, City = p.City,
                 Lat = p.Lat,
                 Long = p.Long,
-                Status = p.Status.ToString().ToLower(),
+                IsVerified = p.IsVerified,
+                AvgRating = p.AvgRating,
+                TotalReviewCount = p.TotalReviewCount,
+                TotalRatingSum = p.TotalRatingSum,
+                BatchReviewCount = p.BatchReviewCount,
+                BatchRatingSum = p.BatchRatingSum,
+                TierId = p.TierId,
+                LastTierResetAt = p.LastTierResetAt,
                 RejectReason = p.RejectReason,
                 LinkedBranchId = p.LinkedBranchId,
                 CreatedAt = p.CreatedAt,

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using BO.Enums;
 
 namespace BO.Entities
 {
@@ -18,13 +17,30 @@ namespace BO.Entities
         public string Name { get; set; }
 
         [Required]
-        public string Address { get; set; }
+        public string AddressDetail { get; set; }
+
+        [StringLength(255)]
+        public string? Ward { get; set; }
+
+        [Required]
+        [StringLength(255)]
+        public string City { get; set; }
 
         public double Lat { get; set; }
 
         public double Long { get; set; }
 
-        public GhostPinStatusEnum Status { get; set; } = GhostPinStatusEnum.Pending;
+        public bool IsVerified { get; set; } = false;
+
+        public double AvgRating { get; set; } = 0;
+        public int TotalReviewCount { get; set; } = 0;
+        public int TotalRatingSum { get; set; } = 0;
+
+        public int BatchReviewCount { get; set; } = 0;
+        public int BatchRatingSum { get; set; } = 0;
+
+        public int TierId { get; set; } = 2; // Default to Silver (2)
+        public DateTime? LastTierResetAt { get; set; }
 
         public string? RejectReason { get; set; }
 
@@ -38,5 +54,8 @@ namespace BO.Entities
         // Navigation properties
         public virtual User Creator { get; set; }
         public virtual Branch LinkedBranch { get; set; }
+        
+        [ForeignKey("TierId")]
+        public virtual Tier Tier { get; set; }
     }
 }

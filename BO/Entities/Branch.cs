@@ -22,11 +22,11 @@ namespace BO.Entities
 
         [Phone]
         [StringLength(50)]
-        public string PhoneNumber { get; set; }
+        public string? PhoneNumber { get; set; }
 
         [EmailAddress]
         [StringLength(255)]
-        public string Email { get; set; }
+        public string? Email { get; set; }
 
         [Required]
         public string AddressDetail { get; set; }
