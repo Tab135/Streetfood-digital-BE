@@ -285,10 +285,11 @@ namespace DAL
         public async Task<(List<BranchRegisterRequest> items, int totalCount)> GetAllBranchRegisterRequestsAsync(int pageNumber, int pageSize)
         {
             var query = _context.BranchRegisterRequests
-                .AsNoTracking();
+                .AsNoTracking()
+                .Where(r => r.Status == RegisterVendorStatusEnum.Pending);
 
             var totalCount = await query.CountAsync();
-            
+
             var items = await query
                 .Include(r => r.Branch)
                     .ThenInclude(b => b.BranchImages)
