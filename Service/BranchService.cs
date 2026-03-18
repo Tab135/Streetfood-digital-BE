@@ -262,9 +262,8 @@ namespace Service
 
         public async Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize)
         {
-            var (allRequests, totalCount) = await _branchRepository.GetAllBranchRegisterRequestsAsync(pageNumber, pageSize);
-            var items = allRequests
-                .Where(r => r.Status == RegisterVendorStatusEnum.Pending)
+            var (pendingRequests, totalCount) = await _branchRepository.GetAllBranchRegisterRequestsAsync(pageNumber, pageSize);
+            var items = pendingRequests
                 .Select(r => new PendingRegistrationDto
                 {
                     BranchRegisterRequestId = r.BranchRegisterRequestId,
@@ -298,7 +297,7 @@ namespace Service
                         {
                             BranchImageId = i.BranchImageId,
                             ImageUrl = i.ImageUrl
-                        }).ToList() 
+                        }).ToList()
                     }
                 }).ToList();
             return new PaginatedResponse<PendingRegistrationDto>(items, totalCount, pageNumber, pageSize);
