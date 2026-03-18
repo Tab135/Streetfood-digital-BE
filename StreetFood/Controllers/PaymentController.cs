@@ -24,11 +24,6 @@ namespace Ielts_System.Controllers.Payments
             _logger = logger;
         }
 
-        /// <summary>
-        /// Create a payment link for a branch vendor subscription (20,000 VND / 30 days).
-        /// The branch must have been approved by a moderator first.
-        /// Endpoint: POST /api/payment/create-link
-        /// </summary>
         [HttpPost("create-link")]
         [Authorize]
         public async Task<ActionResult<PaymentLinkResult>> CreatePaymentLink([FromBody] CreatePaymentLinkDto request)
@@ -57,6 +52,30 @@ namespace Ielts_System.Controllers.Payments
                 _logger.LogError(ex, "Error creating payment link for UserId={UserId}, BranchId={BranchId}",
                     User.FindFirstValue(ClaimTypes.NameIdentifier), request.BranchId);
                 return StatusCode(500, new { message = "An error occurred while creating payment link" });
+            }
+        }
+
+        [HttpPost("order/{orderId}/create-link")]
+        [Authorize(Roles = "User")]
+        public async Task<ActionResult<PaymentLinkResult>> CreateOrderPaymentLink(int orderId)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                    return Unauthorized(new { message = "User not authenticated" });
+
+                var result = await _paymentService.CreateOrderPaymentLink(userId, orderId);
+
+                if (!result.Success)
+                    return BadRequest(result);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating order payment link for OrderId={OrderId}", orderId);
+                return StatusCode(500, new { message = "An error occurred while creating order payment link" });
             }
         }
 
@@ -160,6 +179,38 @@ namespace Ielts_System.Controllers.Payments
             }
         }
 
+        [HttpPost("order/confirm")]
+        [Authorize(Roles = "User")]
+        public async Task<ActionResult<PaymentStatusResponse>> ConfirmOrderPayment([FromBody] ConfirmPaymentDto request)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
+                if (!paymentOwnerCheck)
+                {
+                    return Forbid();
+                }
+
+                var result = await _paymentService.ConfirmPaymentFromRedirect(
+                    request.OrderCode,
+                    request.Status ?? "",
+                    request.TransactionId);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error confirming order payment for OrderCode={OrderCode}", request.OrderCode);
+                return StatusCode(500, new { message = "Failed to confirm order payment" });
+            }
+        }
+
         [HttpGet("cancel")]
         [AllowAnonymous]
         public IActionResult PaymentCancel([FromQuery] long orderCode)
@@ -171,6 +222,51 @@ namespace Ielts_System.Controllers.Payments
                 message = "Payment was cancelled",
                 orderCode = orderCode
             });
+        }
+
+        [HttpGet("vendor/balance")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> GetVendorBalance()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            var balance = await _paymentService.GetVendorBalanceAsync(userId);
+            return Ok(new { message = "Get vendor balance successfully", data = new { balance } });
+        }
+
+        [HttpPost("vendor/transfer")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> RequestVendorTransfer([FromBody] VendorPayoutRequestDto request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var result = await _paymentService.RequestVendorPayoutAsync(userId, request);
+                return Ok(new
+                {
+                    message = "Transfer request created successfully",
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating vendor transfer request");
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

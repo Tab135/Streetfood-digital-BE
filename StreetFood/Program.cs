@@ -125,6 +125,7 @@ namespace StreetFood
             builder.Services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
             builder.Services.AddScoped<IFeedbackVoteService, FeedbackVoteService>();
             builder.Services.AddScoped<IVendorReplyService, VendorReplyService>();
+            builder.Services.AddScoped<IOrderService, OrderService>();
             // Menu Management Services
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITasteService, TasteService>();

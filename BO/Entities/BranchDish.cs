@@ -18,5 +18,6 @@ namespace BO.Entities
         // Navigation
         public virtual Branch Branch { get; set; }
         public virtual Dish Dish { get; set; }
+        public virtual ICollection<OrderDish> OrderDishes { get; set; } = new List<OrderDish>();
     }
 }

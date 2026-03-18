@@ -35,6 +35,7 @@ public class StreetFoodDbContext : DbContext
 
     // Flow 2: Review & Rating enhancements
     public DbSet<Order> Orders { get; set; }
+    public DbSet<OrderDish> OrderDishes { get; set; }
     public DbSet<FeedbackVote> FeedbackVotes { get; set; }
     public DbSet<VendorReply> VendorReplies { get; set; }
     public DbSet<Notification> Notifications { get; set; }
@@ -114,6 +115,7 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.MoneyBalance).HasColumnType("decimal(18,2)").HasDefaultValue(0m);
 
             entity.HasOne(e => e.VendorOwner)
                   .WithMany()
@@ -315,7 +317,12 @@ public class StreetFoodDbContext : DbContext
         modelBuilder.Entity<Order>(entity =>
         {
             entity.HasKey(e => e.OrderId);
-            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(255).IsRequired();
+            entity.Property(e => e.Table).HasMaxLength(255);
+            entity.Property(e => e.PaymentMethod).HasMaxLength(255);
+            entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.DiscountAmount).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.FinalAmount).HasColumnType("decimal(18,2)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.HasOne(e => e.User)
@@ -328,6 +335,23 @@ public class StreetFoodDbContext : DbContext
                   .HasForeignKey(e => e.BranchId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
+
+          modelBuilder.Entity<OrderDish>(entity =>
+          {
+            entity.HasKey(e => new { e.OrderId, e.DishId });
+            entity.Property(e => e.Quantity).IsRequired();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(e => e.Order)
+                .WithMany(o => o.OrderDishes)
+                .HasForeignKey(e => e.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.BranchDish)
+                .WithMany(bd => bd.OrderDishes)
+                .HasForeignKey(e => new { e.BranchId, e.DishId })
+                .OnDelete(DeleteBehavior.Restrict);
+          });
 
         // Feedback → Order FK
         modelBuilder.Entity<Feedback>(entity =>
@@ -392,6 +416,14 @@ public class StreetFoodDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Payment>(entity =>
+        {
+            entity.HasOne(p => p.Order)
+                  .WithMany()
+                  .HasForeignKey(p => p.OrderId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Branch metrics defaults

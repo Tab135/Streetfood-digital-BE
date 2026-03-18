@@ -1,9 +1,12 @@
 using BO.DTO.Payments;
 using BO.Entities;
+using BO.Exceptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PayOS;
+using PayOS.Exceptions;
 using PayOS.Models;
+using PayOS.Models.V1.Payouts;
 using PayOS.Models.V2.PaymentRequests;
 using PayOS.Models.Webhooks;
 using Repository.Interfaces;
@@ -24,13 +27,16 @@ namespace Service.PaymentsService
         private readonly IConfiguration _configuration;
         private readonly ILogger<PaymentService> _logger;
         private readonly PayOSClient _payOS;
+        private readonly PayOSClient _payoutClient;
         private readonly IVendorRepository _vendorRepository;
+        private readonly IOrderRepository _orderRepository;
 
         public PaymentService(
             IPaymentRepository paymentRepo,
             IBranchRepository branchRepo,
             IUserRepository userRepo,
             IVendorRepository vendorRepository,
+            IOrderRepository orderRepository,
             IConfiguration configuration,
             ILogger<PaymentService> logger)
         {
@@ -38,6 +44,7 @@ namespace Service.PaymentsService
             _branchRepo = branchRepo;
             _userRepo = userRepo;
             _vendorRepository = vendorRepository;
+            _orderRepository = orderRepository;
             _configuration = configuration;
             _logger = logger;
 
@@ -52,8 +59,185 @@ namespace Service.PaymentsService
                 throw new InvalidOperationException("PayOS credentials not configured");
             }
 
-            _payOS = new PayOSClient(clientId, apiKey, checksumKey);
+            _payOS = new PayOSClient(new PayOSOptions
+            {
+                ClientId = clientId,
+                ApiKey = apiKey,
+                ChecksumKey = checksumKey,
+                LogLevel = LogLevel.Debug
+            });
+
+            var payoutClientId = _configuration["PayOS:PayoutClientId"] ?? string.Empty;
+            var payoutApiKey = _configuration["PayOS:PayoutApiKey"] ?? string.Empty;
+            var payoutChecksumKey = _configuration["PayOS:PayoutChecksumKey"] ?? string.Empty;
+
+            if (string.IsNullOrEmpty(payoutClientId) || string.IsNullOrEmpty(payoutApiKey) || string.IsNullOrEmpty(payoutChecksumKey))
+            {
+                _logger.LogError("PayOS payout credentials are missing in configuration!");
+                throw new InvalidOperationException("PayOS payout credentials not configured");
+            }
+
+            _payoutClient = new PayOSClient(new PayOSOptions
+            {
+                ClientId = payoutClientId,
+                ApiKey = payoutApiKey,
+                ChecksumKey = payoutChecksumKey,
+                LogLevel = LogLevel.Debug
+            });
+
             _logger.LogInformation("PayOS Client initialized successfully");
+        }
+
+        public async Task<decimal> GetVendorBalanceAsync(int vendorUserId)
+        {
+            var vendor = await _vendorRepository.GetByUserIdAsync(vendorUserId)
+                ?? throw new DomainExceptions("Vendor not found");
+
+            return vendor.MoneyBalance;
+        }
+
+        public async Task<VendorPayoutResponseDto> RequestVendorPayoutAsync(int vendorUserId, VendorPayoutRequestDto request)
+        {
+            var vendor = await _vendorRepository.GetByUserIdAsync(vendorUserId)
+                ?? throw new DomainExceptions("Vendor not found");
+
+            if (request.Amount <= 0)
+            {
+                throw new DomainExceptions("Amount must be greater than 0");
+            }
+
+            var amount = Convert.ToDecimal(request.Amount);
+            if (vendor.MoneyBalance < amount)
+            {
+                throw new DomainExceptions("Insufficient vendor balance");
+            }
+
+            var payoutRequest = new PayoutRequest
+            {
+                ReferenceId = Guid.NewGuid().ToString(),
+                Amount = request.Amount,
+                Description = request.Description,
+                ToBin = request.ToBin,
+                ToAccountNumber = request.ToAccountNumber,
+                Category = request.Category ?? new List<string>()
+            };
+
+            Payout payout;
+            try
+            {
+                payout = await _payoutClient.Payouts.CreateAsync(payoutRequest);
+            }
+            catch (ForbiddenException ex)
+            {
+                _logger.LogError(ex,
+                    "PayOS payout forbidden. Verify PayoutClientId/PayoutApiKey/PayoutChecksumKey and payout permission for this merchant.");
+                throw new DomainExceptions("PayOS payout is forbidden. Please verify payout credentials and payout permission with PayOS.");
+            }
+
+            vendor.MoneyBalance -= amount;
+            await _vendorRepository.UpdateAsync(vendor);
+
+            return new VendorPayoutResponseDto
+            {
+                ReferenceId = payout.ReferenceId,
+                PayoutId = payout.Id,
+                ApprovalState = payout.ApprovalState.ToString(),
+                CurrentVendorBalance = vendor.MoneyBalance
+            };
+        }
+
+        public async Task<PaymentLinkResult> CreateOrderPaymentLink(int userId, int orderId)
+        {
+            try
+            {
+                var order = await _orderRepository.GetById(orderId);
+                if (order == null)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Order not found" };
+                }
+
+                if (order.UserId != userId)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "You do not own this order" };
+                }
+
+                if (order.Status != OrderStatus.Pending)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Only pending orders can be paid" };
+                }
+
+                var latestPayment = await _paymentRepo.GetLatestPaymentByOrderId(orderId);
+                if (latestPayment != null)
+                {
+                    if (latestPayment.Status == "PAID")
+                    {
+                        return new PaymentLinkResult { Success = false, Message = "This order is already paid" };
+                    }
+
+                    if (latestPayment.Status == "PENDING" && !string.IsNullOrEmpty(latestPayment.CheckoutUrl))
+                    {
+                        return new PaymentLinkResult
+                        {
+                            Success = true,
+                            Message = "Using existing pending payment link",
+                            PaymentUrl = latestPayment.CheckoutUrl,
+                            OrderCode = latestPayment.OrderCode,
+                            PaymentLinkId = latestPayment.PaymentLinkId
+                        };
+                    }
+                }
+
+                var orderCode = await GenerateUniqueOrderCodeAsync();
+                var amount = Convert.ToInt32(decimal.Round(order.FinalAmount, 0, MidpointRounding.AwayFromZero));
+                if (amount <= 0)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Order amount must be greater than 0" };
+                }
+
+                var description = $"Order {order.OrderId}";
+
+                await _paymentRepo.CreatePayment(
+                    userId: userId,
+                    orderCode: orderCode,
+                    branchId: order.BranchId,
+                    amount: amount,
+                    description: description,
+                    orderId: order.OrderId);
+
+                var returnUrl = _configuration["PayOS:ReturnUrl"] ?? "http://localhost:4000/Payment/success";
+                var cancelUrl = _configuration["PayOS:CancelUrl"] ?? "http://localhost:4000/Payment/cancel";
+
+                var paymentData = new CreatePaymentLinkRequest
+                {
+                    OrderCode = (int)orderCode,
+                    Amount = amount,
+                    Description = description,
+                    CancelUrl = cancelUrl,
+                    ReturnUrl = returnUrl
+                };
+
+                var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
+
+                await _paymentRepo.UpdatePaymentWithPayOSDetails(
+                    orderCode: orderCode,
+                    status: "PENDING",
+                    paymentLinkId: paymentLinkResponse.PaymentLinkId,
+                    checkoutUrl: paymentLinkResponse.CheckoutUrl);
+
+                return new PaymentLinkResult
+                {
+                    Success = true,
+                    Message = "Create payment link successfully",
+                    PaymentUrl = paymentLinkResponse.CheckoutUrl,
+                    OrderCode = orderCode,
+                    PaymentLinkId = paymentLinkResponse.PaymentLinkId
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating order payment link for UserId={UserId}, OrderId={OrderId}", userId, orderId);
+                return new PaymentLinkResult { Success = false, Message = "Có lỗi xảy ra khi tạo link thanh toán order." };
+            }
         }
 
         /// <summary>
@@ -210,7 +394,16 @@ namespace Service.PaymentsService
                                     paidAt, "QR Code");
 
                                 if (newStatus == "PAID" && payment != null)
-                                    await ActivateVendorSubscriptionAsync(payment);
+                                {
+                                    if (payment.OrderId.HasValue)
+                                    {
+                                        await MoveOrderToVendorConfirmationAsync(payment.OrderId.Value);
+                                    }
+                                    else
+                                    {
+                                        await ActivateVendorSubscriptionAsync(payment);
+                                    }
+                                }
                             }
                         }
                     }
@@ -258,7 +451,16 @@ namespace Service.PaymentsService
                         DateTime.UtcNow, "QR Code");
 
                     if (payment != null)
-                        await ActivateVendorSubscriptionAsync(payment);
+                    {
+                        if (payment.OrderId.HasValue)
+                        {
+                            await MoveOrderToVendorConfirmationAsync(payment.OrderId.Value);
+                        }
+                        else
+                        {
+                            await ActivateVendorSubscriptionAsync(payment);
+                        }
+                    }
                 }
                 else if (actualStatus is "CANCELLED" or "EXPIRED")
                 {
@@ -339,6 +541,55 @@ namespace Service.PaymentsService
             _logger.LogInformation(
                 "Branch {BranchId} subscription activated until {ExpiresAt}",
                 branch.BranchId, branch.SubscriptionExpiresAt);
+        }
+
+        private async Task MoveOrderToVendorConfirmationAsync(int orderId)
+        {
+            var order = await _orderRepository.GetById(orderId);
+            if (order == null)
+            {
+                throw new DomainExceptions("Order not found when confirming payment");
+            }
+
+            if (order.Status == OrderStatus.Pending)
+            {
+                var branch = await _branchRepo.GetByIdAsync(order.BranchId)
+                    ?? throw new DomainExceptions("Branch not found when confirming payment");
+
+                var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId)
+                    ?? throw new DomainExceptions("Vendor not found when confirming payment");
+
+                vendor.MoneyBalance += order.FinalAmount;
+                await _vendorRepository.UpdateAsync(vendor);
+
+                order.Status = OrderStatus.AwaitingVendorConfirmation;
+                await _orderRepository.Update(order);
+            }
+        }
+
+        private async Task<long> GenerateUniqueOrderCodeAsync()
+        {
+            int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            int random = Random.Shared.Next(100, 999);
+            long orderCode = long.Parse($"{timestamp}{random}");
+
+            if (orderCode > int.MaxValue)
+            {
+                orderCode = timestamp;
+            }
+
+            while (await _paymentRepo.OrderCodeExists(orderCode))
+            {
+                random = Random.Shared.Next(100, 999);
+                orderCode = long.Parse($"{timestamp}{random}");
+                if (orderCode > int.MaxValue)
+                {
+                    orderCode = timestamp;
+                    break;
+                }
+            }
+
+            return orderCode;
         }
 
         private static PaymentStatusResponse BuildStatusResponse(Payment payment) =>

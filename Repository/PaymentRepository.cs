@@ -17,14 +17,19 @@ namespace Repository
         }
 
         public async Task<Payment> CreatePayment(int userId, long orderCode, int? branchId,
-            int amount, string description, string? checkoutUrl = null)
+            int amount, string description, string? checkoutUrl = null, int? orderId = null)
         {
-            return await _paymentDAO.CreatePayment(userId, orderCode, branchId, amount, description, checkoutUrl);
+            return await _paymentDAO.CreatePayment(userId, orderCode, branchId, amount, description, checkoutUrl, orderId);
         }
 
         public async Task<Payment?> GetPaymentByOrderCode(long orderCode)
         {
             return await _paymentDAO.GetPaymentByOrderCode(orderCode);
+        }
+
+        public async Task<Payment?> GetLatestPaymentByOrderId(int orderId)
+        {
+            return await _paymentDAO.GetLatestPaymentByOrderId(orderId);
         }
 
         public async Task<Payment?> GetPaymentById(int id)
