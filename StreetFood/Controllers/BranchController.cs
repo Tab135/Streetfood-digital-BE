@@ -60,6 +60,8 @@ namespace StreetFood.Controllers
                     UpdatedAt = branch.UpdatedAt,
                     IsVerified = branch.IsVerified,
                     AvgRating = branch.AvgRating,
+                    TotalReviewCount = branch.TotalReviewCount,
+                    TotalRatingSum = branch.TotalRatingSum,
                     IsActive = branch.IsActive,
                     IsSubscribed = branch.IsSubscribed
                 };

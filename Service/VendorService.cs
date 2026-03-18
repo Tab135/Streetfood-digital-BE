@@ -1,4 +1,5 @@
 using BO.Common;
+using BO.DTO.Dietary;
 using BO.DTO.Vendor;
 using BO.Entities;
 using Repository.Interfaces;
@@ -215,6 +216,13 @@ namespace Service
                 UpdatedAt = vendor.UpdatedAt,
                 IsActive = vendor.IsActive,
                 VendorOwnerName = vendor.VendorOwner != null ? $"{vendor.VendorOwner.FirstName} {vendor.VendorOwner.LastName}".Trim() : "",
+                DietaryPreferences = vendor.VendorDietaryPreferences
+                    .Select(vdp => new DietaryPreferenceDto
+                    {
+                        DietaryPreferenceId = vdp.DietaryPreference.DietaryPreferenceId,
+                        Name = vdp.DietaryPreference.Name,
+                        Description = vdp.DietaryPreference.Description
+                    }).ToList(),
                 Branches = branches.Select(b =>
                 {
                     var licenseRequest = _branchRepository.GetBranchRegisterRequestAsync(b.BranchId).Result;

@@ -22,6 +22,6 @@ namespace BO.Entities
 
 
         public virtual ICollection<UserDietaryPreference> UserPreferences { get; set; }
-        public virtual ICollection<DishDietaryPreference> DishDietaryPreferences { get; set; } = new List<DishDietaryPreference>();
+        public virtual ICollection<VendorDietaryPreference> VendorDietaryPreferences { get; set; } = new List<VendorDietaryPreference>();
     }
 }

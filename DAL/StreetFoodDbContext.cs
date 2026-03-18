@@ -46,7 +46,7 @@ public class StreetFoodDbContext : DbContext
     public DbSet<Taste> Tastes { get; set; }
     public DbSet<Dish> Dishes { get; set; }
     public DbSet<DishTaste> DishTastes { get; set; }
-    public DbSet<DishDietaryPreference> DishDietaryPreferences { get; set; }
+    public DbSet<VendorDietaryPreference> VendorDietaryPreferences { get; set; }
     public DbSet<Payment> Payments { get; set; }
     public DbSet<BranchDish> BranchDishes { get; set; }
 
@@ -309,18 +309,18 @@ public class StreetFoodDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // DishDietaryPreference
-        modelBuilder.Entity<DishDietaryPreference>(entity =>
+        // VendorDietaryPreference
+        modelBuilder.Entity<VendorDietaryPreference>(entity =>
         {
-            entity.HasKey(e => e.DishDietaryPreferenceId);
+            entity.HasKey(e => e.VendorDietaryPreferenceId);
 
-            entity.HasOne(e => e.Dish)
-                  .WithMany(d => d.DishDietaryPreferences)
-                  .HasForeignKey(e => e.DishId)
+            entity.HasOne(e => e.Vendor)
+                  .WithMany(v => v.VendorDietaryPreferences)
+                  .HasForeignKey(e => e.VendorId)
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.DietaryPreference)
-                  .WithMany(dp => dp.DishDietaryPreferences)
+                  .WithMany(dp => dp.VendorDietaryPreferences)
                   .HasForeignKey(e => e.DietaryPreferenceId)
                   .OnDelete(DeleteBehavior.Cascade);
         });

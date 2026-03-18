@@ -16,13 +16,16 @@ namespace StreetFood.Controllers
     {
         private readonly IVendorService _vendorService;
         private readonly IWebHostEnvironment _webHostEnvironment;
+        private readonly IVendorDietaryPreferenceService _vendorDietaryPreferenceService;
 
         public VendorController(
             IVendorService vendorService,
-            IWebHostEnvironment webHostEnvironment)
+            IWebHostEnvironment webHostEnvironment,
+            IVendorDietaryPreferenceService vendorDietaryPreferenceService)
         {
             _vendorService = vendorService ?? throw new ArgumentNullException(nameof(vendorService));
             _webHostEnvironment = webHostEnvironment ?? throw new ArgumentNullException(nameof(webHostEnvironment));
+            _vendorDietaryPreferenceService = vendorDietaryPreferenceService ?? throw new ArgumentNullException(nameof(vendorDietaryPreferenceService));
         }
 
         // CRUD Operations
@@ -48,6 +51,8 @@ namespace StreetFood.Controllers
                 }
 
                 var vendor = await _vendorService.CreateVendorAsync(createVendorDto, userId);
+                await _vendorDietaryPreferenceService.AssignPreferencesToVendor(vendor.VendorId, createVendorDto.DietaryPreferenceIds);
+
                 var vendorResponse = await _vendorService.GetVendorByIdAsync(vendor.VendorId);
 
                 return CreatedAtAction(nameof(GetVendorById), new { id = vendor.VendorId }, vendorResponse);
@@ -206,6 +211,50 @@ namespace StreetFood.Controllers
             catch (Exception ex)
             {
                 return BadRequest(new ApiResponse<object>(400, ex.Message, "REACTIVATE_VENDOR_ERROR"));
+            }
+        }
+
+        // Dietary Preference Operations
+
+        /// <summary>
+        /// Get dietary preferences for a vendor
+        /// </summary>
+        [HttpGet("{id}/dietary-preferences")]
+        public async Task<IActionResult> GetVendorDietaryPreferences(int id)
+        {
+            try
+            {
+                var prefs = await _vendorDietaryPreferenceService.GetPreferencesByVendorId(id);
+                return Ok(new { message = "Dietary preferences retrieved successfully", data = prefs });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>(400, ex.Message, "GET_DIETARY_PREFERENCES_ERROR"));
+            }
+        }
+
+        /// <summary>
+        /// Update dietary preferences for the current user's vendor
+        /// </summary>
+        [HttpPut("my-vendor/dietary-preferences")]
+        [Authorize(Roles = "User,Vendor")]
+        public async Task<IActionResult> UpdateMyVendorDietaryPreferences([FromBody] List<int> dietaryPreferenceIds)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new ApiResponse<object>(401, "User not authenticated", "UNAUTHORIZED"));
+                }
+
+                var vendor = await _vendorService.GetVendorByUserIdAsync(userId);
+                var prefs = await _vendorDietaryPreferenceService.AssignPreferencesToVendor(vendor.VendorId, dietaryPreferenceIds);
+                return Ok(new { message = "Dietary preferences updated successfully", data = prefs });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<object>(400, ex.Message, "UPDATE_DIETARY_PREFERENCES_ERROR"));
             }
         }
     }

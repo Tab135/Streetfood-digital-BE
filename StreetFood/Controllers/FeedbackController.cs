@@ -27,7 +27,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> CreateFeedback([FromBody] CreateFeedbackDto createFeedbackDto)
         {
             try
@@ -48,12 +48,33 @@ namespace StreetFood.Controllers
             }
             catch (Exception ex)
             {
+                // Handle velocity limit errors with 429 status code
+                if (ex.Message.StartsWith("DAILY_REVIEW_LIMIT_REACHED"))
+                {
+                    return StatusCode(429, new
+                    {
+                        status = "error",
+                        message = "You have reached the maximum number of reviews allowed for today.",
+                        errorCode = "DAILY_REVIEW_LIMIT_REACHED"
+                    });
+                }
+
+                if (ex.Message.StartsWith("BRANCH_ALREADY_REVIEWED_TODAY"))
+                {
+                    return StatusCode(429, new
+                    {
+                        status = "error",
+                        message = "You have already reviewed this branch today.",
+                        errorCode = "BRANCH_ALREADY_REVIEWED_TODAY"
+                    });
+                }
+
                 return BadRequest(new { message = ex.Message });
             }
         }
 
         [HttpPost("{feedbackId}/images")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> UploadFeedbackImages(int feedbackId, List<IFormFile> images)
         {
             try
@@ -163,7 +184,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("my-feedback")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> GetMyFeedback([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -182,8 +203,34 @@ namespace StreetFood.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpGet("velocity/check")]
+        [Authorize(Roles = "User,Vendor")]
+        public async Task<IActionResult> CheckVelocity()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var velocityCheck = await _feedbackService.CheckVelocityAsync(userId);
+                return Ok(new
+                {
+                    message = "Velocity check retrieved successfully",
+                    data = velocityCheck
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPut("{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> UpdateFeedback(int id, [FromBody] UpdateFeedbackDto updateFeedbackDto)
         {
             try
@@ -209,7 +256,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> DeleteFeedback(int id)
         {
             try
@@ -295,7 +342,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost("{feedbackId}/vote")]
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Vendor")]
         public async Task<IActionResult> VoteFeedback(int feedbackId, [FromBody] VoteRequestDto voteRequest)
         {
             try

@@ -38,3 +38,4 @@ namespace BO.DTO.Branch
         public string LicenseRejectReason { get; set; }
     }
 }
+
