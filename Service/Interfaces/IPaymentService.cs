@@ -25,6 +25,9 @@ namespace Service.PaymentsService
 
         Task<VendorPayoutResponseDto> RequestVendorPayoutAsync(int vendorUserId, VendorPayoutRequestDto request);
         Task<decimal> GetVendorBalanceAsync(int vendorUserId);
+        
+        Task<VendorPayoutResponseDto> RequestUserPayoutAsync(int userId, VendorPayoutRequestDto request);
+        Task<decimal> GetUserBalanceAsync(int userId);
 
         Task<bool> VerifyPaymentOwnership(long orderCode, int userId);
 

@@ -24,6 +24,9 @@ public class Order
     [StringLength(255)]
     public string? PaymentMethod { get; set; }
 
+    [StringLength(20)]
+    public string? CompletionCode { get; set; }
+
     public decimal TotalAmount { get; set; }
     public decimal? DiscountAmount { get; set; }
     public decimal FinalAmount { get; set; }

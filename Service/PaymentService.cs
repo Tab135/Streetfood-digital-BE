@@ -30,6 +30,7 @@ namespace Service.PaymentsService
         private readonly PayOSClient _payoutClient;
         private readonly IVendorRepository _vendorRepository;
         private readonly IOrderRepository _orderRepository;
+        private readonly bool _isDebugMode;
 
         public PaymentService(
             IPaymentRepository paymentRepo,
@@ -47,6 +48,29 @@ namespace Service.PaymentsService
             _orderRepository = orderRepository;
             _configuration = configuration;
             _logger = logger;
+            _isDebugMode = bool.TryParse(_configuration["PayOS:DebugMode"], out var debugMode) && debugMode;
+
+            if (_isDebugMode)
+            {
+                _payOS = new PayOSClient(new PayOSOptions
+                {
+                    ClientId = "debug",
+                    ApiKey = "debug",
+                    ChecksumKey = "debug",
+                    LogLevel = LogLevel.Debug
+                });
+
+                _payoutClient = new PayOSClient(new PayOSOptions
+                {
+                    ClientId = "debug",
+                    ApiKey = "debug",
+                    ChecksumKey = "debug",
+                    LogLevel = LogLevel.Debug
+                });
+
+                _logger.LogWarning("PayOS debug mode is enabled. External PayOS calls are bypassed.");
+                return;
+            }
 
             // Initialize PayOS SDK
             string clientId = _configuration["PayOS:ClientId"] ?? string.Empty;
@@ -96,6 +120,78 @@ namespace Service.PaymentsService
             return vendor.MoneyBalance;
         }
 
+        public async Task<decimal> GetUserBalanceAsync(int userId)
+        {
+            var user = await _userRepo.GetUserById(userId)
+                ?? throw new DomainExceptions("User not found");
+
+            return user.MoneyBalance;
+        }
+
+        public async Task<VendorPayoutResponseDto> RequestUserPayoutAsync(int userId, VendorPayoutRequestDto request)
+        {
+            var user = await _userRepo.GetUserById(userId)
+                ?? throw new DomainExceptions("User not found");
+
+            if (request.Amount <= 0)
+            {
+                throw new DomainExceptions("Amount must be greater than 0");
+            }
+
+            var amount = Convert.ToDecimal(request.Amount);
+            if (user.MoneyBalance < amount)
+            {
+                throw new DomainExceptions("Insufficient user balance");
+            }
+
+            if (_isDebugMode)
+            {
+                user.MoneyBalance -= amount;
+                await _userRepo.UpdateAsync(user);
+
+                return new VendorPayoutResponseDto
+                {
+                    ReferenceId = $"DEBUG-USER-{Guid.NewGuid():N}",
+                    PayoutId = $"DEBUG-PAYOUT-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                    ApprovalState = "APPROVED_DEBUG",
+                    CurrentVendorBalance = user.MoneyBalance
+                };
+            }
+
+            var payoutRequest = new PayoutRequest
+            {
+                ReferenceId = Guid.NewGuid().ToString(),
+                Amount = request.Amount,
+                Description = request.Description,
+                ToBin = request.ToBin,
+                ToAccountNumber = request.ToAccountNumber,
+                Category = request.Category ?? new List<string>()
+            };
+
+            Payout payout;
+            try
+            {
+                payout = await _payoutClient.Payouts.CreateAsync(payoutRequest);
+            }
+            catch (ForbiddenException ex)
+            {
+                _logger.LogError(ex,
+                    "PayOS payout forbidden. Verify PayoutClientId/PayoutApiKey/PayoutChecksumKey and payout permission for this merchant.");
+                throw new DomainExceptions("PayOS payout is forbidden. Please verify payout credentials and payout permission with PayOS.");
+            }
+
+            user.MoneyBalance -= amount;
+            await _userRepo.UpdateAsync(user);
+
+            return new VendorPayoutResponseDto
+            {
+                ReferenceId = payout.ReferenceId,
+                PayoutId = payout.Id,
+                ApprovalState = payout.ApprovalState.ToString(),
+                CurrentVendorBalance = user.MoneyBalance
+            };
+        }
+
         public async Task<VendorPayoutResponseDto> RequestVendorPayoutAsync(int vendorUserId, VendorPayoutRequestDto request)
         {
             var vendor = await _vendorRepository.GetByUserIdAsync(vendorUserId)
@@ -110,6 +206,20 @@ namespace Service.PaymentsService
             if (vendor.MoneyBalance < amount)
             {
                 throw new DomainExceptions("Insufficient vendor balance");
+            }
+
+            if (_isDebugMode)
+            {
+                vendor.MoneyBalance -= amount;
+                await _vendorRepository.UpdateAsync(vendor);
+
+                return new VendorPayoutResponseDto
+                {
+                    ReferenceId = $"DEBUG-VENDOR-{Guid.NewGuid():N}",
+                    PayoutId = $"DEBUG-PAYOUT-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                    ApprovalState = "APPROVED_DEBUG",
+                    CurrentVendorBalance = vendor.MoneyBalance
+                };
             }
 
             var payoutRequest = new PayoutRequest
@@ -216,21 +326,33 @@ namespace Service.PaymentsService
                     ReturnUrl = returnUrl
                 };
 
-                var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
+                string paymentLinkId;
+                string checkoutUrl;
+                if (_isDebugMode)
+                {
+                    paymentLinkId = $"DEBUG-ORDER-{orderCode}";
+                    checkoutUrl = $"{returnUrl}?debug=true&orderCode={orderCode}";
+                }
+                else
+                {
+                    var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
+                    paymentLinkId = paymentLinkResponse.PaymentLinkId;
+                    checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                }
 
                 await _paymentRepo.UpdatePaymentWithPayOSDetails(
                     orderCode: orderCode,
                     status: "PENDING",
-                    paymentLinkId: paymentLinkResponse.PaymentLinkId,
-                    checkoutUrl: paymentLinkResponse.CheckoutUrl);
+                    paymentLinkId: paymentLinkId,
+                    checkoutUrl: checkoutUrl);
 
                 return new PaymentLinkResult
                 {
                     Success = true,
-                    Message = "Create payment link successfully",
-                    PaymentUrl = paymentLinkResponse.CheckoutUrl,
+                    Message = _isDebugMode ? "Debug payment link created" : "Create payment link successfully",
+                    PaymentUrl = checkoutUrl,
                     OrderCode = orderCode,
-                    PaymentLinkId = paymentLinkResponse.PaymentLinkId
+                    PaymentLinkId = paymentLinkId
                 };
             }
             catch (Exception ex)
@@ -329,14 +451,26 @@ namespace Service.PaymentsService
                     ReturnUrl = returnUrl
                 };
 
-                var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
+                string paymentLinkId;
+                string checkoutUrl;
+                if (_isDebugMode)
+                {
+                    paymentLinkId = $"DEBUG-SUB-{orderCode}";
+                    checkoutUrl = $"{returnUrl}?debug=true&orderCode={orderCode}";
+                }
+                else
+                {
+                    var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
+                    paymentLinkId = paymentLinkResponse.PaymentLinkId;
+                    checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                }
 
                 // 9. Persist PayOS details
                 await _paymentRepo.UpdatePaymentWithPayOSDetails(
                     orderCode: orderCode,
                     status: "PENDING",
-                    paymentLinkId: paymentLinkResponse.PaymentLinkId,
-                    checkoutUrl: paymentLinkResponse.CheckoutUrl);
+                    paymentLinkId: paymentLinkId,
+                    checkoutUrl: checkoutUrl);
 
                 _logger.LogInformation(
                     "Payment link created: OrderCode={OrderCode}, UserId={UserId}, BranchId={BranchId}, Amount={Amount}",
@@ -345,10 +479,10 @@ namespace Service.PaymentsService
                 return new PaymentLinkResult
                 {
                     Success = true,
-                    PaymentUrl = paymentLinkResponse.CheckoutUrl,
+                    PaymentUrl = checkoutUrl,
                     OrderCode = orderCode,
-                    PaymentLinkId = paymentLinkResponse.PaymentLinkId,
-                    Message = "Tạo link thanh toán thành công"
+                    PaymentLinkId = paymentLinkId,
+                    Message = _isDebugMode ? "Tạo link thanh toán debug thành công" : "Tạo link thanh toán thành công"
                 };
             }
             catch (Exception ex)
@@ -377,7 +511,7 @@ namespace Service.PaymentsService
                     throw new Exception($"Payment not found for OrderCode: {orderCode}");
 
                 // Try sync with PayOS if still PENDING
-                if (payment.Status == "PENDING")
+                if (payment.Status == "PENDING" && !_isDebugMode)
                 {
                     try
                     {
@@ -433,11 +567,30 @@ namespace Service.PaymentsService
                 if (payment.Status != "PENDING")
                     return BuildStatusResponse(payment);
 
-                var payosPaymentInfo = await _payOS.PaymentRequests.GetAsync((int)orderCode);
-                if (payosPaymentInfo == null)
-                    throw new Exception($"Payment not found in PayOS: OrderCode={orderCode}");
+                var actualStatus = "PAID";
+                string? externalTxnId = transactionId;
 
-                var actualStatus = payosPaymentInfo.Status.ToString().ToUpper();
+                if (!_isDebugMode)
+                {
+                    var payosPaymentInfo = await _payOS.PaymentRequests.GetAsync((int)orderCode);
+                    if (payosPaymentInfo == null)
+                        throw new Exception($"Payment not found in PayOS: OrderCode={orderCode}");
+
+                    actualStatus = payosPaymentInfo.Status.ToString().ToUpper();
+                    externalTxnId = transactionId ?? payosPaymentInfo.Id?.ToString();
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(status))
+                    {
+                        actualStatus = status.ToUpper();
+                    }
+
+                    if (actualStatus == "SUCCESS")
+                    {
+                        actualStatus = "PAID";
+                    }
+                }
 
                 _logger.LogInformation(
                     "PayOS returned: OrderCode={OrderCode}, ActualStatus={ActualStatus}",
@@ -447,7 +600,7 @@ namespace Service.PaymentsService
                 {
                     payment = await _paymentRepo.UpdatePaymentFromWebhook(
                         orderCode, "PAID",
-                        transactionId ?? payosPaymentInfo.Id?.ToString(),
+                        externalTxnId ?? $"DEBUG-TXN-{orderCode}",
                         DateTime.UtcNow, "QR Code");
 
                     if (payment != null)
@@ -487,6 +640,12 @@ namespace Service.PaymentsService
         {
             try
             {
+                if (_isDebugMode)
+                {
+                    _logger.LogInformation("Skipping webhook registration in debug mode: {WebhookUrl}", webhookUrl);
+                    return true;
+                }
+
                 await _payOS.Webhooks.ConfirmAsync(webhookUrl);
                 _logger.LogInformation("Webhook URL registered: {WebhookUrl}", webhookUrl);
                 return true;
@@ -559,9 +718,7 @@ namespace Service.PaymentsService
                 var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId)
                     ?? throw new DomainExceptions("Vendor not found when confirming payment");
 
-                vendor.MoneyBalance += order.FinalAmount;
-                await _vendorRepository.UpdateAsync(vendor);
-
+                // Instead of adding balance here, it will be handled when the vendor decides (OrderService)
                 order.Status = OrderStatus.AwaitingVendorConfirmation;
                 await _orderRepository.Update(order);
             }

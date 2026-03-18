@@ -78,6 +78,23 @@ public class OrderController : ControllerBase
         });
     }
 
+    [HttpGet("{id}/pickup-code")]
+    [Authorize(Roles = "User")]
+    public async Task<IActionResult> GetPickupCode(int id)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var pickupCode = await _orderService.GetOrderPickupCodeAsync(id, userId);
+        return Ok(new
+        {
+            message = "Get pickup code successfully",
+            data = pickupCode
+        });
+    }
+
     [HttpGet("vendor/orders")]
     [Authorize(Roles = "Vendor")]
     public async Task<IActionResult> GetVendorOrders(
@@ -98,6 +115,27 @@ public class OrderController : ControllerBase
         });
     }
 
+    [HttpGet("vendor/branches/{branchId}/orders")]
+    [Authorize(Roles = "Vendor,Manager")]
+    public async Task<IActionResult> GetVendorOrdersByBranch(
+        int branchId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] BO.Entities.OrderStatus? status = null)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var orders = await _orderService.GetVendorOrdersByBranchAsync(userId, branchId, pageNumber, pageSize, status);
+        return Ok(new
+        {
+            message = "Get vendor branch orders successfully",
+            data = orders
+        });
+    }
+
     [HttpPut("vendor/orders/{id}/decision")]
     [Authorize(Roles = "Vendor")]
     public async Task<IActionResult> VendorDecision(int id, [FromQuery] bool approve)
@@ -112,6 +150,23 @@ public class OrderController : ControllerBase
         {
             message = approve ? "Order confirmed successfully" : "Order rejected successfully",
             data = updated
+        });
+    }
+
+    [HttpPut("vendor/orders/{id}/complete")]
+    [Authorize(Roles = "Vendor")]
+    public async Task<IActionResult> VendorComplete(int id, [FromQuery] string verificationCode)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var completedOptions = await _orderService.VendorCompleteOrderAsync(id, userId, verificationCode);
+        return Ok(new
+        {
+            message = "Order completed successfully after verification, funds have been transferred to vendor",
+            data = completedOptions
         });
     }
 

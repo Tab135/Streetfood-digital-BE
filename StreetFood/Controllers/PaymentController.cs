@@ -224,6 +224,51 @@ namespace Ielts_System.Controllers.Payments
             });
         }
 
+        [HttpGet("user/balance")]
+        [Authorize(Roles = "User")]
+        public async Task<IActionResult> GetUserBalance()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            var balance = await _paymentService.GetUserBalanceAsync(userId);
+            return Ok(new { message = "Get user balance successfully", data = new { balance } });
+        }
+
+        [HttpPost("user/transfer")]
+        [Authorize(Roles = "User")]
+        public async Task<IActionResult> RequestUserTransfer([FromBody] VendorPayoutRequestDto request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var result = await _paymentService.RequestUserPayoutAsync(userId, request);
+                return Ok(new
+                {
+                    message = "Transfer request created successfully",
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating user transfer request");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        
         [HttpGet("vendor/balance")]
         [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> GetVendorBalance()

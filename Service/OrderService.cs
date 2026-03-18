@@ -4,6 +4,7 @@ using BO.Entities;
 using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
+using System.Security.Cryptography;
 
 namespace Service;
 
@@ -124,6 +125,71 @@ public class OrderService : IOrderService
         return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
     }
 
+    public async Task<PaginatedResponse<OrderResponseDto>> GetVendorOrdersByBranchAsync(int vendorUserId, int branchId, int pageNumber, int pageSize, OrderStatus? status = null)
+    {
+        var branch = await _branchRepository.GetByIdAsync(branchId)
+            ?? throw new DomainExceptions("Branch not found");
+
+        var isBranchManager = branch.ManagerId.HasValue && branch.ManagerId.Value == vendorUserId;
+
+        if (!isBranchManager)
+        {
+            var vendor = await _vendorRepository.GetByUserIdAsync(vendorUserId)
+                ?? throw new DomainExceptions("Vendor not found");
+
+            if (branch.VendorId != vendor.VendorId)
+            {
+                throw new DomainExceptions("You do not have access to this branch", "ERR_FORBIDDEN");
+            }
+        }
+
+        if (status == OrderStatus.Pending)
+        {
+            throw new DomainExceptions("Pending orders are not visible to vendors before payment");
+        }
+
+        if (pageNumber <= 0)
+        {
+            pageNumber = 1;
+        }
+
+        if (pageSize <= 0)
+        {
+            pageSize = 10;
+        }
+
+        var effectiveStatus = status ?? OrderStatus.AwaitingVendorConfirmation;
+        var (orders, totalCount) = await _orderRepository.GetByBranchIds(new List<int> { branchId }, pageNumber, pageSize, effectiveStatus);
+        var items = orders.Select(MapToDto).ToList();
+
+        return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
+    }
+
+    public async Task<OrderPickupCodeResponseDto> GetOrderPickupCodeAsync(int orderId, int userId)
+    {
+        var order = await _orderRepository.GetById(orderId)
+            ?? throw new DomainExceptions("Order not found");
+
+        EnsureOrderOwnership(order, userId);
+
+        if (order.Status != OrderStatus.Paid)
+        {
+            throw new DomainExceptions("Pickup code is available only when order is ready for pickup");
+        }
+
+        if (string.IsNullOrWhiteSpace(order.CompletionCode))
+        {
+            throw new DomainExceptions("Pickup code is not generated yet");
+        }
+
+        return new OrderPickupCodeResponseDto
+        {
+            OrderId = order.OrderId,
+            VerificationCode = order.CompletionCode,
+            QrContent = $"SF|ORDER:{order.OrderId}|CODE:{order.CompletionCode}"
+        };
+    }
+
     public async Task<OrderResponseDto> UpdateOrderAsync(int orderId, UpdateOrderRequest request, int userId)
     {
         var order = await _orderRepository.GetById(orderId)
@@ -149,6 +215,7 @@ public class OrderService : IOrderService
             }
 
             order.Status = OrderStatus.Cancelled;
+            order.CompletionCode = null;
         }
 
         if (request.Table != null)
@@ -221,7 +288,69 @@ public class OrderService : IOrderService
             throw new DomainExceptions("Order is not waiting for vendor confirmation");
         }
 
-        order.Status = approve ? OrderStatus.Paid : OrderStatus.Cancelled;
+        if (approve)
+        {
+            order.Status = OrderStatus.Paid;
+            order.CompletionCode = GenerateCompletionCode();
+        }
+        else
+        {
+            order.Status = OrderStatus.Cancelled;
+            order.CompletionCode = null;
+            var user = await _userRepository.GetUserById(order.UserId)
+                ?? throw new DomainExceptions("User not found when refunding");
+            
+            user.MoneyBalance += order.FinalAmount;
+            await _userRepository.UpdateAsync(user);
+        }
+
+        var updated = await _orderRepository.Update(order);
+        return MapToDto(updated);
+    }
+
+    public async Task<OrderResponseDto> VendorCompleteOrderAsync(int orderId, int vendorUserId, string verificationCode)
+    {
+        var order = await _orderRepository.GetById(orderId)
+            ?? throw new DomainExceptions("Order not found", "ERR_NOT_FOUND");
+
+        var branch = await _branchRepository.GetByIdAsync(order.BranchId)
+            ?? throw new DomainExceptions("Branch not found", "ERR_NOT_FOUND");
+
+        var vendor = await _vendorRepository.GetByUserIdAsync(vendorUserId)
+            ?? throw new DomainExceptions("Vendor profile not found");
+
+        if (branch.VendorId != vendor.VendorId)
+        {
+            throw new DomainExceptions("You do not own this branch", "ERR_FORBIDDEN");
+        }
+
+        if (order.Status != OrderStatus.Paid)
+        {
+            throw new DomainExceptions("Order must be paid before it can be completed");
+        }
+
+        if (string.IsNullOrWhiteSpace(verificationCode))
+        {
+            throw new DomainExceptions("Verification code is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(order.CompletionCode))
+        {
+            throw new DomainExceptions("Order verification code is missing");
+        }
+
+        var normalizedCode = verificationCode.Trim();
+        if (!string.Equals(order.CompletionCode, normalizedCode, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new DomainExceptions("Invalid verification code");
+        }
+
+        order.Status = OrderStatus.Complete;
+        order.CompletionCode = null;
+        
+        vendor.MoneyBalance += order.FinalAmount;
+        await _vendorRepository.UpdateAsync(vendor);
+
         var updated = await _orderRepository.Update(order);
         return MapToDto(updated);
     }
@@ -311,6 +440,11 @@ public class OrderService : IOrderService
         {
             throw new DomainExceptions("User not found");
         }
+    }
+
+    private static string GenerateCompletionCode()
+    {
+        return RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
     }
 
     private static OrderResponseDto MapToDto(Order order)

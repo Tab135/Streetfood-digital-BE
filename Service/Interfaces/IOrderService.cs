@@ -10,7 +10,10 @@ public interface IOrderService
     Task<OrderResponseDto?> GetOrderByIdAsync(int orderId, int userId);
     Task<PaginatedResponse<OrderResponseDto>> GetMyOrdersAsync(int userId, int pageNumber, int pageSize);
     Task<PaginatedResponse<OrderResponseDto>> GetVendorOrdersAsync(int vendorUserId, int pageNumber, int pageSize, OrderStatus? status = null);
+    Task<PaginatedResponse<OrderResponseDto>> GetVendorOrdersByBranchAsync(int vendorUserId, int branchId, int pageNumber, int pageSize, OrderStatus? status = null);
+    Task<OrderPickupCodeResponseDto> GetOrderPickupCodeAsync(int orderId, int userId);
     Task<OrderResponseDto> UpdateOrderAsync(int orderId, UpdateOrderRequest request, int userId);
     Task<OrderResponseDto> VendorDecideOrderAsync(int orderId, int vendorUserId, bool approve);
+    Task<OrderResponseDto> VendorCompleteOrderAsync(int orderId, int vendorUserId, string verificationCode);
     Task<bool> DeleteOrderAsync(int orderId, int userId);
 }

@@ -62,6 +62,7 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.AvatarUrl).HasMaxLength(500);
             entity.Property(e => e.Status).HasMaxLength(100);
+            entity.Property(e => e.MoneyBalance).HasColumnType("decimal(18,2)").HasDefaultValue(0m);
         });
 
         modelBuilder.Entity<OtpVerify>(entity =>
@@ -320,6 +321,7 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(255).IsRequired();
             entity.Property(e => e.Table).HasMaxLength(255);
             entity.Property(e => e.PaymentMethod).HasMaxLength(255);
+            entity.Property(e => e.CompletionCode).HasMaxLength(20);
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
             entity.Property(e => e.DiscountAmount).HasColumnType("decimal(18,2)");
             entity.Property(e => e.FinalAmount).HasColumnType("decimal(18,2)");
