@@ -56,8 +56,8 @@ public class BranchMetricsService : IBranchMetricsService
 
             if (average >= 3.0)
             {
-                // Tăng 1 bậc Tier (Nếu đã thanh toán (IsSubscribed) và chưa là Diamond)
-                if (branch.IsSubscribed && newTierId < 4) // Diamond = 4
+                // Tăng 1 bậc Tier (Không phân biệt đã thanh toán hay chưa)
+                if (newTierId < 4) // Diamond = 4
                 {
                     newTierId++;
                     // Reset lại chu kỳ sau khi lên tier không? (Requirement không đề cập đến reset, nên chúng ta giữ rolling window)

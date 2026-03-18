@@ -60,6 +60,8 @@ namespace BO.Entities
         /// <summary>Date when the paid subscription expires (null = never paid)</summary>
         public DateTime? SubscriptionExpiresAt { get; set; }
 
+        public DateTime? LastTierResetAt { get; set; }
+
         // --- Tier Configuration ---
         public int TierId { get; set; } = 2; // Default to Silver (2)
 
