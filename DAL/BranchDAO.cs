@@ -323,14 +323,10 @@ namespace DAL
                 return new List<Branch>();
             }
 
-            var searchPattern = $"%{keyword}%";
-
             var branches = await _context.Branches
                 .AsNoTracking()
                 .AsSplitQuery()
-                .Where(b => b.IsActive && b.IsVerified &&
-                    (EF.Functions.ILike(b.Name, searchPattern) ||
-                     b.BranchDishes.Any(bd => bd.Dish.IsActive && EF.Functions.ILike(bd.Dish.Name, searchPattern))))
+                .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
                 .Include(b => b.Tier)
                 .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
