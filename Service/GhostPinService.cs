@@ -105,7 +105,10 @@ namespace Service
                 VendorId = null, // Ownerless
                 IsVerified = true,
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                TierId = 2, // Tier Silver default for Ghost pin
+                BatchReviewCount = 0,
+                BatchRatingSum = 0
             };
 
             await _branchRepo.CreateAsync(newBranch);
