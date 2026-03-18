@@ -121,5 +121,21 @@ namespace Repository
         {
             await _feedbackDAO.RemoveAllTagsAsync(feedbackId);
         }
+
+        // Velocity Limits
+        public async Task<int> GetDailyFeedbackCountAsync(int userId, DateTime date)
+        {
+            return await _feedbackDAO.GetDailyFeedbackCountAsync(userId, date);
+        }
+
+        public async Task<List<int>> GetReviewedBranchIdsTodayAsync(int userId, DateTime date)
+        {
+            return await _feedbackDAO.GetReviewedBranchIdsTodayAsync(userId, date);
+        }
+
+        public async Task<bool> HasReviewedBranchTodayAsync(int userId, int branchId, DateTime date)
+        {
+            return await _feedbackDAO.HasReviewedBranchTodayAsync(userId, branchId, date);
+        }
     }
 }

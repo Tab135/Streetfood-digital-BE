@@ -302,5 +302,28 @@ namespace DAL
 
             return (items, totalCount);
         }
+
+        // Velocity Limits
+        public async Task<int> GetDailyFeedbackCountAsync(int userId, DateTime date)
+        {
+            return await _context.Feedbacks
+                .Where(f => f.UserId == userId && f.CreatedAt.Date == date.Date)
+                .CountAsync();
+        }
+
+        public async Task<List<int>> GetReviewedBranchIdsTodayAsync(int userId, DateTime date)
+        {
+            return await _context.Feedbacks
+                .Where(f => f.UserId == userId && f.CreatedAt.Date == date.Date)
+                .Select(f => f.BranchId)
+                .Distinct()
+                .ToListAsync();
+        }
+
+        public async Task<bool> HasReviewedBranchTodayAsync(int userId, int branchId, DateTime date)
+        {
+            return await _context.Feedbacks
+                .AnyAsync(f => f.UserId == userId && f.BranchId == branchId && f.CreatedAt.Date == date.Date);
+        }
     }
 }

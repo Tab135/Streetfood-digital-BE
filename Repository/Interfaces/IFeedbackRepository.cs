@@ -34,5 +34,10 @@ namespace Repository.Interfaces
         Task<List<FeedbackTagAssociation>> GetTagsByFeedbackId(int feedbackId);
         Task<bool> RemoveTag(int feedbackTagId);
         Task RemoveAllTags(int feedbackId);
+
+        // Velocity Limits
+        Task<int> GetDailyFeedbackCountAsync(int userId, DateTime date);
+        Task<List<int>> GetReviewedBranchIdsTodayAsync(int userId, DateTime date);
+        Task<bool> HasReviewedBranchTodayAsync(int userId, int branchId, DateTime date);
     }
 }

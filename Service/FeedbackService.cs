@@ -93,6 +93,23 @@ namespace Service
                     throw new Exception("You have already reviewed this order");
             }
 
+            // Velocity Limits - Check daily total limit (3 reviews per day)
+            var today = DateTime.UtcNow.Date;
+            const int dailyLimit = 3;
+
+            var todayCount = await _feedbackRepository.GetDailyFeedbackCountAsync(userId, today);
+            if (todayCount >= dailyLimit)
+            {
+                throw new Exception("You have reached the maximum number of reviews allowed for today.");
+            }
+
+            // Velocity Limits - Check one review per branch per day
+            var hasReviewedBranchToday = await _feedbackRepository.HasReviewedBranchTodayAsync(userId, createFeedbackDto.BranchId, today);
+            if (hasReviewedBranchToday)
+            {
+                throw new Exception("You have already reviewed this branch today.");
+            }
+
             // Validate rating
             if (createFeedbackDto.Rating < 1 || createFeedbackDto.Rating > 5)
             {
@@ -489,6 +506,22 @@ namespace Service
                 NetScore = upVotes - downVotes,
                 UserVote = userVote,
                 VendorReply = vendorReplyDto
+            };
+        }
+
+        public async Task<VelocityCheckDto> CheckVelocityAsync(int userId)
+        {
+            var today = DateTime.UtcNow.Date;
+            const int dailyLimit = 3;
+
+            var todayCount = await _feedbackRepository.GetDailyFeedbackCountAsync(userId, today);
+            var reviewedBranchIds = await _feedbackRepository.GetReviewedBranchIdsTodayAsync(userId, today);
+
+            return new VelocityCheckDto
+            {
+                RemainingTotalToday = Math.Max(0, dailyLimit - todayCount),
+                DailyLimit = dailyLimit,
+                ReviewedBranchIds = reviewedBranchIds
             };
         }
     }
