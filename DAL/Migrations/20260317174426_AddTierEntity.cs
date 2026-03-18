@@ -32,7 +32,7 @@ namespace DAL.Migrations
                 table: "Branches",
                 type: "integer",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 2);
 
             migrationBuilder.CreateTable(
                 name: "Tiers",
