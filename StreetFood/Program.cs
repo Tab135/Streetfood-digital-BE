@@ -142,7 +142,14 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITasteService, TasteService>();
             builder.Services.AddScoped<IDishService, DishService>();
-            // Search Service
+            // Flow 4: Campaigns
+        builder.Services.AddScoped<DAL.CampaignDAO>();
+        builder.Services.AddScoped<DAL.BranchCampaignDAO>();
+        builder.Services.AddScoped<Repository.Interfaces.ICampaignRepository, Repository.CampaignRepository>();
+        builder.Services.AddScoped<Repository.Interfaces.IBranchCampaignRepository, Repository.BranchCampaignRepository>();
+        builder.Services.AddScoped<Service.Interfaces.ICampaignService, Service.CampaignService>();
+
+        // Search Service
             builder.Services.AddScoped<ISearchService, SearchService>();
             builder.Services.AddHostedService<OtpCleanupService>();
 
