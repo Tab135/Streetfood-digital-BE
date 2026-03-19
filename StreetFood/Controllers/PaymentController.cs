@@ -55,31 +55,6 @@ namespace Ielts_System.Controllers.Payments
             }
         }
 
-        [HttpPost("order/{orderId}/create-link")]
-        [Authorize(Roles = "User")]
-        public async Task<ActionResult<PaymentLinkResult>> CreateOrderPaymentLink(int orderId)
-        {
-            try
-            {
-                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                    return Unauthorized(new { message = "User not authenticated" });
-
-                var result = await _paymentService.CreateOrderPaymentLink(userId, orderId);
-
-                if (!result.Success)
-                    return BadRequest(result);
-
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating order payment link for OrderId={OrderId}", orderId);
-                return StatusCode(500, new { message = "An error occurred while creating order payment link" });
-            }
-        }
-
-
         [HttpGet("status/{orderCode}")]
         [Authorize]
         public async Task<ActionResult<PaymentStatusResponse>> GetPaymentStatus(long orderCode)

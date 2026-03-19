@@ -78,6 +78,7 @@ namespace StreetFood
             builder.Services.AddScoped<FeedbackDAO>();
             // Flow 2: Review & Rating DAOs
             builder.Services.AddScoped<OrderDAO>();
+            builder.Services.AddScoped<CartDAO>();
             builder.Services.AddScoped<FeedbackVoteDAO>();
             builder.Services.AddScoped<VendorReplyDAO>();
             builder.Services.AddScoped<NotificationDAO>();
@@ -99,6 +100,7 @@ namespace StreetFood
             builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
             // Flow 2: Review & Rating Repositories
             builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+            builder.Services.AddScoped<ICartRepository, CartRepository>();
             builder.Services.AddScoped<IFeedbackVoteRepository, FeedbackVoteRepository>();
             builder.Services.AddScoped<IVendorReplyRepository, VendorReplyRepository>();
             builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
@@ -126,6 +128,7 @@ namespace StreetFood
             builder.Services.AddScoped<IFeedbackVoteService, FeedbackVoteService>();
             builder.Services.AddScoped<IVendorReplyService, VendorReplyService>();
             builder.Services.AddScoped<IOrderService, OrderService>();
+            builder.Services.AddScoped<ICartService, CartService>();
             // Menu Management Services
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITasteService, TasteService>();

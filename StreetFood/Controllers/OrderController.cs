@@ -1,4 +1,3 @@
-using BO.DTO.Order;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
@@ -15,28 +14,6 @@ public class OrderController : ControllerBase
     public OrderController(IOrderService orderService)
     {
         _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
-    }
-
-    [HttpPost]
-    [Authorize(Roles = "User")]
-    public async Task<IActionResult> Create([FromBody] CreateOrderRequest request)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        if (!TryGetCurrentUserId(out var userId))
-        {
-            return Unauthorized(new { message = "User not authenticated" });
-        }
-
-        var created = await _orderService.CreateOrderAsync(request, userId);
-        return CreatedAtAction(nameof(GetById), new { id = created.OrderId }, new
-        {
-            message = "Order created successfully",
-            data = created
-        });
     }
 
     [HttpGet("{id}")]
@@ -168,41 +145,6 @@ public class OrderController : ControllerBase
             message = "Order completed successfully after verification, funds have been transferred to vendor",
             data = completedOptions
         });
-    }
-
-    [HttpPut("{id}")]
-    [Authorize(Roles = "User")]
-    public async Task<IActionResult> Update(int id, [FromBody] UpdateOrderRequest request)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        if (!TryGetCurrentUserId(out var userId))
-        {
-            return Unauthorized(new { message = "User not authenticated" });
-        }
-
-        var updated = await _orderService.UpdateOrderAsync(id, request, userId);
-        return Ok(new
-        {
-            message = "Order updated successfully",
-            data = updated
-        });
-    }
-
-    [HttpDelete("{id}")]
-    [Authorize(Roles = "User")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        if (!TryGetCurrentUserId(out var userId))
-        {
-            return Unauthorized(new { message = "User not authenticated" });
-        }
-
-        await _orderService.DeleteOrderAsync(id, userId);
-        return Ok(new { message = "Order deleted successfully" });
     }
 
     private bool TryGetCurrentUserId(out int userId)

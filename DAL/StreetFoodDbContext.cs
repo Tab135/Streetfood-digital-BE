@@ -36,6 +36,8 @@ public class StreetFoodDbContext : DbContext
     // Flow 2: Review & Rating enhancements
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderDish> OrderDishes { get; set; }
+    public DbSet<Cart> Carts { get; set; }
+    public DbSet<CartItem> CartItems { get; set; }
     public DbSet<FeedbackVote> FeedbackVotes { get; set; }
     public DbSet<VendorReply> VendorReplies { get; set; }
     public DbSet<Notification> Notifications { get; set; }
@@ -354,6 +356,46 @@ public class StreetFoodDbContext : DbContext
                 .HasForeignKey(e => new { e.BranchId, e.DishId })
                 .OnDelete(DeleteBehavior.Restrict);
           });
+
+              modelBuilder.Entity<Cart>(entity =>
+              {
+                entity.HasKey(e => e.CartId);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.HasIndex(e => e.UserId).IsUnique();
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Branch)
+                    .WithMany()
+                    .HasForeignKey(e => e.BranchId)
+                    .OnDelete(DeleteBehavior.Restrict);
+              });
+
+              modelBuilder.Entity<CartItem>(entity =>
+              {
+                entity.HasKey(e => e.CartItemId);
+                entity.Property(e => e.Quantity).IsRequired();
+                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+                entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.HasIndex(e => new { e.CartId, e.DishId }).IsUnique();
+
+                entity.HasOne(e => e.Cart)
+                    .WithMany(c => c.Items)
+                    .HasForeignKey(e => e.CartId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Dish)
+                    .WithMany()
+                    .HasForeignKey(e => e.DishId)
+                    .OnDelete(DeleteBehavior.Restrict);
+              });
 
         // Feedback → Order FK
         modelBuilder.Entity<Feedback>(entity =>
