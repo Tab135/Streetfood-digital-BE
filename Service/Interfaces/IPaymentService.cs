@@ -13,6 +13,7 @@ namespace Service.PaymentsService
         /// The branch must have been approved by a moderator (RegisterVendorStatus = Accept).
         /// </summary>
         Task<PaymentLinkResult> CreatePaymentLink(int userId, int branchId);
+        Task<PaymentLinkResult> CreateOrderPaymentLink(int userId, int orderId);
 
         Task<Payment?> GetPaymentByOrderCode(long orderCode);
 
@@ -21,6 +22,12 @@ namespace Service.PaymentsService
         Task<PaymentStatusResponse> GetPaymentStatus(long orderCode);
 
         Task<PaymentStatusResponse> ConfirmPaymentFromRedirect(long orderCode, string status, string? transactionId);
+
+        Task<VendorPayoutResponseDto> RequestVendorPayoutAsync(int vendorUserId, VendorPayoutRequestDto request);
+        Task<decimal> GetVendorBalanceAsync(int vendorUserId);
+        
+        Task<VendorPayoutResponseDto> RequestUserPayoutAsync(int userId, VendorPayoutRequestDto request);
+        Task<decimal> GetUserBalanceAsync(int userId);
 
         Task<bool> VerifyPaymentOwnership(long orderCode, int userId);
 

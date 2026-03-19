@@ -242,7 +242,7 @@ namespace Service
                     return new BO.DTO.Branch.BranchResponseDto
                     {
                         BranchId = b.BranchId,
-                        VendorId = b.VendorId,
+                        VendorId = b.VendorId ?? 0,
                         ManagerId = b.ManagerId,
                         Name = b.Name,
                         PhoneNumber = b.PhoneNumber,
@@ -256,12 +256,18 @@ namespace Service
                         UpdatedAt = b.UpdatedAt,
                         IsVerified = b.IsVerified,
                         AvgRating = b.AvgRating,
+                        TotalReviewCount = b.TotalReviewCount,
+                        TotalRatingSum = b.TotalRatingSum,
+                        BatchReviewCount = b.BatchReviewCount,
+                        BatchRatingSum = b.BatchRatingSum,
                         IsActive = b.IsActive,
                         IsSubscribed = b.IsSubscribed,
                         SubscriptionExpiresAt = b.SubscriptionExpiresAt,
-                        DaysRemaining = b.SubscriptionExpiresAt.HasValue 
+                        DaysRemaining = b.SubscriptionExpiresAt.HasValue
                             ? (int)Math.Ceiling((b.SubscriptionExpiresAt.Value - DateTime.UtcNow).TotalDays)
                             : null,
+                        TierId = b.TierId,
+                        TierName = b.Tier?.Name ?? "Silver",
                         LicenseUrls = licenseUrls,
                         LicenseStatus = licenseRequest?.Status.ToString(),
                         LicenseRejectReason = licenseRequest?.RejectReason

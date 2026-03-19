@@ -29,6 +29,7 @@ namespace DAL
                 .AsNoTracking()
                 .AsSplitQuery()
                 .Include(b => b.Vendor)
+                .Include(b => b.Tier)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -42,6 +43,7 @@ namespace DAL
                 .AsNoTracking()
                 .AsSplitQuery()
                 .Where(b => b.VendorId == vendorId)
+                .Include(b => b.Tier)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -55,9 +57,10 @@ namespace DAL
                 .Where(b => b.VendorId == vendorId);
 
             var totalCount = await query.CountAsync();
-            
+
             var items = await query
                 .AsSplitQuery()
+                .Include(b => b.Tier)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -74,9 +77,10 @@ namespace DAL
                 .AsNoTracking();
 
             var totalCount = await query.CountAsync();
-            
+
             var items = await query
                 .AsSplitQuery()
+                .Include(b => b.Tier)
                 .Include(b => b.Vendor)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
@@ -95,15 +99,10 @@ namespace DAL
                 .Where(b => b.IsActive && b.IsVerified); // Only return verified and active branches
 
             var totalCount = await query.CountAsync();
-            
+
             var items = await query
                 .AsSplitQuery()
-                .Include(b => b.Vendor)
-                .Include(b => b.WorkSchedules)
-                .Include(b => b.DayOffs)
-                .Include(b => b.BranchImages)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
+                .Include(b => b.Tier)
                 .ToListAsync();
 
             return (items, totalCount);
@@ -324,15 +323,12 @@ namespace DAL
                 return new List<Branch>();
             }
 
-            var searchPattern = $"%{keyword}%";
-
             var branches = await _context.Branches
                 .AsNoTracking()
                 .AsSplitQuery()
-                .Where(b => b.IsActive && b.IsVerified &&
-                    (EF.Functions.ILike(b.Name, searchPattern) ||
-                     b.BranchDishes.Any(bd => bd.Dish.IsActive && EF.Functions.ILike(bd.Dish.Name, searchPattern))))
+                .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
+                .Include(b => b.Tier)
                 .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.Category)
@@ -466,7 +462,7 @@ namespace DAL
                 .ToList();
         }
 
-        public async Task UpdateBranchMetricsOnFeedbackCreatedAsync(int branchId, int rating)
+        public async Task UpdateBranchMetricsAndTierAsync(int branchId, int rating, int newBatchReviewCount, int newBatchRatingSum, int newTierId, bool banBranch)
         {
             await _context.Branches
                 .Where(b => b.BranchId == branchId)
@@ -474,6 +470,10 @@ namespace DAL
                     .SetProperty(b => b.TotalReviewCount, b => b.TotalReviewCount + 1)
                     .SetProperty(b => b.TotalRatingSum, b => b.TotalRatingSum + rating)
                     .SetProperty(b => b.AvgRating, b => (double)(b.TotalRatingSum + rating) / (b.TotalReviewCount + 1))
+                    .SetProperty(b => b.BatchReviewCount, b => newBatchReviewCount)
+                    .SetProperty(b => b.BatchRatingSum, b => newBatchRatingSum)
+                    .SetProperty(b => b.TierId, b => newTierId)
+                    .SetProperty(b => b.IsActive, b => banBranch ? false : b.IsActive)
                 );
         }
 
@@ -517,12 +517,24 @@ namespace DAL
             int newTotal = metrics?.Total ?? 0;
             double newAvg = newCount > 0 ? (double)newTotal / newCount : 0;
 
+            var latest20Feedbacks = await _context.Feedbacks
+                .Where(f => f.BranchId == branchId)
+                .OrderByDescending(f => f.CreatedAt)
+                .Take(20)
+                .Select(f => f.Rating)
+                .ToListAsync();
+
+            int batchCount = latest20Feedbacks.Count;
+            int batchTotal = latest20Feedbacks.Sum();
+
             await _context.Branches
                 .Where(b => b.BranchId == branchId)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(b => b.TotalReviewCount, newCount)
                     .SetProperty(b => b.TotalRatingSum, newTotal)
                     .SetProperty(b => b.AvgRating, newAvg)
+                    .SetProperty(b => b.BatchReviewCount, batchCount)
+                    .SetProperty(b => b.BatchRatingSum, batchTotal)
                 );
         }
 

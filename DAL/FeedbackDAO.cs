@@ -172,6 +172,16 @@ namespace DAL
                 .CountAsync();
         }
 
+        public async Task<int?> GetRatingOfRecentFeedbackAsync(int branchId, int offset)
+        {
+            return await _context.Feedbacks
+                .Where(f => f.BranchId == branchId)
+                .OrderByDescending(f => f.CreatedAt)
+                .Skip(offset)
+                .Select(f => (int?)f.Rating)
+                .FirstOrDefaultAsync();
+        }
+
         // Update feedback
         public async Task<Feedback> UpdateAsync(Feedback feedback)
         {

@@ -74,6 +74,11 @@ namespace Repository
             return await _feedbackDAO.GetCountByBranchIdAsync(branchId);
         }
 
+        public async Task<int?> GetRatingOfRecentFeedbackAsync(int branchId, int offset)
+        {
+            return await _feedbackDAO.GetRatingOfRecentFeedbackAsync(branchId, offset);
+        }
+
         public async Task<(List<Feedback> items, int totalCount)> GetByRatingRange(
             int branchId, int minRating, int maxRating, int pageNumber, int pageSize)
         {

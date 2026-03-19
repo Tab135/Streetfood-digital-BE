@@ -10,8 +10,9 @@ namespace Repository.Interfaces
     public interface IPaymentRepository
     {
         Task<Payment> CreatePayment(int userId, long orderCode, int? branchId,
-            int amount, string description, string? checkoutUrl = null);
+            int amount, string description, string? checkoutUrl = null, int? orderId = null);
         Task<Payment?> GetPaymentByOrderCode(long orderCode);
+        Task<Payment?> GetLatestPaymentByOrderId(int orderId);
         Task<Payment?> GetPaymentById(int id);
         Task<List<Payment>> GetUserPayments(int userId, string? status = null);
         Task<Payment> UpdatePaymentStatus(long orderCode, string status,

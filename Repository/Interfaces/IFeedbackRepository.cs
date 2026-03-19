@@ -20,6 +20,7 @@ namespace Repository.Interfaces
         // Rating and Statistics
         Task<double> GetAverageRatingByBranchId(int branchId);
         Task<int> GetCountByBranchId(int branchId);
+        Task<int?> GetRatingOfRecentFeedbackAsync(int branchId, int offset);
         Task<(List<Feedback> items, int totalCount)> GetByRatingRange(
             int branchId, int minRating, int maxRating, int pageNumber, int pageSize);
 

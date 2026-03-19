@@ -55,7 +55,7 @@ namespace Repository.Interfaces
             decimal? maxPrice,
             List<int>? categoryIds);
 
-        Task UpdateBranchMetricsOnFeedbackCreatedAsync(int branchId, int rating);
+        Task UpdateBranchMetricsAndTierAsync(int branchId, int rating, int newBatchReviewCount, int newBatchRatingSum, int newTierId, bool banBranch);
         Task UpdateBranchMetricsOnFeedbackUpdatedAsync(int branchId, int oldRating, int newRating);
         Task UpdateBranchMetricsOnFeedbackDeletedAsync(int branchId, int rating);
         Task RecalculateBranchMetricsAsync(int branchId);

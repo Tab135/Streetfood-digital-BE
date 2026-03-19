@@ -3,6 +3,8 @@ namespace BO.Entities;
 public enum OrderStatus
 {
     Pending = 0,
-    Paid = 1,
-    Cancelled = 2
+    AwaitingVendorConfirmation = 1,
+    Paid = 2,
+    Cancelled = 3,
+    Complete = 4
 }
