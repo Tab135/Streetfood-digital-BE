@@ -20,6 +20,8 @@ namespace BO.Entities
         /// <summary>Order this payment is for (food ordering flow)</summary>
         public int? OrderId { get; set; }
 
+        public int? BranchCampaignId { get; set; }
+
         [Required]
         public long OrderCode { get; set; }
 
