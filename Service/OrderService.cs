@@ -275,7 +275,12 @@ public class OrderService : IOrderService
         var branch = await _branchRepository.GetByIdAsync(order.BranchId)
             ?? throw new DomainExceptions("Branch not found");
 
-        var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId)
+        if (!branch.VendorId.HasValue || branch.VendorId.Value <= 0)
+        {
+            throw new DomainExceptions("Vendor not assigned to branch");
+        }
+
+        var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value)
             ?? throw new DomainExceptions("Vendor not found");
 
         if (vendor.UserId != vendorUserId)
