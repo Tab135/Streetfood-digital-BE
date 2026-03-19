@@ -800,7 +800,7 @@ namespace Service
                         City          = branch.City,
                         Lat           = branch.Lat,
                         Long          = branch.Long,
-                        AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = null,
+                        AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, IsSubscribed = branch.IsSubscribed, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = null,
                         Dishes = dishes.Select(x => new ActiveDishResponseDto
                         {
                             DishId       = x.Dish.DishId,
@@ -880,7 +880,7 @@ namespace Service
                     City          = branch.City,
                     Lat           = branch.Lat,
                     Long          = branch.Long,
-                    AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = Math.Round(distanceKm, 2),
+                    AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, IsSubscribed = branch.IsSubscribed, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = Math.Round(distanceKm, 2),
                     Dishes = dishes.Select(x => new ActiveDishResponseDto
                     {
                         DishId       = x.Dish.DishId,
