@@ -74,6 +74,161 @@ namespace Service
             return createdBranch;
         }
 
+        public async Task<BranchResponseDto> CreateUserBranchAsync(CreateUserBranchRequest request, int userId)
+        {
+            var branch = new Branch
+            {
+                VendorId = null,
+                ManagerId = null,
+                CreatedById = userId,
+                Name = request.Name,
+                AddressDetail = request.AddressDetail,
+                Ward = request.Ward,
+                City = request.City,
+                Lat = request.Lat,
+                Long = request.Long,
+                IsVerified = false,
+                IsActive = false,
+                IsSubscribed = false,
+                AvgRating = 0
+            };
+
+            var createdBranch = await _branchRepository.CreateAsync(branch);
+
+            // Auto-create a pending register request for the new branch
+            var branchRegisterRequest = new BranchRegisterRequest
+            {
+                BranchId = createdBranch.BranchId,
+                LicenseUrl = null,
+                Status = RegisterVendorStatusEnum.Pending,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _branchRepository.AddBranchRegisterRequestAsync(branchRegisterRequest);
+
+            return await MapToResponseDtoAsync(createdBranch);
+        }
+
+        
+        
+        // --- Replacing GhostPin logic natively with Branch ---
+        public async Task<BranchResponseDto> ApproveUserBranchAsync(int branchId)
+        {
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null) throw new Exception("Branch not found");
+            if (branch.IsVerified) throw new Exception("Branch is already verified.");
+
+            var registerRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            if (registerRequest != null)
+            {
+                registerRequest.RejectReason = null;
+                registerRequest.UpdatedAt = DateTime.UtcNow;
+                await _branchRepository.UpdateBranchRegisterRequestAsync(registerRequest);
+            }
+
+            return await MapToResponseDtoAsync(branch);
+        }
+
+        public async Task<BranchResponseDto> RejectUserBranchAsync(int branchId, RejectUserBranchRequest request)
+        {
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null) throw new Exception("Branch not found");
+            if (branch.IsVerified) throw new Exception("Verified branches cannot be rejected via this flow.");
+
+            var registerRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            if (registerRequest != null)
+            {
+                registerRequest.RejectReason = request.Reason;
+                registerRequest.Status = RegisterVendorStatusEnum.Reject;
+                registerRequest.UpdatedAt = DateTime.UtcNow;
+                await _branchRepository.UpdateBranchRegisterRequestAsync(registerRequest);
+            }
+
+            return await MapToResponseDtoAsync(branch);
+        }
+
+        public async Task<BranchResponseDto> AuditUserBranchAsync(int branchId, AuditUserBranchRequest request)
+        {
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null) throw new Exception("Branch not found");
+            if (branch.IsVerified) throw new Exception("Branch is already verified.");
+
+            var registerRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            if (registerRequest != null && !string.IsNullOrEmpty(registerRequest.RejectReason))
+                throw new Exception("User branch was rejected.");
+
+            double dist = CalculateDistance(branch.Lat, branch.Long, request.ModLat, request.ModLong);
+            if (dist > 50.0)
+            {
+                throw new Exception($"Moderator is too far from location. Distance: {dist:F1}m (Max allowed: 50m)");
+            }
+
+            branch.IsVerified = true;
+            branch.IsActive = true;
+            branch.UpdatedAt = DateTime.UtcNow;
+            await _branchRepository.UpdateAsync(branch);
+
+            if (registerRequest != null)
+            {
+                registerRequest.Status = RegisterVendorStatusEnum.Accept;
+                registerRequest.UpdatedAt = DateTime.UtcNow;
+                await _branchRepository.UpdateBranchRegisterRequestAsync(registerRequest);
+            }
+
+            return await MapToResponseDtoAsync(branch);
+        }
+
+        public async Task<object> ClaimUserBranchAsync(int branchId, int vendorId, int userId, ClaimUserBranchRequest request)
+        {
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null) throw new Exception("Branch not found");
+            if (!branch.IsVerified || branch.VendorId != null)
+                throw new Exception("Only verified and unowned branches can be claimed.");
+
+            if (request.ExistingBranchId.HasValue)
+            {
+                var targetBranch = await _branchRepository.GetByIdAsync(request.ExistingBranchId.Value);
+                if (targetBranch == null || targetBranch.VendorId != vendorId)
+                    throw new Exception("Invalid or unauthorized existing branch.");
+
+                // Merge data
+                targetBranch.Lat = branch.Lat;
+                targetBranch.Long = branch.Long;
+                targetBranch.AddressDetail = branch.AddressDetail;
+                targetBranch.Ward = branch.Ward;
+                targetBranch.City = branch.City;
+                targetBranch.UpdatedAt = DateTime.UtcNow;
+
+                await _branchRepository.UpdateAsync(targetBranch);
+
+                await _branchRepository.DeleteAsync(branch.BranchId);
+
+                return new { Message = "Merged with existing branch. Generating payment link...", BranchId = targetBranch.BranchId };
+            }
+            else
+            {
+                branch.VendorId = vendorId;
+                branch.ManagerId = userId;
+                branch.UpdatedAt = DateTime.UtcNow;
+                await _branchRepository.UpdateAsync(branch);
+
+                return new { Message = "Claiming new branch. Generating payment link...", BranchId = branch.BranchId };
+            }
+        }
+
+        private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
+        {
+            var R = 6371e3;
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLon = (lon2 - lon1) * Math.PI / 180;
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
+                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return R * c;
+        }
+
         public async Task<BranchResponseDto> GetBranchByIdAsync(int branchId)
         {
             var branch = await _branchRepository.GetByIdAsync(branchId);
@@ -273,6 +428,7 @@ namespace Service
                     RejectReason = r.RejectReason,
                     CreatedAt = r.CreatedAt,
                     UpdatedAt = r.UpdatedAt,
+                    IsCreatedByOwner = r.Branch?.VendorId != null,
                     Branch = r.Branch == null ? null : new PendingRegistrationDto.PendingBranchInfo
                     {
                         BranchId = r.Branch.BranchId,
@@ -780,5 +936,7 @@ namespace Service
         }
     }
 }
+
+
 
 

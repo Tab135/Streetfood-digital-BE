@@ -16,10 +16,97 @@ namespace StreetFood.Controllers
     public class BranchController : ControllerBase
     {
         private readonly IBranchService _branchService;
+        private readonly Service.PaymentsService.IPaymentService _paymentService;
 
-        public BranchController(IBranchService branchService)
+        public BranchController(IBranchService branchService, Service.PaymentsService.IPaymentService paymentService)
         {
             _branchService = branchService ?? throw new ArgumentNullException(nameof(branchService));
+            _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
+        }
+
+        /// <summary>
+        
+        // -- GhostPin migrated endpoints --
+
+        [HttpPost("{branchId}/approve")]
+        [Authorize(Roles = "Moderator,Admin")]
+        public async Task<IActionResult> ApproveUserBranch(int branchId)
+        {
+            var branch = await _branchService.ApproveUserBranchAsync(branchId);
+            return Ok(new { message = "User Branch approved", data = branch });
+        }
+
+        [HttpPost("{branchId}/reject")]
+        [Authorize(Roles = "Moderator,Admin")]
+        public async Task<IActionResult> RejectUserBranch(int branchId, [FromBody] RejectUserBranchRequest request)
+        {
+            var branch = await _branchService.RejectUserBranchAsync(branchId, request);
+            return Ok(new { message = "User Branch rejected", data = branch });
+        }
+
+        [HttpPost("{branchId}/audit")]
+        [Authorize(Roles = "Moderator,Admin")]
+        public async Task<IActionResult> AuditUserBranch(int branchId, [FromBody] AuditUserBranchRequest request)
+        {
+            try
+            {
+                var branch = await _branchService.AuditUserBranchAsync(branchId, request);
+                return Ok(new { message = "Audit complete", data = branch });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{branchId}/claim")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> ClaimUserBranch(int branchId, [FromBody] ClaimUserBranchRequest request)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+                // Same logic as before
+                int vendorId = int.Parse(User.FindFirst("VendorId")?.Value ?? "-1");
+
+                var claimResult = (dynamic)await _branchService.ClaimUserBranchAsync(branchId, vendorId, userId, request);
+                int claimedBranchId = claimResult.BranchId;
+
+                var paymentLink = await _paymentService.CreatePaymentLink(userId, claimedBranchId);
+                return Ok(new { message = claimResult.Message, paymentLink = paymentLink.PaymentUrl });
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("Only verified")) return Conflict(new { message = ex.Message });
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("user")]
+        [Authorize]
+        public async Task<IActionResult> CreateUserBranch([FromBody] CreateUserBranchRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var branchResponse = await _branchService.CreateUserBranchAsync(request, userId);
+
+                return CreatedAtAction(nameof(GetBranchById), new { id = branchResponse.BranchId }, branchResponse);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -715,3 +802,4 @@ namespace StreetFood.Controllers
         }
     }
 }
+

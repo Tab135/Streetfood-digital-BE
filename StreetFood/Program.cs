@@ -92,6 +92,7 @@ namespace StreetFood
 
             // Register Repositories
             builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<IOtpVerifyRepository, OtpVerifyRepository>();
             builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
             builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
@@ -101,12 +102,7 @@ namespace StreetFood
             builder.Services.AddScoped<IVendorRepository, VendorRepository>();
             builder.Services.AddScoped<IBranchRepository, BranchRepository>();
             
-            builder.Services.AddScoped<DAL.GhostPinDAO>();
-            builder.Services.AddScoped<Repository.Interfaces.IGhostPinRepository, Repository.GhostPinRepository>();
-            builder.Services.AddScoped<Service.Interfaces.IGhostPinService, Service.GhostPinService>();
-            
-            builder.Services.AddScoped<ITierRepository, TierRepository>();
-            
+
             builder.Services.AddScoped<IFeedbackTagRepository, FeedbackTagRepository>();
             builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
             // Flow 2: Review & Rating Repositories

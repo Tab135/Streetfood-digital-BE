@@ -9,8 +9,16 @@ namespace Service.Interfaces
     public interface IBranchService
     {
         // CRUD operations
+        Task<BranchResponseDto> CreateUserBranchAsync(CreateUserBranchRequest request, int userId);
         Task<Branch> CreateBranchAsync(CreateBranchDto createBranchDto, int vendorId, int userId);
         Task<BranchResponseDto> GetBranchByIdAsync(int branchId);
+        
+        // User Branch specifics (Replacing GhostPin logic)
+        Task<BranchResponseDto> ApproveUserBranchAsync(int branchId);
+        Task<BranchResponseDto> RejectUserBranchAsync(int branchId, RejectUserBranchRequest request);
+        Task<BranchResponseDto> AuditUserBranchAsync(int branchId, AuditUserBranchRequest request);
+        Task<object> ClaimUserBranchAsync(int branchId, int vendorId, int userId, ClaimUserBranchRequest request);
+
         Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize);
         Task<PaginatedResponse<BranchResponseDto>> GetAllBranchesAsync(int pageNumber, int pageSize);
         Task<PaginatedResponse<BranchResponseDto>> GetActiveBranchesAsync(int pageNumber, int pageSize);
