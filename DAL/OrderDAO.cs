@@ -43,7 +43,7 @@ public class OrderDAO
         return (items, totalCount);
     }
 
-    public async Task<(List<Order> items, int totalCount)> GetByBranchIdsAsync(List<int> branchIds, int pageNumber, int pageSize, OrderStatus? status = null)
+    public async Task<(List<Order> items, int totalCount)> GetByBranchIdsAsync(List<int> branchIds, int pageNumber, int pageSize, List<OrderStatus>? statuses = null)
     {
         var query = _context.Orders
             .Where(o => branchIds.Contains(o.BranchId))
@@ -55,9 +55,9 @@ public class OrderDAO
             .OrderByDescending(o => o.CreatedAt)
             .AsQueryable();
 
-        if (status.HasValue)
+        if (statuses != null && statuses.Count > 0)
         {
-            query = query.Where(o => o.Status == status.Value);
+            query = query.Where(o => statuses.Contains(o.Status));
         }
 
         var totalCount = await query.CountAsync();
