@@ -776,6 +776,17 @@ namespace Service
                         .Where(bd => bd.Dish != null && bd.Dish.IsActive)
                         .Select(bd => new { bd.Dish, bd.IsSoldOut });
 
+                    double wDist = 0.6;
+                    double wRate = 0.4;
+                    double tierWeight = branch.Tier != null ? branch.Tier.Weight : 1.0;
+                    double subMultiplier = branch.IsSubscribed ? 1.2 : 0.7;
+
+                    double distanceScore = 0; // No location provided
+                        
+                    double ratingScore = (branch.AvgRating / 5) * wRate;
+
+                    double finalScore = (distanceScore + ratingScore) * tierWeight * subMultiplier;
+
                     return new ActiveBranchResponseDto
                     {
                         BranchId      = branch.BranchId,
@@ -789,7 +800,7 @@ namespace Service
                         City          = branch.City,
                         Lat           = branch.Lat,
                         Long          = branch.Long,
-                        AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", DistanceKm = null,
+                        AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = null,
                         Dishes = dishes.Select(x => new ActiveDishResponseDto
                         {
                             DishId       = x.Dish.DishId,
@@ -807,7 +818,7 @@ namespace Service
                             .Select(vdp => vdp.DietaryPreference?.Name ?? string.Empty)
                             .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
                     };
-                }).ToList();
+                }).OrderByDescending(x => x.FinalScore).ToList();
 
                 return new ActiveBranchListResponseDto
                 {
@@ -843,6 +854,19 @@ namespace Service
                     .Where(bd => bd.Dish != null && bd.Dish.IsActive)
                     .Select(bd => new { bd.Dish, bd.IsSoldOut });
 
+                double wDist = 0.6;
+                double wRate = 0.4;
+                double tierWeight = branch.Tier != null ? branch.Tier.Weight : 1.0;
+                double subMultiplier = branch.IsSubscribed ? 1.2 : 0.7;
+
+                double distanceScore = (distanceKm == 0 && (!userLat.HasValue || !userLong.HasValue)) 
+                    ? 0 // If no user location, distance score is 0
+                    : (1 / (distanceKm + 1)) * wDist;
+                    
+                double ratingScore = (branch.AvgRating / 5) * wRate;
+
+                double finalScore = (distanceScore + ratingScore) * tierWeight * subMultiplier;
+
                 return new ActiveBranchResponseDto
                 {
                     BranchId      = branch.BranchId,
@@ -856,7 +880,7 @@ namespace Service
                     City          = branch.City,
                     Lat           = branch.Lat,
                     Long          = branch.Long,
-                    AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", DistanceKm = Math.Round(distanceKm, 2),
+                    AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = Math.Round(distanceKm, 2),
                     Dishes = dishes.Select(x => new ActiveDishResponseDto
                     {
                         DishId       = x.Dish.DishId,
@@ -874,7 +898,7 @@ namespace Service
                         .Select(vdp => vdp.DietaryPreference?.Name ?? string.Empty)
                         .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
                 };
-            }).ToList();
+            }).OrderByDescending(x => x.FinalScore).ToList();
 
             return new ActiveBranchListResponseDto
             {

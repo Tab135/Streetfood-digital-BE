@@ -27,6 +27,8 @@ public int TotalRatingSum { get; set; }
         public int TierId { get; set; }
         public string TierName { get; set; } = string.Empty;
 
+        public double FinalScore { get; set; }
+
         /// <summary>Distance in kilometers from user's location (null if no location provided)</summary>
         public double? DistanceKm { get; set; }
 
