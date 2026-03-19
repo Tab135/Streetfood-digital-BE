@@ -30,10 +30,10 @@ namespace Service
             // Search for vendors with their branches and dishes
             var branches = await _branchRepository.SearchVendorsWithBranchesAndDishesAsync(keyword);
 
-            // Filter branches that match the search keyword (by branch name or dish name)
+// Filter branches that match the search keyword (by vendor name or dish name)
             var matchingBranches = branches
-                .Where(branch => 
-                    TextNormalizer.NormalizeForSearch(branch.Name).Contains(normalizedKeyword) ||
+                .Where(branch =>
+                    (branch.Vendor != null && TextNormalizer.NormalizeForSearch(branch.Vendor.Name).Contains(normalizedKeyword)) ||
                     branch.BranchDishes.Any(bd => TextNormalizer.NormalizeForSearch(bd.Dish.Name).Contains(normalizedKeyword)))
                 .ToList();
 

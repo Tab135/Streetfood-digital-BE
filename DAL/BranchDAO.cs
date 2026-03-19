@@ -313,7 +313,7 @@ namespace DAL
         }
 
         /// <summary>
-        /// Search vendors by keyword in branch name or dish name (case-insensitive).
+        /// Search vendors by keyword in vendor name or dish name (case-insensitive).
         /// Returns branches grouped by vendor.
         /// </summary>
         public async Task<List<Branch>> SearchVendorsWithBranchesAndDishesAsync(string keyword)
