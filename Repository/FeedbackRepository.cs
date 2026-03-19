@@ -74,6 +74,11 @@ namespace Repository
             return await _feedbackDAO.GetCountByBranchIdAsync(branchId);
         }
 
+        public async Task<int?> GetRatingOfRecentFeedbackAsync(int branchId, int offset)
+        {
+            return await _feedbackDAO.GetRatingOfRecentFeedbackAsync(branchId, offset);
+        }
+
         public async Task<(List<Feedback> items, int totalCount)> GetByRatingRange(
             int branchId, int minRating, int maxRating, int pageNumber, int pageSize)
         {
@@ -120,6 +125,22 @@ namespace Repository
         public async Task RemoveAllTags(int feedbackId)
         {
             await _feedbackDAO.RemoveAllTagsAsync(feedbackId);
+        }
+
+        // Velocity Limits
+        public async Task<int> GetDailyFeedbackCountAsync(int userId, DateTime date)
+        {
+            return await _feedbackDAO.GetDailyFeedbackCountAsync(userId, date);
+        }
+
+        public async Task<List<int>> GetReviewedBranchIdsTodayAsync(int userId, DateTime date)
+        {
+            return await _feedbackDAO.GetReviewedBranchIdsTodayAsync(userId, date);
+        }
+
+        public async Task<bool> HasReviewedBranchTodayAsync(int userId, int branchId, DateTime date)
+        {
+            return await _feedbackDAO.HasReviewedBranchTodayAsync(userId, branchId, date);
         }
     }
 }

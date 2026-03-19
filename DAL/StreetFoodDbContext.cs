@@ -22,6 +22,8 @@ public class StreetFoodDbContext : DbContext
     // Vendor-related DbSets
     public DbSet<Vendor> Vendors { get; set; }
     public DbSet<Branch> Branches { get; set; }
+    public DbSet<GhostPin> GhostPins { get; set; }
+    public DbSet<Tier> Tiers { get; set; }
     public DbSet<BranchImage> BranchImages { get; set; }
     public DbSet<BranchRegisterRequest> BranchRegisterRequests { get; set; }
     public DbSet<WorkSchedule> WorkSchedules { get; set; }
@@ -47,13 +49,27 @@ public class StreetFoodDbContext : DbContext
     public DbSet<Taste> Tastes { get; set; }
     public DbSet<Dish> Dishes { get; set; }
     public DbSet<DishTaste> DishTastes { get; set; }
-    public DbSet<DishDietaryPreference> DishDietaryPreferences { get; set; }
+    public DbSet<VendorDietaryPreference> VendorDietaryPreferences { get; set; }
     public DbSet<Payment> Payments { get; set; }
     public DbSet<BranchDish> BranchDishes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        // --- Tier Configuration ---
+        modelBuilder.Entity<Branch>()
+            .HasOne(b => b.Tier)
+            .WithMany(t => t.Branches)
+            .HasForeignKey(b => b.TierId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Tier>().HasData(
+            new Tier { TierId = 1, Name = "Warning", Weight = 0.5 },
+            new Tier { TierId = 2, Name = "Silver", Weight = 1.0 },
+            new Tier { TierId = 3, Name = "Gold", Weight = 1.5 },
+            new Tier { TierId = 4, Name = "Diamond", Weight = 2.0 }
+        );
 
         modelBuilder.Entity<User>(entity =>
         {
@@ -298,18 +314,18 @@ public class StreetFoodDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // DishDietaryPreference
-        modelBuilder.Entity<DishDietaryPreference>(entity =>
+        // VendorDietaryPreference
+        modelBuilder.Entity<VendorDietaryPreference>(entity =>
         {
-            entity.HasKey(e => e.DishDietaryPreferenceId);
+            entity.HasKey(e => e.VendorDietaryPreferenceId);
 
-            entity.HasOne(e => e.Dish)
-                  .WithMany(d => d.DishDietaryPreferences)
-                  .HasForeignKey(e => e.DishId)
+            entity.HasOne(e => e.Vendor)
+                  .WithMany(v => v.VendorDietaryPreferences)
+                  .HasForeignKey(e => e.VendorId)
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.DietaryPreference)
-                  .WithMany(dp => dp.DishDietaryPreferences)
+                  .WithMany(dp => dp.VendorDietaryPreferences)
                   .HasForeignKey(e => e.DietaryPreferenceId)
                   .OnDelete(DeleteBehavior.Cascade);
         });

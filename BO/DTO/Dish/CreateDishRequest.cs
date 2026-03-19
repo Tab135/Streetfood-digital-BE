@@ -26,9 +26,5 @@ namespace BO.DTO.Dish
         /// </summary>
         public List<int> TasteIds { get; set; } = new List<int>();
 
-        /// <summary>
-        /// List of DietaryPreferenceIds to associate with this dish (many-to-many via DishDietaryPreference)
-        /// </summary>
-        public List<int> DietaryPreferenceIds { get; set; } = new List<int>();
     }
 }

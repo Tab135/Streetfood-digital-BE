@@ -28,6 +28,8 @@ namespace DAL
         {
             return await _context.Vendors
                 .Include(v => v.VendorOwner)
+                .Include(v => v.VendorDietaryPreferences)
+                    .ThenInclude(vdp => vdp.DietaryPreference)
                 .FirstOrDefaultAsync(v => v.VendorId == vendorId);
         }
 
@@ -35,6 +37,8 @@ namespace DAL
         {
             return await _context.Vendors
                 .Include(v => v.VendorOwner)
+                .Include(v => v.VendorDietaryPreferences)
+                    .ThenInclude(vdp => vdp.DietaryPreference)
                 .FirstOrDefaultAsync(v => v.UserId == userId);
         }
 
@@ -46,6 +50,8 @@ namespace DAL
             
             var items = await query
                 .Include(v => v.VendorOwner)
+                .Include(v => v.VendorDietaryPreferences)
+                    .ThenInclude(vdp => vdp.DietaryPreference)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -59,9 +65,11 @@ namespace DAL
                 .Where(v => v.IsActive);
 
             var totalCount = await query.CountAsync();
-            
+
             var items = await query
                 .Include(v => v.VendorOwner)
+                .Include(v => v.VendorDietaryPreferences)
+                    .ThenInclude(vdp => vdp.DietaryPreference)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();

@@ -118,7 +118,7 @@ namespace Service
             }
 
             // Verify vendor exists and user owns it
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             if (vendor == null || vendor.UserId != userId)
             {
                 throw new Exception("User does not own this vendor");
@@ -162,14 +162,14 @@ namespace Service
                 throw new Exception($"Branch with ID {branchId} not found");
             }
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             if (vendor == null || vendor.UserId != userId)
             {
                 throw new Exception("User does not own this vendor");
             }
 
             // Check if this is the only branch
-            var branches = await _branchRepository.GetAllByVendorIdAsync(branch.VendorId);
+            var branches = await _branchRepository.GetAllByVendorIdAsync(branch.VendorId ?? 0);
             if (branches.Count <= 1)
             {
                 throw new Exception("Cannot delete the last branch. A vendor must have at least one branch.");
@@ -186,7 +186,7 @@ namespace Service
                 return false;
             }
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             return vendor != null && vendor.UserId == userId;
         }
 
@@ -262,9 +262,8 @@ namespace Service
 
         public async Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize)
         {
-            var (allRequests, totalCount) = await _branchRepository.GetAllBranchRegisterRequestsAsync(pageNumber, pageSize);
-            var items = allRequests
-                .Where(r => r.Status == RegisterVendorStatusEnum.Pending)
+            var (pendingRequests, totalCount) = await _branchRepository.GetAllBranchRegisterRequestsAsync(pageNumber, pageSize);
+            var items = pendingRequests
                 .Select(r => new PendingRegistrationDto
                 {
                     BranchRegisterRequestId = r.BranchRegisterRequestId,
@@ -277,7 +276,7 @@ namespace Service
                     Branch = r.Branch == null ? null : new PendingRegistrationDto.PendingBranchInfo
                     {
                         BranchId = r.Branch.BranchId,
-                        VendorId = r.Branch.VendorId,
+                        VendorId = r.Branch.VendorId ?? 0,
                         ManagerId = r.Branch.ManagerId,
                         Name = r.Branch.Name,
                         PhoneNumber = r.Branch.PhoneNumber,
@@ -291,14 +290,20 @@ namespace Service
                         UpdatedAt = r.Branch.UpdatedAt,
                         IsVerified = r.Branch.IsVerified,
                         AvgRating = r.Branch.AvgRating,
+                        TotalReviewCount = r.Branch.TotalReviewCount,
+                        TotalRatingSum = r.Branch.TotalRatingSum,
+                        BatchReviewCount = r.Branch.BatchReviewCount,
+                        BatchRatingSum = r.Branch.BatchRatingSum,
                         IsActive = r.Branch.IsActive,
                         IsSubscribed = r.Branch.IsSubscribed,
                         SubscriptionExpiresAt = r.Branch.SubscriptionExpiresAt,
+                        TierId = r.Branch.TierId,
+                        TierName = r.Branch.Tier?.Name ?? "Silver",
                         BranchImages = r.Branch.BranchImages?.Select(i => new BranchImageResponseDto
                         {
                             BranchImageId = i.BranchImageId,
                             ImageUrl = i.ImageUrl
-                        }).ToList() 
+                        }).ToList()
                     }
                 }).ToList();
             return new PaginatedResponse<PendingRegistrationDto>(items, totalCount, pageNumber, pageSize);
@@ -314,6 +319,9 @@ namespace Service
 
             branch.IsVerified = true;
             branch.IsActive = true;
+            branch.TierId = 2; // Silver
+            branch.BatchReviewCount = 0;
+            branch.BatchRatingSum = 0;
             await _branchRepository.UpdateAsync(branch);
 
             // Update registration request status
@@ -326,7 +334,7 @@ namespace Service
             }
 
             // Promote vendor owner to Vendor role if not already
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             if (vendor != null)
             {
                 var vendorOwner = await _userRepository.GetUserById(vendor.UserId);
@@ -391,7 +399,7 @@ namespace Service
             return new BranchResponseDto
             {
                 BranchId = branch.BranchId,
-                VendorId = branch.VendorId,
+                VendorId = branch.VendorId ?? 0,
                 ManagerId = branch.ManagerId,
                 Name = branch.Name,
                 PhoneNumber = branch.PhoneNumber,
@@ -405,12 +413,18 @@ namespace Service
                 UpdatedAt = branch.UpdatedAt,
                 IsVerified = branch.IsVerified,
                 AvgRating = branch.AvgRating,
+                TotalReviewCount = branch.TotalReviewCount,
+                TotalRatingSum = branch.TotalRatingSum,
+                BatchReviewCount = branch.BatchReviewCount,
+                BatchRatingSum = branch.BatchRatingSum,
                 IsActive = branch.IsActive,
                 IsSubscribed = branch.IsSubscribed,
                 SubscriptionExpiresAt = branch.SubscriptionExpiresAt,
                 DaysRemaining = branch.SubscriptionExpiresAt.HasValue
                     ? (int)Math.Ceiling((branch.SubscriptionExpiresAt.Value - DateTime.UtcNow).TotalDays)
                     : null,
+                TierId = branch.TierId,
+                TierName = branch.Tier?.Name ?? "Silver", // Default to Silver if null
                 LicenseUrls = licenseUrls,
                 LicenseStatus = licenseRequest?.Status.ToString(),
                 LicenseRejectReason = licenseRequest?.RejectReason
@@ -441,7 +455,6 @@ namespace Service
         //    };
         //}
 
-        // ==================== WORK SCHEDULE OPERATIONS ====================
 
         public async Task<List<WorkSchedule>> AddWorkScheduleAsync(int branchId, AddWorkScheduleDto dto, int userId)
         {
@@ -520,7 +533,6 @@ namespace Service
             await _branchRepository.DeleteWorkScheduleAsync(scheduleId);
         }
 
-        // ==================== DAY OFF OPERATIONS ====================
 
         public async Task<DayOff> AddDayOffAsync(int branchId, AddDayOffDto dto, int userId)
         {
@@ -574,7 +586,6 @@ namespace Service
             await _branchRepository.DeleteDayOffAsync(dayOffId);
         }
 
-        // ==================== BRANCH IMAGE OPERATIONS ====================
 
         public async Task<BranchImage> AddBranchImageAsync(int branchId, string imageUrl, int userId)
         {
@@ -638,7 +649,6 @@ namespace Service
             };
         }
 
-        // ==================== ACTIVE BRANCHES WITH DYNAMIC FILTERING ====================
 
         public async Task<ActiveBranchListResponseDto> GetActiveBranchesFilteredAsync(ActiveBranchFilterDto filter)
         {
@@ -665,7 +675,7 @@ namespace Service
                     return new ActiveBranchResponseDto
                     {
                         BranchId      = branch.BranchId,
-                        VendorId      = branch.VendorId,
+                        VendorId      = branch.VendorId ?? 0,
                         VendorName    = branch.Vendor?.Name ?? string.Empty,
                         Name          = branch.Name,
                         PhoneNumber   = branch.PhoneNumber,
@@ -675,9 +685,7 @@ namespace Service
                         City          = branch.City,
                         Lat           = branch.Lat,
                         Long          = branch.Long,
-                        AvgRating     = branch.AvgRating,
-                        IsVerified    = branch.IsVerified,
-                        DistanceKm    = null, // No distance calculation when no lat/long provided
+                        AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", DistanceKm = null,
                         Dishes = dishes.Select(x => new ActiveDishResponseDto
                         {
                             DishId       = x.Dish.DishId,
@@ -690,10 +698,10 @@ namespace Service
                             TasteNames = x.Dish.DishTastes?
                                 .Select(dt => dt.Taste?.Name ?? string.Empty)
                                 .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new(),
-                            DietaryPreferenceNames = x.Dish.DishDietaryPreferences?
-                                .Select(ddp => ddp.DietaryPreference?.Name ?? string.Empty)
-                                .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
-                        }).ToList()
+                        }).ToList(),
+                        DietaryPreferenceNames = branch.Vendor?.VendorDietaryPreferences?
+                            .Select(vdp => vdp.DietaryPreference?.Name ?? string.Empty)
+                            .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
                     };
                 }).ToList();
 
@@ -734,7 +742,7 @@ namespace Service
                 return new ActiveBranchResponseDto
                 {
                     BranchId      = branch.BranchId,
-                    VendorId      = branch.VendorId,
+                    VendorId      = branch.VendorId ?? 0,
                     VendorName    = branch.Vendor?.Name ?? string.Empty,
                     Name          = branch.Name,
                     PhoneNumber   = branch.PhoneNumber,
@@ -744,9 +752,7 @@ namespace Service
                     City          = branch.City,
                     Lat           = branch.Lat,
                     Long          = branch.Long,
-                    AvgRating     = branch.AvgRating,
-                    IsVerified    = branch.IsVerified,
-                    DistanceKm    = Math.Round(distanceKm, 2),
+                    AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", DistanceKm = Math.Round(distanceKm, 2),
                     Dishes = dishes.Select(x => new ActiveDishResponseDto
                     {
                         DishId       = x.Dish.DishId,
@@ -759,10 +765,10 @@ namespace Service
                         TasteNames = x.Dish.DishTastes?
                             .Select(dt => dt.Taste?.Name ?? string.Empty)
                             .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new(),
-                        DietaryPreferenceNames = x.Dish.DishDietaryPreferences?
-                            .Select(ddp => ddp.DietaryPreference?.Name ?? string.Empty)
-                            .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
-                    }).ToList()
+                    }).ToList(),
+                    DietaryPreferenceNames = branch.Vendor?.VendorDietaryPreferences?
+                        .Select(vdp => vdp.DietaryPreference?.Name ?? string.Empty)
+                        .Where(n => !string.IsNullOrEmpty(n)).ToList() ?? new()
                 };
             }).ToList();
 
@@ -774,3 +780,5 @@ namespace Service
         }
     }
 }
+
+

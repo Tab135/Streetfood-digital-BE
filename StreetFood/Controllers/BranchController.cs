@@ -46,7 +46,7 @@ namespace StreetFood.Controllers
                 var branchResponse = new BranchResponseDto
                 {
                     BranchId = branch.BranchId,
-                    VendorId = branch.VendorId,
+                    VendorId = branch.VendorId ?? 0,
                     ManagerId = branch.ManagerId,
                     Name = branch.Name,
                     PhoneNumber = branch.PhoneNumber,
@@ -60,6 +60,8 @@ namespace StreetFood.Controllers
                     UpdatedAt = branch.UpdatedAt,
                     IsVerified = branch.IsVerified,
                     AvgRating = branch.AvgRating,
+                    TotalReviewCount = branch.TotalReviewCount,
+                    TotalRatingSum = branch.TotalRatingSum,
                     IsActive = branch.IsActive,
                     IsSubscribed = branch.IsSubscribed
                 };

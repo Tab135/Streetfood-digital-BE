@@ -36,6 +36,7 @@ namespace BO.Entities
         public virtual User VendorOwner { get; set; }
         public virtual ICollection<Branch> Branches { get; set; }
         public virtual ICollection<Dish> Dishes { get; set; } = new List<Dish>();
+        public virtual ICollection<VendorDietaryPreference> VendorDietaryPreferences { get; set; } = new List<VendorDietaryPreference>();
         //public virtual Tier Tier { get; set; }
     }
 }

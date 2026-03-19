@@ -23,9 +23,5 @@ namespace BO.DTO.Dish
         /// </summary>
         public List<int>? TasteIds { get; set; }
 
-        /// <summary>
-        /// If provided, replaces all existing DietaryPreferenceIds for this dish
-        /// </summary>
-        public List<int>? DietaryPreferenceIds { get; set; }
     }
 }

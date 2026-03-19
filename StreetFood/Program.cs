@@ -64,6 +64,7 @@ namespace StreetFood
             // Service
             builder.Services.AddScoped<IPaymentService, PaymentService>();
             builder.Services.AddHostedService<SubscriptionExpiryService>();
+            builder.Services.AddHostedService<TierResetService>();
             // Register DAL
             builder.Services.AddScoped<UserDAO>();
             builder.Services.AddScoped<OtpVerifyDAO>();
@@ -72,6 +73,7 @@ namespace StreetFood
             // Dietary DAOs
             builder.Services.AddScoped<DietaryPreferenceDAO>();
             builder.Services.AddScoped<UserDietaryPreferenceDAO>();
+            builder.Services.AddScoped<VendorDietaryPreferenceDAO>();
             builder.Services.AddScoped<VendorDAO>();
             builder.Services.AddScoped<BranchDAO>();
             builder.Services.AddScoped<FeedbackTagDAO>();
@@ -86,6 +88,7 @@ namespace StreetFood
             builder.Services.AddScoped<CategoryDAO>();
             builder.Services.AddScoped<TasteDAO>();
             builder.Services.AddScoped<DishDAO>();
+            builder.Services.AddScoped<TierDAO>();
 
             // Register Repositories
             builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -94,8 +97,16 @@ namespace StreetFood
             builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();
             builder.Services.AddScoped<IDietaryPreferenceRepository, DietaryPreferenceRepository>();
             builder.Services.AddScoped<IUserDietaryPreferenceRepository, UserDietaryPreferenceRepository>();
+            builder.Services.AddScoped<IVendorDietaryPreferenceRepository, VendorDietaryPreferenceRepository>();
             builder.Services.AddScoped<IVendorRepository, VendorRepository>();
             builder.Services.AddScoped<IBranchRepository, BranchRepository>();
+            
+            builder.Services.AddScoped<DAL.GhostPinDAO>();
+            builder.Services.AddScoped<Repository.Interfaces.IGhostPinRepository, Repository.GhostPinRepository>();
+            builder.Services.AddScoped<Service.Interfaces.IGhostPinService, Service.GhostPinService>();
+            
+            builder.Services.AddScoped<ITierRepository, TierRepository>();
+            
             builder.Services.AddScoped<IFeedbackTagRepository, FeedbackTagRepository>();
             builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
             // Flow 2: Review & Rating Repositories
@@ -117,7 +128,9 @@ namespace StreetFood
             builder.Services.AddScoped<IBadgeService, BadgeService>();
             builder.Services.AddScoped<IDietaryPreferenceService, DietaryPreferenceService>();
             builder.Services.AddScoped<IUserDietaryPreferenceService, UserDietaryPreferenceService>();
+            builder.Services.AddScoped<IVendorDietaryPreferenceService, VendorDietaryPreferenceService>();
             builder.Services.AddScoped<IVendorService, VendorService>();
+            builder.Services.AddScoped<ITierService, TierService>();
             builder.Services.AddScoped<IBranchService, BranchService>();
             builder.Services.AddScoped<IFeedbackService, FeedbackService>();
             builder.Services.AddScoped<IFeedbackTagService, FeedbackTagService>();

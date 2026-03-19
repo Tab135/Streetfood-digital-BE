@@ -172,6 +172,16 @@ namespace DAL
                 .CountAsync();
         }
 
+        public async Task<int?> GetRatingOfRecentFeedbackAsync(int branchId, int offset)
+        {
+            return await _context.Feedbacks
+                .Where(f => f.BranchId == branchId)
+                .OrderByDescending(f => f.CreatedAt)
+                .Skip(offset)
+                .Select(f => (int?)f.Rating)
+                .FirstOrDefaultAsync();
+        }
+
         // Update feedback
         public async Task<Feedback> UpdateAsync(Feedback feedback)
         {
@@ -301,6 +311,29 @@ namespace DAL
                 .ToListAsync();
 
             return (items, totalCount);
+        }
+
+        // Velocity Limits
+        public async Task<int> GetDailyFeedbackCountAsync(int userId, DateTime date)
+        {
+            return await _context.Feedbacks
+                .Where(f => f.UserId == userId && f.CreatedAt.Date == date.Date)
+                .CountAsync();
+        }
+
+        public async Task<List<int>> GetReviewedBranchIdsTodayAsync(int userId, DateTime date)
+        {
+            return await _context.Feedbacks
+                .Where(f => f.UserId == userId && f.CreatedAt.Date == date.Date)
+                .Select(f => f.BranchId)
+                .Distinct()
+                .ToListAsync();
+        }
+
+        public async Task<bool> HasReviewedBranchTodayAsync(int userId, int branchId, DateTime date)
+        {
+            return await _context.Feedbacks
+                .AnyAsync(f => f.UserId == userId && f.BranchId == branchId && f.CreatedAt.Date == date.Date);
         }
     }
 }

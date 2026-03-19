@@ -11,7 +11,7 @@ namespace BO.Entities
         public int BranchId { get; set; }
 
         [ForeignKey("Vendor")]
-        public int VendorId { get; set; }
+        public int? VendorId { get; set; }
 
         [ForeignKey("Manager")]
         public int? ManagerId { get; set; }
@@ -22,11 +22,11 @@ namespace BO.Entities
 
         [Phone]
         [StringLength(50)]
-        public string PhoneNumber { get; set; }
+        public string? PhoneNumber { get; set; }
 
         [EmailAddress]
         [StringLength(255)]
-        public string Email { get; set; }
+        public string? Email { get; set; }
 
         [Required]
         public string AddressDetail { get; set; }
@@ -60,7 +60,19 @@ namespace BO.Entities
         /// <summary>Date when the paid subscription expires (null = never paid)</summary>
         public DateTime? SubscriptionExpiresAt { get; set; }
 
+        public DateTime? LastTierResetAt { get; set; }
+
+        // --- Tier Configuration ---
+        public int TierId { get; set; } = 2; // Default to Silver (2)
+
+        public int BatchReviewCount { get; set; } = 0;
+
+        public int BatchRatingSum { get; set; } = 0;
+
         // Navigation properties
+        [ForeignKey("TierId")]
+        public virtual Tier Tier { get; set; }
+        
         public virtual Vendor Vendor { get; set; }
         public virtual User Manager { get; set; }
         public virtual ICollection<WorkSchedule> WorkSchedules { get; set; }
