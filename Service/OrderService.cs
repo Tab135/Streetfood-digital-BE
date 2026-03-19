@@ -118,8 +118,10 @@ public class OrderService : IOrderService
             throw new DomainExceptions("Pending orders are not visible to vendors before payment");
         }
 
-        var effectiveStatus = status ?? OrderStatus.AwaitingVendorConfirmation;
-        var (orders, totalCount) = await _orderRepository.GetByBranchIds(branchIds, pageNumber, pageSize, effectiveStatus);
+        var effectiveStatuses = status.HasValue
+            ? new List<OrderStatus> { status.Value }
+            : new List<OrderStatus> { OrderStatus.AwaitingVendorConfirmation };
+        var (orders, totalCount) = await _orderRepository.GetByBranchIds(branchIds, pageNumber, pageSize, effectiveStatuses);
         var items = orders.Select(MapToDto).ToList();
 
         return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
@@ -158,8 +160,17 @@ public class OrderService : IOrderService
             pageSize = 10;
         }
 
-        var effectiveStatus = status ?? OrderStatus.AwaitingVendorConfirmation;
-        var (orders, totalCount) = await _orderRepository.GetByBranchIds(new List<int> { branchId }, pageNumber, pageSize, effectiveStatus);
+        var effectiveStatuses = status.HasValue
+            ? new List<OrderStatus> { status.Value }
+            : new List<OrderStatus>
+            {
+                OrderStatus.AwaitingVendorConfirmation,
+                OrderStatus.Paid,
+                OrderStatus.Cancelled,
+                OrderStatus.Complete
+            };
+
+        var (orders, totalCount) = await _orderRepository.GetByBranchIds(new List<int> { branchId }, pageNumber, pageSize, effectiveStatuses);
         var items = orders.Select(MapToDto).ToList();
 
         return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
