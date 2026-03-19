@@ -28,37 +28,6 @@ namespace StreetFood.Controllers
         
         // -- GhostPin migrated endpoints --
 
-        [HttpPost("{branchId}/approve")]
-        [Authorize(Roles = "Moderator,Admin")]
-        public async Task<IActionResult> ApproveUserBranch(int branchId)
-        {
-            var branch = await _branchService.ApproveUserBranchAsync(branchId);
-            return Ok(new { message = "User Branch approved", data = branch });
-        }
-
-        [HttpPost("{branchId}/reject")]
-        [Authorize(Roles = "Moderator,Admin")]
-        public async Task<IActionResult> RejectUserBranch(int branchId, [FromBody] RejectUserBranchRequest request)
-        {
-            var branch = await _branchService.RejectUserBranchAsync(branchId, request);
-            return Ok(new { message = "User Branch rejected", data = branch });
-        }
-
-        [HttpPost("{branchId}/audit")]
-        [Authorize(Roles = "Moderator,Admin")]
-        public async Task<IActionResult> AuditUserBranch(int branchId, [FromBody] AuditUserBranchRequest request)
-        {
-            try
-            {
-                var branch = await _branchService.AuditUserBranchAsync(branchId, request);
-                return Ok(new { message = "Audit complete", data = branch });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
         [HttpPost("{branchId}/claim")]
         [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> ClaimUserBranch(int branchId, [FromBody] ClaimUserBranchRequest request)

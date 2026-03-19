@@ -14,9 +14,6 @@ namespace Service.Interfaces
         Task<BranchResponseDto> GetBranchByIdAsync(int branchId);
         
         // User Branch specifics (Replacing GhostPin logic)
-        Task<BranchResponseDto> ApproveUserBranchAsync(int branchId);
-        Task<BranchResponseDto> RejectUserBranchAsync(int branchId, RejectUserBranchRequest request);
-        Task<BranchResponseDto> AuditUserBranchAsync(int branchId, AuditUserBranchRequest request);
         Task<object> ClaimUserBranchAsync(int branchId, int vendorId, int userId, ClaimUserBranchRequest request);
 
         Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize);
