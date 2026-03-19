@@ -726,7 +726,12 @@ namespace Service.PaymentsService
                 var branch = await _branchRepo.GetByIdAsync(order.BranchId)
                     ?? throw new DomainExceptions("Branch not found when confirming payment");
 
-                var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId)
+                if (!branch.VendorId.HasValue || branch.VendorId.Value <= 0)
+                {
+                    throw new DomainExceptions("Vendor not assigned to branch when confirming payment");
+                }
+
+                var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value)
                     ?? throw new DomainExceptions("Vendor not found when confirming payment");
 
                 // Instead of adding balance here, it will be handled when the vendor decides (OrderService)

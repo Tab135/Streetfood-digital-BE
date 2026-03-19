@@ -16,6 +16,9 @@ namespace BO.Entities
         [ForeignKey("Manager")]
         public int? ManagerId { get; set; }
 
+        [ForeignKey("CreatedBy")]
+        public int? CreatedById { get; set; }
+
         [Required]
         [StringLength(255)]
         public string Name { get; set; }
@@ -75,6 +78,7 @@ namespace BO.Entities
         
         public virtual Vendor Vendor { get; set; }
         public virtual User Manager { get; set; }
+        public virtual User CreatedBy { get; set; }
         public virtual ICollection<WorkSchedule> WorkSchedules { get; set; }
         public virtual ICollection<DayOff> DayOffs { get; set; }
         public virtual ICollection<BranchImage> BranchImages { get; set; }

@@ -13,6 +13,7 @@ namespace BO.DTO.Branch
         public string? RejectReason { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public bool IsCreatedByOwner { get; set; }
         public PendingBranchInfo Branch { get; set; }
 
         public class PendingBranchInfo
