@@ -50,6 +50,28 @@ namespace DAL
                 .ToListAsync();
         }
 
+        public async Task<(List<Branch> items, int totalCount)> GetByCreatedByIdAsync(int userId, int pageNumber, int pageSize)
+        {
+            var query = _context.Branches
+                .AsNoTracking()
+                .Where(b => b.CreatedById == userId && b.VendorId == null);
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .AsSplitQuery()
+                .Include(b => b.Tier)
+                .Include(b => b.WorkSchedules)
+                .Include(b => b.DayOffs)
+                .Include(b => b.BranchImages)
+                .OrderByDescending(b => b.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
         public async Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
         {
             var query = _context.Branches
