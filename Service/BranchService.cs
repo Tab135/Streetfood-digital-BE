@@ -44,6 +44,7 @@ namespace Service
                 VendorId = vendorId,
                 ManagerId = vendor.UserId,
                 Name = createBranchDto.Name,
+                CreatedById = userId,
                 PhoneNumber = createBranchDto.PhoneNumber,
                 Email = createBranchDto.Email,
                 AddressDetail = createBranchDto.AddressDetail,
@@ -178,6 +179,14 @@ namespace Service
             }
 
             return await MapToResponseDtoAsync(branch);
+        }
+
+        public async Task<PaginatedResponse<BranchResponseDto>> GetMyGhostPinBranchesAsync(int userId, int pageNumber, int pageSize)
+        {
+            var (branches, totalCount) = await _branchRepository.GetByCreatedByIdAsync(userId, pageNumber, pageSize);
+            var requests = await _branchRepository.GetRegisterRequestsByBranchIdsAsync(branches.Select(b => b.BranchId).ToList());
+            var items = branches.Select(b => MapToResponseDto(b, requests.GetValueOrDefault(b.BranchId))).ToList();
+            return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
@@ -374,6 +383,7 @@ namespace Service
                         BranchId = r.Branch.BranchId,
                         VendorId = r.Branch.VendorId ?? 0,
                         ManagerId = r.Branch.ManagerId,
+                        CreatedById = r.Branch.CreatedById,
                         Name = r.Branch.Name,
                         PhoneNumber = r.Branch.PhoneNumber,
                         Email = r.Branch.Email,

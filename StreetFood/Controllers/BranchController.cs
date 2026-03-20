@@ -51,6 +51,27 @@ namespace StreetFood.Controllers
             }
         }
 
+        [HttpGet("my-ghost-pin")]
+        [Authorize]
+        public async Task<IActionResult> GetMyGhostPinBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var branches = await _branchService.GetMyGhostPinBranchesAsync(userId, pageNumber, pageSize);
+                return Ok(new { message = "Ghost pin branches retrieved successfully", data = branches });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPost("user")]
         [Authorize]
         public async Task<IActionResult> CreateUserBranch([FromBody] CreateUserBranchRequest request)

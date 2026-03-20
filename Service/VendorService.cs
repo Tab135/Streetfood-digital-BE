@@ -67,7 +67,8 @@ namespace Service
                 IsVerified = false,
                 IsActive = false, // Not active until verified
                 IsSubscribed = false,
-                AvgRating = 0
+                AvgRating = 0,
+                CreatedById = userId
             };
 
             var createdBranch = await _branchRepository.CreateAsync(defaultBranch);
