@@ -176,6 +176,47 @@ public class OrderService : IOrderService
         return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
     }
 
+    public async Task<PaginatedResponse<OrderResponseDto>> GetManagerOrdersAsync(int managerUserId, int pageNumber, int pageSize, OrderStatus? status = null)
+    {
+        var branches = await _branchRepository.GetAllByManagerIdAsync(managerUserId);
+        if (branches.Count == 0)
+        {
+            throw new DomainExceptions("No branch assigned to this manager", "ERR_NOT_FOUND");
+        }
+
+        var branchIds = branches.Select(b => b.BranchId).ToList();
+
+        if (status == OrderStatus.Pending)
+        {
+            throw new DomainExceptions("Pending orders are not visible to managers before payment");
+        }
+
+        if (pageNumber <= 0)
+        {
+            pageNumber = 1;
+        }
+
+        if (pageSize <= 0)
+        {
+            pageSize = 10;
+        }
+
+        var effectiveStatuses = status.HasValue
+            ? new List<OrderStatus> { status.Value }
+            : new List<OrderStatus>
+            {
+                OrderStatus.AwaitingVendorConfirmation,
+                OrderStatus.Paid,
+                OrderStatus.Cancelled,
+                OrderStatus.Complete
+            };
+
+        var (orders, totalCount) = await _orderRepository.GetByBranchIds(branchIds, pageNumber, pageSize, effectiveStatuses);
+        var items = orders.Select(MapToDto).ToList();
+
+        return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
+    }
+
     public async Task<OrderPickupCodeResponseDto> GetOrderPickupCodeAsync(int orderId, int userId)
     {
         var order = await _orderRepository.GetById(orderId)

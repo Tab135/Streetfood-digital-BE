@@ -113,8 +113,28 @@ public class OrderController : ControllerBase
         });
     }
 
+    [HttpGet("manager/orders")]
+    [Authorize(Roles = "Manager")]
+    public async Task<IActionResult> GetManagerOrders(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] BO.Entities.OrderStatus? status = null)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var orders = await _orderService.GetManagerOrdersAsync(userId, pageNumber, pageSize, status);
+        return Ok(new
+        {
+            message = "Get manager orders successfully",
+            data = orders
+        });
+    }
+
     [HttpPut("vendor/orders/{id}/decision")]
-    [Authorize(Roles = "Vendor")]
+    [Authorize(Roles = "Vendor,Manager")]
     public async Task<IActionResult> VendorDecision(int id, [FromQuery] bool approve)
     {
         if (!TryGetCurrentUserId(out var userId))
@@ -131,7 +151,7 @@ public class OrderController : ControllerBase
     }
 
     [HttpPut("vendor/orders/{id}/complete")]
-    [Authorize(Roles = "Vendor")]
+    [Authorize(Roles = "Vendor,Manager")]
     public async Task<IActionResult> VendorComplete(int id, [FromQuery] string verificationCode)
     {
         if (!TryGetCurrentUserId(out var userId))

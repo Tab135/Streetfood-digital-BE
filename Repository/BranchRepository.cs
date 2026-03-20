@@ -41,6 +41,11 @@ namespace Repository
             return await _branchDAO.GetByVendorIdAsync(vendorId, pageNumber, pageSize);
         }
 
+        public async Task<List<Branch>> GetAllByManagerIdAsync(int managerUserId)
+        {
+            return await _branchDAO.GetAllByManagerIdAsync(managerUserId);
+        }
+
         public async Task<(List<Branch> items, int totalCount)> GetAllAsync(int pageNumber, int pageSize)
         {
             return await _branchDAO.GetAllAsync(pageNumber, pageSize);

@@ -93,6 +93,19 @@ namespace DAL
             return (items, totalCount);
         }
 
+        public async Task<List<Branch>> GetAllByManagerIdAsync(int managerUserId)
+        {
+            return await _context.Branches
+                .AsNoTracking()
+                .AsSplitQuery()
+                .Where(b => b.ManagerId == managerUserId)
+                .Include(b => b.Tier)
+                .Include(b => b.WorkSchedules)
+                .Include(b => b.DayOffs)
+                .Include(b => b.BranchImages)
+                .ToListAsync();
+        }
+
         public async Task<(List<Branch> items, int totalCount)> GetAllAsync(int pageNumber, int pageSize)
         {
             var query = _context.Branches
