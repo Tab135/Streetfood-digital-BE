@@ -299,8 +299,8 @@ namespace StreetFood.Controllers
         {
             try
             {
-                var count = await _feedbackService.GetFeedbackCountByBranch(branchId);
-                return Ok(new { branchId, feedbackCount = count });
+                var result = await _feedbackService.GetFeedbackCountByBranch(branchId);
+                return Ok(result);
             }
             catch (Exception ex)
             {

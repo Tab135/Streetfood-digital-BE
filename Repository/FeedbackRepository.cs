@@ -74,6 +74,11 @@ namespace Repository
             return await _feedbackDAO.GetCountByBranchIdAsync(branchId);
         }
 
+        public async Task<Dictionary<int, int>> GetFeedbackCountByStarsAsync(int branchId)
+        {
+            return await _feedbackDAO.GetFeedbackCountByStarsAsync(branchId);
+        }
+
         public async Task<int?> GetRatingOfRecentFeedbackAsync(int branchId, int offset)
         {
             return await _feedbackDAO.GetRatingOfRecentFeedbackAsync(branchId, offset);
