@@ -1,3 +1,4 @@
+using BO.Common;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 using System.Threading.Tasks;
@@ -16,6 +17,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllTiers()
         {
             var result = await _tierService.GetAllTiersAsync();

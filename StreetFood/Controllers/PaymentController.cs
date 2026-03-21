@@ -1,4 +1,5 @@
-﻿using BO.DTO.Payments;
+﻿using BO.Common;
+using BO.DTO.Payments;
 using BO.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,6 +27,7 @@ namespace Ielts_System.Controllers.Payments
 
         [HttpPost("create-link")]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<PaymentLinkResult>), StatusCodes.Status200OK)]
         public async Task<ActionResult<PaymentLinkResult>> CreatePaymentLink([FromBody] CreatePaymentLinkDto request)
         {
             try
@@ -57,6 +59,7 @@ namespace Ielts_System.Controllers.Payments
 
         [HttpGet("status/{orderCode}")]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<PaymentStatusResponse>), StatusCodes.Status200OK)]
         public async Task<ActionResult<PaymentStatusResponse>> GetPaymentStatus(long orderCode)
         {
             try
@@ -74,6 +77,7 @@ namespace Ielts_System.Controllers.Payments
 
         [HttpGet("history")]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<List<Payment>>), StatusCodes.Status200OK)]
         public async Task<ActionResult<List<Payment>>> GetPaymentHistory()
         {
             try
@@ -99,6 +103,7 @@ namespace Ielts_System.Controllers.Payments
 
         [HttpGet("success")]
         [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public IActionResult PaymentSuccess([FromQuery] long orderCode, [FromQuery] string? status)
         {
             _logger.LogInformation("Payment success redirect: OrderCode={OrderCode}, Status={Status}",
@@ -115,6 +120,7 @@ namespace Ielts_System.Controllers.Payments
 
         [HttpPost("confirm")]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<PaymentStatusResponse>), StatusCodes.Status200OK)]
         public async Task<ActionResult<PaymentStatusResponse>> ConfirmPayment([FromBody] ConfirmPaymentDto request)
         {
             try

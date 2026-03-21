@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO.Taste;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +23,7 @@ namespace StreetFood.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<TasteDto>), StatusCodes.Status201Created)]
         public async Task<IActionResult> Create([FromBody] CreateTasteDto createDto)
         {
             if (!ModelState.IsValid)
@@ -38,6 +40,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<TasteDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetById(int id)
         {
             var taste = await _tasteService.GetTasteByIdAsync(id);
@@ -48,6 +51,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<List<TasteDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()
         {
             var list = await _tasteService.GetAllTastesAsync();
@@ -56,6 +60,7 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<TasteDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateTasteDto updateDto)
         {
             if (!ModelState.IsValid)
@@ -73,6 +78,7 @@ namespace StreetFood.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> Delete(int id)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);

@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO.Branch;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,6 +31,7 @@ namespace StreetFood.Controllers
 
         [HttpGet("my-ghost-pin")]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<object>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMyGhostPinBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -51,6 +53,7 @@ namespace StreetFood.Controllers
 
         [HttpPost("user")]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateUserBranch([FromBody] CreateUserBranchRequest request)
         {
             try
@@ -81,6 +84,7 @@ namespace StreetFood.Controllers
         /// </summary>
         [HttpPost("vendor/{vendorId}")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateBranch(int vendorId, [FromBody] CreateBranchDto createBranchDto)
         {
             try
@@ -134,6 +138,7 @@ namespace StreetFood.Controllers
         /// Otherwise returns public data only
         /// </summary>
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBranchById(int id)
         {
             try
@@ -188,6 +193,7 @@ namespace StreetFood.Controllers
 
 
         [HttpGet("vendor/{vendorId}")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBranchesByVendorId(int vendorId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -229,6 +235,7 @@ namespace StreetFood.Controllers
         /// </summary>
         [HttpGet]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<BranchResponseDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -243,6 +250,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("active")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<ActiveBranchResponseDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetActiveBranches([FromQuery] ActiveBranchFilterDto filter, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -279,6 +287,7 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateBranch(int id, [FromBody] UpdateBranchDto updateBranchDto)
         {
             try
@@ -305,6 +314,7 @@ namespace StreetFood.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> DeleteBranch(int id)
         {
             try
@@ -329,6 +339,7 @@ namespace StreetFood.Controllers
 
         [HttpPost("{id}/submit-license")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> SubmitBranchLicense(int id, List<IFormFile> licenseImages)
         {
             try
@@ -384,6 +395,7 @@ namespace StreetFood.Controllers
 
         [HttpGet("{id}/license-status")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBranchLicenseStatus(int id)
         {
             try

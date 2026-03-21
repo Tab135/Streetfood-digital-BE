@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO.Users;
 using BO.DTO.Dietary;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +24,7 @@ namespace StreetFood.Controllers
 
         [HttpPost("user")]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> AssignPreferences([FromBody] List<int> dietaryPreferenceIds)
         {
             try
@@ -41,6 +43,7 @@ namespace StreetFood.Controllers
 
         [HttpGet("user")]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<List<DietaryPreferenceDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetPreferences()
         {
             try
@@ -59,6 +62,7 @@ namespace StreetFood.Controllers
 
         [HttpGet("users")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<object>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllUsersWithPreferences([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try

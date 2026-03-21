@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO.Auth;
 using BO.DTO.Password;
 using BO.DTO.Users;
@@ -97,6 +98,7 @@ namespace StreetFood.Controllers
         //}
 
         [HttpPost("google-login")]
+        [ProducesResponseType(typeof(ApiResponse<LoginResponse>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleAuthDto googleAuthDto)
         {
             try
@@ -141,6 +143,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost("facebook-login")]
+        [ProducesResponseType(typeof(ApiResponse<LoginResponse>), StatusCodes.Status200OK)]
         public async Task<IActionResult> FacebookLogin([FromBody] FacebookAuthDto facebookAuthDto)
         {
             try
@@ -181,6 +184,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost("phone-login")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> PhoneLogin([FromBody] PhoneLoginDto request)
         {
             try
@@ -206,6 +210,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost("phone-verify")]
+        [ProducesResponseType(typeof(ApiResponse<LoginResponse>), StatusCodes.Status200OK)]
         public async Task<IActionResult> PhoneVerify([FromBody] VerifyPhoneOtpDto request)
         {
             try

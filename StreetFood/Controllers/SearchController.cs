@@ -1,3 +1,4 @@
+using BO.Common;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 using System;
@@ -18,6 +19,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> Search([FromQuery] SearchFilterDto filter)
         {
             if (!ModelState.IsValid)
@@ -41,7 +43,7 @@ namespace StreetFood.Controllers
             else
             {
                 // If no keyword, they must provide at least Lat/Long or some other filter to make it valid
-                // But specifically ""n?u ch? có gps mà b?m vào search nhung ko nh?p mà ch? ch?n d? filter thì s? theo gps luôn""
+                // But specifically ""n?u ch? cï¿½ gps mï¿½ b?m vï¿½o search nhung ko nh?p mï¿½ ch? ch?n d? filter thï¿½ s? theo gps luï¿½n""
                 if (!filter.Lat.HasValue || !filter.Long.HasValue)
                 {
                     // Maybe return error? Or just search all? 

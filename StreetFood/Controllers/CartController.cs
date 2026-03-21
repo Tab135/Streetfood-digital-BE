@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO.Cart;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,7 @@ public class CartController : ControllerBase
     }
 
     [HttpGet("my")]
+    [ProducesResponseType(typeof(ApiResponse<CartResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMyCart()
     {
         if (!TryGetCurrentUserId(out var userId))
@@ -35,6 +37,7 @@ public class CartController : ControllerBase
     }
 
     [HttpPost("items")]
+    [ProducesResponseType(typeof(ApiResponse<CartResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> AddItem([FromBody] AddCartItemRequest request)
     {
         if (!ModelState.IsValid)
@@ -56,6 +59,7 @@ public class CartController : ControllerBase
     }
 
     [HttpPut("items/{dishId}")]
+    [ProducesResponseType(typeof(ApiResponse<CartResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateItemQuantity(int dishId, [FromBody] UpdateCartItemRequest request)
     {
         if (!ModelState.IsValid)
@@ -77,6 +81,7 @@ public class CartController : ControllerBase
     }
 
     [HttpDelete("items/{dishId}")]
+    [ProducesResponseType(typeof(ApiResponse<CartResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> RemoveItem(int dishId)
     {
         if (!TryGetCurrentUserId(out var userId))
@@ -93,6 +98,7 @@ public class CartController : ControllerBase
     }
 
     [HttpDelete("clear")]
+    [ProducesResponseType(typeof(ApiResponse<CartResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> ClearCart()
     {
         if (!TryGetCurrentUserId(out var userId))
@@ -109,6 +115,7 @@ public class CartController : ControllerBase
     }
 
     [HttpPost("checkout")]
+    [ProducesResponseType(typeof(ApiResponse<CheckoutCartResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> Checkout([FromBody] CheckoutCartRequest request)
     {
         if (!ModelState.IsValid)
