@@ -29,6 +29,7 @@ namespace DAL
                 .AsNoTracking()
                 .AsSplitQuery()
                 .Include(b => b.Vendor)
+                .Include(b => b.Tier)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -42,10 +43,33 @@ namespace DAL
                 .AsNoTracking()
                 .AsSplitQuery()
                 .Where(b => b.VendorId == vendorId)
+                .Include(b => b.Tier)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
                 .ToListAsync();
+        }
+
+        public async Task<(List<Branch> items, int totalCount)> GetByCreatedByIdAsync(int userId, int pageNumber, int pageSize)
+        {
+            var query = _context.Branches
+                .AsNoTracking()
+                .Where(b => b.CreatedById == userId && b.VendorId == null);
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .AsSplitQuery()
+                .Include(b => b.Tier)
+                .Include(b => b.WorkSchedules)
+                .Include(b => b.DayOffs)
+                .Include(b => b.BranchImages)
+                .OrderByDescending(b => b.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
         }
 
         public async Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
@@ -55,9 +79,10 @@ namespace DAL
                 .Where(b => b.VendorId == vendorId);
 
             var totalCount = await query.CountAsync();
-            
+
             var items = await query
                 .AsSplitQuery()
+                .Include(b => b.Tier)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -74,9 +99,10 @@ namespace DAL
                 .AsNoTracking();
 
             var totalCount = await query.CountAsync();
-            
+
             var items = await query
                 .AsSplitQuery()
+                .Include(b => b.Tier)
                 .Include(b => b.Vendor)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
@@ -95,15 +121,10 @@ namespace DAL
                 .Where(b => b.IsActive && b.IsVerified); // Only return verified and active branches
 
             var totalCount = await query.CountAsync();
-            
+
             var items = await query
                 .AsSplitQuery()
-                .Include(b => b.Vendor)
-                .Include(b => b.WorkSchedules)
-                .Include(b => b.DayOffs)
-                .Include(b => b.BranchImages)
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
+                .Include(b => b.Tier)
                 .ToListAsync();
 
             return (items, totalCount);
@@ -285,10 +306,11 @@ namespace DAL
         public async Task<(List<BranchRegisterRequest> items, int totalCount)> GetAllBranchRegisterRequestsAsync(int pageNumber, int pageSize)
         {
             var query = _context.BranchRegisterRequests
-                .AsNoTracking();
+                .AsNoTracking()
+                .Where(r => r.Status == RegisterVendorStatusEnum.Pending);
 
             var totalCount = await query.CountAsync();
-            
+
             var items = await query
                 .Include(r => r.Branch)
                     .ThenInclude(b => b.BranchImages)
@@ -313,7 +335,7 @@ namespace DAL
         }
 
         /// <summary>
-        /// Search vendors by keyword in branch name or dish name (case-insensitive).
+        /// Search vendors by keyword in vendor name or dish name (case-insensitive).
         /// Returns branches grouped by vendor.
         /// </summary>
         public async Task<List<Branch>> SearchVendorsWithBranchesAndDishesAsync(string keyword)
@@ -323,15 +345,12 @@ namespace DAL
                 return new List<Branch>();
             }
 
-            var searchPattern = $"%{keyword}%";
-
             var branches = await _context.Branches
                 .AsNoTracking()
                 .AsSplitQuery()
-                .Where(b => b.IsActive && b.IsVerified &&
-                    (EF.Functions.ILike(b.Name, searchPattern) ||
-                     b.BranchDishes.Any(bd => bd.Dish.IsActive && EF.Functions.ILike(bd.Dish.Name, searchPattern))))
+                .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
+                .Include(b => b.Tier)
                 .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.Category)
@@ -353,6 +372,8 @@ namespace DAL
                 .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
+                    .ThenInclude(v => v.VendorDietaryPreferences)
+                        .ThenInclude(vdp => vdp.DietaryPreference)
                 .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.Category)
@@ -360,10 +381,6 @@ namespace DAL
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.DishTastes)
                             .ThenInclude(dt => dt.Taste)
-                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
-                    .ThenInclude(bd => bd.Dish)
-                        .ThenInclude(d => d.DishDietaryPreferences)
-                            .ThenInclude(ddp => ddp.DietaryPreference)
                 .OrderByDescending(b => b.AvgRating)
                 .ThenBy(b => b.Name)
                 .ToListAsync();
@@ -387,6 +404,8 @@ namespace DAL
                 .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified)
                 .Include(b => b.Vendor)
+                    .ThenInclude(v => v.VendorDietaryPreferences)
+                        .ThenInclude(vdp => vdp.DietaryPreference)
                 .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.Category)
@@ -394,10 +413,6 @@ namespace DAL
                     .ThenInclude(bd => bd.Dish)
                         .ThenInclude(d => d.DishTastes)
                             .ThenInclude(dt => dt.Taste)
-                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
-                    .ThenInclude(bd => bd.Dish)
-                        .ThenInclude(d => d.DishDietaryPreferences)
-                            .ThenInclude(ddp => ddp.DietaryPreference)
                 .ToListAsync();
 
             bool hasDietaryFilter  = dietaryIds  != null && dietaryIds.Count  > 0;
@@ -430,50 +445,37 @@ namespace DAL
                     continue;
                 }
 
-                // Check if branch has at least one qualifying dish
-                bool hasQualifyingDish = branch.BranchDishes
-                    .Select(bd => bd.Dish)
-                    .Any(dish =>
+                // Dietary filter: checked at vendor level (not dish level)
+                if (hasDietaryFilter)
                 {
-                    // Price filter (must satisfy if provided)
-                    if (minPrice.HasValue && dish.Price < minPrice.Value) return false;
-                    if (maxPrice.HasValue && dish.Price > maxPrice.Value) return false;
-
-                    // Category filter (must satisfy if provided)
-                    if (hasCategoryFilter && !categoryIds!.Contains(dish.CategoryId)) return false;
-
-                    // If only price/category filters are provided, dish passes
-                    if (!hasDietaryFilter && !hasTasteFilter) return true;
-
-                    // GLOBAL OR LOGIC: Dish passes if it has ANY matching taste OR dietary preference
-                    bool passesFilter = false;
-
-                    if (hasTasteFilter)
-                    {
-                        var dishTasteIds = dish.DishTastes.Select(dt => dt.TasteId).ToHashSet();
-                        if (tasteIds!.Any(id => dishTasteIds.Contains(id)))
-                        {
-                            passesFilter = true;
-                        }
-                    }
-
-                    if (hasDietaryFilter)
-                    {
-                        var dishDietaryIds = dish.DishDietaryPreferences
-                            .Select(ddp => ddp.DietaryPreferenceId).ToHashSet();
-                        if (dietaryIds!.Any(id => dishDietaryIds.Contains(id)))
-                        {
-                            passesFilter = true;
-                        }
-                    }
-
-                    return passesFilter;
-                });
-
-                if (hasQualifyingDish)
-                {
-                    filteredBranches.Add((branch, distanceKm));
+                    var vendorDietaryIds = branch.Vendor.VendorDietaryPreferences
+                        .Select(vdp => vdp.DietaryPreferenceId).ToHashSet();
+                    if (!dietaryIds!.Any(vendorDietaryIds.Contains))
+                        continue;
                 }
+
+                // Dish-level filters: taste, price, category
+                bool hasDishLevelFilter = hasTasteFilter || hasPriceFilter || hasCategoryFilter;
+                if (hasDishLevelFilter)
+                {
+                    bool hasQualifyingDish = branch.BranchDishes
+                        .Select(bd => bd.Dish)
+                        .Any(dish =>
+                        {
+                            if (minPrice.HasValue && dish.Price < minPrice.Value) return false;
+                            if (maxPrice.HasValue && dish.Price > maxPrice.Value) return false;
+                            if (hasCategoryFilter && !categoryIds!.Contains(dish.CategoryId)) return false;
+                            if (!hasTasteFilter) return true;
+
+                            var dishTasteIds = dish.DishTastes.Select(dt => dt.TasteId).ToHashSet();
+                            return tasteIds!.Any(id => dishTasteIds.Contains(id));
+                        });
+
+                    if (!hasQualifyingDish)
+                        continue;
+                }
+
+                filteredBranches.Add((branch, distanceKm));
             }
 
             // Sort by distance (nearest first) and return all
@@ -482,7 +484,7 @@ namespace DAL
                 .ToList();
         }
 
-        public async Task UpdateBranchMetricsOnFeedbackCreatedAsync(int branchId, int rating)
+        public async Task UpdateBranchMetricsAndTierAsync(int branchId, int rating, int newBatchReviewCount, int newBatchRatingSum, int newTierId, bool banBranch)
         {
             await _context.Branches
                 .Where(b => b.BranchId == branchId)
@@ -490,6 +492,10 @@ namespace DAL
                     .SetProperty(b => b.TotalReviewCount, b => b.TotalReviewCount + 1)
                     .SetProperty(b => b.TotalRatingSum, b => b.TotalRatingSum + rating)
                     .SetProperty(b => b.AvgRating, b => (double)(b.TotalRatingSum + rating) / (b.TotalReviewCount + 1))
+                    .SetProperty(b => b.BatchReviewCount, b => newBatchReviewCount)
+                    .SetProperty(b => b.BatchRatingSum, b => newBatchRatingSum)
+                    .SetProperty(b => b.TierId, b => newTierId)
+                    .SetProperty(b => b.IsActive, b => banBranch ? false : b.IsActive)
                 );
         }
 
@@ -533,12 +539,24 @@ namespace DAL
             int newTotal = metrics?.Total ?? 0;
             double newAvg = newCount > 0 ? (double)newTotal / newCount : 0;
 
+            var latest20Feedbacks = await _context.Feedbacks
+                .Where(f => f.BranchId == branchId)
+                .OrderByDescending(f => f.CreatedAt)
+                .Take(20)
+                .Select(f => f.Rating)
+                .ToListAsync();
+
+            int batchCount = latest20Feedbacks.Count;
+            int batchTotal = latest20Feedbacks.Sum();
+
             await _context.Branches
                 .Where(b => b.BranchId == branchId)
                 .ExecuteUpdateAsync(s => s
                     .SetProperty(b => b.TotalReviewCount, newCount)
                     .SetProperty(b => b.TotalRatingSum, newTotal)
                     .SetProperty(b => b.AvgRating, newAvg)
+                    .SetProperty(b => b.BatchReviewCount, batchCount)
+                    .SetProperty(b => b.BatchRatingSum, batchTotal)
                 );
         }
 

@@ -43,5 +43,7 @@ public class User
     // Setup flags
     public bool UserInfoSetup { get; set; } = false;
     public bool DietarySetup { get; set; } = false;
+
+    public decimal MoneyBalance { get; set; } = 0m;
 }
 

@@ -110,7 +110,7 @@ public class VendorReplyService : IVendorReplyService
         if (branch.ManagerId == userId) return;
 
         // Check if user is vendor owner
-        var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+        var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
         if (vendor != null && vendor.UserId == userId) return;
 
         throw new UnauthorizedAccessException("Only the branch manager or vendor owner can reply");

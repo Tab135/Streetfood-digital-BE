@@ -24,8 +24,8 @@ namespace DAL
         // CORE METHODS (KEPT)
         // =================================================================
 
-        public async Task<Payment> CreatePayment(int userId, long orderCode, int? branchId,
-             int amount, string description, string? checkoutUrl = null)
+           public async Task<Payment> CreatePayment(int userId, long orderCode, int? branchId,
+               int amount, string description, string? checkoutUrl = null, int? orderId = null)
         {
             try
             {
@@ -38,6 +38,7 @@ namespace DAL
                     Description = description,
                     Status = "PENDING",
                     CheckoutUrl = checkoutUrl,
+                    OrderId = orderId,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -62,6 +63,14 @@ namespace DAL
             return await _context.Payments
                 .Include(p => p.User)
                 .FirstOrDefaultAsync(p => p.OrderCode == orderCode);
+        }
+
+        public async Task<Payment?> GetLatestPaymentByOrderId(int orderId)
+        {
+            return await _context.Payments
+                .Where(p => p.OrderId == orderId)
+                .OrderByDescending(p => p.CreatedAt)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<Payment?> GetPaymentById(int id)

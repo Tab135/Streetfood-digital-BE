@@ -31,6 +31,11 @@ namespace Repository
             return await _branchDAO.GetAllByVendorIdAsync(vendorId);
         }
 
+        public async Task<(List<Branch> items, int totalCount)> GetByCreatedByIdAsync(int userId, int pageNumber, int pageSize)
+        {
+            return await _branchDAO.GetByCreatedByIdAsync(userId, pageNumber, pageSize);
+        }
+
         public async Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
         {
             return await _branchDAO.GetByVendorIdAsync(vendorId, pageNumber, pageSize);
@@ -188,9 +193,9 @@ namespace Repository
                 categoryIds);
         }
 
-        public async Task UpdateBranchMetricsOnFeedbackCreatedAsync(int branchId, int rating)
+        public async Task UpdateBranchMetricsAndTierAsync(int branchId, int rating, int newBatchReviewCount, int newBatchRatingSum, int newTierId, bool banBranch)
         {
-            await _branchDAO.UpdateBranchMetricsOnFeedbackCreatedAsync(branchId, rating);
+            await _branchDAO.UpdateBranchMetricsAndTierAsync(branchId, rating, newBatchReviewCount, newBatchRatingSum, newTierId, banBranch);
         }
 
         public async Task UpdateBranchMetricsOnFeedbackUpdatedAsync(int branchId, int oldRating, int newRating)

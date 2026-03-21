@@ -9,6 +9,7 @@ namespace Repository.Interfaces
         Task<Branch> CreateAsync(Branch branch);
         Task<Branch> GetByIdAsync(int branchId);
         Task<List<Branch>> GetAllByVendorIdAsync(int vendorId);  // Non-paginated for internal use
+        Task<(List<Branch> items, int totalCount)> GetByCreatedByIdAsync(int userId, int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetAllAsync(int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetActiveBranchesAsync(int pageNumber, int pageSize);
@@ -55,7 +56,7 @@ namespace Repository.Interfaces
             decimal? maxPrice,
             List<int>? categoryIds);
 
-        Task UpdateBranchMetricsOnFeedbackCreatedAsync(int branchId, int rating);
+        Task UpdateBranchMetricsAndTierAsync(int branchId, int rating, int newBatchReviewCount, int newBatchRatingSum, int newTierId, bool banBranch);
         Task UpdateBranchMetricsOnFeedbackUpdatedAsync(int branchId, int oldRating, int newRating);
         Task UpdateBranchMetricsOnFeedbackDeletedAsync(int branchId, int rating);
         Task RecalculateBranchMetricsAsync(int branchId);

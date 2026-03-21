@@ -20,6 +20,8 @@ namespace Repository.Interfaces
         // Rating and Statistics
         Task<double> GetAverageRatingByBranchId(int branchId);
         Task<int> GetCountByBranchId(int branchId);
+        Task<Dictionary<int, int>> GetFeedbackCountByStarsAsync(int branchId);
+        Task<int?> GetRatingOfRecentFeedbackAsync(int branchId, int offset);
         Task<(List<Feedback> items, int totalCount)> GetByRatingRange(
             int branchId, int minRating, int maxRating, int pageNumber, int pageSize);
 
@@ -34,5 +36,10 @@ namespace Repository.Interfaces
         Task<List<FeedbackTagAssociation>> GetTagsByFeedbackId(int feedbackId);
         Task<bool> RemoveTag(int feedbackTagId);
         Task RemoveAllTags(int feedbackId);
+
+        // Velocity Limits
+        Task<int> GetDailyFeedbackCountAsync(int userId, DateTime date);
+        Task<List<int>> GetReviewedBranchIdsTodayAsync(int userId, DateTime date);
+        Task<bool> HasReviewedBranchTodayAsync(int userId, int branchId, DateTime date);
     }
 }

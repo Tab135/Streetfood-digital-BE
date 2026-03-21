@@ -18,22 +18,19 @@ namespace Service
         private readonly ITasteRepository _tasteRepository;
         private readonly IBranchRepository _branchRepository;
         private readonly IVendorRepository _vendorRepository;
-        private readonly IDietaryPreferenceRepository _dietaryPreferenceRepository;
 
         public DishService(
             IDishRepository dishRepository,
             ICategoryRepository categoryRepository,
             ITasteRepository tasteRepository,
             IBranchRepository branchRepository,
-            IVendorRepository vendorRepository,
-            IDietaryPreferenceRepository dietaryPreferenceRepository)
+            IVendorRepository vendorRepository)
         {
             _dishRepository = dishRepository ?? throw new ArgumentNullException(nameof(dishRepository));
             _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
             _tasteRepository = tasteRepository ?? throw new ArgumentNullException(nameof(tasteRepository));
             _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
             _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
-            _dietaryPreferenceRepository = dietaryPreferenceRepository ?? throw new ArgumentNullException(nameof(dietaryPreferenceRepository));
         }
 
         public async Task<DishResponse> CreateDishAsync(int vendorId, CreateDishRequest request, int userId, string imageUrl)
@@ -69,17 +66,6 @@ namespace Service
                 }
             }
 
-            // Validate all DietaryPreferenceIds exist
-            if (request.DietaryPreferenceIds != null && request.DietaryPreferenceIds.Count > 0)
-            {
-                var existingPrefs = await _dietaryPreferenceRepository.GetByIdsAsync(request.DietaryPreferenceIds);
-                var missingPrefIds = request.DietaryPreferenceIds.Except(existingPrefs.Select(p => p.DietaryPreferenceId)).ToList();
-                if (missingPrefIds.Any())
-                {
-                    throw new DomainExceptions($"DietaryPreference IDs not found: {string.Join(", ", missingPrefIds)}");
-                }
-            }
-
             // Step 1: Create Dish -> SaveChanges (to generate DishId)
             var dish = new Dish
             {
@@ -104,18 +90,6 @@ namespace Service
                 }).ToList();
 
                 await _dishRepository.AddDishTastesAsync(dishTastes);
-            }
-
-            // Step 3: Create DishDietaryPreference rows
-            if (request.DietaryPreferenceIds != null && request.DietaryPreferenceIds.Count > 0)
-            {
-                var dishDietaryPreferences = request.DietaryPreferenceIds.Select(prefId => new DishDietaryPreference
-                {
-                    DishId = createdDish.DishId,
-                    DietaryPreferenceId = prefId
-                }).ToList();
-
-                await _dishRepository.AddDishDietaryPreferencesAsync(dishDietaryPreferences);
             }
 
             // Reload dish with full navigation data
@@ -234,35 +208,6 @@ namespace Service
                 }
             }
 
-            // Update DietaryPreferenceIds if provided (replace all)
-            if (request.DietaryPreferenceIds != null)
-            {
-                // Validate DietaryPreferenceIds
-                if (request.DietaryPreferenceIds.Count > 0)
-                {
-                    var existingPrefs = await _dietaryPreferenceRepository.GetByIdsAsync(request.DietaryPreferenceIds);
-                    var missingPrefIds = request.DietaryPreferenceIds.Except(existingPrefs.Select(p => p.DietaryPreferenceId)).ToList();
-                    if (missingPrefIds.Any())
-                    {
-                        throw new DomainExceptions($"DietaryPreference IDs not found: {string.Join(", ", missingPrefIds)}");
-                    }
-                }
-
-                // Remove existing then add new
-                await _dishRepository.RemoveDishDietaryPreferencesAsync(dishId);
-
-                if (request.DietaryPreferenceIds.Count > 0)
-                {
-                    var dishDietaryPreferences = request.DietaryPreferenceIds.Select(prefId => new DishDietaryPreference
-                    {
-                        DishId = dishId,
-                        DietaryPreferenceId = prefId
-                    }).ToList();
-
-                    await _dishRepository.AddDishDietaryPreferencesAsync(dishDietaryPreferences);
-                }
-            }
-
             // Reload full dish
             var fullDish = await _dishRepository.GetByIdAsync(dishId);
             return MapToResponse(fullDish!);
@@ -292,7 +237,7 @@ namespace Service
             if (branch == null)
                 throw new DomainExceptions($"Branch with ID {branchId} not found");
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             if (vendor == null || vendor.UserId != userId)
                 throw new DomainExceptions("You do not own this branch");
 
@@ -329,7 +274,7 @@ namespace Service
             if (branch == null)
                 throw new DomainExceptions($"Branch with ID {branchId} not found");
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId);
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             if (vendor == null || vendor.UserId != userId)
                 throw new DomainExceptions("You do not own this branch");
 
@@ -400,10 +345,6 @@ namespace Service
                 TasteNames = dish.DishTastes?
                     .Where(dt => dt.Taste != null)
                     .Select(dt => dt.Taste.Name)
-                    .ToList() ?? new List<string>(),
-                DietaryPreferenceNames = dish.DishDietaryPreferences?
-                    .Where(ddp => ddp.DietaryPreference != null)
-                    .Select(ddp => ddp.DietaryPreference.Name)
                     .ToList() ?? new List<string>()
             };
         }

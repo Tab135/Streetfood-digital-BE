@@ -19,11 +19,14 @@ namespace Service.Interfaces
 
         // Rating and Statistics
         Task<double> GetAverageRatingByBranch(int branchId);
-        Task<int> GetFeedbackCountByBranch(int branchId);
+        Task<Dictionary<string, object>> GetFeedbackCountByBranch(int branchId);
         Task<PaginatedResponse<FeedbackResponseDto>> GetFeedbackByRatingRange(
             int branchId, int minRating, int maxRating, int pageNumber, int pageSize);
 
         // Image Reference (for viewing)
         Task<List<FeedbackImageDto>> GetFeedbackImages(int feedbackId);
+
+        // Velocity Limits
+        Task<VelocityCheckDto> CheckVelocityAsync(int userId);
     }
 }

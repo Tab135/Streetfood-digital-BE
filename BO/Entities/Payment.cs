@@ -17,6 +17,9 @@ namespace BO.Entities
         /// <summary>Branch this payment is for (vendor subscription flow)</summary>
         public int? BranchId { get; set; }
 
+        /// <summary>Order this payment is for (food ordering flow)</summary>
+        public int? OrderId { get; set; }
+
         [Required]
         public long OrderCode { get; set; }
 
@@ -49,5 +52,6 @@ namespace BO.Entities
 
         // Navigation the user 
         public User? User { get; set; }
+        public Order? Order { get; set; }
     }
 }

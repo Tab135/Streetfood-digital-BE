@@ -93,6 +93,23 @@ namespace Service
                     throw new Exception("You have already reviewed this order");
             }
 
+            // Velocity Limits - Check daily total limit (3 reviews per day)
+            var today = DateTime.UtcNow.Date;
+            const int dailyLimit = 3;
+
+            var todayCount = await _feedbackRepository.GetDailyFeedbackCountAsync(userId, today);
+            if (todayCount >= dailyLimit)
+            {
+                throw new Exception("You have reached the maximum number of reviews allowed for today.");
+            }
+
+            // Velocity Limits - Check one review per branch per day
+            var hasReviewedBranchToday = await _feedbackRepository.HasReviewedBranchTodayAsync(userId, createFeedbackDto.BranchId, today);
+            if (hasReviewedBranchToday)
+            {
+                throw new Exception("You have already reviewed this branch today.");
+            }
+
             // Validate rating
             if (createFeedbackDto.Rating < 1 || createFeedbackDto.Rating > 5)
             {
@@ -352,7 +369,7 @@ namespace Service
             return await _feedbackRepository.GetAverageRatingByBranchId(branchId);
         }
 
-        public async Task<int> GetFeedbackCountByBranch(int branchId)
+        public async Task<Dictionary<string, object>> GetFeedbackCountByBranch(int branchId)
         {
             // Verify branch exists
             var branch = await _branchRepository.GetByIdAsync(branchId);
@@ -361,7 +378,25 @@ namespace Service
                 throw new Exception($"Branch with ID {branchId} not found");
             }
 
-            return await _feedbackRepository.GetCountByBranchId(branchId);
+            var count = await _feedbackRepository.GetCountByBranchId(branchId);
+            var starCounts = await _feedbackRepository.GetFeedbackCountByStarsAsync(branchId);
+
+            var result = new Dictionary<string, object>
+            {
+                { "branchId", branchId },
+                { "feedbackCount", count },
+                { "details", new Dictionary<string, int>
+                    {
+                        { "5", starCounts.GetValueOrDefault(5, 0) },
+                        { "4", starCounts.GetValueOrDefault(4, 0) },
+                        { "3", starCounts.GetValueOrDefault(3, 0) },
+                        { "2", starCounts.GetValueOrDefault(2, 0) },
+                        { "1", starCounts.GetValueOrDefault(1, 0) }
+                    }
+                }
+            };
+
+            return result;
         }
 
         public async Task<PaginatedResponse<FeedbackResponseDto>> GetFeedbackByRatingRange(
@@ -489,6 +524,22 @@ namespace Service
                 NetScore = upVotes - downVotes,
                 UserVote = userVote,
                 VendorReply = vendorReplyDto
+            };
+        }
+
+        public async Task<VelocityCheckDto> CheckVelocityAsync(int userId)
+        {
+            var today = DateTime.UtcNow.Date;
+            const int dailyLimit = 3;
+
+            var todayCount = await _feedbackRepository.GetDailyFeedbackCountAsync(userId, today);
+            var reviewedBranchIds = await _feedbackRepository.GetReviewedBranchIdsTodayAsync(userId, today);
+
+            return new VelocityCheckDto
+            {
+                RemainingTotalToday = Math.Max(0, dailyLimit - todayCount),
+                DailyLimit = dailyLimit,
+                ReviewedBranchIds = reviewedBranchIds
             };
         }
     }

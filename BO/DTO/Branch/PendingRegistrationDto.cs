@@ -13,6 +13,7 @@ namespace BO.DTO.Branch
         public string? RejectReason { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
+        public bool IsCreatedByOwner { get; set; }
         public PendingBranchInfo Branch { get; set; }
 
         public class PendingBranchInfo
@@ -20,6 +21,7 @@ namespace BO.DTO.Branch
             public int BranchId { get; set; }
             public int VendorId { get; set; }
             public int? ManagerId { get; set; }
+            public int? CreatedById { get; set; }
             public string Name { get; set; }
             public string PhoneNumber { get; set; }
             public string Email { get; set; }
@@ -32,9 +34,17 @@ namespace BO.DTO.Branch
             public DateTime? UpdatedAt { get; set; }
             public bool IsVerified { get; set; }
             public double AvgRating { get; set; }
+            public int TotalReviewCount { get; set; }
+            public int TotalRatingSum { get; set; }
+            public int BatchReviewCount { get; set; }
+            public int BatchRatingSum { get; set; }
             public bool IsActive { get; set; }
             public bool IsSubscribed { get; set; }
             public DateTime? SubscriptionExpiresAt { get; set; }
+            
+            public int TierId { get; set; }
+            public string TierName { get; set; }
+
             public List<BranchImageResponseDto> BranchImages { get; set; }
         }
     }

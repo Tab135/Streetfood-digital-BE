@@ -11,6 +11,11 @@ namespace BO.DTO.Payments
         public int BranchId { get; set; }
     }
 
+    public class CreateOrderPaymentLinkDto
+    {
+        public int OrderId { get; set; }
+    }
+
     public class ConfirmPaymentDto
     {
         public long OrderCode { get; set; }
@@ -38,5 +43,33 @@ namespace BO.DTO.Payments
         public DateTime CreatedAt { get; set; }
         public DateTime? PaidAt { get; set; }
         public string? TransactionCode { get; set; }
+    }
+
+    public class VendorPayoutRequestDto
+    {
+        [Range(1000, int.MaxValue, ErrorMessage = "Amount must be at least 1000")]
+        public int Amount { get; set; }
+
+        [Required]
+        [MaxLength(255)]
+        public string Description { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(20)]
+        public string ToBin { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(30)]
+        public string ToAccountNumber { get; set; } = string.Empty;
+
+        public List<string>? Category { get; set; }
+    }
+
+    public class VendorPayoutResponseDto
+    {
+        public string ReferenceId { get; set; } = string.Empty;
+        public string? PayoutId { get; set; }
+        public string? ApprovalState { get; set; }
+        public decimal CurrentVendorBalance { get; set; }
     }
 }

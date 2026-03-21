@@ -16,10 +16,87 @@ namespace StreetFood.Controllers
     public class BranchController : ControllerBase
     {
         private readonly IBranchService _branchService;
+        private readonly Service.PaymentsService.IPaymentService _paymentService;
 
-        public BranchController(IBranchService branchService)
+        public BranchController(IBranchService branchService, Service.PaymentsService.IPaymentService paymentService)
         {
             _branchService = branchService ?? throw new ArgumentNullException(nameof(branchService));
+            _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
+        }
+
+        /// <summary>
+        
+        // -- GhostPin migrated endpoints --
+
+        [HttpPost("{branchId}/claim")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> ClaimUserBranch(int branchId, [FromBody] ClaimUserBranchRequest request)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+                // Same logic as before
+                int vendorId = int.Parse(User.FindFirst("VendorId")?.Value ?? "-1");
+
+                var claimResult = (dynamic)await _branchService.ClaimUserBranchAsync(branchId, vendorId, userId, request);
+                int claimedBranchId = claimResult.BranchId;
+
+                var paymentLink = await _paymentService.CreatePaymentLink(userId, claimedBranchId);
+                return Ok(new { message = claimResult.Message, paymentLink = paymentLink.PaymentUrl });
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.Contains("Only verified")) return Conflict(new { message = ex.Message });
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("my-ghost-pin")]
+        [Authorize]
+        public async Task<IActionResult> GetMyGhostPinBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var branches = await _branchService.GetMyGhostPinBranchesAsync(userId, pageNumber, pageSize);
+                return Ok(new { message = "Ghost pin branches retrieved successfully", data = branches });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("user")]
+        [Authorize]
+        public async Task<IActionResult> CreateUserBranch([FromBody] CreateUserBranchRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var branchResponse = await _branchService.CreateUserBranchAsync(request, userId);
+
+                return CreatedAtAction(nameof(GetBranchById), new { id = branchResponse.BranchId }, branchResponse);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         /// <summary>
@@ -46,7 +123,7 @@ namespace StreetFood.Controllers
                 var branchResponse = new BranchResponseDto
                 {
                     BranchId = branch.BranchId,
-                    VendorId = branch.VendorId,
+                    VendorId = branch.VendorId ?? 0,
                     ManagerId = branch.ManagerId,
                     Name = branch.Name,
                     PhoneNumber = branch.PhoneNumber,
@@ -60,6 +137,8 @@ namespace StreetFood.Controllers
                     UpdatedAt = branch.UpdatedAt,
                     IsVerified = branch.IsVerified,
                     AvgRating = branch.AvgRating,
+                    TotalReviewCount = branch.TotalReviewCount,
+                    TotalRatingSum = branch.TotalRatingSum,
                     IsActive = branch.IsActive,
                     IsSubscribed = branch.IsSubscribed
                 };
@@ -713,3 +792,4 @@ namespace StreetFood.Controllers
         }
     }
 }
+
