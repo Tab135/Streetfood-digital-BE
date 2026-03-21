@@ -335,7 +335,10 @@ public class OrderService : IOrderService
         var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value)
             ?? throw new DomainExceptions("Vendor not found");
 
-        if (vendor.UserId != vendorUserId)
+        var isBranchManager = branch.ManagerId.HasValue && branch.ManagerId.Value == vendorUserId;
+        var isVendorOwner = vendor.UserId == vendorUserId;
+
+        if (!isVendorOwner && !isBranchManager)
         {
             throw new DomainExceptions("You do not own this branch", "ERR_FORBIDDEN");
         }
@@ -373,10 +376,18 @@ public class OrderService : IOrderService
         var branch = await _branchRepository.GetByIdAsync(order.BranchId)
             ?? throw new DomainExceptions("Branch not found", "ERR_NOT_FOUND");
 
-        var vendor = await _vendorRepository.GetByUserIdAsync(vendorUserId)
-            ?? throw new DomainExceptions("Vendor profile not found");
+        if (!branch.VendorId.HasValue || branch.VendorId.Value <= 0)
+        {
+            throw new DomainExceptions("Vendor not assigned to branch", "ERR_NOT_FOUND");
+        }
 
-        if (branch.VendorId != vendor.VendorId)
+        var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value)
+            ?? throw new DomainExceptions("Vendor not found", "ERR_NOT_FOUND");
+
+        var isBranchManager = branch.ManagerId.HasValue && branch.ManagerId.Value == vendorUserId;
+        var isVendorOwner = vendor.UserId == vendorUserId;
+
+        if (!isVendorOwner && !isBranchManager)
         {
             throw new DomainExceptions("You do not own this branch", "ERR_FORBIDDEN");
         }
