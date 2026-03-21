@@ -113,14 +113,16 @@ public class OrderService : IOrderService
 
         var branchIds = branches.Select(b => b.BranchId).ToList();
 
-        if (status == OrderStatus.Pending)
-        {
-            throw new DomainExceptions("Pending orders are not visible to vendors before payment");
-        }
-
         var effectiveStatuses = status.HasValue
             ? new List<OrderStatus> { status.Value }
-            : new List<OrderStatus> { OrderStatus.AwaitingVendorConfirmation };
+            : new List<OrderStatus>
+            {
+                OrderStatus.Pending,
+                OrderStatus.AwaitingVendorConfirmation,
+                OrderStatus.Paid,
+                OrderStatus.Cancelled,
+                OrderStatus.Complete
+            };
         var (orders, totalCount) = await _orderRepository.GetByBranchIds(branchIds, pageNumber, pageSize, effectiveStatuses);
         var items = orders.Select(MapToDto).ToList();
 
