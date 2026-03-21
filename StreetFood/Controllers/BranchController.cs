@@ -28,29 +28,6 @@ namespace StreetFood.Controllers
         
         // -- GhostPin migrated endpoints --
 
-        [HttpPost("{branchId}/claim")]
-        [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> ClaimUserBranch(int branchId, [FromBody] ClaimUserBranchRequest request)
-        {
-            try
-            {
-                var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
-                // Same logic as before
-                int vendorId = int.Parse(User.FindFirst("VendorId")?.Value ?? "-1");
-
-                var claimResult = (dynamic)await _branchService.ClaimUserBranchAsync(branchId, vendorId, userId, request);
-                int claimedBranchId = claimResult.BranchId;
-
-                var paymentLink = await _paymentService.CreatePaymentLink(userId, claimedBranchId);
-                return Ok(new { message = claimResult.Message, paymentLink = paymentLink.PaymentUrl });
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("Only verified")) return Conflict(new { message = ex.Message });
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
         [HttpGet("my-ghost-pin")]
         [Authorize]
         public async Task<IActionResult> GetMyGhostPinBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)

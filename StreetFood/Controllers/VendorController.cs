@@ -31,6 +31,58 @@ namespace StreetFood.Controllers
         // CRUD Operations
 
         /// <summary>
+        /// Claim a Ghost Pin branch
+        /// </summary>
+        [HttpPost("claim-branch")]
+        [Authorize(Roles = "User,Vendor")]
+        public async Task<IActionResult> ClaimGhostPinBranch(
+            [FromForm] int branchId,
+            List<Microsoft.AspNetCore.Http.IFormFile>? licenseImages,
+            [FromServices] IBranchService branchService,
+            [FromServices] Service.PaymentsService.IPaymentService paymentService)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+                
+                var licenseUrls = new List<string>();
+
+                if (licenseImages != null && licenseImages.Count > 0)
+                {
+                    var uploadsFolder = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "uploads", "licenses");
+                    if (!System.IO.Directory.Exists(uploadsFolder))
+                    {
+                        System.IO.Directory.CreateDirectory(uploadsFolder);
+                    }
+
+                    foreach(var image in licenseImages)
+                    {
+                        if (image.Length > 0)
+                        {
+                            var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
+                            var filePath = System.IO.Path.Combine(uploadsFolder, uniqueFileName);
+                            using (var stream = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
+                            {
+                                await image.CopyToAsync(stream);
+                            }
+                            licenseUrls.Add("http://159.223.47.89:5298" + $"/uploads/licenses/{uniqueFileName}");
+                        }
+                    }
+                }
+
+                var claimResult = (dynamic)await branchService.ClaimUserBranchAsync(branchId, userId, licenseUrls);
+                int claimedBranchId = claimResult.BranchId;
+
+                var paymentLink = await paymentService.CreatePaymentLink(userId, claimedBranchId);
+                return Ok(new { message = claimResult.Message, paymentLink = paymentLink.PaymentUrl, licenseUrls = licenseUrls });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Create a new vendor account
         /// </summary>
         [HttpPost]

@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace BO.DTO.Branch
 {
     public class ClaimUserBranchRequest
     {
-        public int? ExistingBranchId { get; set; }
+        [Required]
+        public List<string> LicenseUrls { get; set; } = new List<string>();
     }
 }
