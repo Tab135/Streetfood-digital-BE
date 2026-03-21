@@ -120,44 +120,49 @@ namespace Service
         
         
         // --- Replacing GhostPin logic natively with Branch ---
-        public async Task<object> ClaimUserBranchAsync(int branchId, int vendorId, int userId, ClaimUserBranchRequest request)
+public async Task<object> ClaimUserBranchAsync(int branchId, int userId, List<string> licenseUrls)
         {
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null) throw new Exception("Branch not found");
-            if (!branch.IsVerified || branch.VendorId != null)
-                throw new Exception("Only verified and unowned branches can be claimed.");
 
-            if (request.ExistingBranchId.HasValue)
+            if (branch.VendorId != null)
+                throw new Exception("This branch has already been claimed or owned by a vendor.");
+
+            // Do NOT assign VendorId yet. Just set the ManagerId so we know WHO is claiming.
+            // VendorId will be created/assigned upon Moderator approval in VerifyBranchAsync.
+            branch.ManagerId = userId;
+            branch.IsVerified = false; // Needs moderator approval
+            branch.IsActive = false;
+            branch.UpdatedAt = DateTime.UtcNow;
+
+            await _branchRepository.UpdateAsync(branch);
+
+            var licenseUrlJson = licenseUrls != null && licenseUrls.Count > 0 ? 
+                                 System.Text.Json.JsonSerializer.Serialize(licenseUrls) : null;
+                                 
+            var existingRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            if (existingRequest != null)
             {
-                var targetBranch = await _branchRepository.GetByIdAsync(request.ExistingBranchId.Value);
-                if (targetBranch == null || targetBranch.VendorId != vendorId)
-                    throw new Exception("Invalid or unauthorized existing branch.");
-
-                // Merge data
-                targetBranch.Lat = branch.Lat;
-                targetBranch.Long = branch.Long;
-                targetBranch.AddressDetail = branch.AddressDetail;
-                targetBranch.Ward = branch.Ward;
-                targetBranch.City = branch.City;
-                targetBranch.UpdatedAt = DateTime.UtcNow;
-
-                await _branchRepository.UpdateAsync(targetBranch);
-
-                await _branchRepository.DeleteAsync(branch.BranchId);
-
-                return new { Message = "Merged with existing branch. Generating payment link...", BranchId = targetBranch.BranchId };
+                existingRequest.LicenseUrl = licenseUrlJson;
+                existingRequest.Status = RegisterVendorStatusEnum.Pending;
+                existingRequest.UpdatedAt = DateTime.UtcNow;
+                await _branchRepository.UpdateBranchRegisterRequestAsync(existingRequest);
             }
             else
             {
-                branch.VendorId = vendorId;
-                branch.ManagerId = userId;
-                branch.UpdatedAt = DateTime.UtcNow;
-                await _branchRepository.UpdateAsync(branch);
-
-                return new { Message = "Claiming new branch. Generating payment link...", BranchId = branch.BranchId };
+                var registrationRequest = new BranchRegisterRequest
+                {
+                    BranchId = branchId,
+                    LicenseUrl = licenseUrlJson,
+                    Status = RegisterVendorStatusEnum.Pending,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await _branchRepository.AddBranchRegisterRequestAsync(registrationRequest);
             }
-        }
 
+            return new { Message = "Claim request submitted. Pending moderator approval.", BranchId = branch.BranchId };
+        }
         private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
         {
             var R = 6371e3;
@@ -423,8 +428,41 @@ namespace Service
                 throw new Exception($"Branch with ID {branchId} not found");
             }
 
+            // Handle ghost pin / vendor creation claim mechanism upon verification
+            if (branch.ManagerId.HasValue && branch.VendorId == null)
+            {
+                int userId = branch.ManagerId.Value;
+                var claimingUser = await _userRepository.GetUserById(userId);
+                
+                var existingVendor = await _vendorRepository.GetByUserIdAsync(userId);
+                if (existingVendor != null)
+                {
+                    // User is already a vendor. Assign branch to existing vendor profile.
+                    branch.VendorId = existingVendor.VendorId;
+                }
+                else
+                {
+                    // User is not a vendor yet. Provide them with a new Vendor profile automatically.
+                    var newVendor = new Vendor
+                    {
+                        UserId = userId,
+                        Name = branch.Name,
+                        IsActive = true
+                    };
+                    newVendor = await _vendorRepository.CreateAsync(newVendor);
+                    branch.VendorId = newVendor.VendorId;
+
+                    if (claimingUser != null && claimingUser.Role == Role.User)
+                    {
+                        claimingUser.Role = Role.Vendor;
+                        await _userRepository.UpdateAsync(claimingUser);
+                    }
+                }
+            }
+
             branch.IsVerified = true;
             branch.IsActive = true;
+            branch.IsSubscribed = false; // "ko đóng tiền thì chỉ là branch bình thường chưa được isSubcribed"
             branch.TierId = 2; // Silver
             branch.BatchReviewCount = 0;
             branch.BatchRatingSum = 0;
@@ -439,15 +477,18 @@ namespace Service
                 await _branchRepository.UpdateBranchRegisterRequestAsync(registrationRequest);
             }
 
-            // Promote vendor owner to Vendor role if not already
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
-            if (vendor != null)
+            // Standard promote vendor owner behavior (legacy fallback)
+            if (branch.VendorId.HasValue)
             {
-                var vendorOwner = await _userRepository.GetUserById(vendor.UserId);
-                if (vendorOwner != null && vendorOwner.Role == Role.User)
+                var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value);
+                if (vendor != null)
                 {
-                    vendorOwner.Role = Role.Vendor;
-                    await _userRepository.UpdateAsync(vendorOwner);
+                    var vendorOwner = await _userRepository.GetUserById(vendor.UserId);
+                    if (vendorOwner != null && vendorOwner.Role == Role.User)
+                    {
+                        vendorOwner.Role = Role.Vendor;
+                        await _userRepository.UpdateAsync(vendorOwner);
+                    }
                 }
             }
 
