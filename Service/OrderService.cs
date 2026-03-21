@@ -521,6 +521,7 @@ public class OrderService : IOrderService
         {
             OrderId = order.OrderId,
             UserId = order.UserId,
+            UserName = order.User?.UserName ?? string.Empty,
             BranchId = order.BranchId,
             BranchName = order.Branch?.Name ?? string.Empty,
             Status = order.Status,
@@ -537,6 +538,7 @@ public class OrderService : IOrderService
             {
                 DishId = od.DishId,
                 DishName = od.BranchDish?.Dish?.Name ?? string.Empty,
+                Price = od.BranchDish?.Dish?.Price ?? 0m,
                 Quantity = od.Quantity
             }).ToList()
         };
