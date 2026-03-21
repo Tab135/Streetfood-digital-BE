@@ -370,8 +370,7 @@ namespace DAL
             return await _context.Branches
                 .AsNoTracking()
                 .AsSplitQuery()
-                .Where(b => b.IsActive && b.IsVerified)
-                .Include(b => b.Vendor)
+                .Where(b => b.IsActive && b.IsVerified)                  .Include(b => b.Tier)                .Include(b => b.Vendor)
                     .ThenInclude(v => v.VendorDietaryPreferences)
                         .ThenInclude(vdp => vdp.DietaryPreference)
                 .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
