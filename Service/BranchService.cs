@@ -142,27 +142,16 @@ namespace Service
             var licenseUrlJson = licenseUrls != null && licenseUrls.Count > 0 ? 
                                  System.Text.Json.JsonSerializer.Serialize(licenseUrls) : null;
                                  
-            var existingRequest = await _branchRepository.GetBranchRequestAsync(branchId);
-            if (existingRequest != null)
+            var claimRequest = new BranchRequest
             {
-                existingRequest.LicenseUrl = licenseUrlJson;
-                existingRequest.Status = RegisterVendorStatusEnum.Pending;
-                existingRequest.UpdatedAt = DateTime.UtcNow;
-                await _branchRepository.UpdateBranchRequestAsync(existingRequest);
-            }
-            else
-            {
-                var registrationRequest = new BranchRequest
-                {
-                    BranchId = branchId,
-                    Type = 2,
-                    LicenseUrl = licenseUrlJson,
-                    Status = RegisterVendorStatusEnum.Pending,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-                await _branchRepository.AddBranchRequestAsync(registrationRequest);
-            }
+                BranchId = branchId,
+                Type = 2, // Claim branch
+                LicenseUrl = licenseUrlJson,
+                Status = RegisterVendorStatusEnum.Pending,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await _branchRepository.AddBranchRequestAsync(claimRequest);
 
             return ("Claim request submitted. Pending moderator approval.", branch.BranchId);
         }
@@ -332,37 +321,21 @@ namespace Service
                 throw new Exception("User does not own this branch");
             }
 
-            // Check if registration request already exists
-            var existingRequest = await _branchRepository.GetBranchRequestAsync(branchId);
-            
             // Serialize list of URLs to JSON
             var licenseUrlJson = System.Text.Json.JsonSerializer.Serialize(licenseImagePaths);
 
             var registrationRequest = new BranchRequest
             {
                 BranchId = branchId,
-                Type = 1,
+                Type = 1, // License verification
                 LicenseUrl = licenseUrlJson,
                 Status = RegisterVendorStatusEnum.Pending,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
-            if (existingRequest != null)
-            {
-                registrationRequest.BranchRequestId = existingRequest.BranchRequestId;
-                existingRequest.LicenseUrl = licenseUrlJson;
-                existingRequest.Status = RegisterVendorStatusEnum.Pending;
-                existingRequest.UpdatedAt = DateTime.UtcNow;
-                
-                await _branchRepository.UpdateBranchRequestAsync(existingRequest);
-                return existingRequest; // Return the updated entity
-            }
-            else
-            {
-                await _branchRepository.AddBranchRequestAsync(registrationRequest);
-                return registrationRequest;
-            }
+            await _branchRepository.AddBranchRequestAsync(registrationRequest);
+            return registrationRequest;
         }
 
         public async Task<BranchRequest> GetBranchLicenseStatusAsync(int branchId, int userId)
