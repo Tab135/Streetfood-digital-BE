@@ -304,6 +304,7 @@ namespace DAL
         {
             return await _context.BranchRequests
                 .AsNoTracking()
+                .OrderByDescending(r => r.CreatedAt)
                 .FirstOrDefaultAsync(r => r.BranchId == branchId);
         }
 
@@ -312,8 +313,10 @@ namespace DAL
             var requests = await _context.BranchRequests
                 .AsNoTracking()
                 .Where(r => branchIds.Contains(r.BranchId))
+                .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
-            return requests.ToDictionary(r => r.BranchId);
+            
+            return requests.GroupBy(r => r.BranchId).ToDictionary(g => g.Key, g => g.First());
         }
 
         public async Task<(List<BranchRequest> items, int totalCount)> GetAllBranchRequestsAsync(int pageNumber, int pageSize)
