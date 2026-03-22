@@ -61,16 +61,17 @@ namespace Service
             var createdBranch = await _branchRepository.CreateAsync(branch);
 
             // Auto-create a pending register request for the new branch
-            var branchRegisterRequest = new BranchRegisterRequest
+            var branchRequest = new BranchRequest
             {
                 BranchId = createdBranch.BranchId,
+                Type = 1,
                 LicenseUrl = null,
                 Status = RegisterVendorStatusEnum.Pending,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
-            await _branchRepository.AddBranchRegisterRequestAsync(branchRegisterRequest);
+            await _branchRepository.AddBranchRequestAsync(branchRequest);
 
             return createdBranch;
         }
@@ -97,15 +98,16 @@ namespace Service
             var createdBranch = await _branchRepository.CreateAsync(branch);
 
             // Auto-create a pending register request for the new branch (ghost pin)
-            var branchRegisterRequest = new BranchRegisterRequest
+            var branchRequest = new BranchRequest
             {
                 BranchId = createdBranch.BranchId,
+                Type = 0,
                 LicenseUrl = null,
                 Status = RegisterVendorStatusEnum.Pending,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-            await _branchRepository.AddBranchRegisterRequestAsync(branchRegisterRequest);
+            await _branchRepository.AddBranchRequestAsync(branchRequest);
 
             var responseDto = await MapToResponseDtoAsync(createdBranch);
             
@@ -140,25 +142,26 @@ namespace Service
             var licenseUrlJson = licenseUrls != null && licenseUrls.Count > 0 ? 
                                  System.Text.Json.JsonSerializer.Serialize(licenseUrls) : null;
                                  
-            var existingRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            var existingRequest = await _branchRepository.GetBranchRequestAsync(branchId);
             if (existingRequest != null)
             {
                 existingRequest.LicenseUrl = licenseUrlJson;
                 existingRequest.Status = RegisterVendorStatusEnum.Pending;
                 existingRequest.UpdatedAt = DateTime.UtcNow;
-                await _branchRepository.UpdateBranchRegisterRequestAsync(existingRequest);
+                await _branchRepository.UpdateBranchRequestAsync(existingRequest);
             }
             else
             {
-                var registrationRequest = new BranchRegisterRequest
+                var registrationRequest = new BranchRequest
                 {
                     BranchId = branchId,
+                    Type = 2,
                     LicenseUrl = licenseUrlJson,
                     Status = RegisterVendorStatusEnum.Pending,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
-                await _branchRepository.AddBranchRegisterRequestAsync(registrationRequest);
+                await _branchRepository.AddBranchRequestAsync(registrationRequest);
             }
 
             return ("Claim request submitted. Pending moderator approval.", branch.BranchId);
@@ -315,7 +318,7 @@ namespace Service
             return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
-        public async Task<BranchRegisterRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId)
+        public async Task<BranchRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId)
         {
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
@@ -330,14 +333,15 @@ namespace Service
             }
 
             // Check if registration request already exists
-            var existingRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            var existingRequest = await _branchRepository.GetBranchRequestAsync(branchId);
             
             // Serialize list of URLs to JSON
             var licenseUrlJson = System.Text.Json.JsonSerializer.Serialize(licenseImagePaths);
 
-            var registrationRequest = new BranchRegisterRequest
+            var registrationRequest = new BranchRequest
             {
                 BranchId = branchId,
+                Type = 1,
                 LicenseUrl = licenseUrlJson,
                 Status = RegisterVendorStatusEnum.Pending,
                 CreatedAt = DateTime.UtcNow,
@@ -346,29 +350,29 @@ namespace Service
 
             if (existingRequest != null)
             {
-                registrationRequest.BranchRegisterRequestId = existingRequest.BranchRegisterRequestId;
+                registrationRequest.BranchRequestId = existingRequest.BranchRequestId;
                 existingRequest.LicenseUrl = licenseUrlJson;
                 existingRequest.Status = RegisterVendorStatusEnum.Pending;
                 existingRequest.UpdatedAt = DateTime.UtcNow;
                 
-                await _branchRepository.UpdateBranchRegisterRequestAsync(existingRequest);
+                await _branchRepository.UpdateBranchRequestAsync(existingRequest);
                 return existingRequest; // Return the updated entity
             }
             else
             {
-                await _branchRepository.AddBranchRegisterRequestAsync(registrationRequest);
+                await _branchRepository.AddBranchRequestAsync(registrationRequest);
                 return registrationRequest;
             }
         }
 
-        public async Task<BranchRegisterRequest> GetBranchLicenseStatusAsync(int branchId, int userId)
+        public async Task<BranchRequest> GetBranchLicenseStatusAsync(int branchId, int userId)
         {
             if (!await UserOwnsBranchAsync(branchId, userId))
             {
                 throw new Exception("User does not own this branch");
             }
 
-            var registrationRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
             if (registrationRequest == null)
             {
                 throw new Exception($"No registration request found for branch ID {branchId}");
@@ -379,11 +383,11 @@ namespace Service
 
         public async Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize)
         {
-            var (pendingRequests, totalCount) = await _branchRepository.GetAllBranchRegisterRequestsAsync(pageNumber, pageSize);
+            var (pendingRequests, totalCount) = await _branchRepository.GetAllBranchRequestsAsync(pageNumber, pageSize);
             var items = pendingRequests
                 .Select(r => new PendingRegistrationDto
                 {
-                    BranchRegisterRequestId = r.BranchRegisterRequestId,
+                    BranchRequestId = r.BranchRequestId,
                     BranchId = r.BranchId,
                     LicenseUrl = r.LicenseUrl,
                     Status = r.Status,
@@ -477,12 +481,12 @@ namespace Service
             await _branchRepository.UpdateAsync(branch);
 
             // Update registration request status
-            var registrationRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
             if (registrationRequest != null)
             {
                 registrationRequest.Status = RegisterVendorStatusEnum.Accept;
                 registrationRequest.UpdatedAt = DateTime.UtcNow;
-                await _branchRepository.UpdateBranchRegisterRequestAsync(registrationRequest);
+                await _branchRepository.UpdateBranchRequestAsync(registrationRequest);
             }
 
             // Standard promote vendor owner behavior (legacy fallback)
@@ -505,7 +509,7 @@ namespace Service
 
         public async Task<bool> RejectBranchRegistrationAsync(int branchId, string rejectionReason)
         {
-            var registrationRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
             if (registrationRequest == null)
             {
                 throw new Exception($"No registration request found for branch ID {branchId}");
@@ -514,7 +518,7 @@ namespace Service
             registrationRequest.Status = RegisterVendorStatusEnum.Reject;
             registrationRequest.RejectReason = rejectionReason;
             registrationRequest.UpdatedAt = DateTime.UtcNow;
-            await _branchRepository.UpdateBranchRegisterRequestAsync(registrationRequest);
+            await _branchRepository.UpdateBranchRequestAsync(registrationRequest);
 
             return true;
         }
@@ -525,7 +529,7 @@ namespace Service
             return vendor != null && vendor.UserId == userId;
         }
 
-        private BranchResponseDto MapToResponseDto(Branch branch, BranchRegisterRequest licenseRequest)
+        private BranchResponseDto MapToResponseDto(Branch branch, BranchRequest licenseRequest)
         {
             List<string> licenseUrls = null;
             if (licenseRequest != null)
@@ -553,11 +557,11 @@ namespace Service
 
         private async Task<BranchResponseDto> MapToResponseDtoAsync(Branch branch)
         {
-            var licenseRequest = await _branchRepository.GetBranchRegisterRequestAsync(branch.BranchId);
+            var licenseRequest = await _branchRepository.GetBranchRequestAsync(branch.BranchId);
             return MapToResponseDto(branch, licenseRequest);
         }
 
-        private BranchResponseDto BuildResponseDto(Branch branch, BranchRegisterRequest licenseRequest, List<string> licenseUrls)
+        private BranchResponseDto BuildResponseDto(Branch branch, BranchRequest licenseRequest, List<string> licenseUrls)
         {
             return new BranchResponseDto
             {
@@ -967,6 +971,7 @@ namespace Service
         }
     }
 }
+
 
 
 

@@ -4,15 +4,18 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BO.Entities
 {
-    public class BranchRegisterRequest
+    public class BranchRequest
     {
         [Key]
-        public int BranchRegisterRequestId { get; set; }
+        public int BranchRequestId { get; set; }
 
         [ForeignKey("Branch")]
         public int BranchId { get; set; }
 
         public string? LicenseUrl { get; set; }
+
+        [Required]
+        public int Type { get; set; }
 
         [Required]
         public RegisterVendorStatusEnum Status { get; set; }
@@ -27,3 +30,6 @@ namespace BO.Entities
         public virtual Branch Branch { get; set; }
     }
 }
+
+
+

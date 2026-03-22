@@ -390,7 +390,7 @@ namespace Service.PaymentsService
              
 
                 // 3. Check that the moderator has approved the branch register request
-                var request = await _branchRepo.GetBranchRegisterRequestAsync(branchId);
+                var request = await _branchRepo.GetBranchRequestAsync(branchId);
                 if (request == null || request.Status != RegisterVendorStatusEnum.Accept)
                 {
                     return new PaymentLinkResult
@@ -787,3 +787,5 @@ namespace Service.PaymentsService
         }
     }
 }
+
+

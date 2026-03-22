@@ -6,7 +6,7 @@ namespace BO.DTO.Branch
 {
     public class PendingRegistrationDto
     {
-        public int BranchRegisterRequestId { get; set; }
+        public int BranchRequestId { get; set; }
         public int BranchId { get; set; }
         public string? LicenseUrl { get; set; }
         public RegisterVendorStatusEnum Status { get; set; }
@@ -49,3 +49,5 @@ namespace BO.DTO.Branch
         }
     }
 }
+
+

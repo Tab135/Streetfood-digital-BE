@@ -300,25 +300,25 @@ namespace DAL
         }
 
         // License registration methods
-        public async Task<BranchRegisterRequest> GetBranchRegisterRequestAsync(int branchId)
+        public async Task<BranchRequest> GetBranchRequestAsync(int branchId)
         {
-            return await _context.BranchRegisterRequests
+            return await _context.BranchRequests
                 .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.BranchId == branchId);
         }
 
-        public async Task<Dictionary<int, BranchRegisterRequest>> GetRegisterRequestsByBranchIdsAsync(List<int> branchIds)
+        public async Task<Dictionary<int, BranchRequest>> GetRegisterRequestsByBranchIdsAsync(List<int> branchIds)
         {
-            var requests = await _context.BranchRegisterRequests
+            var requests = await _context.BranchRequests
                 .AsNoTracking()
                 .Where(r => branchIds.Contains(r.BranchId))
                 .ToListAsync();
             return requests.ToDictionary(r => r.BranchId);
         }
 
-        public async Task<(List<BranchRegisterRequest> items, int totalCount)> GetAllBranchRegisterRequestsAsync(int pageNumber, int pageSize)
+        public async Task<(List<BranchRequest> items, int totalCount)> GetAllBranchRequestsAsync(int pageNumber, int pageSize)
         {
-            var query = _context.BranchRegisterRequests
+            var query = _context.BranchRequests
                 .AsNoTracking()
                 .Where(r => r.Status == RegisterVendorStatusEnum.Pending);
 
@@ -334,16 +334,16 @@ namespace DAL
             return (items, totalCount);
         }
 
-        public async Task AddBranchRegisterRequestAsync(BranchRegisterRequest request)
+        public async Task AddBranchRequestAsync(BranchRequest request)
         {
-            _context.BranchRegisterRequests.Add(request);
+            _context.BranchRequests.Add(request);
             await _context.SaveChangesAsync();
         }
 
-        public async Task UpdateBranchRegisterRequestAsync(BranchRegisterRequest request)
+        public async Task UpdateBranchRequestAsync(BranchRequest request)
         {
             request.UpdatedAt = DateTime.UtcNow;
-            _context.BranchRegisterRequests.Update(request);
+            _context.BranchRequests.Update(request);
             await _context.SaveChangesAsync();
         }
 
@@ -625,3 +625,5 @@ namespace DAL
         }
     }
 }
+
+

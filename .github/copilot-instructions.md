@@ -86,7 +86,7 @@ Always use `await` for async calls. **Never use `.Result` or `.Wait()`** — blo
 
 ### LicenseUrl Field
 
-`BranchRegisterRequest.LicenseUrl` stores a JSON-serialized `List<string>`. Always serialize with `JsonSerializer.Serialize(list)` and deserialize with `JsonSerializer.Deserialize<List<string>>(value)`.
+`BranchRequest.LicenseUrl` stores a JSON-serialized `List<string>`. Always serialize with `JsonSerializer.Serialize(list)` and deserialize with `JsonSerializer.Deserialize<List<string>>(value)`.
 
 ### Vietnamese Text Search
 
@@ -103,7 +103,7 @@ Upload files to `uploads/branches/` or `uploads/licenses/` under the web root. P
 | `User`                  | Has `Role` enum, `Point`, `EmailVerified`, dietary/info setup flags                                  |
 | `Vendor`                | Belongs to `User` (owner); has `Branches`                                                            |
 | `Branch`                | Has subscription (`IsSubscribed`, `SubscriptionExpiresAt`), verification (`IsVerified`), `AvgRating` |
-| `BranchRegisterRequest` | `LicenseUrl` is JSON string, `Status` is `RegisterVendorStatusEnum`                                  |
+| `BranchRequest` | `LicenseUrl` is JSON string, `Status` is `RegisterVendorStatusEnum`                                  |
 | `Dish`                  | Belongs to `Branch` and `Category`; has `DishTaste` and `DishDietaryPreference` join tables          |
 | `Feedback`              | Optional `DishId` (can be for a branch generally); has images, tags, auto-updates `Branch.AvgRating` |
 | `Payment`               | PayOS integration; `OrderCode` is `long`, `Status` is string enum ("PENDING","PAID","CANCELLED")     |

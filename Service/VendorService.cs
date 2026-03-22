@@ -74,16 +74,17 @@ namespace Service
             var createdBranch = await _branchRepository.CreateAsync(defaultBranch);
 
             //TODO: We fucking create this bitch ass branch request before those fucker upload license 
-            var defaultRegisterRequest = new BranchRegisterRequest
+            var defaultRegisterRequest = new BranchRequest
             {
                 BranchId = createdBranch.BranchId,
+                Type = 1,
                 LicenseUrl = null,
                 Status = RegisterVendorStatusEnum.Pending,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
-            await _branchRepository.AddBranchRegisterRequestAsync(defaultRegisterRequest);
+            await _branchRepository.AddBranchRequestAsync(defaultRegisterRequest);
 
             return createdVendor;
         }
@@ -226,7 +227,7 @@ namespace Service
                     }).ToList(),
                 Branches = branches.Select(b =>
                 {
-                    var licenseRequest = _branchRepository.GetBranchRegisterRequestAsync(b.BranchId).Result;
+                    var licenseRequest = _branchRepository.GetBranchRequestAsync(b.BranchId).Result;
                     var licenseUrls = new System.Collections.Generic.List<string>();
                     if (!string.IsNullOrEmpty(licenseRequest?.LicenseUrl))
                     {

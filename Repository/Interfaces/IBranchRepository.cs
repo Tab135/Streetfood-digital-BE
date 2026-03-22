@@ -35,11 +35,11 @@ namespace Repository.Interfaces
         Task DeleteBranchImageAsync(int imageId);
         
         // License registration
-        Task<BranchRegisterRequest> GetBranchRegisterRequestAsync(int branchId);
-        Task<Dictionary<int, BranchRegisterRequest>> GetRegisterRequestsByBranchIdsAsync(List<int> branchIds);
-        Task<(List<BranchRegisterRequest> items, int totalCount)> GetAllBranchRegisterRequestsAsync(int pageNumber, int pageSize);
-        Task AddBranchRegisterRequestAsync(BranchRegisterRequest request);
-        Task UpdateBranchRegisterRequestAsync(BranchRegisterRequest request);
+        Task<BranchRequest> GetBranchRequestAsync(int branchId);
+        Task<Dictionary<int, BranchRequest>> GetRegisterRequestsByBranchIdsAsync(List<int> branchIds);
+        Task<(List<BranchRequest> items, int totalCount)> GetAllBranchRequestsAsync(int pageNumber, int pageSize);
+        Task AddBranchRequestAsync(BranchRequest request);
+        Task UpdateBranchRequestAsync(BranchRequest request);
         
         // Search vendors with branches and dishes
         Task<List<Branch>> SearchVendorsWithBranchesAndDishesAsync(string keyword);
@@ -64,3 +64,5 @@ namespace Repository.Interfaces
         Task RecalculateBranchMetricsAsync(int branchId);
     }
 }
+
+
