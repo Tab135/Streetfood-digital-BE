@@ -29,6 +29,21 @@ namespace StreetFood.Controllers
         
         // -- GhostPin migrated endpoints --
 
+        [HttpGet("all-ghost-pins")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<object>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllApprovedGhostPinBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var branches = await _branchService.GetAllApprovedGhostPinsAsync(pageNumber, pageSize);
+                return Ok(new { message = "All approved ghost pin branches retrieved successfully", data = branches });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("my-ghost-pin")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<object>>), StatusCodes.Status200OK)]
