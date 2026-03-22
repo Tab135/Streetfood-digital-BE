@@ -120,7 +120,7 @@ namespace Service
         
         
         // --- Replacing GhostPin logic natively with Branch ---
-public async Task<object> ClaimUserBranchAsync(int branchId, int userId, List<string> licenseUrls)
+        public async Task<(string Message, int BranchId)> ClaimUserBranchAsync(int branchId, int userId, List<string> licenseUrls)
         {
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null) throw new Exception("Branch not found");
@@ -161,7 +161,7 @@ public async Task<object> ClaimUserBranchAsync(int branchId, int userId, List<st
                 await _branchRepository.AddBranchRegisterRequestAsync(registrationRequest);
             }
 
-            return new { Message = "Claim request submitted. Pending moderator approval.", BranchId = branch.BranchId };
+            return ("Claim request submitted. Pending moderator approval.", branch.BranchId);
         }
         private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
         {
@@ -831,7 +831,7 @@ public async Task<object> ClaimUserBranchAsync(int branchId, int userId, List<st
                 
                 var allResponseDtos = allBranches.Select(branch =>
                 {
-                    var dishes = branch.BranchDishes
+                    var dishes = (branch.BranchDishes ?? new List<BranchDish>())
                         .Where(bd => bd.Dish != null && bd.Dish.IsActive)
                         .Select(bd => new { bd.Dish, bd.IsSoldOut });
 
@@ -909,7 +909,7 @@ public async Task<object> ClaimUserBranchAsync(int branchId, int userId, List<st
                 var distanceKm = item.distanceKm;
 
                 // Map all active dishes (already filtered by DAL)
-                var dishes = branch.BranchDishes
+                var dishes = (branch.BranchDishes ?? new List<BranchDish>())
                     .Where(bd => bd.Dish != null && bd.Dish.IsActive)
                     .Select(bd => new { bd.Dish, bd.IsSoldOut });
 

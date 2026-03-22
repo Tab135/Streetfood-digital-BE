@@ -71,7 +71,7 @@ namespace StreetFood.Controllers
                     }
                 }
 
-                var claimResult = (dynamic)await branchService.ClaimUserBranchAsync(branchId, userId, licenseUrls);
+                var claimResult = await branchService.ClaimUserBranchAsync(branchId, userId, licenseUrls);
                 int claimedBranchId = claimResult.BranchId;
 
                 var paymentLink = await paymentService.CreatePaymentLink(userId, claimedBranchId);

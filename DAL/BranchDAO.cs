@@ -460,8 +460,8 @@ namespace DAL
                 // Dietary filter: checked at vendor level (not dish level)
                 if (hasDietaryFilter)
                 {
-                    var vendorDietaryIds = branch.Vendor.VendorDietaryPreferences
-                        .Select(vdp => vdp.DietaryPreferenceId).ToHashSet();
+                    var vendorDietaryIds = branch.Vendor?.VendorDietaryPreferences?
+                        .Select(vdp => vdp.DietaryPreferenceId).ToHashSet() ?? new HashSet<int>();
                     if (!dietaryIds!.Any(vendorDietaryIds.Contains))
                         continue;
                 }
@@ -470,8 +470,9 @@ namespace DAL
                 bool hasDishLevelFilter = hasTasteFilter || hasPriceFilter || hasCategoryFilter;
                 if (hasDishLevelFilter)
                 {
-                    bool hasQualifyingDish = branch.BranchDishes
+                    bool hasQualifyingDish = branch.BranchDishes != null && branch.BranchDishes
                         .Select(bd => bd.Dish)
+                        .Where(dish => dish != null)
                         .Any(dish =>
                         {
                             if (minPrice.HasValue && dish.Price < minPrice.Value) return false;
@@ -479,7 +480,7 @@ namespace DAL
                             if (hasCategoryFilter && !categoryIds!.Contains(dish.CategoryId)) return false;
                             if (!hasTasteFilter) return true;
 
-                            var dishTasteIds = dish.DishTastes.Select(dt => dt.TasteId).ToHashSet();
+                            var dishTasteIds = dish.DishTastes?.Select(dt => dt.TasteId).ToHashSet() ?? new HashSet<int>();
                             return tasteIds!.Any(id => dishTasteIds.Contains(id));
                         });
 
