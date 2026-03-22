@@ -142,7 +142,7 @@ namespace Service
             var licenseUrlJson = licenseUrls != null && licenseUrls.Count > 0 ? 
                                  System.Text.Json.JsonSerializer.Serialize(licenseUrls) : null;
                                  
-            var claimRequest = new BranchRequest
+            var registrationRequest = new BranchRequest
             {
                 BranchId = branchId,
                 Type = 2, // Claim branch
@@ -151,7 +151,7 @@ namespace Service
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-            await _branchRepository.AddBranchRequestAsync(claimRequest);
+            await _branchRepository.AddBranchRequestAsync(registrationRequest);
 
             return ("Claim request submitted. Pending moderator approval.", branch.BranchId);
         }
