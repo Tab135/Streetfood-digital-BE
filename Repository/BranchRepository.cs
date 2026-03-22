@@ -36,6 +36,11 @@ namespace Repository
             return await _branchDAO.GetByCreatedByIdAsync(userId, pageNumber, pageSize);
         }
 
+        public async Task<(List<Branch> items, int totalCount)> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize)
+        {
+            return await _branchDAO.GetAllApprovedGhostPinsAsync(pageNumber, pageSize);
+        }
+
         public async Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
         {
             return await _branchDAO.GetByVendorIdAsync(vendorId, pageNumber, pageSize);

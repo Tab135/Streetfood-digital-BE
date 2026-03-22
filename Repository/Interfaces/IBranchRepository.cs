@@ -10,6 +10,7 @@ namespace Repository.Interfaces
         Task<Branch> GetByIdAsync(int branchId);
         Task<List<Branch>> GetAllByVendorIdAsync(int vendorId);  // Non-paginated for internal use
         Task<(List<Branch> items, int totalCount)> GetByCreatedByIdAsync(int userId, int pageNumber, int pageSize);
+        Task<(List<Branch> items, int totalCount)> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize);
         Task<List<Branch>> GetAllByManagerIdAsync(int managerUserId);
         Task<(List<Branch> items, int totalCount)> GetAllAsync(int pageNumber, int pageSize);

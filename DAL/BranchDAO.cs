@@ -596,5 +596,31 @@ namespace DAL
         {
             return degrees * (Math.PI / 180.0);
         }
+
+        public async Task<(List<Branch> items, int totalCount)> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize)
+        {
+            var query = _context.Branches
+                .AsNoTracking()
+                .Where(b => b.VendorId == null && b.IsVerified);
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .AsSplitQuery()
+                .Include(b => b.Tier)
+                .Include(b => b.Vendor)
+                .Include(b => b.Manager)
+                .Include(b => b.CreatedBy)
+                .Include(b => b.WorkSchedules)
+                .Include(b => b.DayOffs)
+                .Include(b => b.BranchImages)
+                .Include(b => b.BranchDishes)
+                .OrderByDescending(b => b.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
     }
 }

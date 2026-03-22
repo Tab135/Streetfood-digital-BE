@@ -194,6 +194,14 @@ public async Task<object> ClaimUserBranchAsync(int branchId, int userId, List<st
             return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
+        public async Task<PaginatedResponse<BranchResponseDto>> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize)
+        {
+            var (branches, totalCount) = await _branchRepository.GetAllApprovedGhostPinsAsync(pageNumber, pageSize);
+            var requests = await _branchRepository.GetRegisterRequestsByBranchIdsAsync(branches.Select(b => b.BranchId).ToList());
+            var items = branches.Select(b => MapToResponseDto(b, requests.GetValueOrDefault(b.BranchId))).ToList();
+            return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
+        }
+
         public async Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
         {
             var (branches, totalCount) = await _branchRepository.GetByVendorIdAsync(vendorId, pageNumber, pageSize);
