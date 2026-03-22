@@ -111,11 +111,11 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(255);
 
             entity.HasData(
-                new DietaryPreference { DietaryPreferenceId = 1, Name = "An chay", Description = "Không th?t" },
-                new DietaryPreference { DietaryPreferenceId = 2, Name = "Cay", Description = "Món an có v? cay n?ng, s? d?ng nhi?u ?t ho?c tiêu" },
-                new DietaryPreference { DietaryPreferenceId = 3, Name = "Ng?t", Description = "Món an có v? ng?t, ho?c các món tráng mi?ng" },
-                new DietaryPreference { DietaryPreferenceId = 4, Name = "M?n", Description = "Huong v? d?m dà, thích h?p an kèm v?i com" },
-                new DietaryPreference { DietaryPreferenceId = 5, Name = "H?i s?n", Description = "Bao g?m các lo?i tôm, cua, cá, m?c và d? bi?n khác" }
+                new DietaryPreference { DietaryPreferenceId = 1, Name = "An chay", Description = "Khï¿½ng th?t" },
+                new DietaryPreference { DietaryPreferenceId = 2, Name = "Cay", Description = "Mï¿½n an cï¿½ v? cay n?ng, s? d?ng nhi?u ?t ho?c tiï¿½u" },
+                new DietaryPreference { DietaryPreferenceId = 3, Name = "Ng?t", Description = "Mï¿½n an cï¿½ v? ng?t, ho?c cï¿½c mï¿½n trï¿½ng mi?ng" },
+                new DietaryPreference { DietaryPreferenceId = 4, Name = "M?n", Description = "Huong v? d?m dï¿½, thï¿½ch h?p an kï¿½m v?i com" },
+                new DietaryPreference { DietaryPreferenceId = 5, Name = "H?i s?n", Description = "Bao g?m cï¿½c lo?i tï¿½m, cua, cï¿½, m?c vï¿½ d? bi?n khï¿½c" }
             );
         });
 
@@ -204,8 +204,8 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.HasOne(e => e.Branch)
-                  .WithOne()
-                  .HasForeignKey<BranchRequest>(e => e.BranchId)
+                  .WithMany()
+                  .HasForeignKey(e => e.BranchId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
