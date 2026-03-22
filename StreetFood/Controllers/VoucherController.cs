@@ -18,7 +18,7 @@ public class VoucherController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Moderator,Vendor")]
     public async Task<IActionResult> Create([FromBody] CreateVoucherDto createDto)
     {
         if (!ModelState.IsValid)
@@ -55,7 +55,7 @@ public class VoucherController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Moderator,Vendor")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateVoucherDto updateDto)
     {
         if (!ModelState.IsValid)
@@ -73,7 +73,7 @@ public class VoucherController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Moderator,Vendor")]
     public async Task<IActionResult> Delete(int id)
     {
         if (!TryGetCurrentUserId(out var userId))
