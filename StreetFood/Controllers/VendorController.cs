@@ -31,10 +31,64 @@ namespace StreetFood.Controllers
         // CRUD Operations
 
         /// <summary>
+        /// Claim a Ghost Pin branch
+        /// </summary>
+        [HttpPost("claim-branch")]
+        [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ClaimGhostPinBranch(
+            [FromForm] int branchId,
+            List<Microsoft.AspNetCore.Http.IFormFile>? licenseImages,
+            [FromServices] IBranchService branchService,
+            [FromServices] Service.PaymentsService.IPaymentService paymentService)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
+                
+                var licenseUrls = new List<string>();
+
+                if (licenseImages != null && licenseImages.Count > 0)
+                {
+                    var uploadsFolder = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "uploads", "licenses");
+                    if (!System.IO.Directory.Exists(uploadsFolder))
+                    {
+                        System.IO.Directory.CreateDirectory(uploadsFolder);
+                    }
+
+                    foreach(var image in licenseImages)
+                    {
+                        if (image.Length > 0)
+                        {
+                            var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
+                            var filePath = System.IO.Path.Combine(uploadsFolder, uniqueFileName);
+                            using (var stream = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
+                            {
+                                await image.CopyToAsync(stream);
+                            }
+                            licenseUrls.Add("http://159.223.47.89:5298" + $"/uploads/licenses/{uniqueFileName}");
+                        }
+                    }
+                }
+
+                var claimResult = await branchService.ClaimUserBranchAsync(branchId, userId, licenseUrls);
+                int claimedBranchId = claimResult.BranchId;
+
+                var paymentLink = await paymentService.CreatePaymentLink(userId, claimedBranchId);
+                return Ok(new { message = claimResult.Message, paymentLink = paymentLink.PaymentUrl, licenseUrls = licenseUrls });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
         /// Create a new vendor account
         /// </summary>
         [HttpPost]
         [Authorize(Roles = "User")]
+        [ProducesResponseType(typeof(ApiResponse<VendorResponseDto>), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateVendor([FromBody] CreateVendorDto createVendorDto)
         {
             try
@@ -67,6 +121,7 @@ namespace StreetFood.Controllers
         /// Get vendor by ID
         /// </summary>
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<VendorResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetVendorById(int id)
         {
             try
@@ -85,6 +140,7 @@ namespace StreetFood.Controllers
         /// </summary>
         [HttpGet("my-vendor")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<VendorResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMyVendor()
         {
             try
@@ -108,6 +164,7 @@ namespace StreetFood.Controllers
         /// Get all vendors (public endpoint)
         /// </summary>
         [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<VendorResponseDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllVendors([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -125,6 +182,7 @@ namespace StreetFood.Controllers
         /// Get active vendors only
         /// </summary>
         [HttpGet("active")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<VendorResponseDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetActiveVendors([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -143,6 +201,7 @@ namespace StreetFood.Controllers
         /// </summary>
         [HttpPut]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<VendorResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateMyVendor([FromBody] UpdateVendorDto updateVendorDto)
         {
             try
@@ -169,6 +228,7 @@ namespace StreetFood.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> DeleteVendor(int id)
         {
             try
@@ -186,6 +246,7 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}/suspend")]
         [Authorize(Roles = "Admin,Moderator")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> SuspendVendor(int id)
         {
             try
@@ -201,6 +262,7 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}/reactivate")]
         [Authorize(Roles = "Admin,Moderator")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> ReactivateVendor(int id)
         {
             try
@@ -220,6 +282,7 @@ namespace StreetFood.Controllers
         /// Get dietary preferences for a vendor
         /// </summary>
         [HttpGet("{id}/dietary-preferences")]
+        [ProducesResponseType(typeof(ApiResponse<List<object>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetVendorDietaryPreferences(int id)
         {
             try
@@ -238,6 +301,7 @@ namespace StreetFood.Controllers
         /// </summary>
         [HttpPut("my-vendor/dietary-preferences")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateMyVendorDietaryPreferences([FromBody] List<int> dietaryPreferenceIds)
         {
             try

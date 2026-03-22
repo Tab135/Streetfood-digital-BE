@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using BO.Common;
+using BO.DTO.Order;
 using Service.Interfaces;
 using System.Security.Claims;
 
@@ -18,6 +20,7 @@ public class OrderController : ControllerBase
 
     [HttpGet("{id}")]
     [Authorize(Roles = "User")]
+    [ProducesResponseType(typeof(ApiResponse<OrderResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetById(int id)
     {
         if (!TryGetCurrentUserId(out var userId))
@@ -40,6 +43,7 @@ public class OrderController : ControllerBase
 
     [HttpGet("my-orders")]
     [Authorize(Roles = "User")]
+    [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<OrderResponseDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetMyOrders([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         if (!TryGetCurrentUserId(out var userId))
@@ -57,6 +61,7 @@ public class OrderController : ControllerBase
 
     [HttpGet("{id}/pickup-code")]
     [Authorize(Roles = "User")]
+    [ProducesResponseType(typeof(ApiResponse<OrderPickupCodeResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetPickupCode(int id)
     {
         if (!TryGetCurrentUserId(out var userId))
@@ -74,6 +79,7 @@ public class OrderController : ControllerBase
 
     [HttpGet("vendor/orders")]
     [Authorize(Roles = "Vendor")]
+    [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<OrderResponseDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetVendorOrders(
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 10,
@@ -94,6 +100,7 @@ public class OrderController : ControllerBase
 
     [HttpGet("vendor/branches/{branchId}/orders")]
     [Authorize(Roles = "Vendor,Manager")]
+    [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<OrderResponseDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetVendorOrdersByBranch(
         int branchId,
         [FromQuery] int pageNumber = 1,
@@ -113,8 +120,30 @@ public class OrderController : ControllerBase
         });
     }
 
+    [HttpGet("manager/orders")]
+    [Authorize(Roles = "Manager")]
+    [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<OrderResponseDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetManagerOrders(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] BO.Entities.OrderStatus? status = null)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var orders = await _orderService.GetManagerOrdersAsync(userId, pageNumber, pageSize, status);
+        return Ok(new
+        {
+            message = "Get manager orders successfully",
+            data = orders
+        });
+    }
+
     [HttpPut("vendor/orders/{id}/decision")]
-    [Authorize(Roles = "Vendor")]
+    [Authorize(Roles = "Vendor,Manager")]
+    [ProducesResponseType(typeof(ApiResponse<OrderResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> VendorDecision(int id, [FromQuery] bool approve)
     {
         if (!TryGetCurrentUserId(out var userId))
@@ -131,7 +160,8 @@ public class OrderController : ControllerBase
     }
 
     [HttpPut("vendor/orders/{id}/complete")]
-    [Authorize(Roles = "Vendor")]
+    [Authorize(Roles = "Vendor,Manager")]
+    [ProducesResponseType(typeof(ApiResponse<OrderResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> VendorComplete(int id, [FromQuery] string verificationCode)
     {
         if (!TryGetCurrentUserId(out var userId))

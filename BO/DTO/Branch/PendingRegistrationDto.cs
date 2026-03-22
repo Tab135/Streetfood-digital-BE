@@ -6,9 +6,10 @@ namespace BO.DTO.Branch
 {
     public class PendingRegistrationDto
     {
-        public int BranchRegisterRequestId { get; set; }
+        public int BranchRequestId { get; set; }
         public int BranchId { get; set; }
         public string? LicenseUrl { get; set; }
+        public int Type { get; set; }
         public RegisterVendorStatusEnum Status { get; set; }
         public string? RejectReason { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -21,6 +22,7 @@ namespace BO.DTO.Branch
             public int BranchId { get; set; }
             public int VendorId { get; set; }
             public int? ManagerId { get; set; }
+            public int? CreatedById { get; set; }
             public string Name { get; set; }
             public string PhoneNumber { get; set; }
             public string Email { get; set; }
@@ -48,3 +50,5 @@ namespace BO.DTO.Branch
         }
     }
 }
+
+

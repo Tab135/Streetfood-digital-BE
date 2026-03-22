@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260322110335_BranchGhostPin")]
+    partial class BranchGhostPin
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -163,37 +166,6 @@ namespace DAL.Migrations
                     b.ToTable("Branches");
                 });
 
-            modelBuilder.Entity("BO.Entities.BranchCampaign", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("BranchId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("CampaignId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("JoinedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BranchId");
-
-                    b.HasIndex("CampaignId");
-
-                    b.ToTable("BranchCampaigns");
-                });
-
             modelBuilder.Entity("BO.Entities.BranchDish", b =>
                 {
                     b.Property<int>("BranchId")
@@ -275,62 +247,10 @@ namespace DAL.Migrations
 
                     b.HasKey("BranchRequestId");
 
-                    b.HasIndex("BranchId");
+                    b.HasIndex("BranchId")
+                        .IsUnique();
 
                     b.ToTable("BranchRequests");
-                });
-
-            modelBuilder.Entity("BO.Entities.Campaign", b =>
-                {
-                    b.Property<int>("CampaignId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CampaignId"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("CreatedByBranchId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<DateTime?>("RegistrationEndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("RegistrationStartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("RequiredTierId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("TargetSegment")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("CampaignId");
-
-                    b.HasIndex("CreatedByBranchId");
-
-                    b.HasIndex("RequiredTierId");
-
-                    b.ToTable("Campaigns");
                 });
 
             modelBuilder.Entity("BO.Entities.Cart", b =>
@@ -486,31 +406,31 @@ namespace DAL.Migrations
                         new
                         {
                             DietaryPreferenceId = 1,
-                            Description = "Kh�ng th?t",
+                            Description = "Không th?t",
                             Name = "An chay"
                         },
                         new
                         {
                             DietaryPreferenceId = 2,
-                            Description = "M�n an c� v? cay n?ng, s? d?ng nhi?u ?t ho?c ti�u",
+                            Description = "Món an có v? cay n?ng, s? d?ng nhi?u ?t ho?c tiêu",
                             Name = "Cay"
                         },
                         new
                         {
                             DietaryPreferenceId = 3,
-                            Description = "M�n an c� v? ng?t, ho?c c�c m�n tr�ng mi?ng",
+                            Description = "Món an có v? ng?t, ho?c các món tráng mi?ng",
                             Name = "Ng?t"
                         },
                         new
                         {
                             DietaryPreferenceId = 4,
-                            Description = "Huong v? d?m d�, th�ch h?p an k�m v?i com",
+                            Description = "Huong v? d?m dà, thích h?p an kèm v?i com",
                             Name = "M?n"
                         },
                         new
                         {
                             DietaryPreferenceId = 5,
-                            Description = "Bao g?m c�c lo?i t�m, cua, c�, m?c v� d? bi?n kh�c",
+                            Description = "Bao g?m các lo?i tôm, cua, cá, m?c và d? bi?n khác",
                             Name = "H?i s?n"
                         });
                 });
@@ -923,9 +843,6 @@ namespace DAL.Migrations
                     b.Property<int>("Amount")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("BranchCampaignId")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("BranchId")
                         .HasColumnType("integer");
 
@@ -1322,25 +1239,6 @@ namespace DAL.Migrations
                     b.Navigation("Vendor");
                 });
 
-            modelBuilder.Entity("BO.Entities.BranchCampaign", b =>
-                {
-                    b.HasOne("BO.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BO.Entities.Campaign", "Campaign")
-                        .WithMany("BranchCampaigns")
-                        .HasForeignKey("CampaignId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Campaign");
-                });
-
             modelBuilder.Entity("BO.Entities.BranchDish", b =>
                 {
                     b.HasOne("BO.Entities.Branch", "Branch")
@@ -1374,27 +1272,12 @@ namespace DAL.Migrations
             modelBuilder.Entity("BO.Entities.BranchRequest", b =>
                 {
                     b.HasOne("BO.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
+                        .WithOne()
+                        .HasForeignKey("BO.Entities.BranchRequest", "BranchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Branch");
-                });
-
-            modelBuilder.Entity("BO.Entities.Campaign", b =>
-                {
-                    b.HasOne("BO.Entities.Branch", "CreatedByBranch")
-                        .WithMany()
-                        .HasForeignKey("CreatedByBranchId");
-
-                    b.HasOne("BO.Entities.Tier", "RequiredTier")
-                        .WithMany()
-                        .HasForeignKey("RequiredTierId");
-
-                    b.Navigation("CreatedByBranch");
-
-                    b.Navigation("RequiredTier");
                 });
 
             modelBuilder.Entity("BO.Entities.Cart", b =>
@@ -1724,11 +1607,6 @@ namespace DAL.Migrations
             modelBuilder.Entity("BO.Entities.BranchDish", b =>
                 {
                     b.Navigation("OrderDishes");
-                });
-
-            modelBuilder.Entity("BO.Entities.Campaign", b =>
-                {
-                    b.Navigation("BranchCampaigns");
                 });
 
             modelBuilder.Entity("BO.Entities.Cart", b =>

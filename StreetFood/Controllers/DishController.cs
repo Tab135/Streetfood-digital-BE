@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO.Dish;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +23,7 @@ namespace StreetFood.Controllers
         [HttpPost("vendor/{vendorId}")]
         [Authorize(Roles = "Vendor")]
         [Consumes("multipart/form-data")]
+        [ProducesResponseType(typeof(ApiResponse<DishResponse>), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateDish([FromRoute] int vendorId, [FromForm] CreateDishRequest request, IFormFile imageFile)
         {
             if (!ModelState.IsValid)
@@ -47,6 +49,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<DishResponse>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetDishById(int id)
         {
             var result = await _dishService.GetDishByIdAsync(id);
@@ -54,6 +57,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("branch/{branchId}")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<DishResponse>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetDishes(
             [FromRoute] int branchId,
             [FromQuery] int? categoryId,
@@ -66,6 +70,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("vendor/{vendorId}")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<DishResponse>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetDishesByVendor(
             [FromRoute] int vendorId,
             [FromQuery] int? categoryId,
@@ -80,6 +85,7 @@ namespace StreetFood.Controllers
         [HttpPut("{id}")]
         [Authorize(Roles = "Vendor")]
         [Consumes("multipart/form-data")]
+        [ProducesResponseType(typeof(ApiResponse<DishResponse>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateDish(int id, [FromForm] UpdateDishRequest request, IFormFile? imageFile)
         {
             if (!ModelState.IsValid)
@@ -105,6 +111,7 @@ namespace StreetFood.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> DeleteDish(int id)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -119,6 +126,7 @@ namespace StreetFood.Controllers
 
         [HttpPost("branch/{branchId}")]
         [Authorize(Roles = "Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> AddDishesToBranch([FromBody] AssignDishesRequest request, [FromRoute] int branchId)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -131,6 +139,7 @@ namespace StreetFood.Controllers
 
         [HttpDelete("branch/{branchId}")]
         [Authorize(Roles = "Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> RemoveDishesFromBranch([FromBody] AssignDishesRequest request, [FromRoute] int branchId)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -143,6 +152,7 @@ namespace StreetFood.Controllers
 
         [HttpPatch("{dishId}/branch/{branchId}/availability")]
         [Authorize(Roles = "Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateDishAvailability(
             [FromRoute] int dishId,
             [FromRoute] int branchId,

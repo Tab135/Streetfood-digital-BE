@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO.FeedbackTag;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<List<FeedbackTagDto>>), StatusCodes.Status200OK)]
         public async Task<ActionResult<List<FeedbackTagDto>>> GetAll()
         {
             var list = await _service.GetAllFeedbackTags();
@@ -26,6 +28,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<FeedbackTagDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<FeedbackTagDto>> GetById(int id)
         {
             var tag = await _service.GetFeedbackTagById(id);
@@ -35,6 +38,7 @@ namespace StreetFood.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<FeedbackTagDto>), StatusCodes.Status201Created)]
         public async Task<ActionResult<FeedbackTagDto>> Create([FromBody] CreateFeedbackTagDto createDto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -44,6 +48,7 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<FeedbackTagDto>), StatusCodes.Status200OK)]
         public async Task<ActionResult<FeedbackTagDto>> Update(int id, [FromBody] UpdateFeedbackTagDto updateDto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -53,6 +58,7 @@ namespace StreetFood.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<ActionResult> Delete(int id)
         {
             await _service.DeleteFeedbackTag(id);

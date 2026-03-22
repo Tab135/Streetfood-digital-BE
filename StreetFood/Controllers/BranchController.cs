@@ -1,3 +1,4 @@
+using BO.Common;
 using BO.DTO.Branch;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,31 +29,46 @@ namespace StreetFood.Controllers
         
         // -- GhostPin migrated endpoints --
 
-        [HttpPost("{branchId}/claim")]
-        [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> ClaimUserBranch(int branchId, [FromBody] ClaimUserBranchRequest request)
+        [HttpGet("all-ghost-pins")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<object>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllApprovedGhostPinBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
-                // Same logic as before
-                int vendorId = int.Parse(User.FindFirst("VendorId")?.Value ?? "-1");
-
-                var claimResult = (dynamic)await _branchService.ClaimUserBranchAsync(branchId, vendorId, userId, request);
-                int claimedBranchId = claimResult.BranchId;
-
-                var paymentLink = await _paymentService.CreatePaymentLink(userId, claimedBranchId);
-                return Ok(new { message = claimResult.Message, paymentLink = paymentLink.PaymentUrl });
+                var branches = await _branchService.GetAllApprovedGhostPinsAsync(pageNumber, pageSize);
+                return Ok(new { message = "All approved ghost pin branches retrieved successfully", data = branches });
             }
             catch (Exception ex)
             {
-                if (ex.Message.Contains("Only verified")) return Conflict(new { message = ex.Message });
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("my-ghost-pin")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<object>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetMyGhostPinBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var branches = await _branchService.GetMyGhostPinBranchesAsync(userId, pageNumber, pageSize);
+                return Ok(new { message = "Ghost pin branches retrieved successfully", data = branches });
+            }
+            catch (Exception ex)
+            {
                 return BadRequest(new { message = ex.Message });
             }
         }
 
         [HttpPost("user")]
         [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateUserBranch([FromBody] CreateUserBranchRequest request)
         {
             try
@@ -83,6 +99,7 @@ namespace StreetFood.Controllers
         /// </summary>
         [HttpPost("vendor/{vendorId}")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateBranch(int vendorId, [FromBody] CreateBranchDto createBranchDto)
         {
             try
@@ -136,6 +153,7 @@ namespace StreetFood.Controllers
         /// Otherwise returns public data only
         /// </summary>
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBranchById(int id)
         {
             try
@@ -190,6 +208,7 @@ namespace StreetFood.Controllers
 
 
         [HttpGet("vendor/{vendorId}")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBranchesByVendorId(int vendorId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -231,6 +250,7 @@ namespace StreetFood.Controllers
         /// </summary>
         [HttpGet]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<BranchResponseDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -245,6 +265,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("active")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<ActiveBranchResponseDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetActiveBranches([FromQuery] ActiveBranchFilterDto filter, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -281,6 +302,7 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateBranch(int id, [FromBody] UpdateBranchDto updateBranchDto)
         {
             try
@@ -307,6 +329,7 @@ namespace StreetFood.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> DeleteBranch(int id)
         {
             try
@@ -331,6 +354,7 @@ namespace StreetFood.Controllers
 
         [HttpPost("{id}/submit-license")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> SubmitBranchLicense(int id, List<IFormFile> licenseImages)
         {
             try
@@ -386,6 +410,7 @@ namespace StreetFood.Controllers
 
         [HttpGet("{id}/license-status")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBranchLicenseStatus(int id)
         {
             try
@@ -439,11 +464,11 @@ namespace StreetFood.Controllers
         /// </summary>
         [HttpGet("pending-registrations")]
         [Authorize(Roles = "Moderator")]
-        public async Task<IActionResult> GetPendingBranchRegistrations([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetPendingBranchRegistrations([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] int? type = null)
         {
             try
             {
-                var pendingRegistrations = await _branchService.GetPendingBranchRegistrationsAsync(pageNumber, pageSize);
+                var pendingRegistrations = await _branchService.GetPendingBranchRegistrationsAsync(pageNumber, pageSize, type);
                 return Ok(new { message = "Pending registrations retrieved successfully", data = pendingRegistrations });
             }
             catch (Exception ex)

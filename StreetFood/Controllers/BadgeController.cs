@@ -1,9 +1,12 @@
+using BO.Common;
+using BO.DTO;
 using BO.DTO.Badge;
 using BO.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -23,6 +26,7 @@ namespace StreetFood.Controllers
         // Admin endpoints
         [HttpPost]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<BadgeDto>), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateBadge([FromBody] CreateBadgeDto createBadgeDto)
         {
             try
@@ -43,6 +47,7 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<BadgeDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateBadge(int id, [FromBody] UpdateBadgeDto updateBadgeDto)
         {
             try
@@ -67,6 +72,7 @@ namespace StreetFood.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> DeleteBadge(int id)
         {
             try
@@ -86,6 +92,7 @@ namespace StreetFood.Controllers
 
         // Public endpoints
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<BadgeDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBadgeById(int id)
         {
             try
@@ -104,6 +111,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<List<BadgeDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllBadges()
         {
             try

@@ -21,6 +21,7 @@ namespace StreetFood.Controllers
         // GET api/user/userinfo-setup
         [HttpGet("userinfo-setup")]
         [Authorize(Roles = "User")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetUserInfoSetup()
         {
             try
@@ -43,6 +44,7 @@ namespace StreetFood.Controllers
         // PUT api/user/userinfo-setup
         [HttpPut("userinfo-setup")]
         [Authorize(Roles = "User")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> MarkUserInfoSetup()
         {
             try
@@ -65,6 +67,7 @@ namespace StreetFood.Controllers
         // GET api/user/dietary-setup
         [HttpGet("dietary-setup")]
         [Authorize(Roles = "User")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetDietarySetup()
         {
             try
@@ -87,6 +90,7 @@ namespace StreetFood.Controllers
         // PUT api/user/dietary-setup
         [HttpPut("dietary-setup")]
         [Authorize(Roles = "User")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> MarkDietarySetup()
         {
             try

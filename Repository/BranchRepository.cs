@@ -31,9 +31,24 @@ namespace Repository
             return await _branchDAO.GetAllByVendorIdAsync(vendorId);
         }
 
+        public async Task<(List<Branch> items, int totalCount)> GetByCreatedByIdAsync(int userId, int pageNumber, int pageSize)
+        {
+            return await _branchDAO.GetByCreatedByIdAsync(userId, pageNumber, pageSize);
+        }
+
+        public async Task<(List<Branch> items, int totalCount)> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize)
+        {
+            return await _branchDAO.GetAllApprovedGhostPinsAsync(pageNumber, pageSize);
+        }
+
         public async Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
         {
             return await _branchDAO.GetByVendorIdAsync(vendorId, pageNumber, pageSize);
+        }
+
+        public async Task<List<Branch>> GetAllByManagerIdAsync(int managerUserId)
+        {
+            return await _branchDAO.GetAllByManagerIdAsync(managerUserId);
         }
 
         public async Task<(List<Branch> items, int totalCount)> GetAllAsync(int pageNumber, int pageSize)
@@ -136,29 +151,29 @@ namespace Repository
             await _branchDAO.DeleteBranchImageAsync(imageId);
         }
 
-        public async Task<BranchRegisterRequest> GetBranchRegisterRequestAsync(int branchId)
+        public async Task<BranchRequest> GetBranchRequestAsync(int branchId)
         {
-            return await _branchDAO.GetBranchRegisterRequestAsync(branchId);
+            return await _branchDAO.GetBranchRequestAsync(branchId);
         }
 
-        public async Task<Dictionary<int, BranchRegisterRequest>> GetRegisterRequestsByBranchIdsAsync(List<int> branchIds)
+        public async Task<Dictionary<int, BranchRequest>> GetRegisterRequestsByBranchIdsAsync(List<int> branchIds)
         {
             return await _branchDAO.GetRegisterRequestsByBranchIdsAsync(branchIds);
         }
 
-        public async Task<(List<BranchRegisterRequest> items, int totalCount)> GetAllBranchRegisterRequestsAsync(int pageNumber, int pageSize)
+        public async Task<(List<BranchRequest> items, int totalCount)> GetAllBranchRequestsAsync(int pageNumber, int pageSize, int? type = null)
         {
-            return await _branchDAO.GetAllBranchRegisterRequestsAsync(pageNumber, pageSize);
+            return await _branchDAO.GetAllBranchRequestsAsync(pageNumber, pageSize, type);
         }
 
-        public async Task AddBranchRegisterRequestAsync(BranchRegisterRequest request)
+        public async Task AddBranchRequestAsync(BranchRequest request)
         {
-            await _branchDAO.AddBranchRegisterRequestAsync(request);
+            await _branchDAO.AddBranchRequestAsync(request);
         }
 
-        public async Task UpdateBranchRegisterRequestAsync(BranchRegisterRequest request)
+        public async Task UpdateBranchRequestAsync(BranchRequest request)
         {
-            await _branchDAO.UpdateBranchRegisterRequestAsync(request);
+            await _branchDAO.UpdateBranchRequestAsync(request);
         }
 
         public async Task<List<Branch>> SearchVendorsWithBranchesAndDishesAsync(string keyword)
@@ -209,3 +224,5 @@ namespace Repository
         }
     }
 }
+
+

@@ -1,8 +1,10 @@
+using BO.Common;
 using BO.DTO.Feedback;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -28,6 +30,7 @@ namespace StreetFood.Controllers
 
         [HttpPost]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<FeedbackResponseDto>), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateFeedback([FromBody] CreateFeedbackDto createFeedbackDto)
         {
             try
@@ -75,6 +78,7 @@ namespace StreetFood.Controllers
 
         [HttpPost("{feedbackId}/images")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<FeedbackResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UploadFeedbackImages(int feedbackId, List<IFormFile> images)
         {
             try
@@ -127,6 +131,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<FeedbackResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetFeedbackById(int id)
         {
             try
@@ -141,6 +146,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("branch/{branchId}")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<FeedbackResponseDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetFeedbackByBranch(
             int branchId,
             [FromQuery] int pageNumber = 1,
@@ -170,6 +176,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("user/{userId}")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<FeedbackResponseDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetFeedbackByUser(int userId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -185,6 +192,7 @@ namespace StreetFood.Controllers
 
         [HttpGet("my-feedback")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<FeedbackResponseDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMyFeedback([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -206,6 +214,7 @@ namespace StreetFood.Controllers
 
         [HttpGet("velocity/check")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<VelocityCheckDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> CheckVelocity()
         {
             try
@@ -231,6 +240,7 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<FeedbackResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateFeedback(int id, [FromBody] UpdateFeedbackDto updateFeedbackDto)
         {
             try
@@ -257,6 +267,7 @@ namespace StreetFood.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "User,Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> DeleteFeedback(int id)
         {
             try
@@ -299,8 +310,8 @@ namespace StreetFood.Controllers
         {
             try
             {
-                var count = await _feedbackService.GetFeedbackCountByBranch(branchId);
-                return Ok(new { branchId, feedbackCount = count });
+                var result = await _feedbackService.GetFeedbackCountByBranch(branchId);
+                return Ok(result);
             }
             catch (Exception ex)
             {

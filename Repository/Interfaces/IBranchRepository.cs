@@ -9,7 +9,10 @@ namespace Repository.Interfaces
         Task<Branch> CreateAsync(Branch branch);
         Task<Branch> GetByIdAsync(int branchId);
         Task<List<Branch>> GetAllByVendorIdAsync(int vendorId);  // Non-paginated for internal use
+        Task<(List<Branch> items, int totalCount)> GetByCreatedByIdAsync(int userId, int pageNumber, int pageSize);
+        Task<(List<Branch> items, int totalCount)> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize);
+        Task<List<Branch>> GetAllByManagerIdAsync(int managerUserId);
         Task<(List<Branch> items, int totalCount)> GetAllAsync(int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetActiveBranchesAsync(int pageNumber, int pageSize);
         Task<List<Branch>> GetByVerificationStatusAsync(bool isVerified);
@@ -32,11 +35,11 @@ namespace Repository.Interfaces
         Task DeleteBranchImageAsync(int imageId);
         
         // License registration
-        Task<BranchRegisterRequest> GetBranchRegisterRequestAsync(int branchId);
-        Task<Dictionary<int, BranchRegisterRequest>> GetRegisterRequestsByBranchIdsAsync(List<int> branchIds);
-        Task<(List<BranchRegisterRequest> items, int totalCount)> GetAllBranchRegisterRequestsAsync(int pageNumber, int pageSize);
-        Task AddBranchRegisterRequestAsync(BranchRegisterRequest request);
-        Task UpdateBranchRegisterRequestAsync(BranchRegisterRequest request);
+        Task<BranchRequest> GetBranchRequestAsync(int branchId);
+        Task<Dictionary<int, BranchRequest>> GetRegisterRequestsByBranchIdsAsync(List<int> branchIds);
+        Task<(List<BranchRequest> items, int totalCount)> GetAllBranchRequestsAsync(int pageNumber, int pageSize, int? type = null);
+        Task AddBranchRequestAsync(BranchRequest request);
+        Task UpdateBranchRequestAsync(BranchRequest request);
         
         // Search vendors with branches and dishes
         Task<List<Branch>> SearchVendorsWithBranchesAndDishesAsync(string keyword);
@@ -61,3 +64,5 @@ namespace Repository.Interfaces
         Task RecalculateBranchMetricsAsync(int branchId);
     }
 }
+
+

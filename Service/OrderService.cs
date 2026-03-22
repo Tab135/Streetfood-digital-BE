@@ -113,14 +113,16 @@ public class OrderService : IOrderService
 
         var branchIds = branches.Select(b => b.BranchId).ToList();
 
-        if (status == OrderStatus.Pending)
-        {
-            throw new DomainExceptions("Pending orders are not visible to vendors before payment");
-        }
-
         var effectiveStatuses = status.HasValue
             ? new List<OrderStatus> { status.Value }
-            : new List<OrderStatus> { OrderStatus.AwaitingVendorConfirmation };
+            : new List<OrderStatus>
+            {
+                OrderStatus.Pending,
+                OrderStatus.AwaitingVendorConfirmation,
+                OrderStatus.Paid,
+                OrderStatus.Cancelled,
+                OrderStatus.Complete
+            };
         var (orders, totalCount) = await _orderRepository.GetByBranchIds(branchIds, pageNumber, pageSize, effectiveStatuses);
         var items = orders.Select(MapToDto).ToList();
 
@@ -171,6 +173,47 @@ public class OrderService : IOrderService
             };
 
         var (orders, totalCount) = await _orderRepository.GetByBranchIds(new List<int> { branchId }, pageNumber, pageSize, effectiveStatuses);
+        var items = orders.Select(MapToDto).ToList();
+
+        return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
+    }
+
+    public async Task<PaginatedResponse<OrderResponseDto>> GetManagerOrdersAsync(int managerUserId, int pageNumber, int pageSize, OrderStatus? status = null)
+    {
+        var branches = await _branchRepository.GetAllByManagerIdAsync(managerUserId);
+        if (branches.Count == 0)
+        {
+            throw new DomainExceptions("No branch assigned to this manager", "ERR_NOT_FOUND");
+        }
+
+        var branchIds = branches.Select(b => b.BranchId).ToList();
+
+        if (status == OrderStatus.Pending)
+        {
+            throw new DomainExceptions("Pending orders are not visible to managers before payment");
+        }
+
+        if (pageNumber <= 0)
+        {
+            pageNumber = 1;
+        }
+
+        if (pageSize <= 0)
+        {
+            pageSize = 10;
+        }
+
+        var effectiveStatuses = status.HasValue
+            ? new List<OrderStatus> { status.Value }
+            : new List<OrderStatus>
+            {
+                OrderStatus.AwaitingVendorConfirmation,
+                OrderStatus.Paid,
+                OrderStatus.Cancelled,
+                OrderStatus.Complete
+            };
+
+        var (orders, totalCount) = await _orderRepository.GetByBranchIds(branchIds, pageNumber, pageSize, effectiveStatuses);
         var items = orders.Select(MapToDto).ToList();
 
         return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
@@ -294,7 +337,10 @@ public class OrderService : IOrderService
         var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value)
             ?? throw new DomainExceptions("Vendor not found");
 
-        if (vendor.UserId != vendorUserId)
+        var isBranchManager = branch.ManagerId.HasValue && branch.ManagerId.Value == vendorUserId;
+        var isVendorOwner = vendor.UserId == vendorUserId;
+
+        if (!isVendorOwner && !isBranchManager)
         {
             throw new DomainExceptions("You do not own this branch", "ERR_FORBIDDEN");
         }
@@ -332,10 +378,18 @@ public class OrderService : IOrderService
         var branch = await _branchRepository.GetByIdAsync(order.BranchId)
             ?? throw new DomainExceptions("Branch not found", "ERR_NOT_FOUND");
 
-        var vendor = await _vendorRepository.GetByUserIdAsync(vendorUserId)
-            ?? throw new DomainExceptions("Vendor profile not found");
+        if (!branch.VendorId.HasValue || branch.VendorId.Value <= 0)
+        {
+            throw new DomainExceptions("Vendor not assigned to branch", "ERR_NOT_FOUND");
+        }
 
-        if (branch.VendorId != vendor.VendorId)
+        var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value)
+            ?? throw new DomainExceptions("Vendor not found", "ERR_NOT_FOUND");
+
+        var isBranchManager = branch.ManagerId.HasValue && branch.ManagerId.Value == vendorUserId;
+        var isVendorOwner = vendor.UserId == vendorUserId;
+
+        if (!isVendorOwner && !isBranchManager)
         {
             throw new DomainExceptions("You do not own this branch", "ERR_FORBIDDEN");
         }
@@ -469,6 +523,7 @@ public class OrderService : IOrderService
         {
             OrderId = order.OrderId,
             UserId = order.UserId,
+            UserName = order.User?.UserName ?? string.Empty,
             BranchId = order.BranchId,
             BranchName = order.Branch?.Name ?? string.Empty,
             Status = order.Status,
@@ -485,6 +540,7 @@ public class OrderService : IOrderService
             {
                 DishId = od.DishId,
                 DishName = od.BranchDish?.Dish?.Name ?? string.Empty,
+                Price = od.BranchDish?.Dish?.Price ?? 0m,
                 Quantity = od.Quantity
             }).ToList()
         };

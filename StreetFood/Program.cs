@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.OpenApi;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Repository;
 using Repository.Interfaces;
@@ -312,6 +313,188 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
                     }
                 }
             }
+
+            // Fallback response schema for actions returning anonymous IActionResult payloads.
+            // Without this, Scalar can display "No body" because OpenAPI cannot infer schemas.
+            foreach (var path in document.Paths)
+            {
+                foreach (var operation in path.Value.Operations)
+                {
+                    operation.Value.Responses ??= new OpenApiResponses();
+
+                    if (!operation.Value.Responses.ContainsKey("200"))
+                    {
+                        operation.Value.Responses["200"] = new OpenApiResponse { Description = "Success" };
+                    }
+
+                    foreach (var response in operation.Value.Responses.Values)
+                    {
+                        response.Content ??= new Dictionary<string, OpenApiMediaType>();
+
+                        if (!response.Content.ContainsKey("application/json"))
+                        {
+                            response.Content["application/json"] = new OpenApiMediaType
+                            {
+                                Schema = CreateApiResponseEnvelopeSchema()
+                            };
+                            continue;
+                        }
+
+                        var jsonContent = response.Content["application/json"];
+                        var existingSchema = jsonContent.Schema;
+
+                        if (existingSchema == null)
+                        {
+                            jsonContent.Schema = CreateApiResponseEnvelopeSchema();
+                            jsonContent.Example = CreateEnvelopeExample(jsonContent.Schema, document);
+                            continue;
+                        }
+
+                        if (IsApiResponseEnvelopeSchema(existingSchema))
+                        {
+                            jsonContent.Example = CreateEnvelopeExample(existingSchema, document);
+                            continue;
+                        }
+
+                        jsonContent.Schema = CreateApiResponseEnvelopeSchema(existingSchema);
+                        jsonContent.Example = CreateEnvelopeExample(jsonContent.Schema, document);
+                    }
+                }
+            }
+        }
+
+        private static OpenApiSchema CreateApiResponseEnvelopeSchema(OpenApiSchema? dataSchema = null)
+        {
+            return new OpenApiSchema
+            {
+                Type = "object",
+                Properties = new Dictionary<string, OpenApiSchema>
+                {
+                    ["status"] = new OpenApiSchema { Type = "integer", Format = "int32" },
+                    ["message"] = new OpenApiSchema { Type = "string" },
+                    ["data"] = dataSchema ?? new OpenApiSchema { Type = "object", Nullable = true, AdditionalPropertiesAllowed = true },
+                    ["errorCode"] = new OpenApiSchema { Type = "string", Nullable = true }
+                },
+                Required = new HashSet<string> { "status", "message" }
+            };
+        }
+
+        private static bool IsApiResponseEnvelopeSchema(OpenApiSchema schema)
+        {
+            return schema.Properties != null
+                && schema.Properties.ContainsKey("status")
+                && schema.Properties.ContainsKey("message")
+                && schema.Properties.ContainsKey("data")
+                && schema.Properties.ContainsKey("errorCode");
+        }
+
+        private static IOpenApiAny CreateEnvelopeExample(OpenApiSchema envelopeSchema, OpenApiDocument document)
+        {
+            var dataSchema = ResolveSchema(envelopeSchema.Properties != null && envelopeSchema.Properties.TryGetValue("data", out var ds)
+                ? ds
+                : new OpenApiSchema { Type = "object" }, document);
+
+            return new OpenApiObject
+            {
+                ["status"] = new OpenApiInteger(200),
+                ["message"] = new OpenApiString("Success"),
+                ["data"] = CreateExampleFromSchema(dataSchema, document, 0, new HashSet<string>()),
+                ["errorCode"] = new OpenApiNull()
+            };
+        }
+
+        private static IOpenApiAny CreateExampleFromSchema(OpenApiSchema schema, OpenApiDocument document, int depth, HashSet<string> visitedRefs)
+        {
+            if (depth > 4)
+            {
+                return new OpenApiObject();
+            }
+
+            schema = ResolveSchema(schema, document, visitedRefs);
+
+            if (schema.Enum != null && schema.Enum.Count > 0)
+            {
+                return schema.Enum[0];
+            }
+
+            if (schema.OneOf != null && schema.OneOf.Count > 0)
+            {
+                return CreateExampleFromSchema(schema.OneOf[0], document, depth + 1, visitedRefs);
+            }
+
+            if (schema.AnyOf != null && schema.AnyOf.Count > 0)
+            {
+                return CreateExampleFromSchema(schema.AnyOf[0], document, depth + 1, visitedRefs);
+            }
+
+            if (schema.AllOf != null && schema.AllOf.Count > 0)
+            {
+                var obj = new OpenApiObject();
+                foreach (var part in schema.AllOf)
+                {
+                    var partExample = CreateExampleFromSchema(part, document, depth + 1, visitedRefs);
+                    if (partExample is OpenApiObject partObj)
+                    {
+                        foreach (var kvp in partObj)
+                        {
+                            obj[kvp.Key] = kvp.Value;
+                        }
+                    }
+                }
+                return obj;
+            }
+
+            return schema.Type switch
+            {
+                "string" => new OpenApiString("string"),
+                "integer" => new OpenApiInteger(1),
+                "number" => new OpenApiDouble(1),
+                "boolean" => new OpenApiBoolean(true),
+                "array" => new OpenApiArray
+                {
+                    CreateExampleFromSchema(schema.Items ?? new OpenApiSchema { Type = "object" }, document, depth + 1, visitedRefs)
+                },
+                _ => CreateObjectExample(schema, document, depth, visitedRefs)
+            };
+        }
+
+        private static OpenApiObject CreateObjectExample(OpenApiSchema schema, OpenApiDocument document, int depth, HashSet<string> visitedRefs)
+        {
+            var obj = new OpenApiObject();
+            if (schema.Properties == null)
+            {
+                return obj;
+            }
+
+            foreach (var prop in schema.Properties)
+            {
+                var propSchema = ResolveSchema(prop.Value, document, visitedRefs);
+                obj[prop.Key] = CreateExampleFromSchema(propSchema, document, depth + 1, visitedRefs);
+            }
+
+            return obj;
+        }
+
+        private static OpenApiSchema ResolveSchema(OpenApiSchema schema, OpenApiDocument document, HashSet<string>? visitedRefs = null)
+        {
+            if (schema.Reference?.Id == null)
+            {
+                return schema;
+            }
+
+            visitedRefs ??= new HashSet<string>();
+            if (visitedRefs.Contains(schema.Reference.Id))
+            {
+                return new OpenApiSchema { Type = "object" };
+            }
+
+            if (document.Components?.Schemas == null || !document.Components.Schemas.TryGetValue(schema.Reference.Id, out var resolved))
+            {
+                return schema;
+            }
+
+            visitedRefs.Add(schema.Reference.Id);
+            return resolved;
         }
     }
 }

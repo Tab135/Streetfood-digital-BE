@@ -1,9 +1,11 @@
+using BO.Common;
 using BO.DTO.Dietary;
 using BO.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace StreetFood.Controllers
@@ -21,6 +23,7 @@ namespace StreetFood.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<DietaryPreferenceDto>), StatusCodes.Status201Created)]
         public async Task<IActionResult> Create([FromBody] CreateDietaryPreferenceDto createDto)
         {
             try
@@ -37,6 +40,7 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<DietaryPreferenceDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateDietaryPreferenceDto updateDto)
         {
             try
@@ -53,6 +57,7 @@ namespace StreetFood.Controllers
 
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> Delete(int id)
         {
             try
@@ -68,6 +73,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<DietaryPreferenceDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetById(int id)
         {
             try
@@ -83,6 +89,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<List<DietaryPreferenceDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAll()
         {
             try

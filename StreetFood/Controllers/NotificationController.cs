@@ -1,3 +1,5 @@
+using BO.Common;
+using BO.DTO.Notification;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
@@ -18,6 +20,7 @@ public class NotificationController : ControllerBase
     }
 
     [HttpGet]
+    [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<NotificationDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetNotifications(
         [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
@@ -37,6 +40,7 @@ public class NotificationController : ControllerBase
     }
 
     [HttpGet("unread-count")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetUnreadCount()
     {
         try
@@ -55,6 +59,7 @@ public class NotificationController : ControllerBase
     }
 
     [HttpPut("{id}/read")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> MarkAsRead(int id)
     {
         try
@@ -73,6 +78,7 @@ public class NotificationController : ControllerBase
     }
 
     [HttpPut("read-all")]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
     public async Task<IActionResult> MarkAllAsRead()
     {
         try

@@ -172,6 +172,15 @@ namespace DAL
                 .CountAsync();
         }
 
+        public async Task<Dictionary<int, int>> GetFeedbackCountByStarsAsync(int branchId)
+        {
+            return await _context.Feedbacks
+                .Where(f => f.BranchId == branchId)
+                .GroupBy(f => f.Rating)
+                .Select(g => new { Rating = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Rating, x => x.Count);
+        }
+
         public async Task<int?> GetRatingOfRecentFeedbackAsync(int branchId, int offset)
         {
             return await _context.Feedbacks

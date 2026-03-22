@@ -21,8 +21,9 @@ namespace BO.DTO.Branch
         public double Long { get; set; }
         public double AvgRating { get; set; }
         public int TotalReviewCount { get; set; }
-public int TotalRatingSum { get; set; }
+        public int TotalRatingSum { get; set; }
         public bool IsVerified { get; set; }
+        public bool IsSubscribed { get; set; }
         
         public int TierId { get; set; }
         public string TierName { get; set; } = string.Empty;

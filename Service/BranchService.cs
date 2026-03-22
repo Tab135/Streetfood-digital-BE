@@ -44,6 +44,7 @@ namespace Service
                 VendorId = vendorId,
                 ManagerId = vendor.UserId,
                 Name = createBranchDto.Name,
+                CreatedById = userId,
                 PhoneNumber = createBranchDto.PhoneNumber,
                 Email = createBranchDto.Email,
                 AddressDetail = createBranchDto.AddressDetail,
@@ -60,16 +61,17 @@ namespace Service
             var createdBranch = await _branchRepository.CreateAsync(branch);
 
             // Auto-create a pending register request for the new branch
-            var branchRegisterRequest = new BranchRegisterRequest
+            var branchRequest = new BranchRequest
             {
                 BranchId = createdBranch.BranchId,
+                Type = 1,
                 LicenseUrl = null,
                 Status = RegisterVendorStatusEnum.Pending,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
-            await _branchRepository.AddBranchRegisterRequestAsync(branchRegisterRequest);
+            await _branchRepository.AddBranchRequestAsync(branchRequest);
 
             return createdBranch;
         }
@@ -96,15 +98,16 @@ namespace Service
             var createdBranch = await _branchRepository.CreateAsync(branch);
 
             // Auto-create a pending register request for the new branch (ghost pin)
-            var branchRegisterRequest = new BranchRegisterRequest
+            var branchRequest = new BranchRequest
             {
                 BranchId = createdBranch.BranchId,
+                Type = 0,
                 LicenseUrl = null,
                 Status = RegisterVendorStatusEnum.Pending,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-            await _branchRepository.AddBranchRegisterRequestAsync(branchRegisterRequest);
+            await _branchRepository.AddBranchRequestAsync(branchRequest);
 
             var responseDto = await MapToResponseDtoAsync(createdBranch);
             
@@ -119,44 +122,39 @@ namespace Service
         
         
         // --- Replacing GhostPin logic natively with Branch ---
-        public async Task<object> ClaimUserBranchAsync(int branchId, int vendorId, int userId, ClaimUserBranchRequest request)
+        public async Task<(string Message, int BranchId)> ClaimUserBranchAsync(int branchId, int userId, List<string> licenseUrls)
         {
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null) throw new Exception("Branch not found");
-            if (!branch.IsVerified || branch.VendorId != null)
-                throw new Exception("Only verified and unowned branches can be claimed.");
 
-            if (request.ExistingBranchId.HasValue)
+            if (branch.VendorId != null)
+                throw new Exception("This branch has already been claimed or owned by a vendor.");
+
+            // Do NOT assign VendorId yet. Just set the ManagerId so we know WHO is claiming.
+            // VendorId will be created/assigned upon Moderator approval in VerifyBranchAsync.
+            branch.ManagerId = userId;
+            branch.IsVerified = false; // Needs moderator approval
+            branch.IsActive = false;
+            branch.UpdatedAt = DateTime.UtcNow;
+
+            await _branchRepository.UpdateAsync(branch);
+
+            var licenseUrlJson = licenseUrls != null && licenseUrls.Count > 0 ? 
+                                 System.Text.Json.JsonSerializer.Serialize(licenseUrls) : null;
+                                 
+            var registrationRequest = new BranchRequest
             {
-                var targetBranch = await _branchRepository.GetByIdAsync(request.ExistingBranchId.Value);
-                if (targetBranch == null || targetBranch.VendorId != vendorId)
-                    throw new Exception("Invalid or unauthorized existing branch.");
+                BranchId = branchId,
+                Type = 2, // Claim branch
+                LicenseUrl = licenseUrlJson,
+                Status = RegisterVendorStatusEnum.Pending,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await _branchRepository.AddBranchRequestAsync(registrationRequest);
 
-                // Merge data
-                targetBranch.Lat = branch.Lat;
-                targetBranch.Long = branch.Long;
-                targetBranch.AddressDetail = branch.AddressDetail;
-                targetBranch.Ward = branch.Ward;
-                targetBranch.City = branch.City;
-                targetBranch.UpdatedAt = DateTime.UtcNow;
-
-                await _branchRepository.UpdateAsync(targetBranch);
-
-                await _branchRepository.DeleteAsync(branch.BranchId);
-
-                return new { Message = "Merged with existing branch. Generating payment link...", BranchId = targetBranch.BranchId };
-            }
-            else
-            {
-                branch.VendorId = vendorId;
-                branch.ManagerId = userId;
-                branch.UpdatedAt = DateTime.UtcNow;
-                await _branchRepository.UpdateAsync(branch);
-
-                return new { Message = "Claiming new branch. Generating payment link...", BranchId = branch.BranchId };
-            }
+            return ("Claim request submitted. Pending moderator approval.", branch.BranchId);
         }
-
         private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
         {
             var R = 6371e3;
@@ -178,6 +176,22 @@ namespace Service
             }
 
             return await MapToResponseDtoAsync(branch);
+        }
+
+        public async Task<PaginatedResponse<BranchResponseDto>> GetMyGhostPinBranchesAsync(int userId, int pageNumber, int pageSize)
+        {
+            var (branches, totalCount) = await _branchRepository.GetByCreatedByIdAsync(userId, pageNumber, pageSize);
+            var requests = await _branchRepository.GetRegisterRequestsByBranchIdsAsync(branches.Select(b => b.BranchId).ToList());
+            var items = branches.Select(b => MapToResponseDto(b, requests.GetValueOrDefault(b.BranchId))).ToList();
+            return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
+        }
+
+        public async Task<PaginatedResponse<BranchResponseDto>> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize)
+        {
+            var (branches, totalCount) = await _branchRepository.GetAllApprovedGhostPinsAsync(pageNumber, pageSize);
+            var requests = await _branchRepository.GetRegisterRequestsByBranchIdsAsync(branches.Select(b => b.BranchId).ToList());
+            var items = branches.Select(b => MapToResponseDto(b, requests.GetValueOrDefault(b.BranchId))).ToList();
+            return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
@@ -293,7 +307,7 @@ namespace Service
             return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
-        public async Task<BranchRegisterRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId)
+        public async Task<BranchRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId)
         {
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
@@ -307,46 +321,31 @@ namespace Service
                 throw new Exception("User does not own this branch");
             }
 
-            // Check if registration request already exists
-            var existingRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
-            
             // Serialize list of URLs to JSON
             var licenseUrlJson = System.Text.Json.JsonSerializer.Serialize(licenseImagePaths);
 
-            var registrationRequest = new BranchRegisterRequest
+            var registrationRequest = new BranchRequest
             {
                 BranchId = branchId,
+                Type = 1, // License verification
                 LicenseUrl = licenseUrlJson,
                 Status = RegisterVendorStatusEnum.Pending,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 
-            if (existingRequest != null)
-            {
-                registrationRequest.BranchRegisterRequestId = existingRequest.BranchRegisterRequestId;
-                existingRequest.LicenseUrl = licenseUrlJson;
-                existingRequest.Status = RegisterVendorStatusEnum.Pending;
-                existingRequest.UpdatedAt = DateTime.UtcNow;
-                
-                await _branchRepository.UpdateBranchRegisterRequestAsync(existingRequest);
-                return existingRequest; // Return the updated entity
-            }
-            else
-            {
-                await _branchRepository.AddBranchRegisterRequestAsync(registrationRequest);
-                return registrationRequest;
-            }
+            await _branchRepository.AddBranchRequestAsync(registrationRequest);
+            return registrationRequest;
         }
 
-        public async Task<BranchRegisterRequest> GetBranchLicenseStatusAsync(int branchId, int userId)
+        public async Task<BranchRequest> GetBranchLicenseStatusAsync(int branchId, int userId)
         {
             if (!await UserOwnsBranchAsync(branchId, userId))
             {
                 throw new Exception("User does not own this branch");
             }
 
-            var registrationRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
             if (registrationRequest == null)
             {
                 throw new Exception($"No registration request found for branch ID {branchId}");
@@ -355,15 +354,16 @@ namespace Service
             return registrationRequest;
         }
 
-        public async Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize)
+        public async Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize, int? type = null)
         {
-            var (pendingRequests, totalCount) = await _branchRepository.GetAllBranchRegisterRequestsAsync(pageNumber, pageSize);
+            var (pendingRequests, totalCount) = await _branchRepository.GetAllBranchRequestsAsync(pageNumber, pageSize, type);
             var items = pendingRequests
                 .Select(r => new PendingRegistrationDto
                 {
-                    BranchRegisterRequestId = r.BranchRegisterRequestId,
+                    BranchRequestId = r.BranchRequestId,
                     BranchId = r.BranchId,
                     LicenseUrl = r.LicenseUrl,
+                    Type = r.Type,
                     Status = r.Status,
                     RejectReason = r.RejectReason,
                     CreatedAt = r.CreatedAt,
@@ -374,6 +374,7 @@ namespace Service
                         BranchId = r.Branch.BranchId,
                         VendorId = r.Branch.VendorId ?? 0,
                         ManagerId = r.Branch.ManagerId,
+                        CreatedById = r.Branch.CreatedById,
                         Name = r.Branch.Name,
                         PhoneNumber = r.Branch.PhoneNumber,
                         Email = r.Branch.Email,
@@ -413,31 +414,67 @@ namespace Service
                 throw new Exception($"Branch with ID {branchId} not found");
             }
 
+            // Handle ghost pin / vendor creation claim mechanism upon verification
+            if (branch.ManagerId.HasValue && branch.VendorId == null)
+            {
+                int userId = branch.ManagerId.Value;
+                var claimingUser = await _userRepository.GetUserById(userId);
+                
+                var existingVendor = await _vendorRepository.GetByUserIdAsync(userId);
+                if (existingVendor != null)
+                {
+                    // User is already a vendor. Assign branch to existing vendor profile.
+                    branch.VendorId = existingVendor.VendorId;
+                }
+                else
+                {
+                    // User is not a vendor yet. Provide them with a new Vendor profile automatically.
+                    var newVendor = new Vendor
+                    {
+                        UserId = userId,
+                        Name = branch.Name,
+                        IsActive = true
+                    };
+                    newVendor = await _vendorRepository.CreateAsync(newVendor);
+                    branch.VendorId = newVendor.VendorId;
+
+                    if (claimingUser != null && claimingUser.Role == Role.User)
+                    {
+                        claimingUser.Role = Role.Vendor;
+                        await _userRepository.UpdateAsync(claimingUser);
+                    }
+                }
+            }
+
             branch.IsVerified = true;
             branch.IsActive = true;
+            branch.IsSubscribed = false; // "ko đóng tiền thì chỉ là branch bình thường chưa được isSubcribed"
             branch.TierId = 2; // Silver
             branch.BatchReviewCount = 0;
             branch.BatchRatingSum = 0;
             await _branchRepository.UpdateAsync(branch);
 
             // Update registration request status
-            var registrationRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
             if (registrationRequest != null)
             {
                 registrationRequest.Status = RegisterVendorStatusEnum.Accept;
                 registrationRequest.UpdatedAt = DateTime.UtcNow;
-                await _branchRepository.UpdateBranchRegisterRequestAsync(registrationRequest);
+                await _branchRepository.UpdateBranchRequestAsync(registrationRequest);
             }
 
-            // Promote vendor owner to Vendor role if not already
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
-            if (vendor != null)
+            // Standard promote vendor owner behavior (legacy fallback)
+            if (branch.VendorId.HasValue)
             {
-                var vendorOwner = await _userRepository.GetUserById(vendor.UserId);
-                if (vendorOwner != null && vendorOwner.Role == Role.User)
+                var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value);
+                if (vendor != null)
                 {
-                    vendorOwner.Role = Role.Vendor;
-                    await _userRepository.UpdateAsync(vendorOwner);
+                    var vendorOwner = await _userRepository.GetUserById(vendor.UserId);
+                    if (vendorOwner != null && vendorOwner.Role == Role.User)
+                    {
+                        vendorOwner.Role = Role.Vendor;
+                        await _userRepository.UpdateAsync(vendorOwner);
+                    }
                 }
             }
 
@@ -446,7 +483,7 @@ namespace Service
 
         public async Task<bool> RejectBranchRegistrationAsync(int branchId, string rejectionReason)
         {
-            var registrationRequest = await _branchRepository.GetBranchRegisterRequestAsync(branchId);
+            var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
             if (registrationRequest == null)
             {
                 throw new Exception($"No registration request found for branch ID {branchId}");
@@ -455,7 +492,7 @@ namespace Service
             registrationRequest.Status = RegisterVendorStatusEnum.Reject;
             registrationRequest.RejectReason = rejectionReason;
             registrationRequest.UpdatedAt = DateTime.UtcNow;
-            await _branchRepository.UpdateBranchRegisterRequestAsync(registrationRequest);
+            await _branchRepository.UpdateBranchRequestAsync(registrationRequest);
 
             return true;
         }
@@ -466,7 +503,7 @@ namespace Service
             return vendor != null && vendor.UserId == userId;
         }
 
-        private BranchResponseDto MapToResponseDto(Branch branch, BranchRegisterRequest licenseRequest)
+        private BranchResponseDto MapToResponseDto(Branch branch, BranchRequest licenseRequest)
         {
             List<string> licenseUrls = null;
             if (licenseRequest != null)
@@ -494,11 +531,11 @@ namespace Service
 
         private async Task<BranchResponseDto> MapToResponseDtoAsync(Branch branch)
         {
-            var licenseRequest = await _branchRepository.GetBranchRegisterRequestAsync(branch.BranchId);
+            var licenseRequest = await _branchRepository.GetBranchRequestAsync(branch.BranchId);
             return MapToResponseDto(branch, licenseRequest);
         }
 
-        private BranchResponseDto BuildResponseDto(Branch branch, BranchRegisterRequest licenseRequest, List<string> licenseUrls)
+        private BranchResponseDto BuildResponseDto(Branch branch, BranchRequest licenseRequest, List<string> licenseUrls)
         {
             return new BranchResponseDto
             {
@@ -772,7 +809,7 @@ namespace Service
                 
                 var allResponseDtos = allBranches.Select(branch =>
                 {
-                    var dishes = branch.BranchDishes
+                    var dishes = (branch.BranchDishes ?? new List<BranchDish>())
                         .Where(bd => bd.Dish != null && bd.Dish.IsActive)
                         .Select(bd => new { bd.Dish, bd.IsSoldOut });
 
@@ -800,7 +837,7 @@ namespace Service
                         City          = branch.City,
                         Lat           = branch.Lat,
                         Long          = branch.Long,
-                        AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = null,
+                        AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, IsSubscribed = branch.IsSubscribed, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = null,
                         Dishes = dishes.Select(x => new ActiveDishResponseDto
                         {
                             DishId       = x.Dish.DishId,
@@ -850,7 +887,7 @@ namespace Service
                 var distanceKm = item.distanceKm;
 
                 // Map all active dishes (already filtered by DAL)
-                var dishes = branch.BranchDishes
+                var dishes = (branch.BranchDishes ?? new List<BranchDish>())
                     .Where(bd => bd.Dish != null && bd.Dish.IsActive)
                     .Select(bd => new { bd.Dish, bd.IsSoldOut });
 
@@ -880,7 +917,7 @@ namespace Service
                     City          = branch.City,
                     Lat           = branch.Lat,
                     Long          = branch.Long,
-                    AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = Math.Round(distanceKm, 2),
+                    AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, IsSubscribed = branch.IsSubscribed, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = Math.Round(distanceKm, 2),
                     Dishes = dishes.Select(x => new ActiveDishResponseDto
                     {
                         DishId       = x.Dish.DishId,
@@ -908,6 +945,7 @@ namespace Service
         }
     }
 }
+
 
 
 

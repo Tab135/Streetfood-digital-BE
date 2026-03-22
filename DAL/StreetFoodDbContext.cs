@@ -1,4 +1,4 @@
-﻿using BO.DTO.Payments;
+using BO.DTO.Payments;
 using BO.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +24,7 @@ public class StreetFoodDbContext : DbContext
     public DbSet<Branch> Branches { get; set; }
     public DbSet<Tier> Tiers { get; set; }
     public DbSet<BranchImage> BranchImages { get; set; }
-    public DbSet<BranchRegisterRequest> BranchRegisterRequests { get; set; }
+    public DbSet<BranchRequest> BranchRequests { get; set; }
     public DbSet<WorkSchedule> WorkSchedules { get; set; }
     public DbSet<DayOff> DayOffs { get; set; }
 
@@ -115,11 +115,11 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(255);
 
             entity.HasData(
-                new DietaryPreference { DietaryPreferenceId = 1, Name = "Ăn chay", Description = "Không thịt" },
-                new DietaryPreference { DietaryPreferenceId = 2, Name = "Cay", Description = "Món ăn có vị cay nồng, sử dụng nhiều ớt hoặc tiêu" },
-                new DietaryPreference { DietaryPreferenceId = 3, Name = "Ngọt", Description = "Món ăn có vị ngọt, hoặc các món tráng miệng" },
-                new DietaryPreference { DietaryPreferenceId = 4, Name = "Mặn", Description = "Hương vị đậm đà, thích hợp ăn kèm với cơm" },
-                new DietaryPreference { DietaryPreferenceId = 5, Name = "Hải sản", Description = "Bao gồm các loại tôm, cua, cá, mực và đồ biển khác" }
+                new DietaryPreference { DietaryPreferenceId = 1, Name = "An chay", Description = "Kh�ng th?t" },
+                new DietaryPreference { DietaryPreferenceId = 2, Name = "Cay", Description = "M�n an c� v? cay n?ng, s? d?ng nhi?u ?t ho?c ti�u" },
+                new DietaryPreference { DietaryPreferenceId = 3, Name = "Ng?t", Description = "M�n an c� v? ng?t, ho?c c�c m�n tr�ng mi?ng" },
+                new DietaryPreference { DietaryPreferenceId = 4, Name = "M?n", Description = "Huong v? d?m d�, th�ch h?p an k�m v?i com" },
+                new DietaryPreference { DietaryPreferenceId = 5, Name = "H?i s?n", Description = "Bao g?m c�c lo?i t�m, cua, c�, m?c v� d? bi?n kh�c" }
             );
         });
 
@@ -200,16 +200,16 @@ public class StreetFoodDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<BranchRegisterRequest>(entity =>
+        modelBuilder.Entity<BranchRequest>(entity =>
         {
-            entity.HasKey(e => e.BranchRegisterRequestId);
+            entity.HasKey(e => e.BranchRequestId);
             entity.Property(e => e.LicenseUrl).IsRequired(false);
             entity.Property(e => e.Status).IsRequired();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.HasOne(e => e.Branch)
-                  .WithOne()
-                  .HasForeignKey<BranchRegisterRequest>(e => e.BranchId)
+                  .WithMany()
+                  .HasForeignKey(e => e.BranchId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -416,7 +416,7 @@ public class StreetFoodDbContext : DbContext
                     .OnDelete(DeleteBehavior.Restrict);
               });
 
-        // Feedback → Order FK
+        // Feedback ? Order FK
         modelBuilder.Entity<Feedback>(entity =>
         {
             entity.HasOne(e => e.Order)
@@ -513,3 +513,4 @@ public class StreetFoodDbContext : DbContext
         });
     }
 }
+

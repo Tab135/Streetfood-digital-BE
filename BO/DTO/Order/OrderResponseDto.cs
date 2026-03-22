@@ -6,6 +6,7 @@ public class OrderDishResponseDto
 {
     public int DishId { get; set; }
     public string DishName { get; set; } = string.Empty;
+    public decimal Price { get; set; }
     public int Quantity { get; set; }
 }
 
@@ -13,6 +14,7 @@ public class OrderResponseDto
 {
     public int OrderId { get; set; }
     public int UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
     public int BranchId { get; set; }
     public string BranchName { get; set; } = string.Empty;
     public OrderStatus Status { get; set; }

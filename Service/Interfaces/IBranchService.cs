@@ -14,8 +14,10 @@ namespace Service.Interfaces
         Task<BranchResponseDto> GetBranchByIdAsync(int branchId);
         
         // User Branch specifics (Replacing GhostPin logic)
-        Task<object> ClaimUserBranchAsync(int branchId, int vendorId, int userId, ClaimUserBranchRequest request);
+        Task<(string Message, int BranchId)> ClaimUserBranchAsync(int branchId, int userId, List<string> licenseUrls);
 
+        Task<PaginatedResponse<BranchResponseDto>> GetMyGhostPinBranchesAsync(int userId, int pageNumber, int pageSize);
+        Task<PaginatedResponse<BranchResponseDto>> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize);
         Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize);
         Task<PaginatedResponse<BranchResponseDto>> GetAllBranchesAsync(int pageNumber, int pageSize);
         Task<PaginatedResponse<BranchResponseDto>> GetActiveBranchesAsync(int pageNumber, int pageSize);
@@ -25,9 +27,9 @@ namespace Service.Interfaces
         Task<bool> UserOwnsBranchAsync(int branchId, int userId);
         
         // License submission and verification
-        Task<BranchRegisterRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId);
-        Task<BranchRegisterRequest> GetBranchLicenseStatusAsync(int branchId, int userId);
-        Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize);
+        Task<BranchRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId);
+        Task<BranchRequest> GetBranchLicenseStatusAsync(int branchId, int userId);
+        Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize, int? type = null);
         Task<bool> VerifyBranchAsync(int branchId);
         Task<bool> RejectBranchRegistrationAsync(int branchId, string rejectionReason);
 
