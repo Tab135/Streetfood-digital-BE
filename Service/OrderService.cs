@@ -53,6 +53,7 @@ public class OrderService : IOrderService
         {
             UserId = userId,
             BranchId = branch.BranchId,
+            UserVoucherId = request.UserVoucherId,
             Status = OrderStatus.Pending,
             Table = request.Table,
             PaymentMethod = request.PaymentMethod,

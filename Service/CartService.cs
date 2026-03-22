@@ -12,6 +12,7 @@ public class CartService : ICartService
     private readonly ICartRepository _cartRepository;
     private readonly IUserRepository _userRepository;
     private readonly IDishRepository _dishRepository;
+    private readonly IUserVoucherRepository _userVoucherRepository;
     private readonly IOrderService _orderService;
     private readonly IPaymentService _paymentService;
 
@@ -19,12 +20,14 @@ public class CartService : ICartService
         ICartRepository cartRepository,
         IUserRepository userRepository,
         IDishRepository dishRepository,
+        IUserVoucherRepository userVoucherRepository,
         IOrderService orderService,
         IPaymentService paymentService)
     {
         _cartRepository = cartRepository ?? throw new ArgumentNullException(nameof(cartRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _dishRepository = dishRepository ?? throw new ArgumentNullException(nameof(dishRepository));
+        _userVoucherRepository = userVoucherRepository ?? throw new ArgumentNullException(nameof(userVoucherRepository));
         _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
         _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
     }
@@ -205,12 +208,75 @@ public class CartService : ICartService
             throw new DomainExceptions("Cart is empty");
         }
 
+        var cartTotal = cart.Items.Sum(i => i.UnitPrice * i.Quantity);
+
+        decimal discountAmount = request.DiscountAmount ?? 0m;
+        BO.Entities.UserVoucher? redeemedUserVoucher = null;
+
+        if (request.UserVoucherId.HasValue)
+        {
+            var userVoucher = await _userVoucherRepository.GetByIdAsync(request.UserVoucherId.Value)
+                ?? throw new DomainExceptions("User voucher not found");
+
+            if (userVoucher.UserId != userId)
+            {
+                throw new DomainExceptions("You do not own this voucher", "ERR_FORBIDDEN");
+            }
+
+            if (!userVoucher.IsAvailable || userVoucher.Quantity <= 0)
+            {
+                throw new DomainExceptions("Voucher is not available");
+            }
+
+            var voucher = userVoucher.Voucher ?? throw new DomainExceptions("Voucher not found");
+            if (!voucher.IsActive)
+            {
+                throw new DomainExceptions("Voucher is inactive");
+            }
+
+            var now = DateTime.UtcNow;
+            if (now < voucher.StartDate || now > voucher.EndDate)
+            {
+                throw new DomainExceptions("Voucher is out of valid time range");
+            }
+
+            if (voucher.ExpiredDate.HasValue && now > voucher.ExpiredDate.Value)
+            {
+                throw new DomainExceptions("Voucher has expired");
+            }
+
+            if (voucher.MinAmountRequired > cartTotal)
+            {
+                throw new DomainExceptions("Order amount does not meet voucher minimum requirement");
+            }
+
+            decimal calculatedDiscount;
+            if (string.Equals(voucher.Type, "PERCENT", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(voucher.Type, "PERCENTAGE", StringComparison.OrdinalIgnoreCase))
+            {
+                calculatedDiscount = cartTotal * voucher.DiscountValue / 100m;
+            }
+            else
+            {
+                calculatedDiscount = voucher.DiscountValue;
+            }
+
+            if (voucher.MaxDiscountValue.HasValue && calculatedDiscount > voucher.MaxDiscountValue.Value)
+            {
+                calculatedDiscount = voucher.MaxDiscountValue.Value;
+            }
+
+            discountAmount = Math.Min(calculatedDiscount, cartTotal);
+            redeemedUserVoucher = userVoucher;
+        }
+
         var createOrderRequest = new CreateOrderRequest
         {
             BranchId = cart.BranchId.Value,
+            UserVoucherId = request.UserVoucherId,
             Table = request.Table,
             PaymentMethod = request.PaymentMethod,
-            DiscountAmount = request.DiscountAmount,
+            DiscountAmount = discountAmount,
             IsTakeAway = request.IsTakeAway,
             Items = cart.Items.Select(i => new CreateOrderDishRequest
             {
@@ -226,6 +292,18 @@ public class CartService : ICartService
         {
             await _orderService.DeleteOrderAsync(order.OrderId, userId);
             throw new DomainExceptions(payment.Message ?? "Failed to create payment link for order");
+        }
+
+        if (redeemedUserVoucher != null)
+        {
+            redeemedUserVoucher.Quantity -= 1;
+            if (redeemedUserVoucher.Quantity <= 0)
+            {
+                redeemedUserVoucher.Quantity = 0;
+                redeemedUserVoucher.IsAvailable = false;
+            }
+
+            await _userVoucherRepository.UpdateAsync(redeemedUserVoucher);
         }
 
         await _cartRepository.ClearItemsAsync(cart.CartId);
