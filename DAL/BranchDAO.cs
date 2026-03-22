@@ -316,11 +316,16 @@ namespace DAL
             return requests.ToDictionary(r => r.BranchId);
         }
 
-        public async Task<(List<BranchRequest> items, int totalCount)> GetAllBranchRequestsAsync(int pageNumber, int pageSize)
+        public async Task<(List<BranchRequest> items, int totalCount)> GetAllBranchRequestsAsync(int pageNumber, int pageSize, int? type = null)
         {
             var query = _context.BranchRequests
                 .AsNoTracking()
                 .Where(r => r.Status == RegisterVendorStatusEnum.Pending);
+
+            if (type.HasValue)
+            {
+                query = query.Where(r => r.Type == type.Value);
+            }
 
             var totalCount = await query.CountAsync();
 

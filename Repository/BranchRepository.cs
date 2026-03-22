@@ -161,9 +161,9 @@ namespace Repository
             return await _branchDAO.GetRegisterRequestsByBranchIdsAsync(branchIds);
         }
 
-        public async Task<(List<BranchRequest> items, int totalCount)> GetAllBranchRequestsAsync(int pageNumber, int pageSize)
+        public async Task<(List<BranchRequest> items, int totalCount)> GetAllBranchRequestsAsync(int pageNumber, int pageSize, int? type = null)
         {
-            return await _branchDAO.GetAllBranchRequestsAsync(pageNumber, pageSize);
+            return await _branchDAO.GetAllBranchRequestsAsync(pageNumber, pageSize, type);
         }
 
         public async Task AddBranchRequestAsync(BranchRequest request)

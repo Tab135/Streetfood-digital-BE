@@ -37,7 +37,7 @@ namespace Repository.Interfaces
         // License registration
         Task<BranchRequest> GetBranchRequestAsync(int branchId);
         Task<Dictionary<int, BranchRequest>> GetRegisterRequestsByBranchIdsAsync(List<int> branchIds);
-        Task<(List<BranchRequest> items, int totalCount)> GetAllBranchRequestsAsync(int pageNumber, int pageSize);
+        Task<(List<BranchRequest> items, int totalCount)> GetAllBranchRequestsAsync(int pageNumber, int pageSize, int? type = null);
         Task AddBranchRequestAsync(BranchRequest request);
         Task UpdateBranchRequestAsync(BranchRequest request);
         

@@ -381,15 +381,16 @@ namespace Service
             return registrationRequest;
         }
 
-        public async Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize)
+        public async Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize, int? type = null)
         {
-            var (pendingRequests, totalCount) = await _branchRepository.GetAllBranchRequestsAsync(pageNumber, pageSize);
+            var (pendingRequests, totalCount) = await _branchRepository.GetAllBranchRequestsAsync(pageNumber, pageSize, type);
             var items = pendingRequests
                 .Select(r => new PendingRegistrationDto
                 {
                     BranchRequestId = r.BranchRequestId,
                     BranchId = r.BranchId,
                     LicenseUrl = r.LicenseUrl,
+                    Type = r.Type,
                     Status = r.Status,
                     RejectReason = r.RejectReason,
                     CreatedAt = r.CreatedAt,

@@ -9,6 +9,7 @@ namespace BO.DTO.Branch
         public int BranchRequestId { get; set; }
         public int BranchId { get; set; }
         public string? LicenseUrl { get; set; }
+        public int Type { get; set; }
         public RegisterVendorStatusEnum Status { get; set; }
         public string? RejectReason { get; set; }
         public DateTime CreatedAt { get; set; }

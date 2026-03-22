@@ -464,11 +464,11 @@ namespace StreetFood.Controllers
         /// </summary>
         [HttpGet("pending-registrations")]
         [Authorize(Roles = "Moderator")]
-        public async Task<IActionResult> GetPendingBranchRegistrations([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetPendingBranchRegistrations([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] int? type = null)
         {
             try
             {
-                var pendingRegistrations = await _branchService.GetPendingBranchRegistrationsAsync(pageNumber, pageSize);
+                var pendingRegistrations = await _branchService.GetPendingBranchRegistrationsAsync(pageNumber, pageSize, type);
                 return Ok(new { message = "Pending registrations retrieved successfully", data = pendingRegistrations });
             }
             catch (Exception ex)

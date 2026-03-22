@@ -29,7 +29,7 @@ namespace Service.Interfaces
         // License submission and verification
         Task<BranchRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId);
         Task<BranchRequest> GetBranchLicenseStatusAsync(int branchId, int userId);
-        Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize);
+        Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize, int? type = null);
         Task<bool> VerifyBranchAsync(int branchId);
         Task<bool> RejectBranchRegistrationAsync(int branchId, string rejectionReason);
 
