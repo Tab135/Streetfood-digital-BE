@@ -90,6 +90,7 @@ namespace StreetFood
             builder.Services.AddScoped<TasteDAO>();
             builder.Services.AddScoped<DishDAO>();
             builder.Services.AddScoped<TierDAO>();
+            builder.Services.AddScoped<VoucherDAO>();
 
             // Register Repositories
             builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -116,6 +117,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
             builder.Services.AddScoped<ITasteRepository, TasteRepository>();
             builder.Services.AddScoped<IDishRepository, DishRepository>();
+            builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
 
             // Register Services
             builder.Services.AddScoped<IUserService, UserService>();
@@ -143,6 +145,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITasteService, TasteService>();
             builder.Services.AddScoped<IDishService, DishService>();
+            builder.Services.AddScoped<IVoucherService, VoucherService>();
             // Search Service
             builder.Services.AddScoped<ISearchService, SearchService>();
             builder.Services.AddHostedService<OtpCleanupService>();
