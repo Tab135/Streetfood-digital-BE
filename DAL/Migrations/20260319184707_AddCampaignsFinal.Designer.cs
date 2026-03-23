@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260319184707_AddCampaignsFinal")]
+    partial class AddCampaignsFinal
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -240,13 +243,13 @@ namespace DAL.Migrations
                     b.ToTable("BranchImages");
                 });
 
-            modelBuilder.Entity("BO.Entities.BranchRequest", b =>
+            modelBuilder.Entity("BO.Entities.BranchRegisterRequest", b =>
                 {
-                    b.Property<int>("BranchRequestId")
+                    b.Property<int>("BranchRegisterRequestId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("BranchRequestId"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("BranchRegisterRequestId"));
 
                     b.Property<int>("BranchId")
                         .HasColumnType("integer");
@@ -265,19 +268,17 @@ namespace DAL.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                    b.HasKey("BranchRequestId");
+                    b.HasKey("BranchRegisterRequestId");
 
-                    b.HasIndex("BranchId");
+                    b.HasIndex("BranchId")
+                        .IsUnique();
 
-                    b.ToTable("BranchRequests");
+                    b.ToTable("BranchRegisterRequests");
                 });
 
             modelBuilder.Entity("BO.Entities.Campaign", b =>
@@ -486,32 +487,32 @@ namespace DAL.Migrations
                         new
                         {
                             DietaryPreferenceId = 1,
-                            Description = "Kh�ng th?t",
-                            Name = "An chay"
+                            Description = "Không thịt",
+                            Name = "Ăn chay"
                         },
                         new
                         {
                             DietaryPreferenceId = 2,
-                            Description = "M�n an c� v? cay n?ng, s? d?ng nhi?u ?t ho?c ti�u",
+                            Description = "Món ăn có vị cay nồng, sử dụng nhiều ớt hoặc tiêu",
                             Name = "Cay"
                         },
                         new
                         {
                             DietaryPreferenceId = 3,
-                            Description = "M�n an c� v? ng?t, ho?c c�c m�n tr�ng mi?ng",
-                            Name = "Ng?t"
+                            Description = "Món ăn có vị ngọt, hoặc các món tráng miệng",
+                            Name = "Ngọt"
                         },
                         new
                         {
                             DietaryPreferenceId = 4,
-                            Description = "Huong v? d?m d�, th�ch h?p an k�m v?i com",
-                            Name = "M?n"
+                            Description = "Hương vị đậm đà, thích hợp ăn kèm với cơm",
+                            Name = "Mặn"
                         },
                         new
                         {
                             DietaryPreferenceId = 5,
-                            Description = "Bao g?m c�c lo?i t�m, cua, c�, m?c v� d? bi?n kh�c",
-                            Name = "H?i s?n"
+                            Description = "Bao gồm các loại tôm, cua, cá, mực và đồ biển khác",
+                            Name = "Hải sản"
                         });
                 });
 
@@ -1371,11 +1372,11 @@ namespace DAL.Migrations
                     b.Navigation("Branch");
                 });
 
-            modelBuilder.Entity("BO.Entities.BranchRequest", b =>
+            modelBuilder.Entity("BO.Entities.BranchRegisterRequest", b =>
                 {
                     b.HasOne("BO.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
+                        .WithOne()
+                        .HasForeignKey("BO.Entities.BranchRegisterRequest", "BranchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

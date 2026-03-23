@@ -54,6 +54,10 @@ public class StreetFoodDbContext : DbContext
     public DbSet<Payment> Payments { get; set; }
     public DbSet<BranchDish> BranchDishes { get; set; }
 
+    // Flow 4: Campaigns
+    public DbSet<Campaign> Campaigns { get; set; }
+    public DbSet<BranchCampaign> BranchCampaigns { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

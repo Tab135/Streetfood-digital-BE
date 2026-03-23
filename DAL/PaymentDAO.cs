@@ -25,7 +25,7 @@ namespace DAL
         // =================================================================
 
            public async Task<Payment> CreatePayment(int userId, long orderCode, int? branchId,
-               int amount, string description, string? checkoutUrl = null, int? orderId = null)
+               int amount, string description, string? checkoutUrl = null, int? orderId = null, int? branchCampaignId = null)
         {
             try
             {
@@ -39,6 +39,7 @@ namespace DAL
                     Status = "PENDING",
                     CheckoutUrl = checkoutUrl,
                     OrderId = orderId,
+                    BranchCampaignId = branchCampaignId,
                     CreatedAt = DateTime.UtcNow
                 };
 
