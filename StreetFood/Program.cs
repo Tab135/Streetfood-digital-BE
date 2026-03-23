@@ -112,6 +112,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<IFeedbackVoteRepository, FeedbackVoteRepository>();
             builder.Services.AddScoped<IVendorReplyRepository, VendorReplyRepository>();
             builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+            builder.Services.AddScoped<IExpoPushTokenRepository, ExpoPushTokenRepository>();
             // Menu Management Repositories
             builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
             builder.Services.AddScoped<ITasteRepository, TasteRepository>();
@@ -135,6 +136,8 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<IBranchMetricsService, BranchMetricsService>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
+            builder.Services.AddScoped<IExpoPushService, ExpoPushService>();
+            builder.Services.AddHttpClient();
             builder.Services.AddScoped<IFeedbackVoteService, FeedbackVoteService>();
             builder.Services.AddScoped<IVendorReplyService, VendorReplyService>();
             builder.Services.AddScoped<IOrderService, OrderService>();

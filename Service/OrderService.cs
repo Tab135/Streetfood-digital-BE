@@ -15,19 +15,22 @@ public class OrderService : IOrderService
     private readonly IDishRepository _dishRepository;
     private readonly IUserRepository _userRepository;
     private readonly IVendorRepository _vendorRepository;
+    private readonly INotificationService _notificationService;
 
     public OrderService(
         IOrderRepository orderRepository,
         IBranchRepository branchRepository,
         IDishRepository dishRepository,
         IUserRepository userRepository,
-        IVendorRepository vendorRepository)
+        IVendorRepository vendorRepository,
+        INotificationService notificationService)
     {
         _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
         _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
         _dishRepository = dishRepository ?? throw new ArgumentNullException(nameof(dishRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
+        _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
     }
 
     public async Task<OrderResponseDto> CreateOrderAsync(CreateOrderRequest request, int userId)
@@ -367,6 +370,27 @@ public class OrderService : IOrderService
         }
 
         var updated = await _orderRepository.Update(order);
+
+        // Notify customer about order status change
+        var statusText = approve ? "approved" : "cancelled";
+        var title = approve ? "Order Approved" : "Order Cancelled";
+        var message = $"Your order #{order.OrderId} at {branch.Name} has been {statusText}";
+        var pushData = new
+        {
+            type = "order_status",
+            orderId = order.OrderId,
+            branchName = branch.Name,
+            orderStatus = statusText,
+        };
+
+        await _notificationService.NotifyAsync(
+            order.UserId,
+            NotificationType.OrderStatusUpdate,
+            title,
+            message,
+            order.OrderId,
+            pushData);
+
         return MapToDto(updated);
     }
 
@@ -417,11 +441,29 @@ public class OrderService : IOrderService
 
         order.Status = OrderStatus.Complete;
         order.CompletionCode = null;
-        
+
         vendor.MoneyBalance += order.FinalAmount;
         await _vendorRepository.UpdateAsync(vendor);
 
         var updated = await _orderRepository.Update(order);
+
+        // Notify customer about order completion
+        var pushData = new
+        {
+            type = "order_status",
+            orderId = order.OrderId,
+            branchName = branch.Name,
+            orderStatus = "complete",
+        };
+
+        await _notificationService.NotifyAsync(
+            order.UserId,
+            NotificationType.OrderStatusUpdate,
+            "Order Complete",
+            $"Your order #{order.OrderId} at {branch.Name} has been completed",
+            order.OrderId,
+            pushData);
+
         return MapToDto(updated);
     }
 

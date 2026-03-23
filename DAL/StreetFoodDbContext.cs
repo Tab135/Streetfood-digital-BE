@@ -52,6 +52,9 @@ public class StreetFoodDbContext : DbContext
     public DbSet<Payment> Payments { get; set; }
     public DbSet<BranchDish> BranchDishes { get; set; }
 
+    // Push Notifications
+    public DbSet<ExpoPushToken> ExpoPushTokens { get; set; }
+
     // Flow 4: Campaigns
     public DbSet<Campaign> Campaigns { get; set; }
     public DbSet<BranchCampaign> BranchCampaigns { get; set; }
@@ -479,6 +482,19 @@ public class StreetFoodDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ExpoPushToken
+        modelBuilder.Entity<ExpoPushToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Token).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Platform).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => e.UserId);
         });
 
         modelBuilder.Entity<Payment>(entity =>
