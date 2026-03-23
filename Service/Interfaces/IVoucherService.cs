@@ -12,4 +12,5 @@ public interface IVoucherService
     Task<ClaimVoucherResponseDto> ClaimVoucherAsync(int voucherId, int userId);
     Task<List<UserVoucherResponseDto>> GetUserVouchersAsync(int userId);
     Task<List<VoucherDto>> GetVouchersByCampaignIdAsync(int campaignId);
+    Task<List<UserVoucherResponseDto>> GetApplicableUserVouchersAsync(int userId, int branchId);
 }

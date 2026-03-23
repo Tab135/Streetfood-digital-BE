@@ -96,6 +96,23 @@ public class VoucherController : ControllerBase
         return Ok(vouchers);
     }
 
+    [HttpGet("mine/branch/{branchId}")]
+    [Authorize(Roles = "User")]
+    public async Task<IActionResult> GetApplicable(int branchId)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var vouchers = await _voucherService.GetApplicableUserVouchersAsync(userId, branchId);
+        return Ok(new
+        {
+            message = "Applicable vouchers retrieved successfully",
+            data = vouchers
+        });
+    }
+
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin,Moderator,Vendor")]
     public async Task<IActionResult> Delete(int id)

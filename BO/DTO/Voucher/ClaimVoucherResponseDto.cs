@@ -11,5 +11,5 @@ public class ClaimVoucherResponseDto
     public decimal? MaxDiscountValue { get; set; }
     public int Quantity { get; set; }
     public int RemainingUserPoint { get; set; }
-    public int VoucherRemainingQuantity { get; set; }
+    public int Remain { get; set; }
 }

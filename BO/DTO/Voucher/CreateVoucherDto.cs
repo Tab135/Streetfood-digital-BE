@@ -13,7 +13,7 @@ public class CreateVoucherDto
 
     [Required]
     [MaxLength(50)]
-    [RegularExpression("^(AMOUNT|FIXED|PERCENT|PERCENTAGE)$", ErrorMessage = "Type must be AMOUNT, FIXED, PERCENT, or PERCENTAGE")]
+    [RegularExpression("^(AMOUNT|PERCENTAGE)$", ErrorMessage = "Type must be AMOUNT, PERCENTAGE")]
     public string Type { get; set; } = string.Empty;
 
     [Range(0, double.MaxValue)]

@@ -12,15 +12,18 @@ public class VoucherService : IVoucherService
     private readonly IVoucherRepository _voucherRepository;
     private readonly IUserVoucherRepository _userVoucherRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IBranchCampaignRepository _branchCampaignRepository;
 
     public VoucherService(
         IVoucherRepository voucherRepository,
         IUserVoucherRepository userVoucherRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IBranchCampaignRepository branchCampaignRepository)
     {
         _voucherRepository = voucherRepository ?? throw new ArgumentNullException(nameof(voucherRepository));
         _userVoucherRepository = userVoucherRepository ?? throw new ArgumentNullException(nameof(userVoucherRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _branchCampaignRepository = branchCampaignRepository ?? throw new ArgumentNullException(nameof(branchCampaignRepository));
     }
 
     public async Task<CreateVoucherResponseDto> CreateVoucherAsync(CreateVoucherDto createDto, int userId)
@@ -248,7 +251,7 @@ public class VoucherService : IVoucherService
             MaxDiscountValue = voucher.MaxDiscountValue,
             Quantity = userVoucher.Quantity,
             RemainingUserPoint = user.Point,
-            VoucherRemainingQuantity = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0)
+            Remain = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0)
         };
     }
 
@@ -287,6 +290,62 @@ public class VoucherService : IVoucherService
         return vouchers.Select(MapToDto).ToList();
     }
 
+    public async Task<List<UserVoucherResponseDto>> GetApplicableUserVouchersAsync(int userId, int branchId)
+    {
+        var userVouchers = await _userVoucherRepository.GetByUserIdAsync(userId);
+        var applicableVouchers = new List<UserVoucher>();
+
+        foreach (var uv in userVouchers)
+        {
+            if (!uv.IsAvailable || uv.Quantity <= 0) continue;
+
+            var voucher = uv.Voucher;
+            if (voucher == null) continue;
+
+            if (voucher.CampaignId.HasValue)
+            {
+                var campaign = voucher.Campaign;
+                if (campaign != null)
+                {
+                    if (campaign.CreatedByBranchId.HasValue)
+                    {
+                        // Branch Campaign: Must be the same branch
+                        if (branchId == campaign.CreatedByBranchId.Value)
+                        {
+                            applicableVouchers.Add(uv);
+                        }
+                    }
+                    else
+                    {
+                        // System Campaign: Branch must have joined
+                        var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);
+                        if (joinInfo != null && (joinInfo.Status == "Active" || joinInfo.Status == "Paid"))
+                        {
+                            applicableVouchers.Add(uv);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // No campaign: currently assuming globally applicable
+                applicableVouchers.Add(uv);
+            }
+        }
+
+        return applicableVouchers.Select(uv => new UserVoucherResponseDto
+        {
+            UserVoucherId = uv.UserVoucherId,
+            VoucherId = uv.VoucherId,
+            VoucherCode = uv.Voucher?.VoucherCode ?? string.Empty,
+            VoucherName = uv.Voucher?.Name ?? string.Empty,
+            VoucherType = uv.Voucher?.Type ?? string.Empty,
+            DiscountValue = uv.Voucher?.DiscountValue ?? 0m,
+            MaxDiscountValue = uv.Voucher?.MaxDiscountValue,
+            Quantity = uv.Quantity
+        }).ToList();
+    }
+
     private static void ValidateDateRange(DateTime startDate, DateTime endDate)
     {
         if (endDate < startDate)
@@ -314,7 +373,8 @@ public class VoucherService : IVoucherService
             RedeemPoint = voucher.RedeemPoint,
             Quantity = voucher.Quantity,
             UsedQuantity = voucher.UsedQuantity,
-            CampaignId = voucher.CampaignId
+            CampaignId = voucher.CampaignId,
+            Remain = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0)
         };
     }
 
@@ -337,7 +397,7 @@ public class VoucherService : IVoucherService
             RedeemPoint = voucher.RedeemPoint,
             Quantity = voucher.Quantity,
             UsedQuantity = voucher.UsedQuantity,
-            RemainingQuantity = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0)
+            Remain = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0)
         };
     }
 }

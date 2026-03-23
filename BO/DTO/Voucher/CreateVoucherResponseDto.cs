@@ -17,5 +17,5 @@ public class CreateVoucherResponseDto
     public int RedeemPoint { get; set; }
     public int Quantity { get; set; }
     public int UsedQuantity { get; set; }
-    public int RemainingQuantity { get; set; }
+    public int Remain { get; set; }
 }
