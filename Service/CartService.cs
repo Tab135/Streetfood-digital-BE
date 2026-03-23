@@ -4,6 +4,7 @@ using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 using Service.PaymentsService;
+using Service.Utils;
 
 namespace Service;
 
@@ -210,7 +211,7 @@ public class CartService : ICartService
 
         var cartTotal = cart.Items.Sum(i => i.UnitPrice * i.Quantity);
 
-        decimal discountAmount = request.DiscountAmount ?? 0m;
+        decimal discountAmount = 0m;
         BO.Entities.UserVoucher? redeemedUserVoucher = null;
 
         if (request.UserVoucherId.HasValue)
@@ -250,23 +251,7 @@ public class CartService : ICartService
                 throw new DomainExceptions("Order amount does not meet voucher minimum requirement");
             }
 
-            decimal calculatedDiscount;
-            if (string.Equals(voucher.Type, "PERCENT", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(voucher.Type, "PERCENTAGE", StringComparison.OrdinalIgnoreCase))
-            {
-                calculatedDiscount = cartTotal * voucher.DiscountValue / 100m;
-            }
-            else
-            {
-                calculatedDiscount = voucher.DiscountValue;
-            }
-
-            if (voucher.MaxDiscountValue.HasValue && calculatedDiscount > voucher.MaxDiscountValue.Value)
-            {
-                calculatedDiscount = voucher.MaxDiscountValue.Value;
-            }
-
-            discountAmount = Math.Min(calculatedDiscount, cartTotal);
+            discountAmount = VoucherRules.CalculateDiscountAmount(cartTotal, voucher);
             redeemedUserVoucher = userVoucher;
         }
 

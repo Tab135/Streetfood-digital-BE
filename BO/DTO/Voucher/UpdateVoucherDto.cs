@@ -11,6 +11,7 @@ public class UpdateVoucherDto
     public string? Description { get; set; }
 
     [MaxLength(50)]
+    [RegularExpression("^(AMOUNT|FIXED|PERCENT|PERCENTAGE)$", ErrorMessage = "Type must be AMOUNT, FIXED, PERCENT, or PERCENTAGE")]
     public string? Type { get; set; }
 
     [Range(0, double.MaxValue)]

@@ -3,21 +3,31 @@ using BO.Entities;
 using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
+using Service.Utils;
 
 namespace Service;
 
 public class VoucherService : IVoucherService
 {
     private readonly IVoucherRepository _voucherRepository;
+    private readonly IUserVoucherRepository _userVoucherRepository;
+    private readonly IUserRepository _userRepository;
 
-    public VoucherService(IVoucherRepository voucherRepository)
+    public VoucherService(
+        IVoucherRepository voucherRepository,
+        IUserVoucherRepository userVoucherRepository,
+        IUserRepository userRepository)
     {
         _voucherRepository = voucherRepository ?? throw new ArgumentNullException(nameof(voucherRepository));
+        _userVoucherRepository = userVoucherRepository ?? throw new ArgumentNullException(nameof(userVoucherRepository));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
     }
 
-    public async Task<VoucherDto> CreateVoucherAsync(CreateVoucherDto createDto, int userId)
+    public async Task<CreateVoucherResponseDto> CreateVoucherAsync(CreateVoucherDto createDto, int userId)
     {
         ValidateDateRange(createDto.StartDate, createDto.EndDate);
+        var normalizedType = VoucherRules.NormalizeDiscountType(createDto.Type);
+        VoucherRules.ValidateDiscountValue(normalizedType, createDto.DiscountValue);
 
         var existed = await _voucherRepository.GetByCodeAsync(createDto.VoucherCode);
         if (existed != null)
@@ -29,7 +39,7 @@ public class VoucherService : IVoucherService
         {
             Name = createDto.Name,
             Description = createDto.Description,
-            Type = createDto.Type,
+            Type = normalizedType,
             DiscountValue = createDto.DiscountValue,
             MinAmountRequired = createDto.MinAmountRequired,
             MaxDiscountValue = createDto.MaxDiscountValue,
@@ -44,7 +54,7 @@ public class VoucherService : IVoucherService
         };
 
         var created = await _voucherRepository.CreateAsync(entity);
-        return MapToDto(created);
+        return MapToCreateResponseDto(created);
     }
 
     public async Task<VoucherDto?> GetVoucherByIdAsync(int voucherId)
@@ -76,7 +86,7 @@ public class VoucherService : IVoucherService
 
         if (!string.IsNullOrWhiteSpace(updateDto.Type))
         {
-            voucher.Type = updateDto.Type;
+            voucher.Type = VoucherRules.NormalizeDiscountType(updateDto.Type);
         }
 
         if (updateDto.DiscountValue.HasValue)
@@ -105,6 +115,7 @@ public class VoucherService : IVoucherService
         }
 
         ValidateDateRange(voucher.StartDate, voucher.EndDate);
+        VoucherRules.ValidateDiscountValue(voucher.Type, voucher.DiscountValue);
 
         if (updateDto.ExpiredDate.HasValue)
         {
@@ -151,6 +162,82 @@ public class VoucherService : IVoucherService
         return MapToDto(voucher);
     }
 
+    public async Task<ClaimVoucherResponseDto> ClaimVoucherAsync(int voucherId, int userId)
+    {
+        var user = await _userRepository.GetUserById(userId)
+            ?? throw new DomainExceptions("User not found");
+
+        var voucher = await _voucherRepository.GetByIdAsync(voucherId)
+            ?? throw new DomainExceptions("Voucher not found");
+
+        var now = DateTime.UtcNow;
+        if (!voucher.IsActive)
+        {
+            throw new DomainExceptions("Voucher is inactive");
+        }
+
+        if (now < voucher.StartDate || now > voucher.EndDate)
+        {
+            throw new DomainExceptions("Voucher is out of valid time range");
+        }
+
+        if (voucher.ExpiredDate.HasValue && now > voucher.ExpiredDate.Value)
+        {
+            throw new DomainExceptions("Voucher has expired");
+        }
+
+        if (voucher.UsedQuantity >= voucher.Quantity)
+        {
+            throw new DomainExceptions("Voucher is out of stock");
+        }
+
+        if (user.Point < voucher.RedeemPoint)
+        {
+            throw new DomainExceptions("Insufficient points to claim this voucher");
+        }
+
+        VoucherRules.NormalizeDiscountType(voucher.Type);
+
+        var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, voucherId);
+
+        user.Point -= voucher.RedeemPoint;
+        await _userRepository.UpdateAsync(user);
+
+        voucher.UsedQuantity += 1;
+        await _voucherRepository.UpdateAsync(voucher);
+
+        if (userVoucher != null)
+        {
+            userVoucher.Quantity += 1;
+            userVoucher.IsAvailable = true;
+            await _userVoucherRepository.UpdateAsync(userVoucher);
+        }
+        else
+        {
+            userVoucher = await _userVoucherRepository.CreateAsync(new UserVoucher
+            {
+                UserId = userId,
+                VoucherId = voucherId,
+                Quantity = 1,
+                IsAvailable = true
+            });
+        }
+
+        return new ClaimVoucherResponseDto
+        {
+            UserVoucherId = userVoucher.UserVoucherId,
+            VoucherId = voucher.VoucherId,
+            VoucherCode = voucher.VoucherCode,
+            VoucherName = voucher.Name,
+            VoucherType = voucher.Type,
+            DiscountValue = voucher.DiscountValue,
+            MaxDiscountValue = voucher.MaxDiscountValue,
+            Quantity = userVoucher.Quantity,
+            RemainingUserPoint = user.Point,
+            VoucherRemainingQuantity = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0)
+        };
+    }
+
     public async Task<bool> DeleteVoucherAsync(int voucherId, int userId)
     {
         var exists = await _voucherRepository.ExistsByIdAsync(voucherId);
@@ -161,6 +248,23 @@ public class VoucherService : IVoucherService
 
         await _voucherRepository.DeleteAsync(voucherId);
         return true;
+    }
+
+    public async Task<List<UserVoucherResponseDto>> GetUserVouchersAsync(int userId)
+    {
+        var userVouchers = await _userVoucherRepository.GetByUserIdAsync(userId);
+
+        return userVouchers.Select(uv => new UserVoucherResponseDto
+        {
+            UserVoucherId = uv.UserVoucherId,
+            VoucherId = uv.VoucherId,
+            VoucherCode = uv.Voucher?.VoucherCode ?? string.Empty,
+            VoucherName = uv.Voucher?.Name ?? string.Empty,
+            VoucherType = uv.Voucher?.Type ?? string.Empty,
+            DiscountValue = uv.Voucher?.DiscountValue ?? 0m,
+            MaxDiscountValue = uv.Voucher?.MaxDiscountValue,
+            Quantity = uv.Quantity
+        }).ToList();
     }
 
     private static void ValidateDateRange(DateTime startDate, DateTime endDate)
@@ -190,6 +294,29 @@ public class VoucherService : IVoucherService
             RedeemPoint = voucher.RedeemPoint,
             Quantity = voucher.Quantity,
             UsedQuantity = voucher.UsedQuantity
+        };
+    }
+
+    private static CreateVoucherResponseDto MapToCreateResponseDto(Voucher voucher)
+    {
+        return new CreateVoucherResponseDto
+        {
+            VoucherId = voucher.VoucherId,
+            Name = voucher.Name,
+            Description = voucher.Description,
+            Type = voucher.Type,
+            DiscountValue = voucher.DiscountValue,
+            MinAmountRequired = voucher.MinAmountRequired,
+            MaxDiscountValue = voucher.MaxDiscountValue,
+            StartDate = voucher.StartDate,
+            EndDate = voucher.EndDate,
+            ExpiredDate = voucher.ExpiredDate,
+            IsActive = voucher.IsActive,
+            VoucherCode = voucher.VoucherCode,
+            RedeemPoint = voucher.RedeemPoint,
+            Quantity = voucher.Quantity,
+            UsedQuantity = voucher.UsedQuantity,
+            RemainingQuantity = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0)
         };
     }
 }

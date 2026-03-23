@@ -54,6 +54,23 @@ public class VoucherController : ControllerBase
         return Ok(vouchers);
     }
 
+    [HttpGet("mine")]
+    [Authorize(Roles = "User")]
+    public async Task<IActionResult> GetMine()
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var vouchers = await _voucherService.GetUserVouchersAsync(userId);
+        return Ok(new
+        {
+            message = "User vouchers retrieved successfully",
+            data = vouchers
+        });
+    }
+
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin,Moderator,Vendor")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateVoucherDto updateDto)
@@ -83,6 +100,23 @@ public class VoucherController : ControllerBase
 
         await _voucherService.DeleteVoucherAsync(id, userId);
         return Ok(new { message = "Voucher deleted successfully" });
+    }
+
+    [HttpPost("{id}/claim")]
+    [Authorize(Roles = "User")]
+    public async Task<IActionResult> Claim(int id)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var claimed = await _voucherService.ClaimVoucherAsync(id, userId);
+        return Ok(new
+        {
+            message = "Voucher claimed successfully",
+            data = claimed
+        });
     }
 
     private bool TryGetCurrentUserId(out int userId)
