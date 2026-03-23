@@ -56,4 +56,12 @@ public class VoucherDAO
     {
         return await _context.Vouchers.AnyAsync(v => v.VoucherId == voucherId);
     }
+
+    public async Task<List<Voucher>> GetByCampaignIdAsync(int campaignId)
+    {
+        return await _context.Vouchers
+            .Where(v => v.CampaignId == campaignId)
+            .OrderByDescending(v => v.VoucherId)
+            .ToListAsync();
+    }
 }

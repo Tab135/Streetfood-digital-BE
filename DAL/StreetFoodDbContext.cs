@@ -377,6 +377,11 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.MaxDiscountValue).HasColumnType("decimal(18,2)");
             entity.Property(e => e.VoucherCode).IsRequired().HasMaxLength(100);
             entity.HasIndex(e => e.VoucherCode).IsUnique();
+            
+            entity.HasOne(e => e.Campaign)
+                .WithMany()
+                .HasForeignKey(e => e.CampaignId)
+                .OnDelete(DeleteBehavior.SetNull);
           });
 
           modelBuilder.Entity<UserVoucher>(entity =>

@@ -89,6 +89,13 @@ public class VoucherController : ControllerBase
         return Ok(updated);
     }
 
+    [HttpGet("campaign/{campaignId}")]
+    public async Task<IActionResult> GetByCampaignId(int campaignId)
+    {
+        var vouchers = await _voucherService.GetVouchersByCampaignIdAsync(campaignId);
+        return Ok(vouchers);
+    }
+
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin,Moderator,Vendor")]
     public async Task<IActionResult> Delete(int id)

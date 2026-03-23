@@ -50,7 +50,8 @@ public class VoucherService : IVoucherService
             VoucherCode = createDto.VoucherCode,
             RedeemPoint = createDto.RedeemPoint,
             Quantity = createDto.Quantity,
-            UsedQuantity = 0
+            UsedQuantity = 0,
+            CampaignId = createDto.CampaignId
         };
 
         var created = await _voucherRepository.CreateAsync(entity);
@@ -191,17 +192,30 @@ public class VoucherService : IVoucherService
             throw new DomainExceptions("Voucher is out of stock");
         }
 
-        if (user.Point < voucher.RedeemPoint)
-        {
-            throw new DomainExceptions("Insufficient points to claim this voucher");
-        }
-
         VoucherRules.NormalizeDiscountType(voucher.Type);
 
         var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, voucherId);
 
-        user.Point -= voucher.RedeemPoint;
-        await _userRepository.UpdateAsync(user);
+        // Voucher Hunt Logic: if linked to a campaign, it's free but limited to 1 per user
+        bool isCampaignVoucher = voucher.CampaignId.HasValue;
+
+        if (isCampaignVoucher)
+        {
+            if (userVoucher != null)
+            {
+                throw new DomainExceptions("You have already claimed this campaign voucher.");
+            }
+        }
+        else
+        {
+            if (user.Point < voucher.RedeemPoint)
+            {
+                throw new DomainExceptions("Insufficient points to claim this voucher");
+            }
+
+            user.Point -= voucher.RedeemPoint;
+            await _userRepository.UpdateAsync(user);
+        }
 
         voucher.UsedQuantity += 1;
         await _voucherRepository.UpdateAsync(voucher);
@@ -267,6 +281,12 @@ public class VoucherService : IVoucherService
         }).ToList();
     }
 
+    public async Task<List<VoucherDto>> GetVouchersByCampaignIdAsync(int campaignId)
+    {
+        var vouchers = await _voucherRepository.GetByCampaignIdAsync(campaignId);
+        return vouchers.Select(MapToDto).ToList();
+    }
+
     private static void ValidateDateRange(DateTime startDate, DateTime endDate)
     {
         if (endDate < startDate)
@@ -293,7 +313,8 @@ public class VoucherService : IVoucherService
             VoucherCode = voucher.VoucherCode,
             RedeemPoint = voucher.RedeemPoint,
             Quantity = voucher.Quantity,
-            UsedQuantity = voucher.UsedQuantity
+            UsedQuantity = voucher.UsedQuantity,
+            CampaignId = voucher.CampaignId
         };
     }
 

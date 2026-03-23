@@ -17,4 +17,5 @@ public class VoucherDto
     public int RedeemPoint { get; set; }
     public int Quantity { get; set; }
     public int UsedQuantity { get; set; }
+    public int? CampaignId { get; set; }
 }

@@ -26,4 +26,6 @@ public class VoucherRepository : IVoucherRepository
     public Task DeleteAsync(int voucherId) => _voucherDAO.DeleteAsync(voucherId);
 
     public Task<bool> ExistsByIdAsync(int voucherId) => _voucherDAO.ExistsByIdAsync(voucherId);
+
+    public Task<List<Voucher>> GetByCampaignIdAsync(int campaignId) => _voucherDAO.GetByCampaignIdAsync(campaignId);
 }

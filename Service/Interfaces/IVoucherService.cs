@@ -11,4 +11,5 @@ public interface IVoucherService
     Task<bool> DeleteVoucherAsync(int voucherId, int userId);
     Task<ClaimVoucherResponseDto> ClaimVoucherAsync(int voucherId, int userId);
     Task<List<UserVoucherResponseDto>> GetUserVouchersAsync(int userId);
+    Task<List<VoucherDto>> GetVouchersByCampaignIdAsync(int campaignId);
 }

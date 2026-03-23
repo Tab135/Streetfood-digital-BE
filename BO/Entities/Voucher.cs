@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace BO.Entities;
@@ -38,6 +39,11 @@ public class Voucher
     public int RedeemPoint { get; set; }
     public int Quantity { get; set; }
     public int UsedQuantity { get; set; }
+
+    public int? CampaignId { get; set; }
+    [ForeignKey("CampaignId")]
+    public virtual Campaign? Campaign { get; set; }
+
     [JsonIgnore]
     public virtual ICollection<UserVoucher> UserVouchers { get; set; } = new List<UserVoucher>();
 }
