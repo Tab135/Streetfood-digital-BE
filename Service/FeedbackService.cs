@@ -513,6 +513,7 @@ namespace Service
                 User = userDto,
                 DishId = feedback.DishId,
                 Dish = dishDto,
+                BranchId = feedback.BranchId,
                 Rating = feedback.Rating,
                 Comment = feedback.Comment,
                 CreatedAt = feedback.CreatedAt,
