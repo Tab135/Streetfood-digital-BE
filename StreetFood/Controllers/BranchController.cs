@@ -29,6 +29,28 @@ namespace StreetFood.Controllers
         
         // -- GhostPin migrated endpoints --
 
+        [HttpPut("{branchId}/manager")]
+        [Authorize(Roles = "Vendor,Admin")]
+        [ProducesResponseType(typeof(ApiResponse<bool>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> AssignManager(int branchId, [FromBody] AssignManagerDto request)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var success = await _branchService.AssignManagerAsync(branchId, request.ManagerId, userId);
+                return Ok(new { message = "Manager assigned successfully", data = success });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("all-ghost-pins")]
         [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<object>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllApprovedGhostPinBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)

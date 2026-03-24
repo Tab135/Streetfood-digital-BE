@@ -25,6 +25,7 @@ namespace Service.Interfaces
         Task<BranchResponseDto> UpdateBranchAsync(int branchId, UpdateBranchDto updateBranchDto, int userId);
         Task DeleteBranchAsync(int branchId, int userId);
         Task<bool> UserOwnsBranchAsync(int branchId, int userId);
+        Task<bool> AssignManagerAsync(int branchId, int managerId, int vendorUserId);
         
         // License submission and verification
         Task<BranchRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId);
