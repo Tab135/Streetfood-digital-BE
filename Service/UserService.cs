@@ -401,6 +401,28 @@ namespace Service
             return true;
         }
 
+        public async Task<BO.Common.PaginatedResponse<UserProfileDto>> SearchUsersAsync(string keyword, int pageNumber, int pageSize)
+        {
+            var (users, totalCount) = await _userRepository.SearchUsersAsync(keyword, pageNumber, pageSize);
+            var mappedUsers = new List<UserProfileDto>();
+            foreach (var u in users)
+            {
+                mappedUsers.Add(new UserProfileDto
+                {
+                    Id = u.Id,
+                    UserName = u.UserName,
+                    Email = u.Email,
+                    PhoneNumber = u.PhoneNumber,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    AvatarUrl = u.AvatarUrl,
+                    Role = u.Role.ToString(),
+                    Point = u.Point
+                });
+            }
+            return new BO.Common.PaginatedResponse<UserProfileDto>(mappedUsers, totalCount, pageNumber, pageSize);
+        }
+
         // New ChangePassword implementation
         public async Task<string> ChangePassword(string userId, string oldPassword, string newPassword, string confirmNewPassword)
         {

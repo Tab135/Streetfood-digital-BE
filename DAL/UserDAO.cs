@@ -147,5 +147,31 @@ namespace DAL
             _context.Users.Update(user);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<(System.Collections.Generic.List<User> Users, int TotalCount)> SearchUsersAsync(string keyword, int pageNumber, int pageSize)
+        {
+            var query = _context.Users.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                var lowerKeyword = keyword.ToLower();
+                query = query.Where(u => 
+                    (u.Email != null && u.Email.ToLower().Contains(lowerKeyword)) ||
+                    (u.UserName != null && u.UserName.ToLower().Contains(lowerKeyword)) ||
+                    (u.FirstName != null && u.FirstName.ToLower().Contains(lowerKeyword)) ||
+                    (u.LastName != null && u.LastName.ToLower().Contains(lowerKeyword)) ||
+                    (u.PhoneNumber != null && u.PhoneNumber.Contains(keyword))
+                );
+            }
+
+            var totalCount = await query.CountAsync();
+            var users = await query
+                .OrderBy(u => u.Id)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (users, totalCount);
+        }
     }
 }
