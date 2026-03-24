@@ -18,5 +18,6 @@ namespace Repository.Interfaces
         Task<User> FindOrCreateUserFromFacebookAsync(FacebookUserInfo info);
         Task<User> GetUserById(int userId);
         Task UpdatePasswordAsync(int userId, string hashedPassword);
+        Task<(System.Collections.Generic.List<User> Users, int TotalCount)> SearchUsersAsync(string keyword, int pageNumber, int pageSize);
     }
 }

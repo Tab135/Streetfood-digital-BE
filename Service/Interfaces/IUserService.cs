@@ -29,5 +29,7 @@ namespace Service.Interfaces
         Task<(bool UserInfoSetup, bool DietarySetup)> GetUserSetupStatusAsync(int userId);
         Task<bool> MarkUserInfoSetupAsync(int userId);
         Task<bool> MarkDietarySetupAsync(int userId);
+
+        Task<BO.Common.PaginatedResponse<UserProfileDto>> SearchUsersAsync(string keyword, int pageNumber, int pageSize);
     }
 }
