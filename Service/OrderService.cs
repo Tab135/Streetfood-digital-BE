@@ -15,19 +15,25 @@ public class OrderService : IOrderService
     private readonly IDishRepository _dishRepository;
     private readonly IUserRepository _userRepository;
     private readonly IVendorRepository _vendorRepository;
+    private readonly IUserVoucherRepository _userVoucherRepository;
+    private readonly IBranchCampaignRepository _branchCampaignRepository;
 
     public OrderService(
         IOrderRepository orderRepository,
         IBranchRepository branchRepository,
         IDishRepository dishRepository,
         IUserRepository userRepository,
-        IVendorRepository vendorRepository)
+        IVendorRepository vendorRepository,
+        IUserVoucherRepository userVoucherRepository,
+        IBranchCampaignRepository branchCampaignRepository)
     {
         _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
         _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
         _dishRepository = dishRepository ?? throw new ArgumentNullException(nameof(dishRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
+        _userVoucherRepository = userVoucherRepository ?? throw new ArgumentNullException(nameof(userVoucherRepository));
+        _branchCampaignRepository = branchCampaignRepository ?? throw new ArgumentNullException(nameof(branchCampaignRepository));
     }
 
     public async Task<OrderResponseDto> CreateOrderAsync(CreateOrderRequest request, int userId)
@@ -37,6 +43,46 @@ public class OrderService : IOrderService
             ?? throw new DomainExceptions("Branch not found");
 
         var (orderDishes, totalAmount) = await BuildValidatedOrderDishesAsync(request.BranchId, request.Items);
+
+        // Voucher Validation Logic
+        if (request.UserVoucherId.HasValue)
+        {
+            var userVoucher = await _userVoucherRepository.GetByIdAsync(request.UserVoucherId.Value)
+                ?? throw new DomainExceptions("Voucher not found or do not own by you");
+
+            if (userVoucher.UserId != userId)
+                throw new DomainExceptions("You do not own this voucher");
+
+            if (!userVoucher.IsAvailable || userVoucher.Quantity <= 0)
+                throw new DomainExceptions("Voucher is already used or not available");
+
+            var voucher = userVoucher.Voucher;
+            if (voucher.CampaignId.HasValue)
+            {
+                var campaign = voucher.Campaign;
+                if (campaign != null)
+                {
+                    if (campaign.CreatedByBranchId.HasValue)
+                    {
+                        // Branch Campaign: Must be the same branch
+                        if (branch.BranchId != campaign.CreatedByBranchId.Value)
+                        {
+                            throw new DomainExceptions("This voucher is only applicable to a specific branch.");
+                        }
+                    }
+                    else
+                    {
+                        // System Campaign: Branch must have joined
+                        var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branch.BranchId, campaign.CampaignId);
+                        if (joinInfo == null || (joinInfo.Status != "Active" && joinInfo.Status != "Paid"))
+                        {
+                            throw new DomainExceptions("This branch is not participating in the campaign for this voucher.");
+                        }
+                    }
+                }
+            }
+        }
+
         var discountAmount = request.DiscountAmount ?? 0m;
         if (discountAmount < 0)
         {
@@ -53,6 +99,7 @@ public class OrderService : IOrderService
         {
             UserId = userId,
             BranchId = branch.BranchId,
+            UserVoucherId = request.UserVoucherId,
             Status = OrderStatus.Pending,
             Table = request.Table,
             PaymentMethod = request.PaymentMethod,

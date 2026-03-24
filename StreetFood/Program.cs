@@ -90,6 +90,8 @@ namespace StreetFood
             builder.Services.AddScoped<TasteDAO>();
             builder.Services.AddScoped<DishDAO>();
             builder.Services.AddScoped<TierDAO>();
+            builder.Services.AddScoped<VoucherDAO>();
+            builder.Services.AddScoped<UserVoucherDAO>();
 
             // Register Repositories
             builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -116,6 +118,8 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
             builder.Services.AddScoped<ITasteRepository, TasteRepository>();
             builder.Services.AddScoped<IDishRepository, DishRepository>();
+            builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
+            builder.Services.AddScoped<IUserVoucherRepository, UserVoucherRepository>();
 
             // Register Services
             builder.Services.AddScoped<IUserService, UserService>();
@@ -143,7 +147,16 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITasteService, TasteService>();
             builder.Services.AddScoped<IDishService, DishService>();
+            builder.Services.AddScoped<IVoucherService, VoucherService>();
             // Search Service
+            // Flow 4: Campaigns
+        builder.Services.AddScoped<DAL.CampaignDAO>();
+        builder.Services.AddScoped<DAL.BranchCampaignDAO>();
+        builder.Services.AddScoped<Repository.Interfaces.ICampaignRepository, Repository.CampaignRepository>();
+        builder.Services.AddScoped<Repository.Interfaces.IBranchCampaignRepository, Repository.BranchCampaignRepository>();
+        builder.Services.AddScoped<Service.Interfaces.ICampaignService, Service.CampaignService>();
+
+        // Search Service
             builder.Services.AddScoped<ISearchService, SearchService>();
             builder.Services.AddHostedService<OtpCleanupService>();
 

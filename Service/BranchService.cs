@@ -1,6 +1,7 @@
 using BO.Common;
 using BO.DTO.Branch;
 using BO.Entities;
+using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -297,6 +298,40 @@ namespace Service
 
             var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             return vendor != null && vendor.UserId == userId;
+        }
+
+        public async Task<bool> AssignManagerAsync(int branchId, int managerId, int vendorUserId)
+        {
+            if (!await UserOwnsBranchAsync(branchId, vendorUserId))
+            {
+                throw new DomainExceptions("You are not authorized to assign a manager to this branch.", "ERR_UNAUTHORIZED");
+            }
+
+            var newManagerUser = await _userRepository.GetUserById(managerId);
+            if (newManagerUser == null)
+            {
+                throw new DomainExceptions("The user to be assigned as manager does not exist.", "ERR_USER_NOT_FOUND");
+            }
+
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null)
+            {
+                throw new DomainExceptions("Branch not found.", "ERR_BRANCH_NOT_FOUND");
+            }
+
+            branch.ManagerId = newManagerUser.Id;
+            branch.UpdatedAt = DateTime.UtcNow;
+
+            await _branchRepository.UpdateAsync(branch);
+
+            // Promote to Manager if they are currently a regular User
+            if (newManagerUser.Role == Role.User)
+            {
+                newManagerUser.Role = Role.Manager;
+                await _userRepository.UpdateAsync(newManagerUser);
+            }
+
+            return true;
         }
 
         public async Task<PaginatedResponse<BranchResponseDto>> GetUnverifiedBranchesAsync(int pageNumber, int pageSize)

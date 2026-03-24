@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260323104305_voucher")]
+    partial class voucher
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1311,9 +1314,6 @@ namespace DAL.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VoucherId"));
 
-                    b.Property<int?>("CampaignId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
@@ -1364,8 +1364,6 @@ namespace DAL.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.HasKey("VoucherId");
-
-                    b.HasIndex("CampaignId");
 
                     b.HasIndex("VoucherCode")
                         .IsUnique();
@@ -1832,16 +1830,6 @@ namespace DAL.Migrations
                     b.Navigation("Feedback");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("BO.Entities.Voucher", b =>
-                {
-                    b.HasOne("BO.Entities.Campaign", "Campaign")
-                        .WithMany()
-                        .HasForeignKey("CampaignId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Campaign");
                 });
 
             modelBuilder.Entity("BO.Entities.WorkSchedule", b =>

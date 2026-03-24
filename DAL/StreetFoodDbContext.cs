@@ -37,6 +37,8 @@ public class StreetFoodDbContext : DbContext
     // Flow 2: Review & Rating enhancements
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderDish> OrderDishes { get; set; }
+    public DbSet<Voucher> Vouchers { get; set; }
+    public DbSet<UserVoucher> UserVouchers { get; set; }
     public DbSet<Cart> Carts { get; set; }
     public DbSet<CartItem> CartItems { get; set; }
     public DbSet<FeedbackVote> FeedbackVotes { get; set; }
@@ -51,6 +53,10 @@ public class StreetFoodDbContext : DbContext
     public DbSet<VendorDietaryPreference> VendorDietaryPreferences { get; set; }
     public DbSet<Payment> Payments { get; set; }
     public DbSet<BranchDish> BranchDishes { get; set; }
+
+    // Flow 4: Campaigns
+    public DbSet<Campaign> Campaigns { get; set; }
+    public DbSet<BranchCampaign> BranchCampaigns { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -353,7 +359,49 @@ public class StreetFoodDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.BranchId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.UserVoucher)
+                .WithMany(uv => uv.Orders)
+                .HasForeignKey(e => e.UserVoucherId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
+
+          modelBuilder.Entity<Voucher>(entity =>
+          {
+            entity.HasKey(e => e.VoucherId);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.Type).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.DiscountValue).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.MinAmountRequired).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.MaxDiscountValue).HasColumnType("decimal(18,2)");
+            entity.Property(e => e.VoucherCode).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => e.VoucherCode).IsUnique();
+            
+            entity.HasOne(e => e.Campaign)
+                .WithMany()
+                .HasForeignKey(e => e.CampaignId)
+                .OnDelete(DeleteBehavior.SetNull);
+          });
+
+          modelBuilder.Entity<UserVoucher>(entity =>
+          {
+            entity.HasKey(e => e.UserVoucherId);
+            entity.Property(e => e.Quantity).HasDefaultValue(1);
+            entity.Property(e => e.IsAvailable).HasDefaultValue(true);
+
+            entity.HasIndex(e => new { e.UserId, e.VoucherId }).IsUnique();
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Voucher)
+                .WithMany(v => v.UserVouchers)
+                .HasForeignKey(e => e.VoucherId)
+                .OnDelete(DeleteBehavior.Cascade);
+          });
 
           modelBuilder.Entity<OrderDish>(entity =>
           {

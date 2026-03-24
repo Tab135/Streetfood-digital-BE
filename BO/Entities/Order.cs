@@ -16,6 +16,9 @@ public class Order
     [ForeignKey("Branch")]
     public int BranchId { get; set; }
 
+    [ForeignKey("UserVoucher")]
+    public int? UserVoucherId { get; set; }
+
     public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
     [StringLength(255)]
@@ -40,6 +43,7 @@ public class Order
     // Navigation properties
     public virtual User User { get; set; }
     public virtual Branch Branch { get; set; }
+    public virtual UserVoucher? UserVoucher { get; set; }
     public virtual ICollection<OrderDish> OrderDishes { get; set; } = new List<OrderDish>();
     public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
 }

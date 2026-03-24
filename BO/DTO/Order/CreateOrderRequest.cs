@@ -7,6 +7,8 @@ public class CreateOrderRequest
     [Required]
     public int BranchId { get; set; }
 
+    public int? UserVoucherId { get; set; }
+
     [MaxLength(255)]
     public string? Table { get; set; }
 

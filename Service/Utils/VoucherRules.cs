@@ -1,0 +1,68 @@
+using BO.Entities;
+using BO.Exceptions;
+
+namespace Service.Utils;
+
+public static class VoucherRules
+{
+    public const string DiscountTypeAmount = "AMOUNT";
+    public const string DiscountTypePercent = "PERCENT";
+
+    public static string NormalizeDiscountType(string discountType)
+    {
+        if (string.IsNullOrWhiteSpace(discountType))
+        {
+            throw new DomainExceptions("Voucher type is required");
+        }
+
+        var normalized = discountType.Trim().ToUpperInvariant();
+        return normalized switch
+        {
+            "PERCENT" => DiscountTypePercent,
+            "PERCENTAGE" => DiscountTypePercent,
+            "AMOUNT" => DiscountTypeAmount,
+            "FIXED" => DiscountTypeAmount,
+            _ => throw new DomainExceptions("Voucher type must be AMOUNT or PERCENT")
+        };
+    }
+
+    public static bool IsPercentageType(string discountType)
+    {
+        return string.Equals(NormalizeDiscountType(discountType), DiscountTypePercent, StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static decimal CalculateDiscountAmount(decimal amount, Voucher voucher)
+    {
+        decimal calculatedDiscount;
+
+        if (IsPercentageType(voucher.Type))
+        {
+            calculatedDiscount = amount * voucher.DiscountValue / 100m;
+        }
+        else
+        {
+            calculatedDiscount = voucher.DiscountValue;
+        }
+
+        if (voucher.MaxDiscountValue.HasValue && calculatedDiscount > voucher.MaxDiscountValue.Value)
+        {
+            calculatedDiscount = voucher.MaxDiscountValue.Value;
+        }
+
+        if (calculatedDiscount < 0)
+        {
+            calculatedDiscount = 0;
+        }
+
+        return Math.Min(calculatedDiscount, amount);
+    }
+
+    public static void ValidateDiscountValue(string discountType, decimal discountValue)
+    {
+        var normalizedType = NormalizeDiscountType(discountType);
+        if (normalizedType == DiscountTypePercent && (discountValue <= 0 || discountValue > 100))
+        {
+            throw new DomainExceptions("Percentage discount value must be greater than 0 and less than or equal to 100");
+        }
+    }
+}
