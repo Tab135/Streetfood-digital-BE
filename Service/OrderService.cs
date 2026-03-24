@@ -420,9 +420,9 @@ public class OrderService : IOrderService
         var updated = await _orderRepository.Update(order);
 
         // Notify customer about order status change
-        var statusText = approve ? "approved" : "cancelled";
-        var title = approve ? "Order Approved" : "Order Cancelled";
-        var message = $"Your order #{order.OrderId} at {branch.Name} has been {statusText}";
+        var statusText = approve ? "được duyệt" : "đã bị hủy";
+        var title = approve ? "Đơn hàng được duyệt" : "Đơn hàng đã bị hủy";
+        var message = $"Đơn hàng #{order.OrderId} ở {branch.Name} đã {statusText}";
         var pushData = new
         {
             type = "order_status",
@@ -507,8 +507,8 @@ public class OrderService : IOrderService
         await _notificationService.NotifyAsync(
             order.UserId,
             NotificationType.OrderStatusUpdate,
-            "Order Complete",
-            $"Your order #{order.OrderId} at {branch.Name} has been completed",
+            "Đơn hàng đã hoàn thành",
+            $"Đơn hàng #{order.OrderId} ở {branch.Name} đã được hoàn thành",
             order.OrderId,
             pushData);
 
