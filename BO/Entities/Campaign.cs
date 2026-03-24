@@ -14,9 +14,9 @@ namespace BO.Entities
         [ForeignKey("CreatedByBranchId")]
         public virtual Branch? CreatedByBranch { get; set; }
 
-        public int? RequiredTierId { get; set; }
-        [ForeignKey("RequiredTierId")]
-        public virtual Tier? RequiredTier { get; set; }
+        public int? CreatedByVendorId { get; set; }
+        [ForeignKey("CreatedByVendorId")]
+        public virtual Vendor? CreatedByVendor { get; set; }
 
         [Required]
         [StringLength(255)]

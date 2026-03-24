@@ -7,6 +7,7 @@ namespace Service.Interfaces
     {
         Task CreateSystemCampaignAsync(CreateCampaignDto dto);
         Task CreateRestaurantCampaignAsync(int userId, int branchId, CreateCampaignDto dto);
+        Task CreateVendorCampaignAsync(int userId, CreateCampaignDto dto);
         Task<int> JoinSystemCampaignAsync(int userId, int branchId, int campaignId);
     }
 }
