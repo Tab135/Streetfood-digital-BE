@@ -21,7 +21,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost("system")]
-        [Authorize(Roles = "Admin,Manager")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateSystemCampaign([FromBody] CreateCampaignDto dto)
         {
             await _campaignService.CreateSystemCampaignAsync(dto);
@@ -66,6 +66,40 @@ namespace StreetFood.Controllers
             }
 
             return BadRequest(new { message = paymentResult.Message });
+        }
+
+                [HttpGet("system")]
+        public async Task<IActionResult> GetSystemCampaigns([FromQuery] CampaignQueryDto query)
+        {
+            var result = await _campaignService.GetSystemCampaignsAsync(query);
+            return Ok(new { message = "Lấy danh sách chiến dịch hệ thống thành công", data = result });
+        }
+
+        [HttpGet("vendor")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> GetVendorCampaigns([FromQuery] CampaignQueryDto query)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.GetVendorCampaignsAsync(userId, query);
+            return Ok(new { message = "Lấy danh sách chiến dịch của vendor thành công", data = result });
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetCampaignById(int id)
+        {
+            var result = await _campaignService.GetCampaignByIdAsync(id);
+            return Ok(new { message = "Lấy thông tin chiến dịch thành công", data = result });
+        }
+
+        [HttpPut("{id}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateCampaign(int id, [FromBody] UpdateCampaignDto dto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
+
+            await _campaignService.UpdateCampaignAsync(userId, userRole, id, dto);
+            return Ok(new { message = "Cập nhật chiến dịch thành công" });
         }
     }
 }
