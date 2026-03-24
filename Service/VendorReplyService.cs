@@ -56,12 +56,21 @@ public class VendorReplyService : IVendorReplyService
         var branch = await _branchRepository.GetByIdAsync(feedback.BranchId);
 
         // Notify feedback author
+        var pushData = new
+        {
+            type = "vendor_reply",
+            feedbackId,
+            branchId = feedback.BranchId,
+            branchName = branch?.Name ?? string.Empty,
+        };
+
         await _notificationService.NotifyAsync(
             feedback.UserId,
             NotificationType.VendorReply,
             "Vendor Reply",
             $"Vendor replied to your review on '{branch?.Name}'",
-            feedbackId);
+            feedbackId,
+            pushData);
 
         return await MapToDto(created);
     }
