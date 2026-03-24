@@ -85,6 +85,7 @@ namespace StreetFood
             builder.Services.AddScoped<FeedbackVoteDAO>();
             builder.Services.AddScoped<VendorReplyDAO>();
             builder.Services.AddScoped<NotificationDAO>();
+            builder.Services.AddScoped<ExpoPushTokenDAO>();
             // Menu Management DAOs
             builder.Services.AddScoped<CategoryDAO>();
             builder.Services.AddScoped<TasteDAO>();
