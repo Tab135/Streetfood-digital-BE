@@ -31,5 +31,6 @@ namespace Service.Interfaces
         Task<bool> MarkDietarySetupAsync(int userId);
 
         Task<BO.Common.PaginatedResponse<UserProfileDto>> SearchUsersAsync(string keyword, int pageNumber, int pageSize);
+        Task<UserProfileDto> GetUserProfileByIdAsync(int userId);
     }
 }

@@ -4,6 +4,7 @@ using BO.DTO.Auth;
 using BO.DTO.Password;
 using BO.DTO.Users;
 using BO.Entities;
+using BO.Exceptions;
 using Google.Apis.Auth;
 using Microsoft.Extensions.Configuration;
 using Repository.Interfaces;
@@ -421,6 +422,28 @@ namespace Service
                 });
             }
             return new BO.Common.PaginatedResponse<UserProfileDto>(mappedUsers, totalCount, pageNumber, pageSize);
+        }
+
+        public async Task<UserProfileDto> GetUserProfileByIdAsync(int userId)
+        {
+            var u = await _userRepository.GetUserById(userId);
+            if (u == null)
+            {
+                throw new DomainExceptions("User not found", "ERR_USER_NOT_FOUND");
+            }
+
+            return new UserProfileDto
+            {
+                Id = u.Id,
+                UserName = u.UserName,
+                Email = u.Email,
+                PhoneNumber = u.PhoneNumber,
+                FirstName = u.FirstName,
+                LastName = u.LastName,
+                AvatarUrl = u.AvatarUrl,
+                Role = u.Role.ToString(),
+                Point = u.Point
+            };
         }
 
         // New ChangePassword implementation
