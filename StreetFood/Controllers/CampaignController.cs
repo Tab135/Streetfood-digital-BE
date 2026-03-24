@@ -12,10 +12,12 @@ namespace StreetFood.Controllers
     public class CampaignController : ControllerBase
     {
         private readonly ICampaignService _campaignService;
+        private readonly Service.PaymentsService.IPaymentService _paymentService;
 
-        public CampaignController(ICampaignService campaignService)
+        public CampaignController(ICampaignService campaignService, Service.PaymentsService.IPaymentService paymentService)
         {
             _campaignService = campaignService;
+            _paymentService = paymentService;
         }
 
         [HttpPost("system")]
@@ -36,24 +38,35 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Restaurant campaign created successfully" });
         }
 
-        [HttpPost("join/system/{campaignId}/branch/{branchId}")]
+                        [HttpPost("vendor")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> CreateVendorCampaign([FromBody] CreateCampaignDto dto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            await _campaignService.CreateVendorCampaignAsync(userId, dto);
+            return Ok(new { message = "Vendor campaign created successfully" });
+        }
+                [HttpPost("join/system/{campaignId}/branch/{branchId}")]
         [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> JoinSystemCampaign(int campaignId, int branchId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             
-            var paymentId = await _campaignService.JoinSystemCampaignAsync(userId, branchId, campaignId);
+            var branchCampaignId = await _campaignService.JoinSystemCampaignAsync(userId, branchId, campaignId);
             
-            if (paymentId > 0)
+            var paymentResult = await _paymentService.CreateCampaignPaymentLink(userId, branchId, branchCampaignId);
+            
+            if (paymentResult.Success)
             {
-                return Ok(new 
-                { 
+                return Ok(new
+                {
                     message = "Joined successfully. Please proceed to payment.",
-                    data = new { paymentId = paymentId }
+                    data = paymentResult
                 });
             }
 
-            return Ok(new { message = "Joined the campaign successfully and active." });
+            return BadRequest(new { message = paymentResult.Message });
         }
     }
 }
+
