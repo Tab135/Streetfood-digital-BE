@@ -33,7 +33,7 @@ namespace Service
             _vendorRepo = vendorRepo;
         }
 
-        public async Task CreateSystemCampaignAsync(CreateCampaignDto dto)
+        public async Task<CampaignResponseDto> CreateSystemCampaignAsync(CreateCampaignDto dto)
         {
             var campaign = new Campaign
             {
@@ -47,9 +47,11 @@ namespace Service
                 CreatedByBranchId = null
             };
             await _campaignRepo.CreateAsync(campaign);
+
+            return await GetCampaignByIdAsync(campaign.CampaignId);
         }
 
-        public async Task CreateRestaurantCampaignAsync(int userId, int branchId, CreateCampaignDto dto)
+        public async Task<CampaignResponseDto> CreateRestaurantCampaignAsync(int userId, int branchId, CreateCampaignDto dto)
         {
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
             if (vendor == null)
@@ -64,14 +66,18 @@ namespace Service
                 Name = dto.Name,
                 Description = dto.Description,
                 TargetSegment = dto.TargetSegment,
+                RegistrationStartDate = dto.RegistrationStartDate,
+                RegistrationEndDate = dto.RegistrationEndDate,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 CreatedByBranchId = branchId
             };
             await _campaignRepo.CreateAsync(campaign);
+
+            return await GetCampaignByIdAsync(campaign.CampaignId);
         }
 
-        public async Task CreateVendorCampaignAsync(int userId, CreateCampaignDto dto)
+        public async Task<CampaignResponseDto> CreateVendorCampaignAsync(int userId, CreateCampaignDto dto)
         {
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
             if (vendor == null)
@@ -82,11 +88,15 @@ namespace Service
                 Name = dto.Name,
                 Description = dto.Description,
                 TargetSegment = dto.TargetSegment,
+                RegistrationStartDate = dto.RegistrationStartDate,
+                RegistrationEndDate = dto.RegistrationEndDate,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 CreatedByVendorId = vendor.VendorId
             };
             await _campaignRepo.CreateAsync(campaign);
+
+            return await GetCampaignByIdAsync(campaign.CampaignId);
         }
 
         public async Task<int> JoinSystemCampaignAsync(int userId, int branchId, int campaignId)
@@ -222,7 +232,7 @@ namespace Service
             };
         }
 
-                public async Task UpdateCampaignAsync(int userId, string role, int campaignId, UpdateCampaignDto dto)
+                public async Task<CampaignResponseDto> UpdateCampaignAsync(int userId, string role, int campaignId, UpdateCampaignDto dto)
         {
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
             if (campaign == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
@@ -270,6 +280,8 @@ namespace Service
             campaign.UpdatedAt = DateTime.UtcNow;
 
             await _campaignRepo.UpdateAsync(campaign);
+
+            return await GetCampaignByIdAsync(campaign.CampaignId);
         }
     }
 }

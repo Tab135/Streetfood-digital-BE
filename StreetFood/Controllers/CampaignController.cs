@@ -24,8 +24,8 @@ namespace StreetFood.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateSystemCampaign([FromBody] CreateCampaignDto dto)
         {
-            await _campaignService.CreateSystemCampaignAsync(dto);
-            return Ok(new { message = "Campaign created successfully" });
+            var result = await _campaignService.CreateSystemCampaignAsync(dto);
+            return Ok(new { message = "Campaign created successfully", data = result });
         }
 
         [HttpPost("branch/{branchId}")]
@@ -34,8 +34,8 @@ namespace StreetFood.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             
-            await _campaignService.CreateRestaurantCampaignAsync(userId, branchId, dto);
-            return Ok(new { message = "Restaurant campaign created successfully" });
+            var result = await _campaignService.CreateRestaurantCampaignAsync(userId, branchId, dto);
+            return Ok(new { message = "Restaurant campaign created successfully", data = result });
         }
 
                         [HttpPost("vendor")]
@@ -43,8 +43,8 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> CreateVendorCampaign([FromBody] CreateCampaignDto dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            await _campaignService.CreateVendorCampaignAsync(userId, dto);
-            return Ok(new { message = "Vendor campaign created successfully" });
+            var result = await _campaignService.CreateVendorCampaignAsync(userId, dto);
+            return Ok(new { message = "Vendor campaign created successfully", data = result });
         }
                 [HttpPost("join/system/{campaignId}/branch/{branchId}")]
         [Authorize(Roles = "Vendor")]
@@ -98,8 +98,8 @@ namespace StreetFood.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
 
-            await _campaignService.UpdateCampaignAsync(userId, userRole, id, dto);
-            return Ok(new { message = "Cập nhật chiến dịch thành công" });
+            var result = await _campaignService.UpdateCampaignAsync(userId, userRole, id, dto);
+            return Ok(new { message = "Cập nhật chiến dịch thành công", data = result });
         }
     }
 }
