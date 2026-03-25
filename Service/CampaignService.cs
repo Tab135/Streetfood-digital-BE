@@ -44,7 +44,6 @@ namespace Service
                 RegistrationEndDate = dto.RegistrationEndDate,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
-                RequiredTierId = dto.RequiredTierId,
                 CreatedByBranchId = null
             };
             await _campaignRepo.CreateAsync(campaign);
@@ -54,11 +53,11 @@ namespace Service
         {
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
             if (vendor == null)
-                throw new DomainExceptions("Kh�ng t�m th?y Vendor c?a ngu?i d�ng n�y.");
+                throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
 
             var branch = await _branchRepo.GetByIdAsync(branchId);
             if (branch == null || branch.VendorId != vendor.VendorId)
-                throw new DomainExceptions("Kh�ng t�m th?y chi nh�nh ho?c kh�ng c� quy?n truy c?p.");
+                throw new DomainExceptions("Không tìm thấy chi nhánh hoặc không có quyền truy cập.");
 
             var campaign = new Campaign
             {
@@ -72,37 +71,55 @@ namespace Service
             await _campaignRepo.CreateAsync(campaign);
         }
 
+        public async Task CreateVendorCampaignAsync(int userId, CreateCampaignDto dto)
+        {
+            var vendor = await _vendorRepo.GetByUserIdAsync(userId);
+            if (vendor == null)
+                throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+
+            var campaign = new Campaign
+            {
+                Name = dto.Name,
+                Description = dto.Description,
+                TargetSegment = dto.TargetSegment,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
+                CreatedByVendorId = vendor.VendorId
+            };
+            await _campaignRepo.CreateAsync(campaign);
+        }
+
         public async Task<int> JoinSystemCampaignAsync(int userId, int branchId, int campaignId)
         {
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
             if (vendor == null)
-                throw new DomainExceptions("Kh�ng t�m th?y Vendor c?a ngu?i d�ng n�y.");
+                throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
 
             var branch = await _branchRepo.GetByIdAsync(branchId);
             if (branch == null || branch.VendorId != vendor.VendorId)
-                throw new DomainExceptions("Kh�ng t�m th?y chi nh�nh ho?c kh�ng c� quy?n truy c?p.");
+                throw new DomainExceptions("Không tìm thấy chi nhánh hoặc không có quyền truy cập.");
 
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
             if (campaign == null || campaign.CreatedByBranchId != null)
-                throw new DomainExceptions("Chi?n d?ch h? th?ng kh�ng t?n t?i.");
+                throw new DomainExceptions("Chiến dịch hệ thống không tồn tại.");
 
             var now = DateTime.UtcNow;
             if (campaign.RegistrationStartDate.HasValue && campaign.RegistrationEndDate.HasValue)
             {
                 if (now < campaign.RegistrationStartDate || now > campaign.RegistrationEndDate)
-                    throw new DomainExceptions("Kh�ng n?m trong th?i gian tham gia chi?n d?ch n�y.");
+                    throw new DomainExceptions("Không nằm trong thời gian tham gia chiến dịch này.");
             }
 
             var existingJoin = await _branchCampaignRepo.GetByBranchAndCampaignAsync(branchId, campaignId);
             if (existingJoin != null)
-                throw new DomainExceptions("Chi nh�nh d� tham gia chi?n d?ch n�y.");
+                throw new DomainExceptions("Chi nhánh dã tham gia chiến dịch này.");
 
-            if (campaign.RequiredTierId.HasValue)
+            // Require minimum Tier for System Campaign (Weight >= 1)
+            if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null)
             {
-                var targetTier = await _tierRepo.GetByIdAsync(campaign.RequiredTierId.Value);
-                if (targetTier != null && branch.Tier != null && branch.Tier.Weight < targetTier.Weight)
+                if (branch.Tier == null || branch.Tier.Weight < 1)
                 {
-                    throw new DomainExceptions("C?p b?c c?a chi nh�nh kh�ng d? di?u ki?n tham gia chi?n d?ch n�y.");
+                    throw new DomainExceptions("Cấp bậc của chi nhánh không đủ điều kiện tham gia chiến dịch system (yêu cầu Tier mặc định trở lên).");
                 }
             }
 
@@ -114,26 +131,145 @@ namespace Service
             };
             await _branchCampaignRepo.CreateAsync(joinRequest);
 
-            // T�ch h?p logic Payment n?u c� ph� (Mocking Participation Fee = 1,000,000)
-            decimal participationFee = 1000000;
-            var paymentId = await CreateFeePaymentAsync(userId, branchId, joinRequest.Id, participationFee);
-            return paymentId; // Tr? v? PaymentId d? controller l?y Link thanh to�n
+            return joinRequest.Id;
         }
 
-        private async Task<int> CreateFeePaymentAsync(int userId, int branchId, int branchCampaignId, decimal feeAmount)
+                public async Task<BO.Common.PaginatedResponse<CampaignResponseDto>> GetSystemCampaignsAsync(CampaignQueryDto query)
         {
-            var orderCode = long.Parse(DateTime.UtcNow.ToString("yyMMddHHmmss") + userId);
-            var savedPayment = await _paymentRepo.CreatePayment(
-                userId: userId,
-                orderCode: orderCode,
-                branchId: branchId,
-                amount: (int)feeAmount,
-                description: "Tham gia chien dich",
-                checkoutUrl: null,
-                orderId: null,
-                branchCampaignId: branchCampaignId
+            var (items, totalCount) = await _campaignRepo.GetCampaignsAsync(true, null, query.PageNumber, query.PageSize);
+            
+            var mappedItems = new System.Collections.Generic.List<CampaignResponseDto>();
+            foreach(var item in items)
+            {
+                mappedItems.Add(new CampaignResponseDto
+                {
+                    CampaignId = item.CampaignId,
+                    CreatedByBranchId = item.CreatedByBranchId,
+                    CreatedByVendorId = item.CreatedByVendorId,
+                    Name = item.Name,
+                    Description = item.Description,
+                    TargetSegment = item.TargetSegment,
+                    RegistrationStartDate = item.RegistrationStartDate,
+                    RegistrationEndDate = item.RegistrationEndDate,
+                    StartDate = item.StartDate,
+                    EndDate = item.EndDate,
+                    CreatedAt = item.CreatedAt,
+                    UpdatedAt = item.UpdatedAt
+                });
+            }
+
+            return new BO.Common.PaginatedResponse<CampaignResponseDto>(
+                mappedItems,
+                query.PageNumber,
+                query.PageSize,
+                totalCount
             );
-            return savedPayment.Id;
+        }
+
+        public async Task<BO.Common.PaginatedResponse<CampaignResponseDto>> GetVendorCampaignsAsync(int userId, CampaignQueryDto query)
+        {
+            var vendor = await _vendorRepo.GetByUserIdAsync(userId);
+            if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+
+            var (items, totalCount) = await _campaignRepo.GetCampaignsAsync(false, vendor.VendorId, query.PageNumber, query.PageSize);
+            
+            var mappedItems = new System.Collections.Generic.List<CampaignResponseDto>();
+            foreach(var item in items)
+            {
+                mappedItems.Add(new CampaignResponseDto
+                {
+                    CampaignId = item.CampaignId,
+                    CreatedByBranchId = item.CreatedByBranchId,
+                    CreatedByVendorId = item.CreatedByVendorId,
+                    Name = item.Name,
+                    Description = item.Description,
+                    TargetSegment = item.TargetSegment,
+                    RegistrationStartDate = item.RegistrationStartDate,
+                    RegistrationEndDate = item.RegistrationEndDate,
+                    StartDate = item.StartDate,
+                    EndDate = item.EndDate,
+                    CreatedAt = item.CreatedAt,
+                    UpdatedAt = item.UpdatedAt
+                });
+            }
+
+            return new BO.Common.PaginatedResponse<CampaignResponseDto>(
+                mappedItems,
+                query.PageNumber,
+                query.PageSize,
+                totalCount
+            );
+        }
+
+        public async Task<CampaignResponseDto> GetCampaignByIdAsync(int id)
+        {
+            var item = await _campaignRepo.GetByIdAsync(id);
+            if (item == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
+            return new CampaignResponseDto
+            {
+                CampaignId = item.CampaignId,
+                CreatedByBranchId = item.CreatedByBranchId,
+                CreatedByVendorId = item.CreatedByVendorId,
+                Name = item.Name,
+                Description = item.Description,
+                TargetSegment = item.TargetSegment,
+                RegistrationStartDate = item.RegistrationStartDate,
+                RegistrationEndDate = item.RegistrationEndDate,
+                StartDate = item.StartDate,
+                EndDate = item.EndDate,
+                CreatedAt = item.CreatedAt,
+                UpdatedAt = item.UpdatedAt
+            };
+        }
+
+                public async Task UpdateCampaignAsync(int userId, string role, int campaignId, UpdateCampaignDto dto)
+        {
+            var campaign = await _campaignRepo.GetByIdAsync(campaignId);
+            if (campaign == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
+
+            if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null)
+            {
+                if (role != "Admin")
+                {
+                    throw new DomainExceptions("Chỉ Admin mới có thể cập nhật chiến dịch hệ thống.");
+                }
+            }
+            else
+            {
+                var vendor = await _vendorRepo.GetByUserIdAsync(userId);
+                if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+
+                // Allow update if the vendor created it OR if a branch owned by this vendor created it
+                bool isOwner = false;
+                if (campaign.CreatedByVendorId == vendor.VendorId)
+                {
+                    isOwner = true;
+                }
+                else if (campaign.CreatedByBranchId != null)
+                {
+                    var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
+                    if (branch != null && branch.VendorId == vendor.VendorId)
+                    {
+                        isOwner = true;
+                    }
+                }
+
+                if (!isOwner)
+                {
+                    throw new DomainExceptions("Bạn không có quyền cập nhật chiến dịch này.");
+                }
+            }
+
+            campaign.Name = dto.Name;
+            campaign.Description = dto.Description;
+            campaign.TargetSegment = dto.TargetSegment;
+            campaign.RegistrationStartDate = dto.RegistrationStartDate;
+            campaign.RegistrationEndDate = dto.RegistrationEndDate;
+            campaign.StartDate = dto.StartDate;
+            campaign.EndDate = dto.EndDate;
+            campaign.UpdatedAt = DateTime.UtcNow;
+
+            await _campaignRepo.UpdateAsync(campaign);
         }
     }
 }

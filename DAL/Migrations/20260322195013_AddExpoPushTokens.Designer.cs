@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260322195013_AddExpoPushTokens")]
+    partial class AddExpoPushTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -294,9 +297,6 @@ namespace DAL.Migrations
                     b.Property<int?>("CreatedByBranchId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("CreatedByVendorId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
@@ -314,6 +314,9 @@ namespace DAL.Migrations
                     b.Property<DateTime?>("RegistrationStartDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("RequiredTierId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -328,7 +331,7 @@ namespace DAL.Migrations
 
                     b.HasIndex("CreatedByBranchId");
 
-                    b.HasIndex("CreatedByVendorId");
+                    b.HasIndex("RequiredTierId");
 
                     b.ToTable("Campaigns");
                 });
@@ -883,16 +886,11 @@ namespace DAL.Migrations
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("UserVoucherId")
-                        .HasColumnType("integer");
-
                     b.HasKey("OrderId");
 
                     b.HasIndex("BranchId");
 
                     b.HasIndex("UserId");
-
-                    b.HasIndex("UserVoucherId");
 
                     b.ToTable("Orders");
                 });
@@ -1209,40 +1207,6 @@ namespace DAL.Migrations
                     b.ToTable("UserDietaryPreferences");
                 });
 
-            modelBuilder.Entity("BO.Entities.UserVoucher", b =>
-                {
-                    b.Property<int>("UserVoucherId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("UserVoucherId"));
-
-                    b.Property<bool>("IsAvailable")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
-
-                    b.Property<int>("Quantity")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("VoucherId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("UserVoucherId");
-
-                    b.HasIndex("VoucherId");
-
-                    b.HasIndex("UserId", "VoucherId")
-                        .IsUnique();
-
-                    b.ToTable("UserVouchers");
-                });
-
             modelBuilder.Entity("BO.Entities.Vendor", b =>
                 {
                     b.Property<int>("VendorId")
@@ -1342,76 +1306,6 @@ namespace DAL.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("VendorReplies");
-                });
-
-            modelBuilder.Entity("BO.Entities.Voucher", b =>
-                {
-                    b.Property<int>("VoucherId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VoucherId"));
-
-                    b.Property<int?>("CampaignId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<decimal>("DiscountValue")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("ExpiredDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<decimal?>("MaxDiscountValue")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("MinAmountRequired")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("RedeemPoint")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<int>("UsedQuantity")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("VoucherCode")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.HasKey("VoucherId");
-
-                    b.HasIndex("CampaignId");
-
-                    b.HasIndex("VoucherCode")
-                        .IsUnique();
-
-                    b.ToTable("Vouchers");
                 });
 
             modelBuilder.Entity("BO.Entities.WorkSchedule", b =>
@@ -1538,13 +1432,13 @@ namespace DAL.Migrations
                         .WithMany()
                         .HasForeignKey("CreatedByBranchId");
 
-                    b.HasOne("BO.Entities.Vendor", "CreatedByVendor")
+                    b.HasOne("BO.Entities.Tier", "RequiredTier")
                         .WithMany()
-                        .HasForeignKey("CreatedByVendorId");
+                        .HasForeignKey("RequiredTierId");
 
                     b.Navigation("CreatedByBranch");
 
-                    b.Navigation("CreatedByVendor");
+                    b.Navigation("RequiredTier");
                 });
 
             modelBuilder.Entity("BO.Entities.Cart", b =>
@@ -1739,16 +1633,9 @@ namespace DAL.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BO.Entities.UserVoucher", "UserVoucher")
-                        .WithMany("Orders")
-                        .HasForeignKey("UserVoucherId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("Branch");
 
                     b.Navigation("User");
-
-                    b.Navigation("UserVoucher");
                 });
 
             modelBuilder.Entity("BO.Entities.OrderDish", b =>
@@ -1807,25 +1694,6 @@ namespace DAL.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("BO.Entities.UserVoucher", b =>
-                {
-                    b.HasOne("BO.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BO.Entities.Voucher", "Voucher")
-                        .WithMany("UserVouchers")
-                        .HasForeignKey("VoucherId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-
-                    b.Navigation("Voucher");
-                });
-
             modelBuilder.Entity("BO.Entities.Vendor", b =>
                 {
                     b.HasOne("BO.Entities.User", "VendorOwner")
@@ -1873,16 +1741,6 @@ namespace DAL.Migrations
                     b.Navigation("Feedback");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("BO.Entities.Voucher", b =>
-                {
-                    b.HasOne("BO.Entities.Campaign", "Campaign")
-                        .WithMany()
-                        .HasForeignKey("CampaignId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Campaign");
                 });
 
             modelBuilder.Entity("BO.Entities.WorkSchedule", b =>
@@ -1979,11 +1837,6 @@ namespace DAL.Migrations
                     b.Navigation("DietaryPreferences");
                 });
 
-            modelBuilder.Entity("BO.Entities.UserVoucher", b =>
-                {
-                    b.Navigation("Orders");
-                });
-
             modelBuilder.Entity("BO.Entities.Vendor", b =>
                 {
                     b.Navigation("Branches");
@@ -1991,11 +1844,6 @@ namespace DAL.Migrations
                     b.Navigation("Dishes");
 
                     b.Navigation("VendorDietaryPreferences");
-                });
-
-            modelBuilder.Entity("BO.Entities.Voucher", b =>
-                {
-                    b.Navigation("UserVouchers");
                 });
 #pragma warning restore 612, 618
         }

@@ -30,6 +30,7 @@ namespace Service.PaymentsService
         private readonly PayOSClient _payoutClient;
         private readonly IVendorRepository _vendorRepository;
         private readonly IOrderRepository _orderRepository;
+        private readonly IBranchCampaignRepository _branchCampaignRepo;
         private readonly bool _isDebugMode;
 
         public PaymentService(
@@ -38,6 +39,7 @@ namespace Service.PaymentsService
             IUserRepository userRepo,
             IVendorRepository vendorRepository,
             IOrderRepository orderRepository,
+            IBranchCampaignRepository branchCampaignRepo,
             IConfiguration configuration,
             ILogger<PaymentService> logger)
         {
@@ -46,6 +48,7 @@ namespace Service.PaymentsService
             _userRepo = userRepo;
             _vendorRepository = vendorRepository;
             _orderRepository = orderRepository;
+            _branchCampaignRepo = branchCampaignRepo;
             _configuration = configuration;
             _logger = logger;
             _isDebugMode = bool.TryParse(_configuration["PayOS:DebugMode"], out var debugMode) && debugMode;
@@ -657,6 +660,82 @@ namespace Service.PaymentsService
             }
         }
 
+                public async Task<PaymentLinkResult> CreateCampaignPaymentLink(int userId, int branchId, int branchCampaignId)
+        {
+            try
+            {
+                var branch = await _branchRepo.GetByIdAsync(branchId);
+                if (branch == null)
+                    return new PaymentLinkResult { Success = false, Message = "Chi nh�nh kh�ng t?n t?i." };
+
+                var joinJoin = await _branchCampaignRepo.GetByIdAsync(branchCampaignId);
+                if (joinJoin == null || joinJoin.BranchId != branchId)
+                    return new PaymentLinkResult { Success = false, Message = "Y�u c?u tham gia kh�ng h?p l?." };
+
+                if (joinJoin.Status == "Active")
+                    return new PaymentLinkResult { Success = false, Message = "B?n d� thanh to�n cho chi?n d?ch n�y." };
+
+                int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                int random = new Random().Next(100, 999);
+                long orderCode = long.Parse("${timestamp}");
+
+                if (orderCode > int.MaxValue) orderCode = timestamp;
+                while (await _paymentRepo.OrderCodeExists(orderCode))
+                {
+                    random = new Random().Next(100, 999);
+                    orderCode = long.Parse("${timestamp}");
+                    if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
+                }
+
+                int campaignFee = 1000000;
+                var description = "Phi tham gia chien dich";
+
+                var payment = await _paymentRepo.CreatePayment(
+                    userId: userId,
+                    orderCode: orderCode,
+                    branchId: branchId,
+                    amount: campaignFee,
+                    description: description,
+                    checkoutUrl: null,
+                    orderId: null,
+                    branchCampaignId: branchCampaignId
+                );
+
+                var returnUrl = _configuration["PayOS:ReturnUrl"] ?? "http://localhost:4000/Payment/success";
+                var cancelUrl = _configuration["PayOS:CancelUrl"] ?? "http://localhost:4000/Payment/cancel";
+                var paymentData = new CreatePaymentLinkRequest
+                {
+                    OrderCode = (int)orderCode,
+                    Amount = campaignFee,
+                    Description = description,
+                    CancelUrl = cancelUrl,
+                    ReturnUrl = returnUrl
+                };
+
+                string paymentLinkId, checkoutUrl;
+                if (_isDebugMode)
+                {
+                    paymentLinkId = "DEBUG-CAMP-" + orderCode;
+                    checkoutUrl = returnUrl + "?debug=true&orderCode=" + orderCode;
+                }
+                else
+                {
+                    var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
+                    paymentLinkId = paymentLinkResponse.PaymentLinkId;
+                    checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                }
+
+                await _paymentRepo.UpdatePaymentWithPayOSDetails(orderCode, "PENDING", paymentLinkId, checkoutUrl);
+
+                return new PaymentLinkResult { Success = true, PaymentUrl = checkoutUrl, OrderCode = orderCode, PaymentLinkId = paymentLinkId };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating campaign payment link");
+                return new PaymentLinkResult { Success = false, Message = "L?i khi t?o link thanh to�n" };
+            }
+        }
+
         // ─── Private helpers ──────────────────────────────────────────────────────
 
         /// <summary>
@@ -666,6 +745,17 @@ namespace Service.PaymentsService
         ///   • Sets branch.SubscriptionExpiresAt = now + 30 days
         ///   • Upgrades user.Role to Vendor (3)
         /// </summary>
+                private async Task ActivateBranchCampaignAsync(int branchCampaignId)
+        {
+            var branchCampaign = await _branchCampaignRepo.GetByIdAsync(branchCampaignId);
+            if (branchCampaign != null)
+            {
+                branchCampaign.Status = "Active";
+                await _branchCampaignRepo.UpdateAsync(branchCampaign);
+                _logger.LogInformation("Activated BranchCampaign {id}", branchCampaignId);
+            }
+        }
+
         private async Task ActivateVendorSubscriptionAsync(Payment payment)
         {
             if (!payment.BranchId.HasValue)

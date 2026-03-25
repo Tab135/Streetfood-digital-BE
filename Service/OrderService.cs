@@ -17,6 +17,7 @@ public class OrderService : IOrderService
     private readonly IVendorRepository _vendorRepository;
     private readonly IUserVoucherRepository _userVoucherRepository;
     private readonly IBranchCampaignRepository _branchCampaignRepository;
+    private readonly INotificationService _notificationService;
 
     public OrderService(
         IOrderRepository orderRepository,
@@ -25,7 +26,9 @@ public class OrderService : IOrderService
         IUserRepository userRepository,
         IVendorRepository vendorRepository,
         IUserVoucherRepository userVoucherRepository,
-        IBranchCampaignRepository branchCampaignRepository)
+        IBranchCampaignRepository branchCampaignRepository,
+        INotificationService notificationService
+    )
     {
         _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
         _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
@@ -34,6 +37,7 @@ public class OrderService : IOrderService
         _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
         _userVoucherRepository = userVoucherRepository ?? throw new ArgumentNullException(nameof(userVoucherRepository));
         _branchCampaignRepository = branchCampaignRepository ?? throw new ArgumentNullException(nameof(branchCampaignRepository));
+        _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
     }
 
     public async Task<OrderResponseDto> CreateOrderAsync(CreateOrderRequest request, int userId)
@@ -414,6 +418,27 @@ public class OrderService : IOrderService
         }
 
         var updated = await _orderRepository.Update(order);
+
+        // Notify customer about order status change
+        var statusText = approve ? "được duyệt" : "đã bị hủy";
+        var title = approve ? "Đơn hàng được duyệt" : "Đơn hàng đã bị hủy";
+        var message = $"Đơn hàng #{order.OrderId} ở {branch.Name} đã {statusText}";
+        var pushData = new
+        {
+            type = "order_status",
+            orderId = order.OrderId,
+            branchName = branch.Name,
+            orderStatus = statusText,
+        };
+
+        await _notificationService.NotifyAsync(
+            order.UserId,
+            NotificationType.OrderStatusUpdate,
+            title,
+            message,
+            order.OrderId,
+            pushData);
+
         return MapToDto(updated);
     }
 
@@ -464,11 +489,29 @@ public class OrderService : IOrderService
 
         order.Status = OrderStatus.Complete;
         order.CompletionCode = null;
-        
+
         vendor.MoneyBalance += order.FinalAmount;
         await _vendorRepository.UpdateAsync(vendor);
 
         var updated = await _orderRepository.Update(order);
+
+        // Notify customer about order completion
+        var pushData = new
+        {
+            type = "order_status",
+            orderId = order.OrderId,
+            branchName = branch.Name,
+            orderStatus = "complete",
+        };
+
+        await _notificationService.NotifyAsync(
+            order.UserId,
+            NotificationType.OrderStatusUpdate,
+            "Đơn hàng đã hoàn thành",
+            $"Đơn hàng #{order.OrderId} ở {branch.Name} đã được hoàn thành",
+            order.OrderId,
+            pushData);
+
         return MapToDto(updated);
     }
 

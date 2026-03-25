@@ -10,17 +10,21 @@ public class NotificationService : INotificationService
 {
     private readonly INotificationRepository _notificationRepository;
     private readonly INotificationPusher _pusher;
+    private readonly IExpoPushService _expoPushService;
 
     public NotificationService(
         INotificationRepository notificationRepository,
-        INotificationPusher pusher)
+        INotificationPusher pusher,
+        IExpoPushService expoPushService)
     {
         _notificationRepository = notificationRepository ?? throw new ArgumentNullException(nameof(notificationRepository));
         _pusher = pusher ?? throw new ArgumentNullException(nameof(pusher));
+        _expoPushService = expoPushService ?? throw new ArgumentNullException(nameof(expoPushService));
     }
 
     public async Task NotifyAsync(int recipientUserId, NotificationType type,
-                                   string title, string message, int? referenceId)
+                                   string title, string message, int? referenceId,
+                                   object? pushData = null)
     {
         var notification = new Notification
         {
@@ -36,7 +40,11 @@ public class NotificationService : INotificationService
         var saved = await _notificationRepository.Create(notification);
         var dto = MapToDto(saved);
 
+        // SignalR push (in-app real-time)
         await _pusher.PushToUserAsync(recipientUserId, dto);
+
+        // Expo push (background/closed app)
+        await _expoPushService.SendPushToUserAsync(recipientUserId, title, message, pushData);
     }
 
     public async Task MarkAsReadAsync(int notificationId, int userId)

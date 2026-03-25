@@ -144,8 +144,8 @@ namespace Service
                     await _notificationService.NotifyAsync(
                         recipientId.Value,
                         NotificationType.NewFeedback,
-                        "New Review",
-                        $"New {createFeedbackDto.Rating}-star review on your branch '{branch.Name}'",
+                        "Đánh giá mới",
+                        $"Một đánh giá {createFeedbackDto.Rating}-sao trên chi nhánh của bạn '{branch.Name}'",
                         createdFeedback.FeedbackId);
                 }
             }

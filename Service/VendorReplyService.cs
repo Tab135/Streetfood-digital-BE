@@ -54,14 +54,25 @@ public class VendorReplyService : IVendorReplyService
 
         // Get branch name for notification
         var branch = await _branchRepository.GetByIdAsync(feedback.BranchId);
+        var vendor = await _vendorRepository.GetByIdAsync(branch?.VendorId ?? 0);
+        var vendorName = vendor != null ? vendor.Name : "Vendor";
 
         // Notify feedback author
+        var pushData = new
+        {
+            type = "vendor_reply",
+            feedbackId,
+            branchId = feedback.BranchId,
+            branchName = branch?.Name ?? string.Empty,
+        };
+
         await _notificationService.NotifyAsync(
             feedback.UserId,
             NotificationType.VendorReply,
-            "Vendor Reply",
-            $"Vendor replied to your review on '{branch?.Name}'",
-            feedbackId);
+            "Trả lời từ quán ăn",
+            $"Quán ăn {vendorName} đã trả lời đánh giá của bạn ",
+            feedbackId,
+            pushData);
 
         return await MapToDto(created);
     }

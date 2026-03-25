@@ -1,4 +1,4 @@
-﻿using BO.DTO.Payments;
+using BO.DTO.Payments;
 using BO.Entities;
 using PayOS.Models.Webhooks;
 using System.Collections.Generic;
@@ -14,6 +14,7 @@ namespace Service.PaymentsService
         /// </summary>
         Task<PaymentLinkResult> CreatePaymentLink(int userId, int branchId);
         Task<PaymentLinkResult> CreateOrderPaymentLink(int userId, int orderId);
+        Task<PaymentLinkResult> CreateCampaignPaymentLink(int userId, int branchId, int branchCampaignId);
 
         Task<Payment?> GetPaymentByOrderCode(long orderCode);
 
