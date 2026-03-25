@@ -319,6 +319,17 @@ namespace Service
                 throw new DomainExceptions("Branch not found.", "ERR_BRANCH_NOT_FOUND");
             }
 
+            // If assigning another existing manager, demote the current branch manager first.
+            if (newManagerUser.Role == Role.User && branch.ManagerId.HasValue && branch.ManagerId.Value != newManagerUser.Id)
+            {
+                var currentManagerUser = await _userRepository.GetUserById(branch.ManagerId.Value);
+                if (currentManagerUser != null && currentManagerUser.Role == Role.Manager)
+                {
+                    currentManagerUser.Role = Role.User;
+                    await _userRepository.UpdateAsync(currentManagerUser);
+                }
+            }
+
             branch.ManagerId = newManagerUser.Id;
             branch.UpdatedAt = DateTime.UtcNow;
 
