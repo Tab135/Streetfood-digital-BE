@@ -122,7 +122,13 @@ namespace Service
 
             var existingJoin = await _branchCampaignRepo.GetByBranchAndCampaignAsync(branchId, campaignId);
             if (existingJoin != null)
-                throw new DomainExceptions("Chi nhánh dã tham gia chiến dịch này.");
+            {
+                if (existingJoin.Status == "Active")
+                    throw new DomainExceptions("Chi nhánh dã tham gia và thanh toán chiến dịch này.");
+                
+                // If it's pending, just return the existing ID so they can attempt payment again
+                return existingJoin.Id;
+            }
 
             // Require minimum Tier for System Campaign (Weight >= 1)
             if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null)

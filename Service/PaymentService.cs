@@ -666,24 +666,24 @@ namespace Service.PaymentsService
             {
                 var branch = await _branchRepo.GetByIdAsync(branchId);
                 if (branch == null)
-                    return new PaymentLinkResult { Success = false, Message = "Chi nh�nh kh�ng t?n t?i." };
+                    return new PaymentLinkResult { Success = false, Message = "Chi nhánh không tồn tại." };
 
                 var joinJoin = await _branchCampaignRepo.GetByIdAsync(branchCampaignId);
                 if (joinJoin == null || joinJoin.BranchId != branchId)
-                    return new PaymentLinkResult { Success = false, Message = "Y�u c?u tham gia kh�ng h?p l?." };
+                    return new PaymentLinkResult { Success = false, Message = "Yêu cầu tham gia không hợp lệ." };
 
                 if (joinJoin.Status == "Active")
-                    return new PaymentLinkResult { Success = false, Message = "B?n d� thanh to�n cho chi?n d?ch n�y." };
+                    return new PaymentLinkResult { Success = false, Message = "Bạn đã thanh toán cho chiến dịch này." };
 
                 int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 int random = new Random().Next(100, 999);
-                long orderCode = long.Parse("${timestamp}");
+                long orderCode = long.Parse($"{timestamp}{random}");
 
                 if (orderCode > int.MaxValue) orderCode = timestamp;
                 while (await _paymentRepo.OrderCodeExists(orderCode))
                 {
                     random = new Random().Next(100, 999);
-                    orderCode = long.Parse("${timestamp}");
+                    orderCode = long.Parse($"{timestamp}{random}");
                     if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
                 }
 
@@ -732,7 +732,7 @@ namespace Service.PaymentsService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating campaign payment link");
-                return new PaymentLinkResult { Success = false, Message = "L?i khi t?o link thanh to�n" };
+                return new PaymentLinkResult { Success = false, Message = "L?i khi t?o link thanh to�n" };
             }
         }
 
