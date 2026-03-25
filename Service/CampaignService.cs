@@ -411,21 +411,23 @@ namespace Service
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
             if (campaign == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
 
-            if (role != "Admin") {
-                if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null) {
-                    throw new DomainExceptions("Chỉ Admin mới có thể thêm ảnh vào chiến dịch hệ thống.");
-                } else {
-                    var vendor = await _vendorRepo.GetByUserIdAsync(userId);
-                    if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
-                    bool isOwner = false;
-                    if (campaign.CreatedByVendorId == vendor.VendorId)
-                        isOwner = true;
-                    else if (campaign.CreatedByBranchId != null) {
-                        var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
-                        if (branch != null && branch.VendorId == vendor.VendorId) isOwner = true;
-                    }
-                    if (!isOwner) throw new DomainExceptions("Bạn không có quyền thêm ảnh cho chiến dịch này.");
+            if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null) {
+                if (role != "Admin") throw new DomainExceptions("Chỉ Admin mới có thể thêm ảnh vào chiến dịch hệ thống.");
+            } else {
+                if (role == "Admin") throw new DomainExceptions("Admin không thể thêm ảnh cho chiến dịch của Vendor hoặc Branch.");
+                
+                var vendor = await _vendorRepo.GetByUserIdAsync(userId);
+                if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+                
+                bool isOwner = false;
+                if (campaign.CreatedByVendorId == vendor.VendorId)
+                    isOwner = true;
+                else if (campaign.CreatedByBranchId != null) {
+                    var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
+                    if (branch != null && branch.VendorId == vendor.VendorId) isOwner = true;
                 }
+
+                if (!isOwner) throw new DomainExceptions("Bạn không có quyền thêm ảnh cho chiến dịch này.");
             }
 
             var campaignImage = new CampaignImage
@@ -458,12 +460,15 @@ namespace Service
             if (image == null) throw new DomainExceptions("Không tìm thấy ảnh.");
 
             var campaign = await _campaignRepo.GetByIdAsync(image.CampaignId);
-            if (role != "Admin" && campaign != null) {
+            if (campaign != null) {
                 if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null) {
-                    throw new DomainExceptions("Chỉ Admin mới có thể xóa ảnh của chiến dịch hệ thống.");
+                    if (role != "Admin") throw new DomainExceptions("Chỉ Admin mới có thể xóa ảnh của chiến dịch hệ thống.");
                 } else {
+                    if (role == "Admin") throw new DomainExceptions("Admin không thể xóa ảnh của chiến dịch do Vendor hoặc Branch tạo.");
+                    
                     var vendor = await _vendorRepo.GetByUserIdAsync(userId);
                     if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+                    
                     bool isOwner = false;
                     if (campaign.CreatedByVendorId == vendor.VendorId)
                         isOwner = true;
@@ -471,6 +476,7 @@ namespace Service
                         var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
                         if (branch != null && branch.VendorId == vendor.VendorId) isOwner = true;
                     }
+
                     if (!isOwner) throw new DomainExceptions("Bạn không có quyền xóa ảnh của chiến dịch này.");
                 }
             }
