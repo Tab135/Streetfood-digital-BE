@@ -37,7 +37,7 @@ namespace BO.Entities
         public DateTime? UpdatedAt { get; set; }
 
         /// <summary>
-        /// Draft, Active, Inactive
+        /// Active, Inactive
         /// </summary>
         [StringLength(50)]
         public string Status { get; set; } = "Active";
