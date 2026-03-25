@@ -75,6 +75,20 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Lấy danh sách chiến dịch hệ thống thành công", data = result });
         }
 
+        [HttpGet("system/joinable")]
+        public async Task<IActionResult> GetJoinableSystemCampaigns([FromQuery] CampaignQueryDto query)
+        {
+            var result = await _campaignService.GetJoinableSystemCampaignsAsync(query);
+            return Ok(new { message = "Lấy danh sách chiến dịch hệ thống cho phép tham gia thành công", data = result });
+        }
+
+        [HttpGet("public")]
+        public async Task<IActionResult> GetPublicCampaigns([FromQuery] CampaignQueryDto query)
+        {
+            var result = await _campaignService.GetPublicCampaignsAsync(query);
+            return Ok(new { message = "Lấy danh sách các chiến dịch đã public thành công", data = result });
+        }
+
         [HttpGet("vendor")]
         [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> GetVendorCampaigns([FromQuery] CampaignQueryDto query)

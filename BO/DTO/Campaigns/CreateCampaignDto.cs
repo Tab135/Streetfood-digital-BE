@@ -14,5 +14,8 @@ namespace BO.DTO.Campaigns
         public DateTime? RegistrationEndDate { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+        
+        [StringLength(50)]
+        public string Status { get; set; } = "Active";
     }
 }

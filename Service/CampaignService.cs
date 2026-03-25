@@ -43,7 +43,7 @@ namespace Service
                 RegistrationStartDate = dto.RegistrationStartDate,
                 RegistrationEndDate = dto.RegistrationEndDate,
                 StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
+                EndDate = dto.EndDate, Status = dto.Status,
                 CreatedByBranchId = null
             };
             await _campaignRepo.CreateAsync(campaign);
@@ -69,7 +69,7 @@ namespace Service
                 RegistrationStartDate = dto.RegistrationStartDate,
                 RegistrationEndDate = dto.RegistrationEndDate,
                 StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
+                EndDate = dto.EndDate, Status = dto.Status,
                 CreatedByBranchId = branchId
             };
             await _campaignRepo.CreateAsync(campaign);
@@ -91,7 +91,7 @@ namespace Service
                 RegistrationStartDate = dto.RegistrationStartDate,
                 RegistrationEndDate = dto.RegistrationEndDate,
                 StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
+                EndDate = dto.EndDate, Status = dto.Status,
                 CreatedByVendorId = vendor.VendorId
             };
             await _campaignRepo.CreateAsync(campaign);
@@ -162,7 +162,7 @@ namespace Service
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
                     StartDate = item.StartDate,
-                    EndDate = item.EndDate,
+                    EndDate = item.EndDate, Status = item.Status,
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt
                 });
@@ -197,7 +197,71 @@ namespace Service
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
                     StartDate = item.StartDate,
-                    EndDate = item.EndDate,
+                    EndDate = item.EndDate, Status = item.Status,
+                    CreatedAt = item.CreatedAt,
+                    UpdatedAt = item.UpdatedAt
+                });
+            }
+
+            return new BO.Common.PaginatedResponse<CampaignResponseDto>(
+                mappedItems,
+                query.PageNumber,
+                query.PageSize,
+                totalCount
+            );
+        }
+
+        public async Task<BO.Common.PaginatedResponse<CampaignResponseDto>> GetJoinableSystemCampaignsAsync(CampaignQueryDto query)
+        {
+            var (items, totalCount) = await _campaignRepo.GetJoinableSystemCampaignsAsync(query.PageNumber, query.PageSize);
+            
+            var mappedItems = new System.Collections.Generic.List<CampaignResponseDto>();
+            foreach(var item in items)
+            {
+                mappedItems.Add(new CampaignResponseDto
+                {
+                    CampaignId = item.CampaignId,
+                    CreatedByBranchId = item.CreatedByBranchId,
+                    CreatedByVendorId = item.CreatedByVendorId,
+                    Name = item.Name,
+                    Description = item.Description,
+                    TargetSegment = item.TargetSegment,
+                    RegistrationStartDate = item.RegistrationStartDate,
+                    RegistrationEndDate = item.RegistrationEndDate,
+                    StartDate = item.StartDate,
+                    EndDate = item.EndDate, Status = item.Status,
+                    CreatedAt = item.CreatedAt,
+                    UpdatedAt = item.UpdatedAt
+                });
+            }
+
+            return new BO.Common.PaginatedResponse<CampaignResponseDto>(
+                mappedItems,
+                query.PageNumber,
+                query.PageSize,
+                totalCount
+            );
+        }
+
+        public async Task<BO.Common.PaginatedResponse<CampaignResponseDto>> GetPublicCampaignsAsync(CampaignQueryDto query)
+        {
+            var (items, totalCount) = await _campaignRepo.GetPublicCampaignsAsync(query.PageNumber, query.PageSize);
+            
+            var mappedItems = new System.Collections.Generic.List<CampaignResponseDto>();
+            foreach(var item in items)
+            {
+                mappedItems.Add(new CampaignResponseDto
+                {
+                    CampaignId = item.CampaignId,
+                    CreatedByBranchId = item.CreatedByBranchId,
+                    CreatedByVendorId = item.CreatedByVendorId,
+                    Name = item.Name,
+                    Description = item.Description,
+                    TargetSegment = item.TargetSegment,
+                    RegistrationStartDate = item.RegistrationStartDate,
+                    RegistrationEndDate = item.RegistrationEndDate,
+                    StartDate = item.StartDate,
+                    EndDate = item.EndDate, Status = item.Status,
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt
                 });
@@ -226,7 +290,7 @@ namespace Service
                 RegistrationStartDate = item.RegistrationStartDate,
                 RegistrationEndDate = item.RegistrationEndDate,
                 StartDate = item.StartDate,
-                EndDate = item.EndDate,
+                EndDate = item.EndDate, Status = item.Status,
                 CreatedAt = item.CreatedAt,
                 UpdatedAt = item.UpdatedAt
             };
@@ -277,6 +341,7 @@ namespace Service
             campaign.RegistrationEndDate = dto.RegistrationEndDate;
             campaign.StartDate = dto.StartDate;
             campaign.EndDate = dto.EndDate;
+            if (!string.IsNullOrEmpty(dto.Status)) campaign.Status = dto.Status;
             campaign.UpdatedAt = DateTime.UtcNow;
 
             await _campaignRepo.UpdateAsync(campaign);
