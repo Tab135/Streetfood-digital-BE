@@ -25,7 +25,7 @@ namespace StreetFood.Middleware
             // 1. Skip Middleware for Swagger/Scalar/Uploads
             var path = context.Request.Path.Value?.ToLower();
             if (path != null && (path.StartsWith("/scalar") || path.StartsWith("/openapi") ||
-                path.StartsWith("/swagger") || path.StartsWith("/uploads")))
+                path.StartsWith("/swagger") || path.StartsWith("/uploads") || path.StartsWith("/hubs")))
             {
                 await _next(context);
                 return;
