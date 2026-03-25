@@ -30,7 +30,7 @@ namespace StreetFood.Controllers
 
         [HttpPost("branch/{branchId}")]
         [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> CreateRestaurantCampaign(int branchId, [FromBody] CreateCampaignDto dto)
+        public async Task<IActionResult> CreateRestaurantCampaign(int branchId, [FromBody] CreateVendorCampaignDto dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             
@@ -40,7 +40,7 @@ namespace StreetFood.Controllers
 
                         [HttpPost("vendor")]
         [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> CreateVendorCampaign([FromBody] CreateCampaignDto dto)
+        public async Task<IActionResult> CreateVendorCampaign([FromBody] CreateVendorCampaignDto dto)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var result = await _campaignService.CreateVendorCampaignAsync(userId, dto);
@@ -182,4 +182,5 @@ namespace StreetFood.Controllers
         }
     }
 }
+
 

@@ -51,7 +51,7 @@ namespace Service
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
 
-        public async Task<CampaignResponseDto> CreateRestaurantCampaignAsync(int userId, int branchId, CreateCampaignDto dto)
+        public async Task<CampaignResponseDto> CreateRestaurantCampaignAsync(int userId, int branchId, CreateVendorCampaignDto dto)
         {
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
             if (vendor == null)
@@ -66,10 +66,11 @@ namespace Service
                 Name = dto.Name,
                 Description = dto.Description,
                 TargetSegment = dto.TargetSegment,
-                RegistrationStartDate = dto.RegistrationStartDate,
-                RegistrationEndDate = dto.RegistrationEndDate,
+                RegistrationStartDate = null,
+                RegistrationEndDate = null,
                 StartDate = dto.StartDate,
-                EndDate = dto.EndDate, Status = dto.Status,
+                EndDate = dto.EndDate,
+                Status = dto.Status,
                 CreatedByBranchId = branchId
             };
             await _campaignRepo.CreateAsync(campaign);
@@ -77,7 +78,7 @@ namespace Service
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
 
-        public async Task<CampaignResponseDto> CreateVendorCampaignAsync(int userId, CreateCampaignDto dto)
+        public async Task<CampaignResponseDto> CreateVendorCampaignAsync(int userId, CreateVendorCampaignDto dto)
         {
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
             if (vendor == null)
@@ -88,10 +89,11 @@ namespace Service
                 Name = dto.Name,
                 Description = dto.Description,
                 TargetSegment = dto.TargetSegment,
-                RegistrationStartDate = dto.RegistrationStartDate,
-                RegistrationEndDate = dto.RegistrationEndDate,
+                RegistrationStartDate = null,
+                RegistrationEndDate = null,
                 StartDate = dto.StartDate,
-                EndDate = dto.EndDate, Status = dto.Status,
+                EndDate = dto.EndDate,
+                Status = dto.Status,
                 CreatedByVendorId = vendor.VendorId
             };
             await _campaignRepo.CreateAsync(campaign);

@@ -7,8 +7,8 @@ namespace Service.Interfaces
     public interface ICampaignService
     {
         Task<CampaignResponseDto> CreateSystemCampaignAsync(CreateCampaignDto dto);
-        Task<CampaignResponseDto> CreateRestaurantCampaignAsync(int userId, int branchId, CreateCampaignDto dto);
-        Task<CampaignResponseDto> CreateVendorCampaignAsync(int userId, CreateCampaignDto dto);
+        Task<CampaignResponseDto> CreateRestaurantCampaignAsync(int userId, int branchId, CreateVendorCampaignDto dto);
+        Task<CampaignResponseDto> CreateVendorCampaignAsync(int userId, CreateVendorCampaignDto dto);
         Task<int> JoinSystemCampaignAsync(int userId, int branchId, int campaignId);
         Task<PaginatedResponse<CampaignResponseDto>> GetSystemCampaignsAsync(CampaignQueryDto query);
         Task<PaginatedResponse<CampaignResponseDto>> GetVendorCampaignsAsync(int userId, CampaignQueryDto query);
