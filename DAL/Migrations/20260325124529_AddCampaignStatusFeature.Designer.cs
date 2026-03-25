@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260325124529_AddCampaignStatusFeature")]
+    partial class AddCampaignStatusFeature
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -336,29 +339,6 @@ namespace DAL.Migrations
                     b.HasIndex("CreatedByVendorId");
 
                     b.ToTable("Campaigns");
-                });
-
-            modelBuilder.Entity("BO.Entities.CampaignImage", b =>
-                {
-                    b.Property<int>("CampaignImageId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CampaignImageId"));
-
-                    b.Property<int>("CampaignId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("ImageUrl")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.HasKey("CampaignImageId");
-
-                    b.HasIndex("CampaignId");
-
-                    b.ToTable("CampaignImages");
                 });
 
             modelBuilder.Entity("BO.Entities.Cart", b =>
@@ -1575,17 +1555,6 @@ namespace DAL.Migrations
                     b.Navigation("CreatedByVendor");
                 });
 
-            modelBuilder.Entity("BO.Entities.CampaignImage", b =>
-                {
-                    b.HasOne("BO.Entities.Campaign", "Campaign")
-                        .WithMany("CampaignImages")
-                        .HasForeignKey("CampaignId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Campaign");
-                });
-
             modelBuilder.Entity("BO.Entities.Cart", b =>
                 {
                     b.HasOne("BO.Entities.Branch", "Branch")
@@ -1954,8 +1923,6 @@ namespace DAL.Migrations
             modelBuilder.Entity("BO.Entities.Campaign", b =>
                 {
                     b.Navigation("BranchCampaigns");
-
-                    b.Navigation("CampaignImages");
                 });
 
             modelBuilder.Entity("BO.Entities.Cart", b =>

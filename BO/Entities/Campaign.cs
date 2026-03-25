@@ -36,6 +36,13 @@ namespace BO.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
+        /// <summary>
+        /// Active, Inactive
+        /// </summary>
+        [StringLength(50)]
+        public string Status { get; set; } = "Active";
+
         public virtual ICollection<BranchCampaign> BranchCampaigns { get; set; } = new List<BranchCampaign>();
+        public virtual ICollection<CampaignImage> CampaignImages { get; set; } = new List<CampaignImage>();
     }
 }
