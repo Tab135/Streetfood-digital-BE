@@ -312,6 +312,10 @@ namespace Service
             {
                 throw new DomainExceptions("The user to be assigned as manager does not exist.", "ERR_USER_NOT_FOUND");
             }
+            else if (newManagerUser.Role == Role.Vendor || newManagerUser.Role == Role.Manager)
+            {
+                throw new DomainExceptions("The user to be assigned as manager must not be a vendor or a manager of another branch","ERR_UNAUTHORIZED");
+            }
 
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
