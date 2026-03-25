@@ -612,6 +612,10 @@ namespace Service.PaymentsService
                         {
                             await MoveOrderToVendorConfirmationAsync(payment.OrderId.Value);
                         }
+                        else if (payment.BranchCampaignId.HasValue)
+                        {
+                            await ActivateBranchCampaignAsync(payment.BranchCampaignId.Value);
+                        }
                         else
                         {
                             await ActivateVendorSubscriptionAsync(payment);

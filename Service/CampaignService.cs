@@ -354,5 +354,126 @@ namespace Service
 
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
+
+        public async Task<BO.Common.PaginatedResponse<CampaignResponseDto>> GetCampaignsByBranchAsync(int userId, string role, int branchId, CampaignQueryDto query)
+        {
+            var branch = await _branchRepo.GetByIdAsync(branchId);
+            if (branch == null) throw new DomainExceptions("Không tìm thấy chi nhánh.");
+
+            if (role != "Admin")
+            {
+                if (role == "Vendor")
+                {
+                    var vendor = await _vendorRepo.GetByUserIdAsync(userId);
+                    if (vendor == null || branch.VendorId != vendor.VendorId)
+                        throw new DomainExceptions("Bạn không có quyền xem chiến dịch của chi nhánh này.");
+                }
+                else if (role == "Manager")
+                {
+                    if (branch.ManagerId != userId)
+                        throw new DomainExceptions("Bạn không phải quản lý của chi nhánh này.");
+                }
+                else
+                {
+                    throw new DomainExceptions("Bạn không có quyền xem chiến dịch của chi nhánh này.");
+                }
+            }
+
+            var (items, totalCount) = await _campaignRepo.GetCampaignsByBranchAsync(branchId, query.PageNumber, query.PageSize);
+
+            var mappedItems = new System.Collections.Generic.List<CampaignResponseDto>();
+            foreach(var item in items)
+            {
+                mappedItems.Add(new CampaignResponseDto
+                {
+                    CampaignId = item.CampaignId,
+                    CreatedByBranchId = item.CreatedByBranchId,
+                    CreatedByVendorId = item.CreatedByVendorId,
+                    Name = item.Name,
+                    Description = item.Description,
+                    TargetSegment = item.TargetSegment,
+                    RegistrationStartDate = item.RegistrationStartDate,
+                    RegistrationEndDate = item.RegistrationEndDate,
+                    StartDate = item.StartDate,
+                    EndDate = item.EndDate, Status = item.Status,
+                    CreatedAt = item.CreatedAt,
+                    UpdatedAt = item.UpdatedAt
+                });
+            }
+            return new BO.Common.PaginatedResponse<CampaignResponseDto>(mappedItems, totalCount, query.PageNumber, query.PageSize);
+        }
+
+        // --- Campaign Image Methods ---
+        public async Task<object> AddCampaignImageAsync(int campaignId, string imageUrl, int userId, string role)
+        {
+            var campaign = await _campaignRepo.GetByIdAsync(campaignId);
+            if (campaign == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
+
+            if (role != "Admin") {
+                if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null) {
+                    throw new DomainExceptions("Chỉ Admin mới có thể thêm ảnh vào chiến dịch hệ thống.");
+                } else {
+                    var vendor = await _vendorRepo.GetByUserIdAsync(userId);
+                    if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+                    bool isOwner = false;
+                    if (campaign.CreatedByVendorId == vendor.VendorId)
+                        isOwner = true;
+                    else if (campaign.CreatedByBranchId != null) {
+                        var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
+                        if (branch != null && branch.VendorId == vendor.VendorId) isOwner = true;
+                    }
+                    if (!isOwner) throw new DomainExceptions("Bạn không có quyền thêm ảnh cho chiến dịch này.");
+                }
+            }
+
+            var campaignImage = new CampaignImage
+            {
+                CampaignId = campaignId,
+                ImageUrl = imageUrl
+            };
+            await _campaignRepo.AddCampaignImageAsync(campaignImage);
+            return campaignImage;
+        }
+
+        public async Task<BO.Common.PaginatedResponse<CampaignImageResponseDto>> GetCampaignImagesAsync(int campaignId, int pageNumber, int pageSize)
+        {
+            var (images, totalCount) = await _campaignRepo.GetCampaignImagesAsync(campaignId, pageNumber, pageSize);
+            var items = new System.Collections.Generic.List<CampaignImageResponseDto>();
+            foreach (var i in images)
+            {
+                items.Add(new CampaignImageResponseDto
+                {
+                    CampaignImageId = i.CampaignImageId,
+                    ImageUrl = i.ImageUrl
+                });
+            }
+            return new BO.Common.PaginatedResponse<CampaignImageResponseDto>(items, totalCount, pageNumber, pageSize);
+        }
+
+        public async Task DeleteCampaignImageAsync(int imageId, int userId, string role)
+        {
+            var image = await _campaignRepo.GetCampaignImageByIdAsync(imageId);
+            if (image == null) throw new DomainExceptions("Không tìm thấy ảnh.");
+
+            var campaign = await _campaignRepo.GetByIdAsync(image.CampaignId);
+            if (role != "Admin" && campaign != null) {
+                if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null) {
+                    throw new DomainExceptions("Chỉ Admin mới có thể xóa ảnh của chiến dịch hệ thống.");
+                } else {
+                    var vendor = await _vendorRepo.GetByUserIdAsync(userId);
+                    if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+                    bool isOwner = false;
+                    if (campaign.CreatedByVendorId == vendor.VendorId)
+                        isOwner = true;
+                    else if (campaign.CreatedByBranchId != null) {
+                        var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
+                        if (branch != null && branch.VendorId == vendor.VendorId) isOwner = true;
+                    }
+                    if (!isOwner) throw new DomainExceptions("Bạn không có quyền xóa ảnh của chiến dịch này.");
+                }
+            }
+
+            await _campaignRepo.DeleteCampaignImageAsync(imageId);
+        }
     }
 }

@@ -14,7 +14,14 @@ namespace Service.Interfaces
         Task<PaginatedResponse<CampaignResponseDto>> GetVendorCampaignsAsync(int userId, CampaignQueryDto query);
         Task<PaginatedResponse<CampaignResponseDto>> GetJoinableSystemCampaignsAsync(CampaignQueryDto query);
         Task<PaginatedResponse<CampaignResponseDto>> GetPublicCampaignsAsync(CampaignQueryDto query);
+        Task<PaginatedResponse<CampaignResponseDto>> GetCampaignsByBranchAsync(int userId, string role, int branchId, CampaignQueryDto query);
+        
         Task<CampaignResponseDto> GetCampaignByIdAsync(int id);
         Task<CampaignResponseDto> UpdateCampaignAsync(int userId, string role, int campaignId, UpdateCampaignDto dto);
+
+        // Images
+        Task<object> AddCampaignImageAsync(int campaignId, string imageUrl, int userId, string role);
+        Task<PaginatedResponse<CampaignImageResponseDto>> GetCampaignImagesAsync(int campaignId, int pageNumber, int pageSize);
+        Task DeleteCampaignImageAsync(int imageId, int userId, string role);
     }
 }

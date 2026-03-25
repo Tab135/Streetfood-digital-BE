@@ -115,6 +115,71 @@ namespace StreetFood.Controllers
             var result = await _campaignService.UpdateCampaignAsync(userId, userRole, id, dto);
             return Ok(new { message = "Cập nhật chiến dịch thành công", data = result });
         }
+
+        [HttpGet("branch/{branchId}")]
+        [Authorize(Roles = "Vendor,Manager,Admin")]
+        public async Task<IActionResult> GetCampaignsByBranchAsync(int branchId, [FromQuery] CampaignQueryDto query)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
+
+            var result = await _campaignService.GetCampaignsByBranchAsync(userId, userRole, branchId, query);
+            return Ok(new { message = "Lấy danh sách chiến dịch của chi nhánh thành công", data = result });
+        }
+
+        // ==================== CAMPAIGN IMAGE OPERATIONS ====================
+        [HttpPost("{campaignId}/images")]
+        [Authorize]
+        public async Task<IActionResult> AddCampaignImage(int campaignId, List<IFormFile> images)
+        {
+            if (images == null || images.Count == 0)
+                return BadRequest(new { message = "At least one image is required" });
+
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
+
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "campaigns");
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            var addedImages = new List<object>();
+            foreach (var image in images)
+            {
+                if (image.Length == 0) continue;
+
+                var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await image.CopyToAsync(stream);
+                }
+
+                var imageUrl = "http://159.223.47.89:5298" + $"/uploads/campaigns/{uniqueFileName}";
+                var campaignImage = await _campaignService.AddCampaignImageAsync(campaignId, imageUrl, userId, userRole);
+                addedImages.Add(campaignImage);
+            }
+
+            return Ok(new { message = "Images added successfully", data = addedImages });
+        }
+
+        [HttpGet("{campaignId}/images")]
+        public async Task<IActionResult> GetCampaignImages(int campaignId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            var images = await _campaignService.GetCampaignImagesAsync(campaignId, pageNumber, pageSize);
+            return Ok(new { message = "Images retrieved successfully", data = images });
+        }
+
+        [HttpDelete("images/{imageId}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteCampaignImage(int imageId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
+
+            await _campaignService.DeleteCampaignImageAsync(imageId, userId, userRole);
+            return Ok(new { message = "Image deleted successfully" });
+        }
     }
 }
 
