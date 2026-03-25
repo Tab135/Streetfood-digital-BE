@@ -35,5 +35,14 @@ namespace StreetFood.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpGet("{id}")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<UserProfileDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetUserById(int id)
+        {
+            var user = await _userService.GetUserProfileByIdAsync(id);
+            return Ok(new { message = "User retrieved successfully", data = user });
+        }
     }
 }

@@ -47,7 +47,7 @@ namespace StreetFood
             {
                 options.AddPolicy("AllowFrontend", policy =>
                 {
-                    policy.WithOrigins("http://localhost:5173", "https://lowca-seven.vercel.app")
+                    policy.WithOrigins("http://localhost:5173","https://lowca-seven.vercel.app")
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials();

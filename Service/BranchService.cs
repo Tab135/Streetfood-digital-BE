@@ -359,18 +359,34 @@ namespace Service
             // Serialize list of URLs to JSON
             var licenseUrlJson = System.Text.Json.JsonSerializer.Serialize(licenseImagePaths);
 
-            var registrationRequest = new BranchRequest
-            {
-                BranchId = branchId,
-                Type = 1, // License verification
-                LicenseUrl = licenseUrlJson,
-                Status = RegisterVendorStatusEnum.Pending,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+            // Fetch the latest request
+            var existingRequest = await _branchRepository.GetBranchRequestAsync(branchId);
 
-            await _branchRepository.AddBranchRequestAsync(registrationRequest);
-            return registrationRequest;
+            // If there is an existing PENDING request (like the one created during /api/Vendor or /api/Branch/vendor), OVERWRITE its license URL
+            if (existingRequest != null && existingRequest.Status == RegisterVendorStatusEnum.Pending)
+            {
+                existingRequest.LicenseUrl = licenseUrlJson;
+                existingRequest.UpdatedAt = DateTime.UtcNow;
+
+                await _branchRepository.UpdateBranchRequestAsync(existingRequest);
+                return existingRequest;
+            }
+            else
+            {
+                // If it doesn't exist or is already Processed, Create a NEW request
+                var registrationRequest = new BranchRequest
+                {
+                    BranchId = branchId,
+                    Type = 1, // License verification
+                    LicenseUrl = licenseUrlJson,
+                    Status = RegisterVendorStatusEnum.Pending,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                await _branchRepository.AddBranchRequestAsync(registrationRequest);
+                return registrationRequest;
+            }
         }
 
         public async Task<BranchRequest> GetBranchLicenseStatusAsync(int branchId, int userId)
