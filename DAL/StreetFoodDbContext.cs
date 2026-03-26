@@ -60,7 +60,6 @@ public class StreetFoodDbContext : DbContext
     // Flow 4: Campaigns
     public DbSet<Campaign> Campaigns { get; set; }
     public DbSet<BranchCampaign> BranchCampaigns { get; set; }
-    public DbSet<CampaignImage> CampaignImages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

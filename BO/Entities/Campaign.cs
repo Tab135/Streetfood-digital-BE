@@ -43,6 +43,6 @@ namespace BO.Entities
         public bool IsActive { get; set; } = true;
 
         public virtual ICollection<BranchCampaign> BranchCampaigns { get; set; } = new List<BranchCampaign>();
-        public virtual ICollection<CampaignImage> CampaignImages { get; set; } = new List<CampaignImage>();
+        public string? ImageUrl { get; set; }
     }
 }

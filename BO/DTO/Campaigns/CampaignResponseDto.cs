@@ -23,6 +23,7 @@ namespace BO.DTO.Campaigns
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public string? ImageUrl { get; set; }
         public bool IsSystemCampaign => CreatedByBranchId == null && CreatedByVendorId == null;
     }
 }

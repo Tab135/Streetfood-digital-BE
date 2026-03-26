@@ -25,9 +25,5 @@ namespace Repository
         public Task<(List<Campaign> Items, int TotalCount)> GetPublicCampaignsAsync(int page, int pageSize) => _dao.GetPublicCampaignsAsync(page, pageSize);
         public Task<(List<Campaign> Items, int TotalCount)> GetCampaignsByBranchAsync(int branchId, int page, int pageSize) => _dao.GetCampaignsByBranchAsync(branchId, page, pageSize);
 
-        public Task<(List<CampaignImage> items, int totalCount)> GetCampaignImagesAsync(int campaignId, int pageNumber, int pageSize) => _dao.GetCampaignImagesAsync(campaignId, pageNumber, pageSize);
-        public Task AddCampaignImageAsync(CampaignImage campaignImage) => _dao.AddCampaignImageAsync(campaignImage);
-        public Task<CampaignImage?> GetCampaignImageByIdAsync(int imageId) => _dao.GetCampaignImageByIdAsync(imageId);
-        public Task DeleteCampaignImageAsync(int imageId) => _dao.DeleteCampaignImageAsync(imageId);
     }
 }

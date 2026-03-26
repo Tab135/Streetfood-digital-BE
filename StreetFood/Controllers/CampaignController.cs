@@ -1,4 +1,5 @@
 using BO.DTO.Campaigns;
+using BO.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
@@ -128,12 +129,13 @@ namespace StreetFood.Controllers
         }
 
         // ==================== CAMPAIGN IMAGE OPERATIONS ====================
+
         [HttpPost("{campaignId}/images")]
         [Authorize]
-        public async Task<IActionResult> AddCampaignImage(int campaignId, List<IFormFile> images)
+        public async Task<IActionResult> UpdateCampaignImage(int campaignId, IFormFile image)
         {
-            if (images == null || images.Count == 0)
-                return BadRequest(new { message = "At least one image is required" });
+            if (image == null || image.Length == 0)
+                return BadRequest(new { message = "Image is required" });
 
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
@@ -142,42 +144,35 @@ namespace StreetFood.Controllers
             if (!Directory.Exists(uploadsFolder))
                 Directory.CreateDirectory(uploadsFolder);
 
-            var addedImages = new List<object>();
-            foreach (var image in images)
+            var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
             {
-                if (image.Length == 0) continue;
-
-                var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
-                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
-                {
-                    await image.CopyToAsync(stream);
-                }
-
-                var imageUrl = "http://159.223.47.89:5298" + $"/uploads/campaigns/{uniqueFileName}";
-                var campaignImage = await _campaignService.AddCampaignImageAsync(campaignId, imageUrl, userId, userRole);
-                addedImages.Add(campaignImage);
+                await image.CopyToAsync(stream);
             }
 
-            return Ok(new { message = "Images added successfully", data = addedImages });
+            var imageUrl = "http://159.223.47.89:5298" + $"/uploads/campaigns/{uniqueFileName}";
+            await _campaignService.UpdateCampaignImageUrlAsync(campaignId, imageUrl, userId, userRole);
+            return Ok(new { message = "Image updated successfully", data = imageUrl });
         }
+
 
         [HttpGet("{campaignId}/images")]
-        public async Task<IActionResult> GetCampaignImages(int campaignId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetCampaignImage(int campaignId)
         {
-            var images = await _campaignService.GetCampaignImagesAsync(campaignId, pageNumber, pageSize);
-            return Ok(new { message = "Images retrieved successfully", data = images });
+            var imageUrl = await _campaignService.GetCampaignImageUrlAsync(campaignId);
+            return Ok(new { message = "Image retrieved successfully", data = imageUrl });
         }
 
-        [HttpDelete("images/{imageId}")]
+
+        [HttpDelete("{campaignId}/image")]
         [Authorize]
-        public async Task<IActionResult> DeleteCampaignImage(int imageId)
+        public async Task<IActionResult> DeleteCampaignImage(int campaignId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
-
-            await _campaignService.DeleteCampaignImageAsync(imageId, userId, userRole);
+            await _campaignService.UpdateCampaignImageUrlAsync(campaignId, null, userId, userRole);
             return Ok(new { message = "Image deleted successfully" });
         }
     }
