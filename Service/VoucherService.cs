@@ -319,7 +319,7 @@ public class VoucherService : IVoucherService
                     {
                         // System Campaign: Branch must have joined
                         var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);
-                        if (joinInfo != null && (joinInfo.Status == "Active" || joinInfo.Status == "Paid"))
+                        if (joinInfo != null && joinInfo.IsActive == true)
                         {
                             applicableVouchers.Add(uv);
                         }

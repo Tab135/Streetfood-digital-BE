@@ -20,7 +20,7 @@ namespace BO.DTO.Campaigns
         
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
-        public string Status { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public bool IsSystemCampaign => CreatedByBranchId == null && CreatedByVendorId == null;

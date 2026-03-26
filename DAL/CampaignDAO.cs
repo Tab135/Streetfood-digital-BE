@@ -77,7 +77,7 @@ namespace DAL
             var now = DateTime.UtcNow;
             var query = _context.Campaigns
                 .Where(c => c.CreatedByBranchId == null && c.CreatedByVendorId == null) // system campaigns
-                .Where(c => c.Status == "Active")
+                .Where(c => c.IsActive)
                 .Where(c => c.RegistrationStartDate != null && c.RegistrationEndDate != null 
                             && now >= c.RegistrationStartDate && now <= c.RegistrationEndDate);
 
@@ -94,7 +94,7 @@ namespace DAL
         {
             var now = DateTime.UtcNow;
             var query = _context.Campaigns.Include(c => c.CreatedByBranch)
-                .Where(c => c.Status == "Active" && c.StartDate <= now && c.EndDate >= now);
+                .Where(c => c.IsActive && c.StartDate <= now && c.EndDate >= now);
 
             int totalCount = await query.CountAsync();
             var items = await query.OrderByDescending(c => c.CreatedAt)

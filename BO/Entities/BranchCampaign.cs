@@ -17,11 +17,11 @@ namespace BO.Entities
         public int BranchId { get; set; }
         public virtual Branch Branch { get; set; }
 
+
         /// <summary>
-        /// pending, paid, active, rejected
+        /// Trạng thái hoạt động của branch campaign
         /// </summary>
-        [StringLength(50)]
-        public string Status { get; set; } = "Pending";
+        public bool IsActive { get; set; } = true;
 
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
     }

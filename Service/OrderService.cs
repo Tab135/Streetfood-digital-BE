@@ -78,7 +78,7 @@ public class OrderService : IOrderService
                     {
                         // System Campaign: Branch must have joined
                         var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branch.BranchId, campaign.CampaignId);
-                        if (joinInfo == null || (joinInfo.Status != "Active" && joinInfo.Status != "Paid"))
+                        if (joinInfo == null || joinInfo.IsActive != true)
                         {
                             throw new DomainExceptions("This branch is not participating in the campaign for this voucher.");
                         }

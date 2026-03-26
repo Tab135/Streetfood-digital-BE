@@ -676,7 +676,7 @@ namespace Service.PaymentsService
                 if (joinJoin == null || joinJoin.BranchId != branchId)
                     return new PaymentLinkResult { Success = false, Message = "Yêu cầu tham gia không hợp lệ." };
 
-                if (joinJoin.Status == "Active")
+                if (joinJoin.IsActive == true)
                     return new PaymentLinkResult { Success = false, Message = "Bạn đã thanh toán cho chiến dịch này." };
 
                 int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -736,7 +736,7 @@ namespace Service.PaymentsService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating campaign payment link");
-                return new PaymentLinkResult { Success = false, Message = "L?i khi t?o link thanh to�n" };
+                return new PaymentLinkResult { Success = false, Message = "Lỗi khi tạo link thanh toán" };
             }
         }
 
@@ -754,7 +754,7 @@ namespace Service.PaymentsService
             var branchCampaign = await _branchCampaignRepo.GetByIdAsync(branchCampaignId);
             if (branchCampaign != null)
             {
-                branchCampaign.Status = "Active";
+                branchCampaign.IsActive = true;
                 await _branchCampaignRepo.UpdateAsync(branchCampaign);
                 _logger.LogInformation("Activated BranchCampaign {id}", branchCampaignId);
             }

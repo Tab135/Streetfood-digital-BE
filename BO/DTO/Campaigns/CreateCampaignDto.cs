@@ -15,7 +15,6 @@ namespace BO.DTO.Campaigns
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         
-        [StringLength(50)]
-        public string Status { get; set; } = "Active";
+        public bool IsActive { get; set; } = true;
     }
 }

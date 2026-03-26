@@ -43,7 +43,8 @@ namespace Service
                 RegistrationStartDate = dto.RegistrationStartDate,
                 RegistrationEndDate = dto.RegistrationEndDate,
                 StartDate = dto.StartDate,
-                EndDate = dto.EndDate, Status = dto.Status,
+                EndDate = dto.EndDate,
+                IsActive = dto.IsActive,
                 CreatedByBranchId = null
             };
             await _campaignRepo.CreateAsync(campaign);
@@ -70,7 +71,7 @@ namespace Service
                 RegistrationEndDate = null,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
-                Status = dto.Status,
+                IsActive = dto.IsActive,
                 CreatedByBranchId = branchId
             };
             await _campaignRepo.CreateAsync(campaign);
@@ -93,7 +94,7 @@ namespace Service
                 RegistrationEndDate = null,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
-                Status = dto.Status,
+                IsActive = dto.IsActive,
                 CreatedByVendorId = vendor.VendorId
             };
             await _campaignRepo.CreateAsync(campaign);
@@ -125,10 +126,9 @@ namespace Service
             var existingJoin = await _branchCampaignRepo.GetByBranchAndCampaignAsync(branchId, campaignId);
             if (existingJoin != null)
             {
-                if (existingJoin.Status == "Active")
-                    throw new DomainExceptions("Chi nhánh dã tham gia và thanh toán chiến dịch này.");
-                
-                // If it's pending, just return the existing ID so they can attempt payment again
+                if (existingJoin.IsActive)
+                    throw new DomainExceptions("Chi nhánh đã tham gia và thanh toán chiến dịch này.");
+                // Nếu chưa active, trả về ID để thanh toán lại
                 return existingJoin.Id;
             }
 
@@ -145,7 +145,7 @@ namespace Service
             {
                 BranchId = branchId,
                 CampaignId = campaignId,
-                Status = "Pending"
+                IsActive = false
             };
             await _branchCampaignRepo.CreateAsync(joinRequest);
 
@@ -170,7 +170,7 @@ namespace Service
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
                     StartDate = item.StartDate,
-                    EndDate = item.EndDate, Status = item.Status,
+                    EndDate = item.EndDate, IsActive = item.IsActive,
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt
                 });
@@ -205,7 +205,7 @@ namespace Service
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
                     StartDate = item.StartDate,
-                    EndDate = item.EndDate, Status = item.Status,
+                    EndDate = item.EndDate, IsActive = item.IsActive,
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt
                 });
@@ -237,7 +237,7 @@ namespace Service
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
                     StartDate = item.StartDate,
-                    EndDate = item.EndDate, Status = item.Status,
+                    EndDate = item.EndDate, IsActive = item.IsActive,
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt
                 });
@@ -269,7 +269,7 @@ namespace Service
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
                     StartDate = item.StartDate,
-                    EndDate = item.EndDate, Status = item.Status,
+                    EndDate = item.EndDate, IsActive = item.IsActive,
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt
                 });
@@ -298,7 +298,7 @@ namespace Service
                 RegistrationStartDate = item.RegistrationStartDate,
                 RegistrationEndDate = item.RegistrationEndDate,
                 StartDate = item.StartDate,
-                EndDate = item.EndDate, Status = item.Status,
+                EndDate = item.EndDate, IsActive = item.IsActive,
                 CreatedAt = item.CreatedAt,
                 UpdatedAt = item.UpdatedAt
             };
@@ -349,7 +349,7 @@ namespace Service
             campaign.RegistrationEndDate = dto.RegistrationEndDate;
             campaign.StartDate = dto.StartDate;
             campaign.EndDate = dto.EndDate;
-            if (!string.IsNullOrEmpty(dto.Status)) campaign.Status = dto.Status;
+            if (dto.IsActive != null) campaign.IsActive = dto.IsActive.Value;
             campaign.UpdatedAt = DateTime.UtcNow;
 
             await _campaignRepo.UpdateAsync(campaign);
@@ -397,7 +397,7 @@ namespace Service
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
                     StartDate = item.StartDate,
-                    EndDate = item.EndDate, Status = item.Status,
+                    EndDate = item.EndDate, IsActive = item.IsActive,
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt
                 });
