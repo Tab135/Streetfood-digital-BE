@@ -13,6 +13,42 @@ namespace Service
         private readonly ICampaignRepository _campaignRepo;
         private readonly IBranchCampaignRepository _branchCampaignRepo;
         private readonly IBranchRepository _branchRepo;
+
+        public async Task UpdateCampaignImageUrlAsync(int campaignId, string? imageUrl, int userId, string role)
+        {
+            var campaign = await _campaignRepo.GetByIdAsync(campaignId);
+            if (campaign == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
+
+            // Quyền: Admin chỉ sửa campaign hệ thống, vendor chỉ sửa campaign của mình
+            if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null)
+            {
+                if (role != "Admin") throw new DomainExceptions("Chỉ Admin mới có thể thao tác ảnh chiến dịch hệ thống.");
+            }
+            else
+            {
+                if (role == "Admin") throw new DomainExceptions("Admin không thể thao tác ảnh campaign của Vendor/Branch.");
+                var vendor = await _vendorRepo.GetByUserIdAsync(userId);
+                if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+                bool isOwner = false;
+                if (campaign.CreatedByVendorId == vendor.VendorId)
+                    isOwner = true;
+                else if (campaign.CreatedByBranchId != null)
+                {
+                    var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
+                    if (branch != null && branch.VendorId == vendor.VendorId) isOwner = true;
+                }
+                if (!isOwner) throw new DomainExceptions("Bạn không có quyền thao tác ảnh cho chiến dịch này.");
+            }
+            campaign.ImageUrl = imageUrl;
+            await _campaignRepo.UpdateAsync(campaign);
+        }
+
+        public async Task<string?> GetCampaignImageUrlAsync(int campaignId)
+        {
+            var campaign = await _campaignRepo.GetByIdAsync(campaignId);
+            if (campaign == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
+            return campaign.ImageUrl;
+        }
         private readonly ITierRepository _tierRepo;
         private readonly IPaymentRepository _paymentRepo;
         private readonly IVendorRepository _vendorRepo;
@@ -170,9 +206,11 @@ namespace Service
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
                     StartDate = item.StartDate,
-                    EndDate = item.EndDate, IsActive = item.IsActive,
+                    EndDate = item.EndDate,
+                    IsActive = item.IsActive,
                     CreatedAt = item.CreatedAt,
-                    UpdatedAt = item.UpdatedAt
+                    UpdatedAt = item.UpdatedAt,
+                    ImageUrl = item.ImageUrl
                 });
             }
 
@@ -298,9 +336,11 @@ namespace Service
                 RegistrationStartDate = item.RegistrationStartDate,
                 RegistrationEndDate = item.RegistrationEndDate,
                 StartDate = item.StartDate,
-                EndDate = item.EndDate, IsActive = item.IsActive,
+                EndDate = item.EndDate,
+                IsActive = item.IsActive,
                 CreatedAt = item.CreatedAt,
-                UpdatedAt = item.UpdatedAt
+                UpdatedAt = item.UpdatedAt,
+                ImageUrl = item.ImageUrl
             };
         }
 
@@ -406,82 +446,5 @@ namespace Service
         }
 
         // --- Campaign Image Methods ---
-        public async Task<object> AddCampaignImageAsync(int campaignId, string imageUrl, int userId, string role)
-        {
-            var campaign = await _campaignRepo.GetByIdAsync(campaignId);
-            if (campaign == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
-
-            if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null) {
-                if (role != "Admin") throw new DomainExceptions("Chỉ Admin mới có thể thêm ảnh vào chiến dịch hệ thống.");
-            } else {
-                if (role == "Admin") throw new DomainExceptions("Admin không thể thêm ảnh cho chiến dịch của Vendor hoặc Branch.");
-                
-                var vendor = await _vendorRepo.GetByUserIdAsync(userId);
-                if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
-                
-                bool isOwner = false;
-                if (campaign.CreatedByVendorId == vendor.VendorId)
-                    isOwner = true;
-                else if (campaign.CreatedByBranchId != null) {
-                    var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
-                    if (branch != null && branch.VendorId == vendor.VendorId) isOwner = true;
-                }
-
-                if (!isOwner) throw new DomainExceptions("Bạn không có quyền thêm ảnh cho chiến dịch này.");
-            }
-
-            var campaignImage = new CampaignImage
-            {
-                CampaignId = campaignId,
-                ImageUrl = imageUrl
-            };
-            await _campaignRepo.AddCampaignImageAsync(campaignImage);
-            return campaignImage;
-        }
-
-        public async Task<BO.Common.PaginatedResponse<CampaignImageResponseDto>> GetCampaignImagesAsync(int campaignId, int pageNumber, int pageSize)
-        {
-            var (images, totalCount) = await _campaignRepo.GetCampaignImagesAsync(campaignId, pageNumber, pageSize);
-            var items = new System.Collections.Generic.List<CampaignImageResponseDto>();
-            foreach (var i in images)
-            {
-                items.Add(new CampaignImageResponseDto
-                {
-                    CampaignImageId = i.CampaignImageId,
-                    ImageUrl = i.ImageUrl
-                });
-            }
-            return new BO.Common.PaginatedResponse<CampaignImageResponseDto>(items, totalCount, pageNumber, pageSize);
-        }
-
-        public async Task DeleteCampaignImageAsync(int imageId, int userId, string role)
-        {
-            var image = await _campaignRepo.GetCampaignImageByIdAsync(imageId);
-            if (image == null) throw new DomainExceptions("Không tìm thấy ảnh.");
-
-            var campaign = await _campaignRepo.GetByIdAsync(image.CampaignId);
-            if (campaign != null) {
-                if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null) {
-                    if (role != "Admin") throw new DomainExceptions("Chỉ Admin mới có thể xóa ảnh của chiến dịch hệ thống.");
-                } else {
-                    if (role == "Admin") throw new DomainExceptions("Admin không thể xóa ảnh của chiến dịch do Vendor hoặc Branch tạo.");
-                    
-                    var vendor = await _vendorRepo.GetByUserIdAsync(userId);
-                    if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
-                    
-                    bool isOwner = false;
-                    if (campaign.CreatedByVendorId == vendor.VendorId)
-                        isOwner = true;
-                    else if (campaign.CreatedByBranchId != null) {
-                        var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
-                        if (branch != null && branch.VendorId == vendor.VendorId) isOwner = true;
-                    }
-
-                    if (!isOwner) throw new DomainExceptions("Bạn không có quyền xóa ảnh của chiến dịch này.");
-                }
-            }
-
-            await _campaignRepo.DeleteCampaignImageAsync(imageId);
-        }
     }
 }

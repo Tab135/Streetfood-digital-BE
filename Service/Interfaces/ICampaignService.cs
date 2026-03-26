@@ -20,8 +20,7 @@ namespace Service.Interfaces
         Task<CampaignResponseDto> UpdateCampaignAsync(int userId, string role, int campaignId, UpdateCampaignDto dto);
 
         // Images
-        Task<object> AddCampaignImageAsync(int campaignId, string imageUrl, int userId, string role);
-        Task<PaginatedResponse<CampaignImageResponseDto>> GetCampaignImagesAsync(int campaignId, int pageNumber, int pageSize);
-        Task DeleteCampaignImageAsync(int imageId, int userId, string role);
+        Task UpdateCampaignImageUrlAsync(int campaignId, string? imageUrl, int userId, string role);
+        Task<string?> GetCampaignImageUrlAsync(int campaignId);
     }
 }

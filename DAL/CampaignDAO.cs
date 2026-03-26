@@ -118,36 +118,5 @@ namespace DAL
         }
 
         // --- Campaign Image Methods ---
-        public async Task<(List<CampaignImage> items, int totalCount)> GetCampaignImagesAsync(int campaignId, int pageNumber, int pageSize)
-        {
-            var query = _context.CampaignImages
-                .Where(img => img.CampaignId == campaignId)
-                .OrderBy(img => img.CampaignImageId);
-
-            int totalCount = await query.CountAsync();
-            var items = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
-            return (items, totalCount);
-        }
-
-        public async Task AddCampaignImageAsync(CampaignImage campaignImage)
-        {
-            _context.CampaignImages.Add(campaignImage);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task<CampaignImage?> GetCampaignImageByIdAsync(int imageId)
-        {
-            return await _context.CampaignImages.FindAsync(imageId);
-        }
-
-        public async Task DeleteCampaignImageAsync(int imageId)
-        {
-            var image = await _context.CampaignImages.FindAsync(imageId);
-            if (image != null)
-            {
-                _context.CampaignImages.Remove(image);
-                await _context.SaveChangesAsync();
-            }
-        }
     }
 }
