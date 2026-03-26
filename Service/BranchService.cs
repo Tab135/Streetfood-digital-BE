@@ -187,6 +187,24 @@ namespace Service
             return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
+        public async Task<BranchResponseDto> GetMyManagedBranchAsync(int managerUserId)
+        {
+            var branches = await _branchRepository.GetAllByManagerIdAsync(managerUserId);
+            if (branches == null || branches.Count == 0)
+            {
+                throw new DomainExceptions("No branch assigned to this manager", "ERR_NOT_FOUND");
+            }
+
+            if (branches.Count > 1)
+            {
+                throw new DomainExceptions("Manager is assigned to more than one branch", "ERR_CONFLICT");
+            }
+
+            var branch = branches[0];
+            var request = await _branchRepository.GetBranchRequestAsync(branch.BranchId);
+            return MapToResponseDto(branch, request);
+        }
+
         public async Task<PaginatedResponse<BranchResponseDto>> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize)
         {
             var (branches, totalCount) = await _branchRepository.GetAllApprovedGhostPinsAsync(pageNumber, pageSize);
@@ -227,11 +245,13 @@ namespace Service
                 throw new Exception($"Branch with ID {branchId} not found");
             }
 
-            // Verify vendor exists and user owns it
+            // Allow vendor owner or assigned manager to update branch
             var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
-            if (vendor == null || vendor.UserId != userId)
+            var isVendorOwner = vendor != null && vendor.UserId == userId;
+            var isBranchManager = branch.ManagerId.HasValue && branch.ManagerId.Value == userId;
+            if (!isVendorOwner && !isBranchManager)
             {
-                throw new Exception("User does not own this vendor");
+                throw new Exception("Unauthorized: You do not manage this branch");
             }
 
             // Update only non-null fields
@@ -312,11 +332,26 @@ namespace Service
             {
                 throw new DomainExceptions("The user to be assigned as manager does not exist.", "ERR_USER_NOT_FOUND");
             }
+            else if (newManagerUser.Role == Role.Vendor || newManagerUser.Role == Role.Manager)
+            {
+                throw new DomainExceptions("The user to be assigned as manager must not be a vendor or a manager of another branch","ERR_UNAUTHORIZED");
+            }
 
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
                 throw new DomainExceptions("Branch not found.", "ERR_BRANCH_NOT_FOUND");
+            }
+
+            // If assigning another existing manager, demote the current branch manager first.
+            if (newManagerUser.Role == Role.User && branch.ManagerId.HasValue && branch.ManagerId.Value != newManagerUser.Id)
+            {
+                var currentManagerUser = await _userRepository.GetUserById(branch.ManagerId.Value);
+                if (currentManagerUser != null && currentManagerUser.Role == Role.Manager)
+                {
+                    currentManagerUser.Role = Role.User;
+                    await _userRepository.UpdateAsync(currentManagerUser);
+                }
             }
 
             branch.ManagerId = newManagerUser.Id;
@@ -350,10 +385,10 @@ namespace Service
                 throw new Exception($"Branch with ID {branchId} not found");
             }
 
-            // Verify user owns the branch
-            if (!await UserOwnsBranchAsync(branchId, userId))
+            // Verify user can manage the branch (vendor owner or assigned manager)
+            if (!await UserCanManageBranchAsync(branchId, userId))
             {
-                throw new Exception("User does not own this branch");
+                throw new Exception("Unauthorized: You do not manage this branch");
             }
 
             // Serialize list of URLs to JSON
@@ -391,9 +426,9 @@ namespace Service
 
         public async Task<BranchRequest> GetBranchLicenseStatusAsync(int branchId, int userId)
         {
-            if (!await UserOwnsBranchAsync(branchId, userId))
+            if (!await UserCanManageBranchAsync(branchId, userId))
             {
-                throw new Exception("User does not own this branch");
+                throw new Exception("Unauthorized: You do not manage this branch");
             }
 
             var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
@@ -650,10 +685,10 @@ namespace Service
 
         public async Task<List<WorkSchedule>> AddWorkScheduleAsync(int branchId, AddWorkScheduleDto dto, int userId)
         {
-            // Verify branch exists and user owns it
-            if (!await UserOwnsBranchAsync(branchId, userId))
+            // Verify user can manage the branch
+            if (!await UserCanManageBranchAsync(branchId, userId))
             {
-                throw new Exception("Unauthorized: You do not own this branch");
+                throw new Exception("Unauthorized: You do not manage this branch");
             }
 
             var workSchedules = dto.Weekdays.Select(weekday => new WorkSchedule
@@ -694,10 +729,10 @@ namespace Service
                 throw new Exception($"Work schedule with ID {scheduleId} not found");
             }
 
-            // Verify user owns the branch
-            if (!await UserOwnsBranchAsync(schedule.BranchId, userId))
+            // Verify user can manage the branch
+            if (!await UserCanManageBranchAsync(schedule.BranchId, userId))
             {
-                throw new Exception("Unauthorized: You do not own this branch");
+                throw new Exception("Unauthorized: You do not manage this branch");
             }
 
             schedule.Weekday = dto.Weekday;
@@ -716,10 +751,10 @@ namespace Service
                 throw new Exception($"Work schedule with ID {scheduleId} not found");
             }
 
-            // Verify user owns the branch
-            if (!await UserOwnsBranchAsync(schedule.BranchId, userId))
+            // Verify user can manage the branch
+            if (!await UserCanManageBranchAsync(schedule.BranchId, userId))
             {
-                throw new Exception("Unauthorized: You do not own this branch");
+                throw new Exception("Unauthorized: You do not manage this branch");
             }
 
             await _branchRepository.DeleteWorkScheduleAsync(scheduleId);
@@ -728,10 +763,10 @@ namespace Service
 
         public async Task<DayOff> AddDayOffAsync(int branchId, AddDayOffDto dto, int userId)
         {
-            // Verify branch exists and user owns it
-            if (!await UserOwnsBranchAsync(branchId, userId))
+            // Verify user can manage the branch
+            if (!await UserCanManageBranchAsync(branchId, userId))
             {
-                throw new Exception("Unauthorized: You do not own this branch");
+                throw new Exception("Unauthorized: You do not manage this branch");
             }
 
             var dayOff = new DayOff
@@ -769,10 +804,10 @@ namespace Service
                 throw new Exception($"Day off with ID {dayOffId} not found");
             }
 
-            // Verify user owns the branch
-            if (!await UserOwnsBranchAsync(dayOff.BranchId, userId))
+            // Verify user can manage the branch
+            if (!await UserCanManageBranchAsync(dayOff.BranchId, userId))
             {
-                throw new Exception("Unauthorized: You do not own this branch");
+                throw new Exception("Unauthorized: You do not manage this branch");
             }
 
             await _branchRepository.DeleteDayOffAsync(dayOffId);
@@ -781,10 +816,10 @@ namespace Service
 
         public async Task<BranchImage> AddBranchImageAsync(int branchId, string imageUrl, int userId)
         {
-            // Verify branch exists and user owns it
-            if (!await UserOwnsBranchAsync(branchId, userId))
+            // Verify user can manage the branch
+            if (!await UserCanManageBranchAsync(branchId, userId))
             {
-                throw new Exception("Unauthorized: You do not own this branch");
+                throw new Exception("Unauthorized: You do not manage this branch");
             }
 
             var branchImage = new BranchImage
@@ -816,16 +851,27 @@ namespace Service
                 throw new Exception($"Branch image with ID {imageId} not found");
             }
 
-            // Verify user owns the branch
-            if (!await UserOwnsBranchAsync(image.BranchId, userId))
+            // Verify user can manage the branch
+            if (!await UserCanManageBranchAsync(image.BranchId, userId))
             {
-                throw new Exception("Unauthorized: You do not own this branch");
+                throw new Exception("Unauthorized: You do not manage this branch");
             }
 
             await _branchRepository.DeleteBranchImageAsync(imageId);
         }
 
         // Helper method
+        private async Task<bool> UserCanManageBranchAsync(int branchId, int userId)
+        {
+            if (await UserOwnsBranchAsync(branchId, userId))
+            {
+                return true;
+            }
+
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            return branch != null && branch.ManagerId.HasValue && branch.ManagerId.Value == userId;
+        }
+
         private string GetWeekdayName(int weekday)
         {
             return weekday switch

@@ -88,6 +88,28 @@ namespace StreetFood.Controllers
             }
         }
 
+        [HttpGet("manager/my-branch")]
+        [Authorize(Roles = "Manager")]
+        [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetMyManagedBranch()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var branch = await _branchService.GetMyManagedBranchAsync(userId);
+                return Ok(new { message = "Managed branch retrieved successfully", data = branch });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPost("user")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status201Created)]
@@ -323,7 +345,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "User,Vendor")]
+        [Authorize(Roles = "User,Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateBranch(int id, [FromBody] UpdateBranchDto updateBranchDto)
         {
@@ -375,7 +397,7 @@ namespace StreetFood.Controllers
 
 
         [HttpPost("{id}/submit-license")]
-        [Authorize(Roles = "User,Vendor")]
+        [Authorize(Roles = "User,Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> SubmitBranchLicense(int id, List<IFormFile> licenseImages)
         {
@@ -431,7 +453,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("{id}/license-status")]
-        [Authorize(Roles = "User,Vendor")]
+        [Authorize(Roles = "User,Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetBranchLicenseStatus(int id)
         {
@@ -559,7 +581,7 @@ namespace StreetFood.Controllers
         /// Add a work schedule to a branch
         /// </summary>
         [HttpPost("{branchId}/work-schedules")]
-        [Authorize(Roles = "User,Vendor")]
+        [Authorize(Roles = "User,Vendor,Manager")]
         public async Task<IActionResult> AddWorkSchedule(int branchId, [FromBody] AddWorkScheduleDto dto)
         {
             try
@@ -605,7 +627,7 @@ namespace StreetFood.Controllers
         /// Update a work schedule
         /// </summary>
         [HttpPut("work-schedules/{scheduleId}")]
-        [Authorize(Roles = "User,Vendor")]
+        [Authorize(Roles = "User,Vendor,Manager")]
         public async Task<IActionResult> UpdateWorkSchedule(int scheduleId, [FromBody] UpdateWorkScheduleDto dto)
         {
             try
@@ -634,7 +656,7 @@ namespace StreetFood.Controllers
         /// Delete a work schedule
         /// </summary>
         [HttpDelete("work-schedules/{scheduleId}")]
-        [Authorize(Roles = "User,Vendor")]
+        [Authorize(Roles = "User,Vendor,Manager")]
         public async Task<IActionResult> DeleteWorkSchedule(int scheduleId)
         {
             try
@@ -660,7 +682,7 @@ namespace StreetFood.Controllers
         /// Add a day off to a branch
         /// </summary>
         [HttpPost("{branchId}/day-offs")]
-        [Authorize(Roles = "User,Vendor")]
+        [Authorize(Roles = "User,Vendor,Manager")]
         public async Task<IActionResult> AddDayOff(int branchId, [FromBody] AddDayOffDto dto)
         {
             try
@@ -706,7 +728,7 @@ namespace StreetFood.Controllers
         /// Delete a day off
         /// </summary>
         [HttpDelete("day-offs/{dayOffId}")]
-        [Authorize(Roles = "User,Vendor")]
+        [Authorize(Roles = "User,Vendor,Manager")]
         public async Task<IActionResult> DeleteDayOff(int dayOffId)
         {
             try
@@ -728,7 +750,7 @@ namespace StreetFood.Controllers
 
         // ==================== BRANCH IMAGE OPERATIONS ====================
         [HttpPost("{branchId}/images")]
-        [Authorize(Roles = "Vendor,User")]
+        [Authorize(Roles = "Vendor,User,Manager")]
         public async Task<IActionResult> AddBranchImage(int branchId, List<IFormFile> images)
         {
             try
@@ -797,7 +819,7 @@ namespace StreetFood.Controllers
         /// Delete a branch image
         /// </summary>
         [HttpDelete("images/{imageId}")]
-        [Authorize(Roles = "Vendor,User")]
+        [Authorize(Roles = "Vendor,User,Manager")]
         public async Task<IActionResult> DeleteBranchImage(int imageId)
         {
             try

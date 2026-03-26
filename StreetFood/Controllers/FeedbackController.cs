@@ -376,7 +376,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost("{feedbackId}/reply")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         public async Task<IActionResult> CreateReply(int feedbackId, [FromBody] CreateVendorReplyDto dto)
         {
             try
@@ -399,7 +399,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPut("{feedbackId}/reply")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         public async Task<IActionResult> UpdateReply(int feedbackId, [FromBody] UpdateVendorReplyDto dto)
         {
             try
@@ -422,7 +422,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpDelete("{feedbackId}/reply")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         public async Task<IActionResult> DeleteReply(int feedbackId)
         {
             try

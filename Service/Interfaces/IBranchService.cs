@@ -17,6 +17,7 @@ namespace Service.Interfaces
         Task<(string Message, int BranchId)> ClaimUserBranchAsync(int branchId, int userId, List<string> licenseUrls);
 
         Task<PaginatedResponse<BranchResponseDto>> GetMyGhostPinBranchesAsync(int userId, int pageNumber, int pageSize);
+        Task<BranchResponseDto> GetMyManagedBranchAsync(int managerUserId);
         Task<PaginatedResponse<BranchResponseDto>> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize);
         Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize);
         Task<PaginatedResponse<BranchResponseDto>> GetAllBranchesAsync(int pageNumber, int pageSize);

@@ -21,7 +21,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost("vendor/{vendorId}")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(ApiResponse<DishResponse>), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateDish([FromRoute] int vendorId, [FromForm] CreateDishRequest request, IFormFile imageFile)
@@ -83,7 +83,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(ApiResponse<DishResponse>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateDish(int id, [FromForm] UpdateDishRequest request, IFormFile? imageFile)
@@ -110,7 +110,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> DeleteDish(int id)
         {
@@ -125,7 +125,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost("branch/{branchId}")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> AddDishesToBranch([FromBody] AssignDishesRequest request, [FromRoute] int branchId)
         {
@@ -138,7 +138,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpDelete("branch/{branchId}")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> RemoveDishesFromBranch([FromBody] AssignDishesRequest request, [FromRoute] int branchId)
         {
@@ -151,7 +151,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPatch("{dishId}/branch/{branchId}/availability")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> UpdateDishAvailability(
             [FromRoute] int dishId,
