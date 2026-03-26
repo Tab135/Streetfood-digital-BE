@@ -1,6 +1,7 @@
 using BO.Entities;
 using DAL;
 using Repository.Interfaces;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Repository
@@ -17,6 +18,7 @@ namespace Repository
         public Task<BranchCampaign> CreateAsync(BranchCampaign branchCampaign) => _dao.CreateAsync(branchCampaign);
         public Task<BranchCampaign?> GetByIdAsync(int id) => _dao.GetByIdAsync(id);
         public Task<BranchCampaign?> GetByBranchAndCampaignAsync(int branchId, int campaignId) => _dao.GetByBranchAndCampaignAsync(branchId, campaignId);
+        public Task<List<BranchCampaign>> GetPendingByCampaignAndVendorAsync(int campaignId, int vendorId) => _dao.GetPendingByCampaignAndVendorAsync(campaignId, vendorId);
         public Task UpdateAsync(BranchCampaign branchCampaign) => _dao.UpdateAsync(branchCampaign);
     }
 }

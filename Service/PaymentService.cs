@@ -614,7 +614,7 @@ namespace Service.PaymentsService
                         }
                         else if (payment.BranchCampaignId.HasValue)
                         {
-                            await ActivateBranchCampaignAsync(payment.BranchCampaignId.Value);
+                            await ActivateBranchCampaignAsync(payment.BranchCampaignId.Value, payment.Description);
                         }
                         else
                         {
@@ -691,7 +691,8 @@ namespace Service.PaymentsService
                     if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
                 }
 
-                int campaignFee = 1000000;
+                int campaignFee = 20000;
+                // Used later during webhook confirmation to activate only one branch-campaign
                 var description = "Phi tham gia chien dich";
 
                 var payment = await _paymentRepo.CreatePayment(
@@ -740,6 +741,106 @@ namespace Service.PaymentsService
             }
         }
 
+        public async Task<PaymentLinkResult> CreateVendorSystemCampaignPaymentLink(
+            int userId,
+            int campaignId,
+            int vendorId,
+            List<int> pendingBranchCampaignIds)
+        {
+            try
+            {
+                if (pendingBranchCampaignIds == null || pendingBranchCampaignIds.Count == 0)
+                    return new PaymentLinkResult { Success = false, Message = "Không có chi nhánh cần thanh toán." };
+
+                int campaignFee = 20000;
+                var totalAmount = campaignFee * pendingBranchCampaignIds.Count;
+
+                // PayOS Amount is int; keep it safe
+                if (totalAmount <= 0 || totalAmount > int.MaxValue)
+                    return new PaymentLinkResult { Success = false, Message = "Tổng tiền thanh toán không hợp lệ." };
+
+                var firstBranchCampaignId = pendingBranchCampaignIds[0];
+                var firstBranchCampaign = await _branchCampaignRepo.GetByIdAsync(firstBranchCampaignId);
+                if (firstBranchCampaign == null)
+                    return new PaymentLinkResult { Success = false, Message = "BranchCampaign không hợp lệ." };
+
+                var branch = firstBranchCampaign.Branch;
+                if (branch == null || !branch.VendorId.HasValue || branch.VendorId.Value != vendorId)
+                    return new PaymentLinkResult { Success = false, Message = "Chi nhánh không thuộc vendor này." };
+
+                // Ensure all provided ids belong to the same (campaignId, vendorId) and are pending
+                var pendingRows = await _branchCampaignRepo.GetPendingByCampaignAndVendorAsync(campaignId, vendorId);
+                if (pendingRows == null || pendingRows.Count == 0)
+                    return new PaymentLinkResult { Success = false, Message = "Không có chi nhánh pending cho chiến dịch này." };
+
+                // Create one payment for the vendor's whole campaign selection
+                int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                int random = new Random().Next(100, 999);
+                long orderCode = long.Parse($"{timestamp}{random}");
+                if (orderCode > int.MaxValue) orderCode = timestamp;
+                while (await _paymentRepo.OrderCodeExists(orderCode))
+                {
+                    random = new Random().Next(100, 999);
+                    orderCode = long.Parse($"{timestamp}{random}");
+                    if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
+                }
+
+                // Used later during webhook confirmation to activate all pending branch-campaigns
+                var description = "Phi tham gia chien dich ";
+
+                var payment = await _paymentRepo.CreatePayment(
+                    userId: userId,
+                    orderCode: orderCode,
+                    branchId: firstBranchCampaign.BranchId,
+                    amount: totalAmount,
+                    description: description,
+                    checkoutUrl: null,
+                    orderId: null,
+                    branchCampaignId: firstBranchCampaignId
+                );
+
+                var returnUrl = _configuration["PayOS:ReturnUrl"] ?? "http://localhost:4000/Payment/success";
+                var cancelUrl = _configuration["PayOS:CancelUrl"] ?? "http://localhost:4000/Payment/cancel";
+
+                var paymentData = new CreatePaymentLinkRequest
+                {
+                    OrderCode = (int)orderCode,
+                    Amount = totalAmount,
+                    Description = description,
+                    CancelUrl = cancelUrl,
+                    ReturnUrl = returnUrl
+                };
+
+                string paymentLinkId, checkoutUrl;
+                if (_isDebugMode)
+                {
+                    paymentLinkId = "DEBUG-VENDOR-CAMP-" + orderCode;
+                    checkoutUrl = returnUrl + "?debug=true&orderCode=" + orderCode;
+                }
+                else
+                {
+                    var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
+                    paymentLinkId = paymentLinkResponse.PaymentLinkId;
+                    checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                }
+
+                await _paymentRepo.UpdatePaymentWithPayOSDetails(orderCode, "PENDING", paymentLinkId, checkoutUrl);
+
+                return new PaymentLinkResult
+                {
+                    Success = true,
+                    PaymentUrl = checkoutUrl,
+                    OrderCode = orderCode,
+                    PaymentLinkId = paymentLinkId
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating vendor system campaign payment link");
+                return new PaymentLinkResult { Success = false, Message = "Lỗi khi tạo link thanh toán" };
+            }
+        }
+
         // ─── Private helpers ──────────────────────────────────────────────────────
 
         /// <summary>
@@ -749,15 +850,37 @@ namespace Service.PaymentsService
         ///   • Sets branch.SubscriptionExpiresAt = now + 30 days
         ///   • Upgrades user.Role to Vendor (3)
         /// </summary>
-                private async Task ActivateBranchCampaignAsync(int branchCampaignId)
+                private async Task ActivateBranchCampaignAsync(int branchCampaignId, string? paymentDescription)
         {
             var branchCampaign = await _branchCampaignRepo.GetByIdAsync(branchCampaignId);
-            if (branchCampaign != null)
+            if (branchCampaign == null) return;
+
+            var isBatch = !string.IsNullOrWhiteSpace(paymentDescription) &&
+                          paymentDescription.Contains("VENDOR_SYSTEM_CAMPAIGN_BATCH");
+
+            if (!isBatch)
             {
                 branchCampaign.IsActive = true;
                 await _branchCampaignRepo.UpdateAsync(branchCampaign);
                 _logger.LogInformation("Activated BranchCampaign {id}", branchCampaignId);
+                return;
             }
+
+            // Batch payment: activate all pending BranchCampaigns for this vendor + system campaign
+            var vendorId = branchCampaign.Branch?.VendorId;
+            if (!vendorId.HasValue)
+                return;
+
+            var pendingRows = await _branchCampaignRepo.GetPendingByCampaignAndVendorAsync(branchCampaign.CampaignId, vendorId.Value);
+            foreach (var row in pendingRows)
+            {
+                row.IsActive = true;
+                await _branchCampaignRepo.UpdateAsync(row);
+            }
+
+            _logger.LogInformation(
+                "Activated {Count} pending BranchCampaigns for Vendor {VendorId}, Campaign {CampaignId}",
+                pendingRows.Count, vendorId.Value, branchCampaign.CampaignId);
         }
 
         private async Task ActivateVendorSubscriptionAsync(Payment payment)

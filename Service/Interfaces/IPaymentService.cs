@@ -15,6 +15,12 @@ namespace Service.PaymentsService
         Task<PaymentLinkResult> CreatePaymentLink(int userId, int branchId);
         Task<PaymentLinkResult> CreateOrderPaymentLink(int userId, int orderId);
         Task<PaymentLinkResult> CreateCampaignPaymentLink(int userId, int branchId, int branchCampaignId);
+        // Vendor joins a system campaign for all eligible branches in one bill
+        Task<PaymentLinkResult> CreateVendorSystemCampaignPaymentLink(
+            int userId,
+            int campaignId,
+            int vendorId,
+            List<int> pendingBranchCampaignIds);
 
         Task<Payment?> GetPaymentByOrderCode(long orderCode);
 

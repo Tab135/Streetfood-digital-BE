@@ -22,5 +22,10 @@ namespace Service.Interfaces
         // Images
         Task UpdateCampaignImageUrlAsync(int campaignId, string? imageUrl, int userId, string role);
         Task<string?> GetCampaignImageUrlAsync(int campaignId);
+        // New: Get system campaign detail with eligible branches
+        Task<SystemCampaignDetailDto> GetSystemCampaignDetailWithJoinableBranchesAsync(int userId, int campaignId);
+
+        // New: Vendor join system campaign for all eligible branches
+        Task<VendorJoinSystemCampaignResultDto> VendorJoinSystemCampaignAsync(int userId, int campaignId);
     }
 }

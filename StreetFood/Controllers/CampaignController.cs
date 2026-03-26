@@ -128,6 +128,26 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Lấy danh sách chiến dịch của chi nhánh thành công", data = result });
         }
 
+        // NEW: Get system campaign detail with eligible branches
+        [HttpGet("system/{campaignId}")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> GetSystemCampaignDetailWithJoinableBranches(int campaignId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.GetSystemCampaignDetailWithJoinableBranchesAsync(userId, campaignId);
+            return Ok(new { message = "Lấy chi tiết chiến dịch hệ thống thành công", data = result });
+        }
+
+        // NEW: Vendor join system campaign for all eligible branches
+        [HttpPost("vendor/join")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> VendorJoinSystemCampaign([FromQuery] int campaignId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.VendorJoinSystemCampaignAsync(userId, campaignId);
+            return Ok(new { message = "Đã tham gia chiến dịch hệ thống cho các chi nhánh hợp lệ", data = result });
+        }
+
         // ==================== CAMPAIGN IMAGE OPERATIONS ====================
 
         [HttpPost("{campaignId}/images")]

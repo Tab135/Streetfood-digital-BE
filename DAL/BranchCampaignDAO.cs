@@ -37,6 +37,19 @@ namespace DAL
                 .FirstOrDefaultAsync(bc => bc.BranchId == branchId && bc.CampaignId == campaignId);
         }
 
+        public async Task<List<BranchCampaign>> GetPendingByCampaignAndVendorAsync(int campaignId, int vendorId)
+        {
+            // Only return pending (not yet paid) rows for this vendor + campaign
+            return await _context.BranchCampaigns
+                .Include(bc => bc.Campaign)
+                .Include(bc => bc.Branch)
+                .Where(bc =>
+                    bc.CampaignId == campaignId &&
+                    bc.IsActive == false &&
+                    bc.Branch.VendorId == vendorId)
+                .ToListAsync();
+        }
+
         public async Task UpdateAsync(BranchCampaign branchCampaign)
         {
             _context.BranchCampaigns.Update(branchCampaign);
