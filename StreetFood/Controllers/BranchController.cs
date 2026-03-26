@@ -88,6 +88,28 @@ namespace StreetFood.Controllers
             }
         }
 
+        [HttpGet("manager/my-branch")]
+        [Authorize(Roles = "Manager")]
+        [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetMyManagedBranch()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var branch = await _branchService.GetMyManagedBranchAsync(userId);
+                return Ok(new { message = "Managed branch retrieved successfully", data = branch });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPost("user")]
         [Authorize]
         [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status201Created)]

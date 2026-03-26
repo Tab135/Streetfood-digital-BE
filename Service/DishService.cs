@@ -35,15 +35,15 @@ namespace Service
 
         public async Task<DishResponse> CreateDishAsync(int vendorId, CreateDishRequest request, int userId, string imageUrl)
         {
-            // Validate vendor exists and user owns it
+            // Validate vendor exists and user can manage it
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
             if (vendor == null)
             {
                 throw new DomainExceptions($"Vendor with ID {vendorId} not found");
             }
-            if (vendor.UserId != userId)
+            if (!await IsVendorOwnerOrManagerOfVendorAsync(vendorId, userId))
             {
-                throw new DomainExceptions("You do not own this vendor");
+                throw new DomainExceptions("You do not manage this vendor");
             }
 
             // TODO: (Optional) Get category instance instead of checking existence, to avoid multiple DB calls. Same for Taste and DietaryPreference.
@@ -141,11 +141,10 @@ namespace Service
                 throw new DomainExceptions($"Dish with ID {dishId} not found");
             }
 
-            // Validate user owns the vendor
-            var vendor = await _vendorRepository.GetByIdAsync(dish.VendorId);
-            if (vendor == null || vendor.UserId != userId)
+            // Validate user can manage the vendor
+            if (!await IsVendorOwnerOrManagerOfVendorAsync(dish.VendorId, userId))
             {
-                throw new DomainExceptions("You do not own this vendor");
+                throw new DomainExceptions("You do not manage this vendor");
             }
 
             // Validate CategoryId if provided
@@ -221,11 +220,10 @@ namespace Service
                 throw new DomainExceptions($"Dish with ID {dishId} not found");
             }
 
-            // Validate user owns the vendor
-            var vendor = await _vendorRepository.GetByIdAsync(dish.VendorId);
-            if (vendor == null || vendor.UserId != userId)
+            // Validate user can manage the vendor
+            if (!await IsVendorOwnerOrManagerOfVendorAsync(dish.VendorId, userId))
             {
-                throw new DomainExceptions("You do not own this vendor");
+                throw new DomainExceptions("You do not manage this vendor");
             }
 
             await _dishRepository.DeleteAsync(dishId);
@@ -237,9 +235,8 @@ namespace Service
             if (branch == null)
                 throw new DomainExceptions($"Branch with ID {branchId} not found");
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
-            if (vendor == null || vendor.UserId != userId)
-                throw new DomainExceptions("You do not own this branch");
+            if (!await IsBranchOwnerOrManagerAsync(branch, userId))
+                throw new DomainExceptions("You do not manage this branch");
 
             foreach (var dishId in dishIds)
             {
@@ -274,9 +271,8 @@ namespace Service
             if (branch == null)
                 throw new DomainExceptions($"Branch with ID {branchId} not found");
 
-            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
-            if (vendor == null || vendor.UserId != userId)
-                throw new DomainExceptions("You do not own this branch");
+            if (!await IsBranchOwnerOrManagerAsync(branch, userId))
+                throw new DomainExceptions("You do not manage this branch");
 
             foreach (var dishId in dishIds)
             {
@@ -296,13 +292,12 @@ namespace Service
             if (dish == null)
                 throw new DomainExceptions($"Dish with ID {dishId} not found");
 
-            var vendor = await _vendorRepository.GetByIdAsync(dish.VendorId);
-            if (vendor == null || vendor.UserId != userId)
-                throw new DomainExceptions("You do not own this vendor");
-
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
                 throw new DomainExceptions($"Branch with ID {branchId} not found");
+
+            if (!await IsBranchOwnerOrManagerAsync(branch, userId))
+                throw new DomainExceptions("You do not manage this branch");
 
             if (branch.VendorId != dish.VendorId)
                 throw new DomainExceptions("Branch does not belong to the same vendor as this dish");
@@ -324,6 +319,29 @@ namespace Service
             }
 
             return response;
+        }
+
+        private async Task<bool> IsVendorOwnerOrManagerOfVendorAsync(int vendorId, int userId)
+        {
+            var vendor = await _vendorRepository.GetByIdAsync(vendorId);
+            if (vendor != null && vendor.UserId == userId)
+            {
+                return true;
+            }
+
+            var managedBranches = await _branchRepository.GetAllByManagerIdAsync(userId);
+            return managedBranches.Any(b => b.VendorId == vendorId);
+        }
+
+        private async Task<bool> IsBranchOwnerOrManagerAsync(Branch branch, int userId)
+        {
+            if (branch.ManagerId.HasValue && branch.ManagerId.Value == userId)
+            {
+                return true;
+            }
+
+            var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
+            return vendor != null && vendor.UserId == userId;
         }
 
         private static DishResponse MapToResponse(Dish dish)
