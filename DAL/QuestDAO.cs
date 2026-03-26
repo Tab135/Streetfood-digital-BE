@@ -56,7 +56,7 @@ namespace DAL
             var now = DateTime.UtcNow;
             var query = _context.Quests
                 .Include(q => q.QuestTasks)
-                .Where(q => q.IsActive && q.StartDate <= now && q.EndDate >= now);
+                .Where(q => q.IsActive);
 
             if (campaignId.HasValue)
                 query = query.Where(q => q.CampaignId == campaignId.Value);

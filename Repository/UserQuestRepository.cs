@@ -1,4 +1,5 @@
 using BO.Entities;
+using BO.Enums;
 using DAL;
 using Repository.Interfaces;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace Repository
         public Task<UserQuest?> GetByUserAndQuestAsync(int userId, int questId) => _dao.GetByUserAndQuestAsync(userId, questId);
         public Task<UserQuest?> GetByIdAsync(int userQuestId) => _dao.GetByIdAsync(userQuestId);
         public Task<List<UserQuest>> GetByUserIdAsync(int userId, string? status) => _dao.GetByUserIdAsync(userId, status);
-        public Task<List<UserQuestTask>> GetInProgressTasksByTypeAsync(int userId, string taskType) => _dao.GetInProgressTasksByTypeAsync(userId, taskType);
+        public Task<List<UserQuestTask>> GetInProgressTasksByTypeAsync(int userId, QuestTaskType taskType) => _dao.GetInProgressTasksByTypeAsync(userId, taskType);
         public Task UpdateUserQuestTaskAsync(UserQuestTask userQuestTask) => _dao.UpdateUserQuestTaskAsync(userQuestTask);
         public Task UpdateUserQuestAsync(UserQuest userQuest) => _dao.UpdateUserQuestAsync(userQuest);
         public Task<bool> AreAllTasksCompletedAsync(int userQuestId) => _dao.AreAllTasksCompletedAsync(userQuestId);

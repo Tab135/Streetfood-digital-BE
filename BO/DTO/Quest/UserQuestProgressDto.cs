@@ -10,8 +10,6 @@ namespace BO.DTO.Quest
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public string? ImageUrl { get; set; }
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime StartedAt { get; set; }
         public DateTime? CompletedAt { get; set; }

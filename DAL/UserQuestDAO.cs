@@ -111,7 +111,7 @@ namespace DAL
             var now = DateTime.UtcNow;
             return await _context.UserQuests
                 .Include(uq => uq.Quest)
-                .Where(uq => uq.Status == "IN_PROGRESS" && uq.Quest.EndDate < now)
+                .Where(uq => uq.Status == "IN_PROGRESS")
                 .ToListAsync();
         }
     }

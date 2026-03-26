@@ -56,8 +56,6 @@ namespace Service
                 Title = dto.Title,
                 Description = dto.Description,
                 ImageUrl = dto.ImageUrl,
-                StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
                 IsActive = dto.IsActive,
                 CampaignId = dto.CampaignId,
                 QuestTasks = dto.Tasks.Select(t => new QuestTask
@@ -86,10 +84,6 @@ namespace Service
                 quest.Description = dto.Description;
             if (dto.ImageUrl != null)
                 quest.ImageUrl = dto.ImageUrl;
-            if (dto.StartDate.HasValue)
-                quest.StartDate = dto.StartDate.Value;
-            if (dto.EndDate.HasValue)
-                quest.EndDate = dto.EndDate.Value;
             if (dto.IsActive.HasValue)
                 quest.IsActive = dto.IsActive.Value;
             if (dto.CampaignId.HasValue)
@@ -172,10 +166,6 @@ namespace Service
             if (!quest.IsActive)
                 throw new Exception("Quest is not available");
 
-            var now = DateTime.UtcNow;
-            if (quest.EndDate < now)
-                throw new Exception("Quest has ended");
-
             var existing = await _userQuestRepository.GetByUserAndQuestAsync(userId, questId);
             if (existing != null)
                 throw new Exception("You are already enrolled in this quest");
@@ -240,8 +230,6 @@ namespace Service
                 Title = quest.Title,
                 Description = quest.Description,
                 ImageUrl = quest.ImageUrl,
-                StartDate = quest.StartDate,
-                EndDate = quest.EndDate,
                 IsActive = quest.IsActive,
                 CampaignId = quest.CampaignId,
                 CreatedAt = quest.CreatedAt,
@@ -283,8 +271,6 @@ namespace Service
                 Title = uq.Quest.Title,
                 Description = uq.Quest.Description,
                 ImageUrl = uq.Quest.ImageUrl,
-                StartDate = uq.Quest.StartDate,
-                EndDate = uq.Quest.EndDate,
                 Status = uq.Status,
                 StartedAt = uq.StartedAt,
                 CompletedAt = uq.CompletedAt,
