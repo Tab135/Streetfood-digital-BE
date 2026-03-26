@@ -18,6 +18,7 @@ public class OrderService : IOrderService
     private readonly IUserVoucherRepository _userVoucherRepository;
     private readonly IBranchCampaignRepository _branchCampaignRepository;
     private readonly INotificationService _notificationService;
+    private readonly IQuestProgressService _questProgressService;
 
     public OrderService(
         IOrderRepository orderRepository,
@@ -27,7 +28,8 @@ public class OrderService : IOrderService
         IVendorRepository vendorRepository,
         IUserVoucherRepository userVoucherRepository,
         IBranchCampaignRepository branchCampaignRepository,
-        INotificationService notificationService
+        INotificationService notificationService,
+        IQuestProgressService questProgressService
     )
     {
         _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
@@ -38,6 +40,7 @@ public class OrderService : IOrderService
         _userVoucherRepository = userVoucherRepository ?? throw new ArgumentNullException(nameof(userVoucherRepository));
         _branchCampaignRepository = branchCampaignRepository ?? throw new ArgumentNullException(nameof(branchCampaignRepository));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+        _questProgressService = questProgressService ?? throw new ArgumentNullException(nameof(questProgressService));
     }
 
     public async Task<OrderResponseDto> CreateOrderAsync(CreateOrderRequest request, int userId)
@@ -511,6 +514,9 @@ public class OrderService : IOrderService
             $"Đơn hàng #{order.OrderId} ở {branch.Name} đã được hoàn thành",
             order.OrderId,
             pushData);
+
+        // Update quest progress for ORDER_AMOUNT tasks
+        await _questProgressService.UpdateProgressAsync(order.UserId, "ORDER_AMOUNT", (int)order.FinalAmount);
 
         return MapToDto(updated);
     }

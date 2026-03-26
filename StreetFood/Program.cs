@@ -160,6 +160,14 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
         builder.Services.AddScoped<Repository.Interfaces.IBranchCampaignRepository, Repository.BranchCampaignRepository>();
         builder.Services.AddScoped<Service.Interfaces.ICampaignService, Service.CampaignService>();
 
+        // Quests
+        builder.Services.AddScoped<DAL.QuestDAO>();
+        builder.Services.AddScoped<DAL.UserQuestDAO>();
+        builder.Services.AddScoped<Repository.Interfaces.IQuestRepository, Repository.QuestRepository>();
+        builder.Services.AddScoped<Repository.Interfaces.IUserQuestRepository, Repository.UserQuestRepository>();
+        builder.Services.AddScoped<Service.Interfaces.IQuestService, Service.QuestService>();
+        builder.Services.AddScoped<Service.Interfaces.IQuestProgressService, Service.QuestProgressService>();
+
         // Search Service
             builder.Services.AddScoped<ISearchService, SearchService>();
             builder.Services.AddHostedService<OtpCleanupService>();

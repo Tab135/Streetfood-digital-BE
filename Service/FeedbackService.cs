@@ -20,6 +20,7 @@ namespace Service
         private readonly IBranchMetricsService _branchMetricsService;
         private readonly INotificationService _notificationService;
         private readonly IOrderRepository _orderRepository;
+        private readonly IQuestProgressService _questProgressService;
 
         public FeedbackService(
             IFeedbackRepository feedbackRepository,
@@ -29,7 +30,8 @@ namespace Service
             IDishRepository dishRepository,
             IBranchMetricsService branchMetricsService,
             INotificationService notificationService,
-            IOrderRepository orderRepository)
+            IOrderRepository orderRepository,
+            IQuestProgressService questProgressService)
         {
             _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
@@ -39,6 +41,7 @@ namespace Service
             _branchMetricsService = branchMetricsService ?? throw new ArgumentNullException(nameof(branchMetricsService));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
+            _questProgressService = questProgressService ?? throw new ArgumentNullException(nameof(questProgressService));
         }
 
         public async Task<FeedbackResponseDto> CreateFeedback(CreateFeedbackDto createFeedbackDto, int userId)
@@ -149,6 +152,9 @@ namespace Service
                         createdFeedback.FeedbackId);
                 }
             }
+
+            // Update quest progress for REVIEW tasks
+            await _questProgressService.UpdateProgressAsync(userId, "REVIEW", 1);
 
             return await MapToResponseDtoAsync(createdFeedback);
         }
