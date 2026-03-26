@@ -1,6 +1,7 @@
 using BO.Common;
 using BO.DTO.Feedback;
 using BO.Entities;
+using BO.Enums;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -154,7 +155,7 @@ namespace Service
             }
 
             // Update quest progress for REVIEW tasks
-            await _questProgressService.UpdateProgressAsync(userId, "REVIEW", 1);
+            await _questProgressService.UpdateProgressAsync(userId, QuestTaskType.REVIEW, 1);
 
             return await MapToResponseDtoAsync(createdFeedback);
         }

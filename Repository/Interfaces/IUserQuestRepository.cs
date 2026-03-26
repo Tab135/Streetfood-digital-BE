@@ -1,4 +1,5 @@
 using BO.Entities;
+using BO.Enums;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -10,7 +11,7 @@ namespace Repository.Interfaces
         Task<UserQuest?> GetByUserAndQuestAsync(int userId, int questId);
         Task<UserQuest?> GetByIdAsync(int userQuestId);
         Task<List<UserQuest>> GetByUserIdAsync(int userId, string? status);
-        Task<List<UserQuestTask>> GetInProgressTasksByTypeAsync(int userId, string taskType);
+        Task<List<UserQuestTask>> GetInProgressTasksByTypeAsync(int userId, QuestTaskType taskType);
         Task UpdateUserQuestTaskAsync(UserQuestTask userQuestTask);
         Task UpdateUserQuestAsync(UserQuest userQuest);
         Task<bool> AreAllTasksCompletedAsync(int userQuestId);

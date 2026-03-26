@@ -1,5 +1,6 @@
 using BO.DTO.Payments;
 using BO.Entities;
+using BO.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace DAL;
@@ -596,9 +597,9 @@ public class StreetFoodDbContext : DbContext
         modelBuilder.Entity<QuestTask>(entity =>
         {
             entity.HasKey(e => e.QuestTaskId);
-            entity.Property(e => e.Type).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Type).IsRequired().HasMaxLength(50).HasConversion<string>();
             entity.Property(e => e.Description).HasMaxLength(500);
-            entity.Property(e => e.RewardType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.RewardType).IsRequired().HasMaxLength(50).HasConversion<string>();
 
             entity.HasOne(e => e.Quest)
                   .WithMany(q => q.QuestTasks)

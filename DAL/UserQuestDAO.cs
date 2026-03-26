@@ -1,4 +1,5 @@
 using BO.Entities;
+using BO.Enums;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -56,7 +57,7 @@ namespace DAL
             return await query.OrderByDescending(uq => uq.StartedAt).ToListAsync();
         }
 
-        public async Task<List<UserQuestTask>> GetInProgressTasksByTypeAsync(int userId, string taskType)
+        public async Task<List<UserQuestTask>> GetInProgressTasksByTypeAsync(int userId, QuestTaskType taskType)
         {
             return await _context.UserQuestTasks
                 .Include(uqt => uqt.QuestTask)

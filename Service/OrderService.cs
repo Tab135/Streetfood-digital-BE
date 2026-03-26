@@ -1,6 +1,7 @@
 using BO.Common;
 using BO.DTO.Order;
 using BO.Entities;
+using BO.Enums;
 using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
@@ -516,7 +517,7 @@ public class OrderService : IOrderService
             pushData);
 
         // Update quest progress for ORDER_AMOUNT tasks
-        await _questProgressService.UpdateProgressAsync(order.UserId, "ORDER_AMOUNT", (int)order.FinalAmount);
+        await _questProgressService.UpdateProgressAsync(order.UserId, QuestTaskType.ORDER_AMOUNT, (int)order.FinalAmount);
 
         return MapToDto(updated);
     }

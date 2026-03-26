@@ -1,6 +1,7 @@
 using BO.Common;
 using BO.DTO.Quest;
 using BO.Entities;
+using BO.Enums;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -211,25 +212,23 @@ namespace Service
             return userQuests.Select(MapToProgressDto).ToList();
         }
 
-        private async Task ValidateTaskRewardAsync(string rewardType, int rewardValue)
+        private async Task ValidateTaskRewardAsync(QuestRewardType rewardType, int rewardValue)
         {
-            switch (rewardType.ToUpper())
+            switch (rewardType)
             {
-                case "BADGE":
+                case QuestRewardType.BADGE:
                     var badgeExists = await _badgeRepository.Exists(rewardValue);
                     if (!badgeExists)
                         throw new Exception($"Badge with ID {rewardValue} not found");
                     break;
-                case "VOUCHER":
+                case QuestRewardType.VOUCHER:
                     var voucher = await _voucherRepository.GetByIdAsync(rewardValue);
                     if (voucher == null)
                         throw new Exception($"Voucher with ID {rewardValue} not found");
                     break;
-                case "POINTS":
+                case QuestRewardType.POINTS:
                     // No external reference to validate
                     break;
-                default:
-                    throw new Exception($"Invalid reward type: {rewardType}. Must be BADGE, POINTS, or VOUCHER");
             }
         }
 

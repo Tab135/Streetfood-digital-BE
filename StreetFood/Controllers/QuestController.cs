@@ -1,4 +1,5 @@
 using BO.DTO.Quest;
+using BO.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
@@ -117,7 +118,7 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> CheckIn(int branchId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            await _questProgressService.UpdateProgressAsync(userId, "VISIT", 1);
+            await _questProgressService.UpdateProgressAsync(userId, QuestTaskType.VISIT, 1);
             return Ok(new { message = "Check-in recorded successfully" });
         }
 
@@ -126,7 +127,7 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> ShareStall(int branchId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            await _questProgressService.UpdateProgressAsync(userId, "SHARE", 1);
+            await _questProgressService.UpdateProgressAsync(userId, QuestTaskType.SHARE, 1);
             return Ok(new { message = "Share recorded successfully" });
         }
     }

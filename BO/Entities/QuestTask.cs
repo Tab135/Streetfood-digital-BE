@@ -17,8 +17,7 @@ namespace BO.Entities
         public virtual Quest Quest { get; set; } = null!;
 
         [Required]
-        [MaxLength(50)]
-        public string Type { get; set; } = string.Empty;
+        public QuestTaskType Type { get; set; }
 
         public int TargetValue { get; set; }
 
@@ -26,8 +25,7 @@ namespace BO.Entities
         public string? Description { get; set; }
 
         [Required]
-        [MaxLength(50)]
-        public string RewardType { get; set; } = string.Empty;
+        public QuestRewardType RewardType { get; set; }
 
         public int RewardValue { get; set; }
 

@@ -1,4 +1,5 @@
 using BO.Entities;
+using BO.Enums;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -25,7 +26,7 @@ namespace Service
             _userVoucherRepository = userVoucherRepository;
         }
 
-        public async Task UpdateProgressAsync(int userId, string taskType, int incrementValue)
+        public async Task UpdateProgressAsync(int userId, QuestTaskType taskType, int incrementValue)
         {
             var matchingTasks = await _userQuestRepository.GetInProgressTasksByTypeAsync(userId, taskType);
 
@@ -58,12 +59,12 @@ namespace Service
 
         private async Task DistributeTaskRewardAsync(int userId, UserQuestTask userQuestTask)
         {
-            var rewardType = userQuestTask.QuestTask.RewardType.ToUpper();
+            var rewardType = userQuestTask.QuestTask.RewardType;
             var rewardValue = userQuestTask.QuestTask.RewardValue;
 
             switch (rewardType)
             {
-                case "BADGE":
+                case QuestRewardType.BADGE:
                     var userBadge = new UserBadge
                     {
                         UserId = userId,
@@ -73,7 +74,7 @@ namespace Service
                     await _userBadgeRepository.Create(userBadge);
                     break;
 
-                case "POINTS":
+                case QuestRewardType.POINTS:
                     var user = await _userRepository.GetUserById(userId);
                     if (user != null)
                     {
@@ -82,7 +83,7 @@ namespace Service
                     }
                     break;
 
-                case "VOUCHER":
+                case QuestRewardType.VOUCHER:
                     var existingUserVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, rewardValue);
                     if (existingUserVoucher != null)
                     {
