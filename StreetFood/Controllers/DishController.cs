@@ -3,6 +3,7 @@ using BO.DTO.Dish;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using StreetFood.Services;
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -14,10 +15,12 @@ namespace StreetFood.Controllers
     public class DishController : ControllerBase
     {
         private readonly IDishService _dishService;
+        private readonly IS3Service _s3Service;
 
-        public DishController(IDishService dishService)
+        public DishController(IDishService dishService, IS3Service s3Service)
         {
             _dishService = dishService ?? throw new ArgumentNullException(nameof(dishService));
+            _s3Service = s3Service ?? throw new ArgumentNullException(nameof(s3Service));
         }
 
         [HttpPost("vendor/{vendorId}")]
@@ -42,7 +45,7 @@ namespace StreetFood.Controllers
                 return Unauthorized(new { message = "User not authenticated" });
             }
 
-            var imageUrl = await SaveDishImageAsync(imageFile);
+            var imageUrl = await _s3Service.UploadFileAsync(imageFile, "dishes");
 
             var result = await _dishService.CreateDishAsync(vendorId, request, userId, imageUrl);
             return CreatedAtAction(nameof(GetDishById), new { id = result.DishId }, result);
@@ -102,7 +105,7 @@ namespace StreetFood.Controllers
             string? imageUrl = null;
             if (imageFile != null && imageFile.Length > 0)
             {
-                imageUrl = await SaveDishImageAsync(imageFile);
+                imageUrl = await _s3Service.UploadFileAsync(imageFile, "dishes");
             }
 
             var result = await _dishService.UpdateDishAsync(id, request, userId, imageUrl);
@@ -166,24 +169,6 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Dish availability updated successfully" });
         }
 
-        private static async Task<string> SaveDishImageAsync(IFormFile imageFile)
-        {
-            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "dishes");
-            if (!Directory.Exists(uploadsFolder))
-            {
-                Directory.CreateDirectory(uploadsFolder);
-            }
-
-            var uniqueFileName = $"{Guid.NewGuid()}_{imageFile.FileName}";
-            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-            await using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await imageFile.CopyToAsync(stream);
-            }
-
-            return "http://159.223.47.89:5298" + $"/uploads/dishes/{uniqueFileName}";
-        }
     }
 }
 

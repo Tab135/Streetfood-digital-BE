@@ -3,6 +3,7 @@ using BO.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using StreetFood.Services;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -14,11 +15,13 @@ namespace StreetFood.Controllers
     {
         private readonly ICampaignService _campaignService;
         private readonly Service.PaymentsService.IPaymentService _paymentService;
+        private readonly IS3Service _s3Service;
 
-        public CampaignController(ICampaignService campaignService, Service.PaymentsService.IPaymentService paymentService)
+        public CampaignController(ICampaignService campaignService, Service.PaymentsService.IPaymentService paymentService, IS3Service s3Service)
         {
             _campaignService = campaignService;
             _paymentService = paymentService;
+            _s3Service = s3Service;
         }
 
         [HttpPost("system")]
@@ -140,19 +143,7 @@ namespace StreetFood.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
 
-            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "campaigns");
-            if (!Directory.Exists(uploadsFolder))
-                Directory.CreateDirectory(uploadsFolder);
-
-            var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
-            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await image.CopyToAsync(stream);
-            }
-
-            var imageUrl = "http://159.223.47.89:5298" + $"/uploads/campaigns/{uniqueFileName}";
+            var imageUrl = await _s3Service.UploadFileAsync(image, "campaigns");
             await _campaignService.UpdateCampaignImageUrlAsync(campaignId, imageUrl, userId, userRole);
             return Ok(new { message = "Image updated successfully", data = imageUrl });
         }

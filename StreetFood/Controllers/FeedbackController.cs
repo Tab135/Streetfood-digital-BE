@@ -3,6 +3,7 @@ using BO.DTO.Feedback;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using StreetFood.Services;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -17,15 +18,18 @@ namespace StreetFood.Controllers
         private readonly IFeedbackService _feedbackService;
         private readonly IFeedbackVoteService _feedbackVoteService;
         private readonly IVendorReplyService _vendorReplyService;
+        private readonly IS3Service _s3Service;
 
         public FeedbackController(
             IFeedbackService feedbackService,
             IFeedbackVoteService feedbackVoteService,
-            IVendorReplyService vendorReplyService)
+            IVendorReplyService vendorReplyService,
+            IS3Service s3Service)
         {
             _feedbackService = feedbackService ?? throw new ArgumentNullException(nameof(feedbackService));
             _feedbackVoteService = feedbackVoteService ?? throw new ArgumentNullException(nameof(feedbackVoteService));
             _vendorReplyService = vendorReplyService ?? throw new ArgumentNullException(nameof(vendorReplyService));
+            _s3Service = s3Service ?? throw new ArgumentNullException(nameof(s3Service));
         }
 
         [HttpPost]
@@ -94,26 +98,13 @@ namespace StreetFood.Controllers
                     return Unauthorized(new { message = "User not authenticated" });
                 }
 
-                // Save the uploaded images
-                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "feedbacks");
-                if (!Directory.Exists(uploadsFolder))
-                {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
                 var imageUrls = new List<string>();
                 foreach (var image in images)
                 {
                     if (image.Length > 0)
                     {
-                        var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        using (var stream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await image.CopyToAsync(stream);
-                        }
-                        imageUrls.Add("http://159.223.47.89:5298" + $"/uploads/feedbacks/{uniqueFileName}");
+                        var url = await _s3Service.UploadFileAsync(image, "feedbacks");
+                        imageUrls.Add(url);
                     }
                 }
 

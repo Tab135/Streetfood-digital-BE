@@ -171,6 +171,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
         // Search Service
             builder.Services.AddScoped<ISearchService, SearchService>();
             builder.Services.AddHostedService<OtpCleanupService>();
+            builder.Services.AddSingleton<StreetFood.Services.IS3Service, StreetFood.Services.S3Service>();
 
             // JWT Authentication Configuration
             var jwtKey = builder.Configuration["Jwt:Key"] ?? "YourDefaultJwtKeyHere"; // Add to appsettings
