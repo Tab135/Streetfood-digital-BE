@@ -15,6 +15,7 @@ namespace Repository.Interfaces
         Task UpdateUserQuestAsync(UserQuest userQuest);
         Task<bool> AreAllTasksCompletedAsync(int userQuestId);
         Task AddUserQuestTasksAsync(List<UserQuestTask> tasks);
+        Task<List<UserQuest>> GetByUserAndCampaignAsync(int userId, int campaignId);
         Task<List<UserQuest>> GetExpiredQuestsAsync();
     }
 }

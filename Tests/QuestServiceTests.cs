@@ -474,7 +474,7 @@ public class QuestServiceTests
         // Arrange
         var quests = new List<Quest> { MakeQuest(1) };
         _questRepoMock
-            .Setup(r => r.GetPublicQuestsAsync(1, 10))
+            .Setup(r => r.GetPublicQuestsAsync(null, 1, 10))
             .ReturnsAsync((quests, 1));
 
         var query = new QuestQueryDto { PageNumber = 1, PageSize = 10 };

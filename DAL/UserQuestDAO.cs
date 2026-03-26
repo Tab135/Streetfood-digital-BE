@@ -93,6 +93,18 @@ namespace DAL
             await _context.SaveChangesAsync();
         }
 
+        public async Task<List<UserQuest>> GetByUserAndCampaignAsync(int userId, int campaignId)
+        {
+            return await _context.UserQuests
+                .Include(uq => uq.UserQuestTasks)
+                    .ThenInclude(uqt => uqt.QuestTask)
+                .Include(uq => uq.Quest)
+                    .ThenInclude(q => q.QuestTasks)
+                .Where(uq => uq.UserId == userId && uq.Quest.CampaignId == campaignId)
+                .OrderByDescending(uq => uq.StartedAt)
+                .ToListAsync();
+        }
+
         public async Task<List<UserQuest>> GetExpiredQuestsAsync()
         {
             var now = DateTime.UtcNow;

@@ -76,6 +76,15 @@ namespace StreetFood.Controllers
 
         // ==================== User-facing ====================
 
+        [HttpGet("campaign/{campaignId}/my-progress")]
+        [Authorize]
+        public async Task<IActionResult> GetCampaignQuestProgress(int campaignId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _questService.GetCampaignQuestProgressAsync(userId, campaignId);
+            return Ok(new { message = "Campaign quest progress retrieved successfully", data = result });
+        }
+
         [HttpPost("{questId}/enroll")]
         [Authorize]
         public async Task<IActionResult> EnrollInQuest(int questId)

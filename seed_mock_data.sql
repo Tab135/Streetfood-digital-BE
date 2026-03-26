@@ -595,14 +595,17 @@ INSERT INTO "Notifications" (
 -- ============================================================
 -- 28. CAMPAIGNS
 -- CreatedByBranchId / CreatedByVendorId are nullable (system campaign = both NULL)
+-- Status: 'Active' | 'Ended' | 'Upcoming' | 'Cancelled'
+-- isJoined (returned by API): computed per-user/vendor from BranchCampaigns
 -- ============================================================
 INSERT INTO "Campaigns" (
     "CampaignId", "CreatedByBranchId", "CreatedByVendorId",
     "Name", "Description", "TargetSegment",
     "RegistrationStartDate", "RegistrationEndDate",
-    "StartDate", "EndDate", "CreatedAt", "UpdatedAt"
+    "StartDate", "EndDate",
+    "CreatedAt", "UpdatedAt"
 ) VALUES
--- System campaign (created by admin, both FK null)
+-- Campaign 1: Active system campaign (isJoined: true for branches 1,3 via BranchCampaigns)
 (1, NULL, NULL,
  'Lễ Hội Ẩm Thực Đường Phố Hè 2026',
  'Sự kiện quảng bá ẩm thực đường phố TP.HCM mùa hè 2026. Các gian hàng tham gia sẽ được hiển thị nổi bật và tặng voucher cho khách hàng.',
@@ -611,7 +614,7 @@ INSERT INTO "Campaigns" (
  NOW() + INTERVAL '5 days',  NOW() + INTERVAL '35 days',
  NOW() - INTERVAL '25 days', NOW() - INTERVAL '5 days'),
 
--- Vendor 1 campaign (Bún Bò)
+-- Campaign 2: Active vendor campaign — Bún Bò (isJoined: true for branch 1)
 (2, 1, 1,
  'Khuyến Mãi Sinh Nhật Quán Bún Bò Dì Hương',
  'Nhân dịp kỷ niệm 1 năm thành lập, Bún Bò Dì Hương giảm giá đặc biệt cho tất cả các món bún và tặng voucher cho khách hàng thân thiết.',
@@ -620,31 +623,55 @@ INSERT INTO "Campaigns" (
  NOW() + INTERVAL '2 days',  NOW() + INTERVAL '17 days',
  NOW() - INTERVAL '12 days', NOW() - INTERVAL '3 days'),
 
--- Vendor 2 campaign (Cơm Tấm)
+-- Campaign 3: Active vendor campaign — Cơm Tấm (isJoined: true for branch 3)
 (3, 3, 2,
  'Combo Cơm Tấm Cuối Tuần Giá Rẻ',
  'Mỗi cuối tuần, thưởng thức combo cơm tấm đặc biệt với giá ưu đãi. Đặt hàng qua app nhận ngay voucher giảm giá cho lần tiếp theo.',
  'Khách hàng mới',
  NOW() - INTERVAL '5 days', NOW() + INTERVAL '2 days',
  NOW() + INTERVAL '7 days',  NOW() + INTERVAL '37 days',
- NOW() - INTERVAL '7 days',  NOW() - INTERVAL '2 days');
+ NOW() - INTERVAL '7 days',  NOW() - INTERVAL '2 days'),
+
+-- Campaign 4: Second active system campaign — no branches joined (tests isJoined:false)
+(4, NULL, NULL,
+ 'Tuần Lễ Khám Phá Ẩm Thực Mới',
+ 'Chương trình khuyến khích thực khách thử những món ăn chưa từng ăn. Ghé các quán mới đăng ký trên app và nhận điểm thưởng đặc biệt.',
+ 'Tất cả',
+ NOW() - INTERVAL '3 days', NOW() + INTERVAL '4 days',
+ NOW() + INTERVAL '7 days',  NOW() + INTERVAL '21 days',
+ NOW() - INTERVAL '5 days', NOW()),
+
+-- Campaign 5: Ended vendor campaign — Bánh Mì (tests expired/past campaign)
+(5, 4, 3,
+ 'Khai Trương Chi Nhánh Bánh Mì Ba Lan Q5',
+ 'Ưu đãi khai trương! Giảm 30% toàn bộ menu tại chi nhánh mới Q5 trong suốt tuần đầu tiên.',
+ 'Tất cả',
+ NOW() - INTERVAL '60 days', NOW() - INTERVAL '53 days',
+ NOW() - INTERVAL '50 days', NOW() - INTERVAL '43 days',
+ NOW() - INTERVAL '65 days', NOW() - INTERVAL '43 days');
 
 -- ============================================================
 -- 29. BRANCH CAMPAIGNS
 -- Status: 'Pending' | 'paid' | 'active' | 'rejected'
 -- ============================================================
-INSERT INTO "BranchCampaigns" ("Id", "CampaignId", "BranchId", "Status", "JoinedAt") VALUES
+INSERT INTO "BranchCampaigns" ("Id", "CampaignId", "BranchId", "IsActive", "JoinedAt") VALUES
 -- Campaign 1 (Lễ Hội Hè): 3 branches joined
-(1, 1, 1, 'active',   NOW() - INTERVAL '18 days'),  -- Bún Bò Q1: đã duyệt, đang chạy
-(2, 1, 3, 'active',   NOW() - INTERVAL '17 days'),  -- Cơm Tấm BT: đã duyệt
-(3, 1, 4, 'Pending',  NOW() - INTERVAL '8 days'),   -- Bánh Mì Q5: chờ duyệt
+(1, 1, 1, true,  NOW() - INTERVAL '18 days'),  -- Bún Bò Q1: active
+(2, 1, 3, true,  NOW() - INTERVAL '17 days'),  -- Cơm Tấm BT: active
+(3, 1, 4, false, NOW() - INTERVAL '8 days'),   -- Bánh Mì Q5: chờ duyệt
 
 -- Campaign 2 (Sinh Nhật Bún Bò): 2 branches của Vendor 1
-(4, 2, 1, 'active',   NOW() - INTERVAL '9 days'),   -- Bún Bò Q1: đang chạy
-(5, 2, 2, 'paid',     NOW() - INTERVAL '8 days'),   -- Bún Bò Q3: đã thanh toán, chờ kích hoạt
+(4, 2, 1, true,  NOW() - INTERVAL '9 days'),   -- Bún Bò Q1: active
+(5, 2, 2, false, NOW() - INTERVAL '8 days'),   -- Bún Bò Q3: chưa active
 
 -- Campaign 3 (Cơm Tấm Cuối Tuần): 1 branch
-(6, 3, 3, 'active',   NOW() - INTERVAL '4 days');   -- Cơm Tấm BT: đang chạy
+(6, 3, 3, true,  NOW() - INTERVAL '4 days'),   -- Cơm Tấm BT: active
+
+-- Campaign 4 (Tuần Khám Phá): no branches — tests isJoined:false
+-- (intentionally empty)
+
+-- Campaign 5 (Khai Trương Bánh Mì — đã kết thúc)
+(7, 5, 4, false, NOW() - INTERVAL '48 days');  -- Bánh Mì Q5: inactive
 
 -- ============================================================
 -- 30. CAMPAIGN-LINKED VOUCHERS (new, beyond the 3 existing ones)
@@ -684,7 +711,149 @@ INSERT INTO "UserVouchers" ("UserVoucherId", "UserId", "VoucherId", "Quantity", 
 (11, 9,  6, 1, true);   -- Cuong: Voucher Cơm Tấm Cuối Tuần 15K
 
 -- ============================================================
--- 32. RESET IDENTITY SEQUENCES
+-- 32. QUESTS
+-- Tests: public list pagination, with/without imageUrl, linked/unlinked campaign,
+--        active vs inactive (expired), all task count variations
+-- ============================================================
+INSERT INTO "Quests" (
+    "QuestId", "Title", "Description", "ImageUrl",
+    "StartDate", "EndDate", "IsActive", "CampaignId",
+    "CreatedAt", "UpdatedAt"
+) VALUES
+-- Quest 1: Linked to system Campaign 1 — active, 3 tasks, has imageUrl
+--   Tests: campaignId != null, image header, IN_PROGRESS (User An) + COMPLETED (User Dung)
+(1,
+ 'Khám Phá Ẩm Thực Đường Phố HCM',
+ 'Ghé thăm các quán ẩm thực đường phố, để lại đánh giá và chia sẻ trải nghiệm để nhận phần thưởng hấp dẫn từ Lễ Hội Ẩm Thực Hè 2026.',
+ 'https://via.placeholder.com/800x400/a1d973?text=Khám+Phá+Ẩm+Thực',
+ NOW() + INTERVAL '5 days',  NOW() + INTERVAL '35 days',
+ true, 1,
+ NOW() - INTERVAL '5 days',  NULL),
+
+-- Quest 2: No campaign link — active, 2 tasks, no imageUrl
+--   Tests: campaignId == null, fallback header, COMPLETED (User Binh)
+(2,
+ 'Tín Đồ Bánh Mì Sài Gòn',
+ 'Khám phá các tiệm bánh mì ngon nhất HCM. Ghé thăm và đặt hàng để chứng tỏ bạn là tín đồ bánh mì thực thụ!',
+ NULL,
+ NOW() - INTERVAL '10 days', NOW() + INTERVAL '20 days',
+ true, NULL,
+ NOW() - INTERVAL '10 days', NULL),
+
+-- Quest 3: No campaign link — active, 2 tasks, has imageUrl
+--   Tests: REVIEW + SHARE task types, BADGE reward, IN_PROGRESS with 0 progress (User An)
+(3,
+ 'Thám Tử Đường Phố',
+ 'Viết đánh giá chi tiết và chia sẻ các quán ăn yêu thích của bạn với bạn bè để nhận phần thưởng đặc biệt.',
+ 'https://via.placeholder.com/800x400/FFD700?text=Thám+Tử+Đường+Phố',
+ NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days',
+ true, NULL,
+ NOW() - INTERVAL '15 days', NULL),
+
+-- Quest 4: Linked to vendor Campaign 3 (Cơm Tấm) — active, 1 task, no imageUrl
+--   Tests: single-task quest, VOUCHER reward, not yet enrolled by any user
+(4,
+ 'Vua Cơm Tấm Sài Gòn',
+ 'Chứng tỏ tình yêu với cơm tấm Sài Gòn! Đặt hàng đủ số lượng trong tháng và nhận ngay voucher đặc biệt từ chương trình Cơm Tấm Cuối Tuần.',
+ NULL,
+ NOW() + INTERVAL '7 days',  NOW() + INTERVAL '37 days',
+ true, 3,
+ NOW() - INTERVAL '2 days',  NULL),
+
+-- Quest 5: No campaign — EXPIRED (isActive:false, endDate in past)
+--   Tests: expired quest rendering, EXPIRED user status (User Cường)
+(5,
+ 'Tiệc Tất Niên Ẩm Thực 2025',
+ 'Sự kiện kỷ niệm cuối năm đã kết thúc. Cảm ơn tất cả thực khách đã tham gia!',
+ NULL,
+ NOW() - INTERVAL '60 days', NOW() - INTERVAL '30 days',
+ false, NULL,
+ NOW() - INTERVAL '65 days', NOW() - INTERVAL '30 days');
+
+-- ============================================================
+-- 33. QUEST TASKS
+-- Covers all QuestTaskType values: REVIEW, ORDER_AMOUNT, VISIT, SHARE
+-- Covers all QuestRewardType values: BADGE, POINTS, VOUCHER
+-- ============================================================
+INSERT INTO "QuestTasks" (
+    "QuestTaskId", "QuestId", "Type", "TargetValue", "Description", "RewardType", "RewardValue"
+) VALUES
+-- Quest 1 tasks (3 tasks — full coverage of all task & reward types)
+(1,  1, 'VISIT',        3,      'Ghé thăm 3 quán ẩm thực khác nhau trên app',                    'POINTS',  50),
+(2,  1, 'REVIEW',       2,      'Viết 2 đánh giá chi tiết về quán ăn (ít nhất 30 chữ mỗi bài)',  'BADGE',   2),
+(3,  1, 'ORDER_AMOUNT', 200000, 'Đặt hàng tổng cộng 200.000đ qua app trong thời gian sự kiện',   'VOUCHER', 1),
+
+-- Quest 2 tasks (2 tasks — VISIT + ORDER_AMOUNT, POINTS reward)
+(4,  2, 'VISIT',        3,      'Ghé thăm 3 tiệm bánh mì khác nhau',                             'POINTS',  30),
+(5,  2, 'ORDER_AMOUNT', 100000, 'Đặt hàng tổng cộng 100.000đ tại tiệm bánh mì',                  'POINTS',  50),
+
+-- Quest 3 tasks (2 tasks — REVIEW + SHARE, POINTS + BADGE reward)
+(6,  3, 'REVIEW',       1,      'Viết 1 đánh giá chi tiết (ít nhất 50 chữ)',                     'POINTS',  20),
+(7,  3, 'SHARE',        2,      'Chia sẻ 2 quán ăn yêu thích với bạn bè qua app',                'BADGE',   1),
+
+-- Quest 4 tasks (1 task — ORDER_AMOUNT, VOUCHER reward)
+(8,  4, 'ORDER_AMOUNT', 300000, 'Đặt hàng tổng cộng 300.000đ tại các quán cơm tấm trong tháng', 'VOUCHER', 1),
+
+-- Quest 5 tasks (2 tasks — expired quest, partial completion history)
+(9,  5, 'VISIT',        5,      'Ghé thăm 5 quán ẩm thực trong tuần cuối năm',                   'POINTS',  100),
+(10, 5, 'ORDER_AMOUNT', 500000, 'Đặt hàng tổng cộng 500.000đ trong tháng 12',                    'VOUCHER', 2);
+
+-- ============================================================
+-- 34. USER QUESTS
+-- Covers all UserQuestStatus values: IN_PROGRESS, COMPLETED, EXPIRED
+-- User 7  (An):    Quest 1 IN_PROGRESS (2/3 tasks partially done)
+-- User 8  (Binh):  Quest 2 COMPLETED (both tasks done)
+-- User 7  (An):    Quest 3 IN_PROGRESS (0/2 tasks started)
+-- User 10 (Dung):  Quest 1 COMPLETED (all tasks done)
+-- User 9  (Cường): Quest 5 EXPIRED (partial progress)
+-- Quest 4: not enrolled by anyone — tests "Start Quest" enroll button on FE
+-- ============================================================
+INSERT INTO "UserQuests" (
+    "UserQuestId", "UserId", "QuestId", "Status", "StartedAt", "CompletedAt"
+) VALUES
+(1, 7,  1, 'IN_PROGRESS', NOW() - INTERVAL '3 days',  NULL),                        -- An: Quest 1 đang thực hiện
+(2, 8,  2, 'COMPLETED',   NOW() - INTERVAL '8 days',  NOW() - INTERVAL '2 days'),   -- Binh: Quest 2 hoàn thành
+(3, 7,  3, 'IN_PROGRESS', NOW() - INTERVAL '1 day',   NULL),                        -- An: Quest 3 mới bắt đầu
+(4, 10, 1, 'COMPLETED',   NOW() - INTERVAL '5 days',  NOW() - INTERVAL '1 day'),    -- Dung: Quest 1 hoàn thành
+(5, 9,  5, 'EXPIRED',     NOW() - INTERVAL '55 days', NULL);                        -- Cường: Quest 5 hết hạn
+
+-- ============================================================
+-- 35. USER QUEST TASKS
+-- Tracks per-task progress for each UserQuest above
+-- ============================================================
+INSERT INTO "UserQuestTasks" (
+    "UserQuestTaskId", "UserQuestId", "QuestTaskId",
+    "CurrentValue", "IsCompleted", "CompletedAt", "RewardClaimed"
+) VALUES
+-- UserQuest 1 (An, Quest 1 IN_PROGRESS):
+--   Task VISIT 3/3 done + reward claimed
+--   Task REVIEW 1/2 in progress
+--   Task ORDER_AMOUNT 95k/200k in progress
+(1,  1, 1, 3,      true,  NOW() - INTERVAL '2 days', true),
+(2,  1, 2, 1,      false, NULL,                      false),
+(3,  1, 3, 95000,  false, NULL,                      false),
+
+-- UserQuest 2 (Binh, Quest 2 COMPLETED):
+--   Both tasks done + rewards claimed
+(4,  2, 4, 3,      true,  NOW() - INTERVAL '5 days', true),
+(5,  2, 5, 105000, true,  NOW() - INTERVAL '2 days', true),
+
+-- UserQuest 3 (An, Quest 3 IN_PROGRESS — fresh start, 0 progress):
+(6,  3, 6, 0,      false, NULL,                      false),
+(7,  3, 7, 0,      false, NULL,                      false),
+
+-- UserQuest 4 (Dung, Quest 1 COMPLETED):
+--   All 3 tasks done + rewards claimed
+(8,  4, 1, 3,      true,  NOW() - INTERVAL '4 days', true),
+(9,  4, 2, 2,      true,  NOW() - INTERVAL '3 days', true),
+(10, 4, 3, 220000, true,  NOW() - INTERVAL '1 day',  true),
+
+-- UserQuest 5 (Cường, Quest 5 EXPIRED — partial, no rewards):
+(11, 5, 9, 2,      false, NULL,                      false),
+(12, 5, 10, 100000, false, NULL,                     false);
+
+-- ============================================================
+-- 36. RESET IDENTITY SEQUENCES
 -- ============================================================
 ALTER TABLE "Categories"              ALTER COLUMN "CategoryId"              RESTART WITH 11;
 ALTER TABLE "Tastes"                  ALTER COLUMN "TasteId"                 RESTART WITH 6;
@@ -701,8 +870,8 @@ ALTER TABLE "DishTastes"              ALTER COLUMN "DishTasteId"             RES
 -- DishDietaryPreferences table dropped – no sequence to reset
 ALTER TABLE "VendorDietaryPreferences" ALTER COLUMN "VendorDietaryPreferenceId" RESTART WITH 7;
 ALTER TABLE "BranchRequests"          ALTER COLUMN "BranchRequestId"        RESTART WITH 6;
-ALTER TABLE "Campaigns"               ALTER COLUMN "CampaignId"              RESTART WITH 4;
-ALTER TABLE "BranchCampaigns"         ALTER COLUMN "Id"                      RESTART WITH 7;
+ALTER TABLE "Campaigns"               ALTER COLUMN "CampaignId"              RESTART WITH 6;
+ALTER TABLE "BranchCampaigns"         ALTER COLUMN "Id"                      RESTART WITH 8;
 ALTER TABLE "Vouchers"                ALTER COLUMN "VoucherId"               RESTART WITH 7;
 ALTER TABLE "UserVouchers"            ALTER COLUMN "UserVoucherId"           RESTART WITH 12;
 ALTER TABLE "Orders"                  ALTER COLUMN "OrderId"                 RESTART WITH 6;
@@ -712,5 +881,9 @@ ALTER TABLE "FeedbackTagAssociations" ALTER COLUMN "FeedbackTagId"           RES
 ALTER TABLE "FeedbackVotes"           ALTER COLUMN "FeedbackVoteId"          RESTART WITH 7;
 ALTER TABLE "VendorReplies"           ALTER COLUMN "VendorReplyId"           RESTART WITH 3;
 ALTER TABLE "Notifications"           ALTER COLUMN "NotificationId"          RESTART WITH 8;
+ALTER TABLE "Quests"                  ALTER COLUMN "QuestId"                 RESTART WITH 6;
+ALTER TABLE "QuestTasks"              ALTER COLUMN "QuestTaskId"             RESTART WITH 11;
+ALTER TABLE "UserQuests"              ALTER COLUMN "UserQuestId"             RESTART WITH 6;
+ALTER TABLE "UserQuestTasks"          ALTER COLUMN "UserQuestTaskId"         RESTART WITH 13;
 
 COMMIT;

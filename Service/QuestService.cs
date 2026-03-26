@@ -151,9 +151,15 @@ namespace Service
 
         public async Task<PaginatedResponse<QuestResponseDto>> GetPublicQuestsAsync(QuestQueryDto query)
         {
-            var (items, totalCount) = await _questRepository.GetPublicQuestsAsync(query.PageNumber, query.PageSize);
+            var (items, totalCount) = await _questRepository.GetPublicQuestsAsync(query.CampaignId, query.PageNumber, query.PageSize);
             var dtos = items.Select(MapToResponseDto).ToList();
             return new PaginatedResponse<QuestResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
+        }
+
+        public async Task<List<UserQuestProgressDto>> GetCampaignQuestProgressAsync(int userId, int campaignId)
+        {
+            var userQuests = await _userQuestRepository.GetByUserAndCampaignAsync(userId, campaignId);
+            return userQuests.Select(MapToProgressDto).ToList();
         }
 
         public async Task<UserQuestProgressDto> EnrollInQuestAsync(int userId, int questId)

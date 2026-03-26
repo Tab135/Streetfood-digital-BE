@@ -51,12 +51,15 @@ namespace DAL
             return (items, totalCount);
         }
 
-        public async Task<(List<Quest> Items, int TotalCount)> GetPublicQuestsAsync(int page, int pageSize)
+        public async Task<(List<Quest> Items, int TotalCount)> GetPublicQuestsAsync(int? campaignId, int page, int pageSize)
         {
             var now = DateTime.UtcNow;
             var query = _context.Quests
                 .Include(q => q.QuestTasks)
                 .Where(q => q.IsActive && q.StartDate <= now && q.EndDate >= now);
+
+            if (campaignId.HasValue)
+                query = query.Where(q => q.CampaignId == campaignId.Value);
 
             int totalCount = await query.CountAsync();
             var items = await query
@@ -67,6 +70,7 @@ namespace DAL
 
             return (items, totalCount);
         }
+
 
         public async Task UpdateAsync(Quest quest)
         {
