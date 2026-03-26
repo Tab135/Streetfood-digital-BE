@@ -66,6 +66,7 @@ namespace StreetFood
             builder.Services.AddScoped<IPaymentService, PaymentService>();
             builder.Services.AddHostedService<SubscriptionExpiryService>();
             builder.Services.AddHostedService<TierResetService>();
+            builder.Services.AddHostedService<CampaignExpiryService>();
             // Register DAL
             builder.Services.AddScoped<UserDAO>();
             builder.Services.AddScoped<OtpVerifyDAO>();
