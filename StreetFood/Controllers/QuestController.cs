@@ -90,8 +90,15 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> EnrollInQuest(int questId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var result = await _questService.EnrollInQuestAsync(userId, questId);
-            return Ok(new { message = "Enrolled in quest successfully", data = result });
+            try
+            {
+                var result = await _questService.EnrollInQuestAsync(userId, questId);
+                return Ok(new { message = "Enrolled in quest successfully", data = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("my")]

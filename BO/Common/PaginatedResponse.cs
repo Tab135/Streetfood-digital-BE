@@ -12,6 +12,9 @@ namespace BO.Common
         public bool HasNext => CurrentPage < TotalPages;
         public List<T> Items { get; set; }
 
+        // Parameterless constructor for JSON deserialization (STJ uses property setters).
+        public PaginatedResponse() { Items = new List<T>(); }
+
         public PaginatedResponse(List<T> items, int count, int pageNumber, int pageSize)
         {
             TotalCount = count;
