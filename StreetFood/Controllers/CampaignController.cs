@@ -21,6 +21,34 @@ namespace StreetFood.Controllers
             _paymentService = paymentService;
         }
 
+        private static VendorJoinSystemCampaignPaymentResponseDto ToPaymentResponse(VendorJoinSystemCampaignResultDto result)
+        {
+            var response = new VendorJoinSystemCampaignPaymentResponseDto();
+            if (result?.Branches == null) return response;
+
+            foreach (var b in result.Branches)
+            {
+                response.Branches.Add(new VendorJoinSystemCampaignBranchStatusDto
+                {
+                    BranchId = b.BranchId,
+                    Status = b.Status
+                });
+            }
+
+            var paymentSource = result.Branches.Find(b => !string.IsNullOrWhiteSpace(b.PaymentUrl));
+            if (paymentSource != null)
+            {
+                response.Payment = new VendorJoinSystemCampaignPaymentInfoDto
+                {
+                    PaymentUrl = paymentSource.PaymentUrl,
+                    OrderCode = paymentSource.OrderCode,
+                    PaymentLinkId = paymentSource.PaymentLinkId
+                };
+            }
+
+            return response;
+        }
+
         [HttpPost("system")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateSystemCampaign([FromBody] CreateCampaignDto dto)
@@ -74,7 +102,11 @@ namespace StreetFood.Controllers
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var result = await _campaignService.VendorJoinSystemCampaignForBranchesAsync(userId, campaignId, request?.BranchIds ?? new());
-            return Ok(new { message = "Đã tạo yêu cầu tham gia và link thanh toán cho các chi nhánh được chọn", data = result });
+            return Ok(new
+            {
+                message = "Đã tạo yêu cầu tham gia và link thanh toán cho các chi nhánh được chọn",
+                data = ToPaymentResponse(result)
+            });
         }
 
         [HttpGet("system")]
@@ -148,13 +180,33 @@ namespace StreetFood.Controllers
         }
 
         // NEW: Vendor join system campaign for all eligible branches
+        // Legacy route with query param; keep but hide from Swagger/UI.
+        [ApiExplorerSettings(IgnoreApi = true)]
         [HttpPost("vendor/join")]
         [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> VendorJoinSystemCampaign([FromQuery] int campaignId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
             var result = await _campaignService.VendorJoinSystemCampaignAsync(userId, campaignId);
-            return Ok(new { message = "Đã tham gia chiến dịch hệ thống cho các chi nhánh hợp lệ", data = result });
+            return Ok(new
+            {
+                message = "Đã tham gia chiến dịch hệ thống cho các chi nhánh hợp lệ",
+                data = ToPaymentResponse(result)
+            });
+        }
+
+        // New (preferred) route: campaignId in path to avoid missing query param in clients
+        [HttpPost("vendor/join/{campaignId}")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> VendorJoinSystemCampaignByPath(int campaignId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.VendorJoinSystemCampaignAsync(userId, campaignId);
+            return Ok(new
+            {
+                message = "Đã tham gia chiến dịch hệ thống cho các chi nhánh hợp lệ",
+                data = ToPaymentResponse(result)
+            });
         }
 
         // ==================== CAMPAIGN IMAGE OPERATIONS ====================
