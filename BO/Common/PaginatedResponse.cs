@@ -15,6 +15,16 @@ namespace BO.Common
         public PaginatedResponse(List<T> items, int count, int pageNumber, int pageSize)
         {
             TotalCount = count;
+            // Guard against invalid paging input
+            if (pageNumber <= 0)
+            {
+                pageNumber = 1;
+            }
+            if (pageSize <= 0)
+            {
+                pageSize = 10;
+            }
+
             PageSize = pageSize;
             CurrentPage = pageNumber;
             TotalPages = (int)System.Math.Ceiling(count / (double)pageSize);

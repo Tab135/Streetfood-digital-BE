@@ -379,9 +379,9 @@ namespace Service
 
             return new BO.Common.PaginatedResponse<CampaignResponseDto>(
                 mappedItems,
+                totalCount,
                 query.PageNumber,
-                query.PageSize,
-                totalCount
+                query.PageSize
             );
         }
 
@@ -415,9 +415,9 @@ namespace Service
 
             return new BO.Common.PaginatedResponse<CampaignResponseDto>(
                 mappedItems,
+                totalCount,
                 query.PageNumber,
-                query.PageSize,
-                totalCount
+                query.PageSize
             );
         }
 
@@ -448,9 +448,9 @@ namespace Service
 
             return new BO.Common.PaginatedResponse<CampaignResponseDto>(
                 mappedItems,
+                totalCount,
                 query.PageNumber,
-                query.PageSize,
-                totalCount
+                query.PageSize
             );
         }
 
@@ -481,9 +481,9 @@ namespace Service
 
             return new BO.Common.PaginatedResponse<CampaignResponseDto>(
                 mappedItems,
+                totalCount,
                 query.PageNumber,
-                query.PageSize,
-                totalCount
+                query.PageSize
             );
         }
 
@@ -609,12 +609,11 @@ namespace Service
                 });
             }
             
-            // Đã fix lỗi thứ tự biến cho PaginatedResponse giống với các hàm bên trên
             return new BO.Common.PaginatedResponse<CampaignResponseDto>(
                 mappedItems, 
+                totalCount,
                 query.PageNumber, 
-                query.PageSize,
-                totalCount
+                query.PageSize
             );
         }
 
