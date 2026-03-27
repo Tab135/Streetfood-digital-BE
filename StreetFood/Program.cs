@@ -1,4 +1,6 @@
 using DAL;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.OpenApi;
@@ -167,7 +169,15 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
         builder.Services.AddScoped<Repository.Interfaces.IUserQuestRepository, Repository.UserQuestRepository>();
         builder.Services.AddScoped<Service.Interfaces.IQuestService, Service.QuestService>();
         builder.Services.AddScoped<Service.Interfaces.IQuestProgressService, Service.QuestProgressService>();
-        builder.Services.AddHostedService<Service.QuestExpirationService>();
+        builder.Services.AddScoped<Service.Interfaces.IQuestExpirationJob, Service.QuestExpirationJob>();
+
+        // Hangfire — stores jobs in the same PostgreSQL DB
+        builder.Services.AddHangfire(config => config
+            .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+            .UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings()
+            .UsePostgreSqlStorage(builder.Configuration.GetConnectionString("DefaultConnection")!));
+        builder.Services.AddHangfireServer();
 
         // Search Service
             builder.Services.AddScoped<ISearchService, SearchService>();
@@ -280,6 +290,11 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             app.UseMiddleware<StreetFood.Middleware.ResponseMiddleware>();
             app.UseAuthentication();
             app.UseAuthorization();
+
+            app.UseHangfireDashboard("/hangfire", new DashboardOptions
+            {
+                Authorization = [new Hangfire.Dashboard.LocalRequestsOnlyAuthorizationFilter()]
+            });
 
             app.UseStaticFiles();
             app.MapControllers();

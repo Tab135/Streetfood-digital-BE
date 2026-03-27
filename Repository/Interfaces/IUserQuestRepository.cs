@@ -17,10 +17,11 @@ namespace Repository.Interfaces
         Task<bool> AreAllTasksCompletedAsync(int userQuestId);
         Task AddUserQuestTasksAsync(List<UserQuestTask> tasks);
         Task<List<UserQuest>> GetByUserAndCampaignAsync(int userId, int campaignId);
-        Task<List<UserQuest>> GetExpiredQuestsAsync();
         /// <summary>Returns the active (IN_PROGRESS) standalone UserQuest for this user, or null.</summary>
         Task<UserQuest?> GetActiveStandaloneQuestAsync(int userId);
         /// <summary>Returns the UserQuest for (userId, questId) regardless of status, or null.</summary>
         Task<UserQuest?> GetByUserAndQuestAnyStatusAsync(int userId, int questId);
+        /// <summary>Returns all IN_PROGRESS UserQuests whose Quest belongs to the given campaign.</summary>
+        Task<List<UserQuest>> GetByUserAndCampaignQuestsInProgressAsync(int campaignId);
     }
 }

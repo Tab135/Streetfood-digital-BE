@@ -135,5 +135,13 @@ namespace DAL
                 .Include(uq => uq.Quest)
                 .FirstOrDefaultAsync(uq => uq.UserId == userId && uq.QuestId == questId);
         }
+
+        public async Task<List<UserQuest>> GetByUserAndCampaignQuestsInProgressAsync(int campaignId)
+        {
+            return await _context.UserQuests
+                .Include(uq => uq.Quest)
+                .Where(uq => uq.Status == "IN_PROGRESS" && uq.Quest.CampaignId == campaignId)
+                .ToListAsync();
+        }
     }
 }
