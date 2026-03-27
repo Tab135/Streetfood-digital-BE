@@ -75,13 +75,17 @@ namespace Service
             switch (rewardType)
             {
                 case QuestRewardType.BADGE:
-                    var userBadge = new UserBadge
+                    var alreadyHasBadge = await _userBadgeRepository.Exists(userId, rewardValue);
+                    if (!alreadyHasBadge)
                     {
-                        UserId = userId,
-                        BadgeId = rewardValue,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    await _userBadgeRepository.Create(userBadge);
+                        var userBadge = new UserBadge
+                        {
+                            UserId = userId,
+                            BadgeId = rewardValue,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        await _userBadgeRepository.Create(userBadge);
+                    }
                     break;
 
                 case QuestRewardType.POINTS:

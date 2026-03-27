@@ -47,6 +47,9 @@ namespace Service
                     throw new Exception("Campaign not found");
                 if (campaign.CreatedByVendorId != null)
                     throw new Exception("Quests cannot be linked to vendor-created campaigns. Only system campaigns support quests.");
+
+                if (await _questRepository.ExistsByCampaignIdAsync(dto.CampaignId.Value))
+                    throw new Exception("A quest already exists for this campaign. Each campaign can only have one quest.");
             }
 
             foreach (var taskDto in dto.Tasks)
@@ -106,6 +109,10 @@ namespace Service
                     throw new Exception("Campaign not found");
                 if (campaign.CreatedByVendorId != null)
                     throw new Exception("Quests cannot be linked to vendor-created campaigns. Only system campaigns support quests.");
+
+                if (await _questRepository.ExistsByCampaignIdAsync(dto.CampaignId.Value, excludeQuestId: questId))
+                    throw new Exception("A quest already exists for this campaign. Each campaign can only have one quest.");
+
                 quest.CampaignId = dto.CampaignId.Value;
             }
 

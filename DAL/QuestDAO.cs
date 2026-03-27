@@ -96,6 +96,13 @@ namespace DAL
             return await _context.UserQuests.AnyAsync(uq => uq.QuestId == questId);
         }
 
+        public async Task<bool> ExistsByCampaignIdAsync(int campaignId, int? excludeQuestId = null)
+        {
+            return await _context.Quests.AnyAsync(q =>
+                q.CampaignId == campaignId &&
+                (!excludeQuestId.HasValue || q.QuestId != excludeQuestId.Value));
+        }
+
         public async Task RemoveTasksAsync(List<QuestTask> tasks)
         {
             _context.QuestTasks.RemoveRange(tasks);

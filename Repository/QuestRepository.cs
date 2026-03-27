@@ -22,6 +22,7 @@ namespace Repository
         public Task UpdateAsync(Quest quest) => _dao.UpdateAsync(quest);
         public Task<bool> DeleteAsync(int questId) => _dao.DeleteAsync(questId);
         public Task<bool> HasEnrolledUsersAsync(int questId) => _dao.HasEnrolledUsersAsync(questId);
+        public Task<bool> ExistsByCampaignIdAsync(int campaignId, int? excludeQuestId = null) => _dao.ExistsByCampaignIdAsync(campaignId, excludeQuestId);
         public Task RemoveTasksAsync(List<QuestTask> tasks) => _dao.RemoveTasksAsync(tasks);
         public Task AddTasksAsync(List<QuestTask> tasks) => _dao.AddTasksAsync(tasks);
     }

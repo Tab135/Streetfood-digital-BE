@@ -592,6 +592,10 @@ public class StreetFoodDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.CampaignId)
                   .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.CampaignId)
+                  .IsUnique()
+                  .HasFilter("\"CampaignId\" IS NOT NULL");
         });
 
         modelBuilder.Entity<QuestTask>(entity =>
