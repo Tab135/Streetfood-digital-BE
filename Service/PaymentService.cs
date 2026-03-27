@@ -873,29 +873,36 @@ namespace Service.PaymentsService
             var branchCampaign = await _branchCampaignRepo.GetByIdAsync(branchCampaignId);
             if (branchCampaign == null) return;
 
-            var isBatch = !string.IsNullOrWhiteSpace(paymentDescription) &&
-                          paymentDescription.Contains("VENDOR_SYSTEM_CAMPAIGN_BATCH");
-
-            if (!isBatch)
-            {
-                branchCampaign.IsActive = true;
-                await _branchCampaignRepo.UpdateAsync(branchCampaign);
-                _logger.LogInformation("Activated BranchCampaign {id}", branchCampaignId);
-                return;
-            }
-
-            // Batch payment: activate only selected BranchCampaignIds encoded in description.
-            // Format: "...VENDOR_SYSTEM_CAMPAIGN_BATCH:{id1,id2,id3}"
+            // Detect + parse batch ids from description.
+            // Supported formats:
+            // - "...VENDOR_SYSTEM_CAMPAIGN_BATCH:{id1,id2}"
+            // - "Phi tham gia:{id1,id2}" (legacy format seen in production)
             var selectedIds = new List<int>();
+            var desc = paymentDescription ?? string.Empty;
             try
             {
+                // Prefer marker format
                 var marker = "VENDOR_SYSTEM_CAMPAIGN_BATCH:";
-                var idx = paymentDescription!.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+                var idx = desc.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+                string? idsPart = null;
                 if (idx >= 0)
                 {
-                    var tail = paymentDescription.Substring(idx + marker.Length).Trim();
+                    var tail = desc.Substring(idx + marker.Length).Trim();
                     var endIdx = tail.IndexOfAny(new[] { ' ', ';', '|' });
-                    var idsPart = endIdx >= 0 ? tail.Substring(0, endIdx) : tail;
+                    idsPart = endIdx >= 0 ? tail.Substring(0, endIdx) : tail;
+                }
+                else
+                {
+                    // Fallback: take substring after last ':' (e.g. "Phi tham gia:23,24")
+                    var colonIdx = desc.LastIndexOf(':');
+                    if (colonIdx >= 0 && colonIdx + 1 < desc.Length)
+                    {
+                        idsPart = desc.Substring(colonIdx + 1).Trim();
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(idsPart))
+                {
                     foreach (var s in idsPart.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                     {
                         if (int.TryParse(s, out var id) && id > 0)
@@ -906,6 +913,18 @@ namespace Service.PaymentsService
             catch
             {
                 // ignore parsing errors; fall back below
+            }
+
+            var isBatch = selectedIds.Count > 1 ||
+                          (!string.IsNullOrWhiteSpace(paymentDescription) &&
+                           paymentDescription.Contains("VENDOR_SYSTEM_CAMPAIGN_BATCH", StringComparison.OrdinalIgnoreCase));
+
+            if (!isBatch)
+            {
+                branchCampaign.IsActive = true;
+                await _branchCampaignRepo.UpdateAsync(branchCampaign);
+                _logger.LogInformation("Activated BranchCampaign {id}", branchCampaignId);
+                return;
             }
 
             // If parsing failed, fall back to old behavior: activate all pending rows
