@@ -202,6 +202,123 @@ namespace Service
             return result;
         }
 
+        public async Task<VendorJoinSystemCampaignResultDto> VendorJoinSystemCampaignForBranchesAsync(int userId, int campaignId, List<int> branchIds)
+        {
+            var campaign = await _campaignRepo.GetByIdAsync(campaignId);
+            if (campaign == null || campaign.CreatedByBranchId != null || campaign.CreatedByVendorId != null)
+                throw new DomainExceptions("Chiến dịch không phải là System Campaign.");
+
+            var vendor = await _vendorRepo.GetByUserIdAsync(userId);
+            if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+
+            var result = new VendorJoinSystemCampaignResultDto();
+
+            var requested = (branchIds ?? new List<int>())
+                .FindAll(id => id > 0);
+            // distinct while preserving order
+            var distinctRequested = new List<int>();
+            var seen = new HashSet<int>();
+            foreach (var id in requested)
+            {
+                if (seen.Add(id)) distinctRequested.Add(id);
+            }
+
+            if (distinctRequested.Count == 0)
+                throw new DomainExceptions("Danh sách BranchIds không hợp lệ hoặc rỗng.");
+
+            var vendorBranches = await _branchRepo.GetAllByVendorIdAsync(vendor.VendorId);
+            var vendorBranchMap = new Dictionary<int, BO.Entities.Branch>();
+            foreach (var b in vendorBranches)
+            {
+                vendorBranchMap[b.BranchId] = b;
+            }
+
+            var pendingBranchCampaignIds = new List<int>();
+            var pendingBranchDtos = new List<VendorJoinSystemCampaignBranchDto>();
+
+            foreach (var branchId in distinctRequested)
+            {
+                if (!vendorBranchMap.TryGetValue(branchId, out var branch) || branch == null)
+                {
+                    result.Branches.Add(new VendorJoinSystemCampaignBranchDto
+                    {
+                        BranchId = branchId,
+                        Status = "NOT_OWNED"
+                    });
+                    continue;
+                }
+
+                if (!(branch.Tier != null && branch.Tier.Weight >= 1 && branch.IsSubscribed))
+                {
+                    result.Branches.Add(new VendorJoinSystemCampaignBranchDto
+                    {
+                        BranchId = branchId,
+                        Status = "NOT_ELIGIBLE"
+                    });
+                    continue;
+                }
+
+                var branchCampaign = await _branchCampaignRepo.GetByBranchAndCampaignAsync(branchId, campaignId);
+                if (branchCampaign != null && branchCampaign.IsActive)
+                {
+                    result.Branches.Add(new VendorJoinSystemCampaignBranchDto
+                    {
+                        BranchId = branchId,
+                        Status = "ALREADY_JOINED"
+                    });
+                    continue;
+                }
+
+                int branchCampaignId;
+                if (branchCampaign == null)
+                {
+                    var created = await _branchCampaignRepo.CreateAsync(new BO.Entities.BranchCampaign
+                    {
+                        BranchId = branchId,
+                        CampaignId = campaignId,
+                        IsActive = false
+                    });
+                    branchCampaignId = created.Id;
+                }
+                else
+                {
+                    branchCampaignId = branchCampaign.Id;
+                }
+
+                pendingBranchCampaignIds.Add(branchCampaignId);
+                pendingBranchDtos.Add(new VendorJoinSystemCampaignBranchDto
+                {
+                    BranchId = branchId,
+                    Status = "PAYMENT_REQUIRED"
+                });
+            }
+
+            if (pendingBranchCampaignIds.Count == 0)
+                return result;
+
+            var paymentResult = await _paymentService.CreateVendorSystemCampaignPaymentLink(
+                userId,
+                campaignId,
+                vendor.VendorId,
+                pendingBranchCampaignIds);
+
+            foreach (var dto in pendingBranchDtos)
+            {
+                if (!paymentResult.Success)
+                {
+                    dto.Status = "PAYMENT_ERROR";
+                    continue;
+                }
+
+                dto.PaymentUrl = paymentResult.PaymentUrl;
+                dto.OrderCode = paymentResult.OrderCode;
+                dto.PaymentLinkId = paymentResult.PaymentLinkId;
+            }
+
+            result.Branches.AddRange(pendingBranchDtos);
+            return result;
+        }
+
         public async Task UpdateCampaignImageUrlAsync(int campaignId, string? imageUrl, int userId, string role)
         {
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);

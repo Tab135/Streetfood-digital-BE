@@ -753,13 +753,23 @@ namespace Service.PaymentsService
                     return new PaymentLinkResult { Success = false, Message = "Không có chi nhánh cần thanh toán." };
 
                 int campaignFee = 20000;
-                var totalAmount = campaignFee * pendingBranchCampaignIds.Count;
+                // distinct while preserving input order
+                var distinct = new List<int>();
+                var seen = new HashSet<int>();
+                foreach (var id in pendingBranchCampaignIds)
+                {
+                    if (id > 0 && seen.Add(id)) distinct.Add(id);
+                }
+                if (distinct.Count == 0)
+                    return new PaymentLinkResult { Success = false, Message = "Danh sách BranchCampaignIds không hợp lệ." };
+
+                var totalAmount = campaignFee * distinct.Count;
 
                 // PayOS Amount is int; keep it safe
                 if (totalAmount <= 0 || totalAmount > int.MaxValue)
                     return new PaymentLinkResult { Success = false, Message = "Tổng tiền thanh toán không hợp lệ." };
 
-                var firstBranchCampaignId = pendingBranchCampaignIds[0];
+                var firstBranchCampaignId = distinct[0];
                 var firstBranchCampaign = await _branchCampaignRepo.GetByIdAsync(firstBranchCampaignId);
                 if (firstBranchCampaign == null)
                     return new PaymentLinkResult { Success = false, Message = "BranchCampaign không hợp lệ." };
@@ -768,10 +778,17 @@ namespace Service.PaymentsService
                 if (branch == null || !branch.VendorId.HasValue || branch.VendorId.Value != vendorId)
                     return new PaymentLinkResult { Success = false, Message = "Chi nhánh không thuộc vendor này." };
 
-                // Ensure all provided ids belong to the same (campaignId, vendorId) and are pending
+                // Ensure provided ids belong to the same (campaignId, vendorId) and are pending
                 var pendingRows = await _branchCampaignRepo.GetPendingByCampaignAndVendorAsync(campaignId, vendorId);
                 if (pendingRows == null || pendingRows.Count == 0)
                     return new PaymentLinkResult { Success = false, Message = "Không có chi nhánh pending cho chiến dịch này." };
+
+                var pendingIdSet = new HashSet<int>(pendingRows.Select(r => r.Id));
+                foreach (var id in distinct)
+                {
+                    if (!pendingIdSet.Contains(id))
+                        return new PaymentLinkResult { Success = false, Message = "Danh sách chi nhánh thanh toán không hợp lệ hoặc đã được thanh toán." };
+                }
 
                 // Create one payment for the vendor's whole campaign selection
                 int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -785,8 +802,9 @@ namespace Service.PaymentsService
                     if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
                 }
 
-                // Used later during webhook confirmation to activate all pending branch-campaigns
-                var description = "Phi tham gia chien dich ";
+                // Used later during webhook confirmation to activate selected BranchCampaignIds
+                // Keep it short but include marker + ids
+                var description = $"Phi tham gia chien dich VENDOR_SYSTEM_CAMPAIGN_BATCH:{string.Join(",", distinct)}";
 
                 var payment = await _paymentRepo.CreatePayment(
                     userId: userId,
@@ -850,7 +868,7 @@ namespace Service.PaymentsService
         ///   • Sets branch.SubscriptionExpiresAt = now + 30 days
         ///   • Upgrades user.Role to Vendor (3)
         /// </summary>
-                private async Task ActivateBranchCampaignAsync(int branchCampaignId, string? paymentDescription)
+        private async Task ActivateBranchCampaignAsync(int branchCampaignId, string? paymentDescription)
         {
             var branchCampaign = await _branchCampaignRepo.GetByIdAsync(branchCampaignId);
             if (branchCampaign == null) return;
@@ -866,21 +884,50 @@ namespace Service.PaymentsService
                 return;
             }
 
-            // Batch payment: activate all pending BranchCampaigns for this vendor + system campaign
-            var vendorId = branchCampaign.Branch?.VendorId;
-            if (!vendorId.HasValue)
-                return;
-
-            var pendingRows = await _branchCampaignRepo.GetPendingByCampaignAndVendorAsync(branchCampaign.CampaignId, vendorId.Value);
-            foreach (var row in pendingRows)
+            // Batch payment: activate only selected BranchCampaignIds encoded in description.
+            // Format: "...VENDOR_SYSTEM_CAMPAIGN_BATCH:{id1,id2,id3}"
+            var selectedIds = new List<int>();
+            try
             {
+                var marker = "VENDOR_SYSTEM_CAMPAIGN_BATCH:";
+                var idx = paymentDescription!.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+                if (idx >= 0)
+                {
+                    var tail = paymentDescription.Substring(idx + marker.Length).Trim();
+                    var endIdx = tail.IndexOfAny(new[] { ' ', ';', '|' });
+                    var idsPart = endIdx >= 0 ? tail.Substring(0, endIdx) : tail;
+                    foreach (var s in idsPart.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        if (int.TryParse(s, out var id) && id > 0)
+                            selectedIds.Add(id);
+                    }
+                }
+            }
+            catch
+            {
+                // ignore parsing errors; fall back below
+            }
+
+            // Always include the anchor BranchCampaignId if parsing failed
+            if (selectedIds.Count == 0)
+                selectedIds.Add(branchCampaignId);
+
+            var activatedCount = 0;
+            foreach (var id in selectedIds.Distinct())
+            {
+                var row = await _branchCampaignRepo.GetByIdAsync(id);
+                if (row == null) continue;
+                if (row.CampaignId != branchCampaign.CampaignId) continue; // safety
+                if (row.IsActive == true) continue;
+
                 row.IsActive = true;
                 await _branchCampaignRepo.UpdateAsync(row);
+                activatedCount++;
             }
 
             _logger.LogInformation(
-                "Activated {Count} pending BranchCampaigns for Vendor {VendorId}, Campaign {CampaignId}",
-                pendingRows.Count, vendorId.Value, branchCampaign.CampaignId);
+                "Activated {Count} BranchCampaigns (batch) for Campaign {CampaignId}",
+                activatedCount, branchCampaign.CampaignId);
         }
 
         private async Task ActivateVendorSubscriptionAsync(Payment payment)
