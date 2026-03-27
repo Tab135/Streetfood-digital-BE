@@ -127,11 +127,11 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(255);
 
             entity.HasData(
-                new DietaryPreference { DietaryPreferenceId = 1, Name = "An chay", Description = "Kh�ng th?t" },
-                new DietaryPreference { DietaryPreferenceId = 2, Name = "Cay", Description = "M�n an c� v? cay n?ng, s? d?ng nhi?u ?t ho?c ti�u" },
-                new DietaryPreference { DietaryPreferenceId = 3, Name = "Ng?t", Description = "M�n an c� v? ng?t, ho?c c�c m�n tr�ng mi?ng" },
-                new DietaryPreference { DietaryPreferenceId = 4, Name = "M?n", Description = "Huong v? d?m d�, th�ch h?p an k�m v?i com" },
-                new DietaryPreference { DietaryPreferenceId = 5, Name = "H?i s?n", Description = "Bao g?m c�c lo?i t�m, cua, c�, m?c v� d? bi?n kh�c" }
+                new DietaryPreference { DietaryPreferenceId = 1, Name = "An chay", Description = "Không thịt" },
+                new DietaryPreference { DietaryPreferenceId = 2, Name = "Cay", Description = "Món an có vị cay nồng, sử dụng nhiều ớt hoặc tiêu" },
+                new DietaryPreference { DietaryPreferenceId = 3, Name = "Ngọt", Description = "Món an có vị ngọt, hoặc các món tráng miệng" },
+                new DietaryPreference { DietaryPreferenceId = 4, Name = "Mặn", Description = "Hương vị đậm đà, thích hợp ăn kèm với cơm" },
+                new DietaryPreference { DietaryPreferenceId = 5, Name = "Hải sản", Description = "Bao gồm các loại tôm, cua, cá, mực và các món biển khác" }
             );
         });
 

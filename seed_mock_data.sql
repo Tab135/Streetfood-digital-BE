@@ -776,7 +776,7 @@ INSERT INTO "QuestTasks" (
 ) VALUES
 -- Quest 1 tasks (3 tasks — full coverage of all task & reward types)
 (1,  1, 'CREATE_GHOST_PIN', 3,      'Gắn địa điểm 3 quán ẩm thực mới trên bản đồ',                 'POINTS',  50),
-(2,  1, 'REVIEW',           2,      'Viết 2 đánh giá chi tiết về quán ăn (ít nhất 30 chữ mỗi bài)', 'BADGE',   2),
+(2,  1, 'REVIEW',           2,      'Viết 2 đánh giá chi tiết về quán ăn', 'BADGE',   2),
 (3,  1, 'ORDER_AMOUNT',     200000, 'Đặt hàng tổng cộng 200.000đ qua app trong thời gian sự kiện',  'VOUCHER', 1),
 
 -- Quest 2 tasks (2 tasks — SHARE + ORDER_AMOUNT, POINTS reward)
@@ -784,7 +784,7 @@ INSERT INTO "QuestTasks" (
 (5,  2, 'ORDER_AMOUNT', 100000, 'Đặt hàng tổng cộng 100.000đ tại tiệm bánh mì',                  'POINTS',  50),
 
 -- Quest 3 tasks (2 tasks — REVIEW + SHARE, POINTS + BADGE reward)
-(6,  3, 'REVIEW',       1,      'Viết 1 đánh giá chi tiết (ít nhất 50 chữ)',                     'POINTS',  20),
+(6,  3, 'REVIEW',       1,      'Viết 1 đánh giá chi tiết',                     'POINTS',  20),
 (7,  3, 'SHARE',        2,      'Chia sẻ 2 quán ăn yêu thích với bạn bè qua app',                'BADGE',   1),
 
 -- Quest 4 tasks (1 task — ORDER_AMOUNT, VOUCHER reward)
@@ -796,13 +796,13 @@ INSERT INTO "QuestTasks" (
 
 -- ============================================================
 -- 34. USER QUESTS
--- Covers all UserQuestStatus values: IN_PROGRESS, COMPLETED, EXPIRED
+-- Covers all UserQuestStatus values: IN_PROGRESS, COMPLETED, EXPIRED, STOPPED
 -- User 7  (An):    Quest 1 IN_PROGRESS (2/3 tasks partially done)
 -- User 8  (Binh):  Quest 2 COMPLETED (both tasks done)
 -- User 7  (An):    Quest 3 IN_PROGRESS (0/2 tasks started)
 -- User 10 (Dung):  Quest 1 COMPLETED (all tasks done)
 -- User 9  (Cường): Quest 5 EXPIRED (partial progress)
--- Quest 4: not enrolled by anyone — tests "Start Quest" enroll button on FE
+-- User 11 (Hoàng): Quest 4 STOPPED (gave up after partial progress)
 -- ============================================================
 INSERT INTO "UserQuests" (
     "UserQuestId", "UserId", "QuestId", "Status", "StartedAt", "CompletedAt"
@@ -811,7 +811,8 @@ INSERT INTO "UserQuests" (
 (2, 8,  2, 'COMPLETED',   NOW() - INTERVAL '8 days',  NOW() - INTERVAL '2 days'),   -- Binh: Quest 2 hoàn thành
 (3, 7,  3, 'IN_PROGRESS', NOW() - INTERVAL '1 day',   NULL),                        -- An: Quest 3 mới bắt đầu
 (4, 10, 1, 'COMPLETED',   NOW() - INTERVAL '5 days',  NOW() - INTERVAL '1 day'),    -- Dung: Quest 1 hoàn thành
-(5, 9,  5, 'EXPIRED',     NOW() - INTERVAL '55 days', NULL);                        -- Cường: Quest 5 hết hạn
+(5, 9,  5, 'EXPIRED',     NOW() - INTERVAL '55 days', NULL),                        -- Cường: Quest 5 hết hạn
+(6, 11, 4, 'STOPPED',     NOW() - INTERVAL '4 days',  NULL);                        -- Hoàng: Quest 4 đã dừng
 
 -- ============================================================
 -- 35. USER QUEST TASKS
@@ -822,7 +823,7 @@ INSERT INTO "UserQuestTasks" (
     "CurrentValue", "IsCompleted", "CompletedAt", "RewardClaimed"
 ) VALUES
 -- UserQuest 1 (An, Quest 1 IN_PROGRESS):
---   Task VISIT 3/3 done + reward claimed
+--   Task CREATE_GHOST_PIN 3/3 done + reward claimed
 --   Task REVIEW 1/2 in progress
 --   Task ORDER_AMOUNT 95k/200k in progress
 (1,  1, 1, 3,      true,  NOW() - INTERVAL '2 days', true),
@@ -846,7 +847,11 @@ INSERT INTO "UserQuestTasks" (
 
 -- UserQuest 5 (Cường, Quest 5 EXPIRED — partial, no rewards):
 (11, 5, 9, 2,      false, NULL,                      false),
-(12, 5, 10, 100000, false, NULL,                     false);
+(12, 5, 10, 100000, false, NULL,                     false),
+
+-- UserQuest 6 (Hoàng, Quest 4 STOPPED — started but gave up):
+--   Task ORDER_AMOUNT 50k/300k — abandoned, no reward
+(13, 6, 8, 50000, false, NULL,                       false);
 
 -- ============================================================
 -- 36. RESET IDENTITY SEQUENCES
@@ -879,7 +884,7 @@ ALTER TABLE "VendorReplies"           ALTER COLUMN "VendorReplyId"           RES
 ALTER TABLE "Notifications"           ALTER COLUMN "NotificationId"          RESTART WITH 8;
 ALTER TABLE "Quests"                  ALTER COLUMN "QuestId"                 RESTART WITH 6;
 ALTER TABLE "QuestTasks"              ALTER COLUMN "QuestTaskId"             RESTART WITH 11;
-ALTER TABLE "UserQuests"              ALTER COLUMN "UserQuestId"             RESTART WITH 6;
-ALTER TABLE "UserQuestTasks"          ALTER COLUMN "UserQuestTaskId"         RESTART WITH 13;
+ALTER TABLE "UserQuests"              ALTER COLUMN "UserQuestId"             RESTART WITH 7;
+ALTER TABLE "UserQuestTasks"          ALTER COLUMN "UserQuestTaskId"         RESTART WITH 14;
 
 COMMIT;
