@@ -46,6 +46,11 @@ public class OrderService : IOrderService
         var branch = await _branchRepository.GetByIdAsync(request.BranchId)
             ?? throw new DomainExceptions("Branch not found");
 
+        if (!branch.IsSubscribed)
+        {
+            throw new DomainExceptions("This branch is not subscribed and cannot accept order checkout.");
+        }
+
         var (orderDishes, totalAmount) = await BuildValidatedOrderDishesAsync(request.BranchId, request.Items);
 
         // Voucher Validation Logic
