@@ -13,17 +13,20 @@ namespace Service
         private readonly IUserBadgeRepository _userBadgeRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserVoucherRepository _userVoucherRepository;
+        private readonly INotificationService _notificationService;
 
         public QuestProgressService(
             IUserQuestRepository userQuestRepository,
             IUserBadgeRepository userBadgeRepository,
             IUserRepository userRepository,
-            IUserVoucherRepository userVoucherRepository)
+            IUserVoucherRepository userVoucherRepository,
+            INotificationService notificationService)
         {
             _userQuestRepository = userQuestRepository;
             _userBadgeRepository = userBadgeRepository;
             _userRepository = userRepository;
             _userVoucherRepository = userVoucherRepository;
+            _notificationService = notificationService;
         }
 
         public async Task UpdateProgressAsync(int userId, QuestTaskType taskType, int incrementValue)
@@ -39,7 +42,6 @@ namespace Service
                     userQuestTask.IsCompleted = true;
                     userQuestTask.CompletedAt = DateTime.UtcNow;
 
-                    // Distribute reward for this task
                     if (!userQuestTask.RewardClaimed)
                     {
                         await DistributeTaskRewardAsync(userId, userQuestTask);
@@ -49,10 +51,18 @@ namespace Service
 
                 await _userQuestRepository.UpdateUserQuestTaskAsync(userQuestTask);
 
-                // Check if all tasks for this quest are completed
                 if (userQuestTask.IsCompleted)
                 {
-                    await CheckAndCompleteQuestAsync(userQuestTask.UserQuestId);
+                    // Notify task completion
+                    var taskLabel = userQuestTask.QuestTask.Description ?? userQuestTask.QuestTask.Type.ToString();
+                    await _notificationService.NotifyAsync(
+                        userId,
+                        NotificationType.QuestTaskCompleted,
+                        "Nhiệm vụ hoàn thành!",
+                        $"Bạn đã hoàn thành nhiệm vụ: {taskLabel}",
+                        userQuestTask.UserQuestId);
+
+                    await CheckAndCompleteQuestAsync(userId, userQuestTask.UserQuestId);
                 }
             }
         }
@@ -105,19 +115,24 @@ namespace Service
             }
         }
 
-        private async Task CheckAndCompleteQuestAsync(int userQuestId)
+        private async Task CheckAndCompleteQuestAsync(int userId, int userQuestId)
         {
             var allCompleted = await _userQuestRepository.AreAllTasksCompletedAsync(userQuestId);
-            if (allCompleted)
-            {
-                var userQuest = await _userQuestRepository.GetByIdAsync(userQuestId);
-                if (userQuest != null && userQuest.Status == "IN_PROGRESS")
-                {
-                    userQuest.Status = "COMPLETED";
-                    userQuest.CompletedAt = DateTime.UtcNow;
-                    await _userQuestRepository.UpdateUserQuestAsync(userQuest);
-                }
-            }
+            if (!allCompleted) return;
+
+            var userQuest = await _userQuestRepository.GetByIdAsync(userQuestId);
+            if (userQuest == null || userQuest.Status != "IN_PROGRESS") return;
+
+            userQuest.Status = "COMPLETED";
+            userQuest.CompletedAt = DateTime.UtcNow;
+            await _userQuestRepository.UpdateUserQuestAsync(userQuest);
+
+            await _notificationService.NotifyAsync(
+                userId,
+                NotificationType.QuestCompleted,
+                "Thử thách hoàn tất!",
+                $"Chúc mừng! Bạn đã hoàn tất thử thách \"{userQuest.Quest.Title}\"",
+                userQuestId);
         }
     }
 }

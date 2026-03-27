@@ -17,6 +17,9 @@ namespace BO.DTO.Quest
 
         public bool IsActive { get; set; } = true;
 
+        [Required]
+        public bool IsStandalone { get; set; } = true;
+
         public int? CampaignId { get; set; }
 
         [Required]

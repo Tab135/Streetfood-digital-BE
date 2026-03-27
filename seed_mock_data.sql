@@ -717,74 +717,70 @@ INSERT INTO "UserVouchers" ("UserVoucherId", "UserId", "VoucherId", "Quantity", 
 -- ============================================================
 INSERT INTO "Quests" (
     "QuestId", "Title", "Description", "ImageUrl",
-    "StartDate", "EndDate", "IsActive", "CampaignId",
+    "IsActive", "IsStandalone", "CampaignId",
     "CreatedAt", "UpdatedAt"
 ) VALUES
--- Quest 1: Linked to system Campaign 1 — active, 3 tasks, has imageUrl
+-- Quest 1: Linked to system Campaign 1 — campaign quest, active, 3 tasks, has imageUrl
 --   Tests: campaignId != null, image header, IN_PROGRESS (User An) + COMPLETED (User Dung)
 (1,
  'Khám Phá Ẩm Thực Đường Phố HCM',
  'Ghé thăm các quán ẩm thực đường phố, để lại đánh giá và chia sẻ trải nghiệm để nhận phần thưởng hấp dẫn từ Lễ Hội Ẩm Thực Hè 2026.',
- 'https://via.placeholder.com/800x400/a1d973?text=Khám+Phá+Ẩm+Thực',
- NOW() + INTERVAL '5 days',  NOW() + INTERVAL '35 days',
- true, 1,
+ 'https://lowca-s3-bucket.s3.ap-southeast-1.amazonaws.com/quests/2c036fc6-f917-4191-804a-e64f76c927ce_images.jpeg',
+ true, false, 1,
  NOW() - INTERVAL '5 days',  NULL),
 
--- Quest 2: No campaign link — active, 2 tasks, no imageUrl
+-- Quest 2: Standalone — active, 2 tasks, no imageUrl
 --   Tests: campaignId == null, fallback header, COMPLETED (User Binh)
 (2,
  'Tín Đồ Bánh Mì Sài Gòn',
- 'Khám phá các tiệm bánh mì ngon nhất HCM. Ghé thăm và đặt hàng để chứng tỏ bạn là tín đồ bánh mì thực thụ!',
+ 'Khám phá các tiệm bánh mì ngon nhất HCM. Đặt hàng và chia sẻ để chứng tỏ bạn là tín đồ bánh mì thực thụ!',
  NULL,
- NOW() - INTERVAL '10 days', NOW() + INTERVAL '20 days',
- true, NULL,
+ true, true, NULL,
  NOW() - INTERVAL '10 days', NULL),
 
--- Quest 3: No campaign link — active, 2 tasks, has imageUrl
+-- Quest 3: Standalone — active, 2 tasks, has imageUrl
 --   Tests: REVIEW + SHARE task types, BADGE reward, IN_PROGRESS with 0 progress (User An)
 (3,
  'Thám Tử Đường Phố',
  'Viết đánh giá chi tiết và chia sẻ các quán ăn yêu thích của bạn với bạn bè để nhận phần thưởng đặc biệt.',
- 'https://via.placeholder.com/800x400/FFD700?text=Thám+Tử+Đường+Phố',
- NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days',
- true, NULL,
+ 'https://lowca-s3-bucket.s3.ap-southeast-1.amazonaws.com/quests/2c036fc6-f917-4191-804a-e64f76c927ce_images.jpeg',
+ true, true, NULL,
  NOW() - INTERVAL '15 days', NULL),
 
--- Quest 4: Linked to vendor Campaign 3 (Cơm Tấm) — active, 1 task, no imageUrl
+-- Quest 4: Standalone — active, 1 task, no imageUrl
 --   Tests: single-task quest, VOUCHER reward, not yet enrolled by any user
+--   (Previously linked to vendor Campaign 3 — fixed: vendor campaigns cannot have quests)
 (4,
  'Vua Cơm Tấm Sài Gòn',
- 'Chứng tỏ tình yêu với cơm tấm Sài Gòn! Đặt hàng đủ số lượng trong tháng và nhận ngay voucher đặc biệt từ chương trình Cơm Tấm Cuối Tuần.',
+ 'Chứng tỏ tình yêu với cơm tấm Sài Gòn! Đặt hàng đủ số lượng và nhận ngay voucher đặc biệt.',
  NULL,
- NOW() + INTERVAL '7 days',  NOW() + INTERVAL '37 days',
- true, 3,
+ true, true, NULL,
  NOW() - INTERVAL '2 days',  NULL),
 
--- Quest 5: No campaign — EXPIRED (isActive:false, endDate in past)
+-- Quest 5: Standalone — EXPIRED (isActive:false)
 --   Tests: expired quest rendering, EXPIRED user status (User Cường)
 (5,
  'Tiệc Tất Niên Ẩm Thực 2025',
  'Sự kiện kỷ niệm cuối năm đã kết thúc. Cảm ơn tất cả thực khách đã tham gia!',
  NULL,
- NOW() - INTERVAL '60 days', NOW() - INTERVAL '30 days',
- false, NULL,
+ false, true, NULL,
  NOW() - INTERVAL '65 days', NOW() - INTERVAL '30 days');
 
 -- ============================================================
 -- 33. QUEST TASKS
--- Covers all QuestTaskType values: REVIEW, ORDER_AMOUNT, VISIT, SHARE
+-- Covers all QuestTaskType values: REVIEW, ORDER_AMOUNT, SHARE, CREATE_GHOST_PIN
 -- Covers all QuestRewardType values: BADGE, POINTS, VOUCHER
 -- ============================================================
 INSERT INTO "QuestTasks" (
     "QuestTaskId", "QuestId", "Type", "TargetValue", "Description", "RewardType", "RewardValue"
 ) VALUES
 -- Quest 1 tasks (3 tasks — full coverage of all task & reward types)
-(1,  1, 'VISIT',        3,      'Ghé thăm 3 quán ẩm thực khác nhau trên app',                    'POINTS',  50),
-(2,  1, 'REVIEW',       2,      'Viết 2 đánh giá chi tiết về quán ăn (ít nhất 30 chữ mỗi bài)',  'BADGE',   2),
-(3,  1, 'ORDER_AMOUNT', 200000, 'Đặt hàng tổng cộng 200.000đ qua app trong thời gian sự kiện',   'VOUCHER', 1),
+(1,  1, 'CREATE_GHOST_PIN', 3,      'Gắn địa điểm 3 quán ẩm thực mới trên bản đồ',                 'POINTS',  50),
+(2,  1, 'REVIEW',           2,      'Viết 2 đánh giá chi tiết về quán ăn (ít nhất 30 chữ mỗi bài)', 'BADGE',   2),
+(3,  1, 'ORDER_AMOUNT',     200000, 'Đặt hàng tổng cộng 200.000đ qua app trong thời gian sự kiện',  'VOUCHER', 1),
 
--- Quest 2 tasks (2 tasks — VISIT + ORDER_AMOUNT, POINTS reward)
-(4,  2, 'VISIT',        3,      'Ghé thăm 3 tiệm bánh mì khác nhau',                             'POINTS',  30),
+-- Quest 2 tasks (2 tasks — SHARE + ORDER_AMOUNT, POINTS reward)
+(4,  2, 'SHARE',        3,      'Chia sẻ 3 tiệm bánh mì yêu thích với bạn bè qua app',           'POINTS',  30),
 (5,  2, 'ORDER_AMOUNT', 100000, 'Đặt hàng tổng cộng 100.000đ tại tiệm bánh mì',                  'POINTS',  50),
 
 -- Quest 3 tasks (2 tasks — REVIEW + SHARE, POINTS + BADGE reward)
@@ -795,8 +791,8 @@ INSERT INTO "QuestTasks" (
 (8,  4, 'ORDER_AMOUNT', 300000, 'Đặt hàng tổng cộng 300.000đ tại các quán cơm tấm trong tháng', 'VOUCHER', 1),
 
 -- Quest 5 tasks (2 tasks — expired quest, partial completion history)
-(9,  5, 'VISIT',        5,      'Ghé thăm 5 quán ẩm thực trong tuần cuối năm',                   'POINTS',  100),
-(10, 5, 'ORDER_AMOUNT', 500000, 'Đặt hàng tổng cộng 500.000đ trong tháng 12',                    'VOUCHER', 2);
+(9,  5, 'CREATE_GHOST_PIN', 5,      'Gắn địa điểm 5 quán ẩm thực trong tuần cuối năm',            'POINTS',  100),
+(10, 5, 'ORDER_AMOUNT',     500000, 'Đặt hàng tổng cộng 500.000đ trong tháng 12',                 'VOUCHER', 2);
 
 -- ============================================================
 -- 34. USER QUESTS

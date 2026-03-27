@@ -118,6 +118,22 @@ namespace StreetFood.Controllers
             }
         }
 
+        [HttpPost("{questId}/stop")]
+        [Authorize]
+        public async Task<IActionResult> StopQuest(int questId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            try
+            {
+                var result = await _questService.StopQuestAsync(userId, questId);
+                return Ok(new { message = "Quest stopped successfully", data = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("my")]
         [Authorize]
         public async Task<IActionResult> GetMyQuests([FromQuery] string? status)
@@ -127,16 +143,7 @@ namespace StreetFood.Controllers
             return Ok(new { message = "User quests retrieved successfully", data = result });
         }
 
-        // ==================== Check-in & Share ====================
-
-        [HttpPost("checkin/{branchId}")]
-        [Authorize]
-        public async Task<IActionResult> CheckIn(int branchId)
-        {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            await _questProgressService.UpdateProgressAsync(userId, QuestTaskType.VISIT, 1);
-            return Ok(new { message = "Check-in recorded successfully" });
-        }
+        // ==================== Progress ====================
 
         [HttpPost("share/{branchId}")]
         [Authorize]

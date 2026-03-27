@@ -38,14 +38,17 @@ namespace Service
             if (dto.Tasks == null || dto.Tasks.Count == 0)
                 throw new Exception("At least one task is required");
 
+            ValidateStandaloneCampaignConsistency(dto.IsStandalone, dto.CampaignId);
+
             if (dto.CampaignId.HasValue)
             {
                 var campaign = await _campaignRepository.GetByIdAsync(dto.CampaignId.Value);
                 if (campaign == null)
                     throw new Exception("Campaign not found");
+                if (campaign.CreatedByVendorId != null)
+                    throw new Exception("Quests cannot be linked to vendor-created campaigns. Only system campaigns support quests.");
             }
 
-            // Validate each task's reward references
             foreach (var taskDto in dto.Tasks)
             {
                 await ValidateTaskRewardAsync(taskDto.RewardType, taskDto.RewardValue);
@@ -57,6 +60,7 @@ namespace Service
                 Description = dto.Description,
                 ImageUrl = dto.ImageUrl,
                 IsActive = dto.IsActive,
+                IsStandalone = dto.IsStandalone,
                 CampaignId = dto.CampaignId,
                 QuestTasks = dto.Tasks.Select(t => new QuestTask
                 {
@@ -78,6 +82,12 @@ namespace Service
             if (quest == null)
                 throw new Exception($"Quest with ID {questId} not found");
 
+            // Determine effective standalone/campaign values after update
+            bool effectiveIsStandalone = dto.IsStandalone ?? quest.IsStandalone;
+            int? effectiveCampaignId = dto.CampaignId ?? quest.CampaignId;
+
+            ValidateStandaloneCampaignConsistency(effectiveIsStandalone, effectiveCampaignId);
+
             if (!string.IsNullOrEmpty(dto.Title))
                 quest.Title = dto.Title;
             if (dto.Description != null)
@@ -86,11 +96,16 @@ namespace Service
                 quest.ImageUrl = dto.ImageUrl;
             if (dto.IsActive.HasValue)
                 quest.IsActive = dto.IsActive.Value;
+            if (dto.IsStandalone.HasValue)
+                quest.IsStandalone = dto.IsStandalone.Value;
+
             if (dto.CampaignId.HasValue)
             {
                 var campaign = await _campaignRepository.GetByIdAsync(dto.CampaignId.Value);
                 if (campaign == null)
                     throw new Exception("Campaign not found");
+                if (campaign.CreatedByVendorId != null)
+                    throw new Exception("Quests cannot be linked to vendor-created campaigns. Only system campaigns support quests.");
                 quest.CampaignId = dto.CampaignId.Value;
             }
 
@@ -101,7 +116,6 @@ namespace Service
                     await ValidateTaskRewardAsync(taskDto.RewardType, taskDto.RewardValue);
                 }
 
-                // Remove old tasks and add new ones
                 await _questRepository.RemoveTasksAsync(quest.QuestTasks.ToList());
                 var newTasks = dto.Tasks.Select(t => new QuestTask
                 {
@@ -166,9 +180,46 @@ namespace Service
             if (!quest.IsActive)
                 throw new Exception("Quest is not available");
 
-            var existing = await _userQuestRepository.GetByUserAndQuestAsync(userId, questId);
+            // Check if the user has any previous record for this quest
+            var existing = await _userQuestRepository.GetByUserAndQuestAnyStatusAsync(userId, questId);
+
             if (existing != null)
-                throw new Exception("You are already enrolled in this quest");
+            {
+                if (existing.Status == "IN_PROGRESS")
+                    throw new Exception("You are already enrolled in this quest");
+
+                if (existing.Status == "COMPLETED")
+                    throw new Exception("You have already completed this quest");
+
+                if (existing.Status == "EXPIRED")
+                    throw new Exception("This quest has expired for you");
+
+                // STOPPED: allow re-enrollment (resume)
+                if (existing.Status == "STOPPED")
+                {
+                    // For standalone quests, enforce the 1-active limit before resuming
+                    if (quest.IsStandalone)
+                    {
+                        var activeStandalone = await _userQuestRepository.GetActiveStandaloneQuestAsync(userId);
+                        if (activeStandalone != null && activeStandalone.UserQuestId != existing.UserQuestId)
+                            throw new Exception("You already have an active standalone quest. Stop it before starting another.");
+                    }
+
+                    existing.Status = "IN_PROGRESS";
+                    await _userQuestRepository.UpdateUserQuestAsync(existing);
+
+                    var resumed = await _userQuestRepository.GetByIdAsync(existing.UserQuestId);
+                    return MapToProgressDto(resumed!);
+                }
+            }
+
+            // New enrollment — enforce standalone limit
+            if (quest.IsStandalone)
+            {
+                var activeStandalone = await _userQuestRepository.GetActiveStandaloneQuestAsync(userId);
+                if (activeStandalone != null)
+                    throw new Exception("You already have an active standalone quest. Stop it before starting another.");
+            }
 
             var userQuest = new UserQuest
             {
@@ -191,8 +242,27 @@ namespace Service
 
             await _userQuestRepository.AddUserQuestTasksAsync(userQuestTasks);
 
-            // Reload with tasks
             var loaded = await _userQuestRepository.GetByIdAsync(created.UserQuestId);
+            return MapToProgressDto(loaded!);
+        }
+
+        public async Task<UserQuestProgressDto> StopQuestAsync(int userId, int questId)
+        {
+            var existing = await _userQuestRepository.GetByUserAndQuestAnyStatusAsync(userId, questId);
+            if (existing == null)
+                throw new Exception("You are not enrolled in this quest");
+
+            if (existing.Status != "IN_PROGRESS")
+                throw new Exception($"Quest cannot be stopped — current status is {existing.Status}");
+
+            var quest = await _questRepository.GetByIdAsync(questId);
+            if (quest != null && !quest.IsStandalone)
+                throw new Exception("Only standalone quests can be manually stopped");
+
+            existing.Status = "STOPPED";
+            await _userQuestRepository.UpdateUserQuestAsync(existing);
+
+            var loaded = await _userQuestRepository.GetByIdAsync(existing.UserQuestId);
             return MapToProgressDto(loaded!);
         }
 
@@ -212,6 +282,17 @@ namespace Service
             return MapToResponseDto(quest);
         }
 
+        // ── Helpers ──────────────────────────────────────────────────────────
+
+        private static void ValidateStandaloneCampaignConsistency(bool isStandalone, int? campaignId)
+        {
+            if (isStandalone && campaignId.HasValue)
+                throw new Exception("A standalone quest cannot belong to a campaign.");
+
+            if (!isStandalone && !campaignId.HasValue)
+                throw new Exception("A campaign quest must specify a campaign (CampaignId is required).");
+        }
+
         private async Task ValidateTaskRewardAsync(QuestRewardType rewardType, int rewardValue)
         {
             switch (rewardType)
@@ -227,7 +308,6 @@ namespace Service
                         throw new Exception($"Voucher with ID {rewardValue} not found");
                     break;
                 case QuestRewardType.POINTS:
-                    // No external reference to validate
                     break;
             }
         }
@@ -241,6 +321,7 @@ namespace Service
                 Description = quest.Description,
                 ImageUrl = quest.ImageUrl,
                 IsActive = quest.IsActive,
+                IsStandalone = quest.IsStandalone,
                 CampaignId = quest.CampaignId,
                 CreatedAt = quest.CreatedAt,
                 UpdatedAt = quest.UpdatedAt,
@@ -281,6 +362,7 @@ namespace Service
                 Title = uq.Quest.Title,
                 Description = uq.Quest.Description,
                 ImageUrl = uq.Quest.ImageUrl,
+                IsStandalone = uq.Quest.IsStandalone,
                 Status = uq.Status,
                 StartedAt = uq.StartedAt,
                 CompletedAt = uq.CompletedAt,

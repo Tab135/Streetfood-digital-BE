@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -14,6 +13,7 @@ namespace BO.DTO.Quest
         [StringLength(500)]
         public string? ImageUrl { get; set; }
         public bool? IsActive { get; set; }
+        public bool? IsStandalone { get; set; }
         public int? CampaignId { get; set; }
 
         public List<CreateQuestTaskDto>? Tasks { get; set; }

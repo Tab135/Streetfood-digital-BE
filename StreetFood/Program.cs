@@ -167,6 +167,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
         builder.Services.AddScoped<Repository.Interfaces.IUserQuestRepository, Repository.UserQuestRepository>();
         builder.Services.AddScoped<Service.Interfaces.IQuestService, Service.QuestService>();
         builder.Services.AddScoped<Service.Interfaces.IQuestProgressService, Service.QuestProgressService>();
+        builder.Services.AddHostedService<Service.QuestExpirationService>();
 
         // Search Service
             builder.Services.AddScoped<ISearchService, SearchService>();

@@ -10,6 +10,7 @@ namespace BO.DTO.Quest
         public string? Description { get; set; }
         public string? ImageUrl { get; set; }
         public bool IsActive { get; set; }
+        public bool IsStandalone { get; set; }
         public int? CampaignId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }

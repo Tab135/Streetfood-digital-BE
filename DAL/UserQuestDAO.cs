@@ -108,11 +108,32 @@ namespace DAL
 
         public async Task<List<UserQuest>> GetExpiredQuestsAsync()
         {
-            var now = DateTime.UtcNow;
             return await _context.UserQuests
                 .Include(uq => uq.Quest)
-                .Where(uq => uq.Status == "IN_PROGRESS")
+                    .ThenInclude(q => q.Campaign)
+                .Where(uq => uq.Status == "IN_PROGRESS"
+                    && uq.Quest.CampaignId != null
+                    && uq.Quest.Campaign!.EndDate < DateTime.UtcNow)
                 .ToListAsync();
+        }
+
+        public async Task<UserQuest?> GetActiveStandaloneQuestAsync(int userId)
+        {
+            return await _context.UserQuests
+                .Include(uq => uq.Quest)
+                .Where(uq => uq.UserId == userId
+                    && uq.Status == "IN_PROGRESS"
+                    && uq.Quest.IsStandalone)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<UserQuest?> GetByUserAndQuestAnyStatusAsync(int userId, int questId)
+        {
+            return await _context.UserQuests
+                .Include(uq => uq.UserQuestTasks)
+                    .ThenInclude(uqt => uqt.QuestTask)
+                .Include(uq => uq.Quest)
+                .FirstOrDefaultAsync(uq => uq.UserId == userId && uq.QuestId == questId);
         }
     }
 }
