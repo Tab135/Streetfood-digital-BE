@@ -787,7 +787,7 @@ namespace Service.PaymentsService
                 foreach (var id in distinct)
                 {
                     if (!pendingIdSet.Contains(id))
-                        return new PaymentLinkResult { Success = false, Message = "Danh sách chi nhánh thanh toán không hợp lệ hoặc đã được thanh toán." };
+                        return new PaymentLinkResult { Success = false, Message = "Danh sách chi nhánh thanh toán không hợp lệ." };
                 }
 
                 // Create one payment for the vendor's whole campaign selection
@@ -804,7 +804,7 @@ namespace Service.PaymentsService
 
                 // Used later during webhook confirmation to activate selected BranchCampaignIds
                 // Keep it short but include marker + ids
-                var description = $"Phi tham gia chien dich VENDOR_SYSTEM_CAMPAIGN_BATCH:{string.Join(",", distinct)}";
+                var description = $"Phi tham gia:{string.Join(",", distinct)}";
 
                 var payment = await _paymentRepo.CreatePayment(
                     userId: userId,
@@ -908,9 +908,29 @@ namespace Service.PaymentsService
                 // ignore parsing errors; fall back below
             }
 
-            // Always include the anchor BranchCampaignId if parsing failed
+            // If parsing failed, fall back to old behavior: activate all pending rows
+            // for this vendor + campaign (pre-marker payments / legacy links).
             if (selectedIds.Count == 0)
+            {
+                var vendorId = branchCampaign.Branch?.VendorId;
+                if (vendorId.HasValue)
+                {
+                    var pendingRows = await _branchCampaignRepo.GetPendingByCampaignAndVendorAsync(branchCampaign.CampaignId, vendorId.Value);
+                    foreach (var row in pendingRows)
+                    {
+                        row.IsActive = true;
+                        await _branchCampaignRepo.UpdateAsync(row);
+                    }
+
+                    _logger.LogInformation(
+                        "Activated {Count} pending BranchCampaigns (legacy batch) for Vendor {VendorId}, Campaign {CampaignId}",
+                        pendingRows.Count, vendorId.Value, branchCampaign.CampaignId);
+                    return;
+                }
+
+                // Worst-case: at least activate the anchor row
                 selectedIds.Add(branchCampaignId);
+            }
 
             var activatedCount = 0;
             foreach (var id in selectedIds.Distinct())
