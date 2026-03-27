@@ -57,6 +57,28 @@ namespace Service
             };
             await _campaignRepo.CreateAsync(campaign);
 
+            // For vendor-created campaigns, create BranchCampaign rows so vouchers/orders
+            // can validate join status using (branchId, campaignId) lookup.
+            var branches = await _branchRepo.GetAllByVendorIdAsync(vendor.VendorId);
+            foreach (var branch in branches)
+            {
+                // Eligibility matches the existing "system campaign join" rule.
+                if (!(branch.Tier != null && branch.Tier.Weight >= 1 && branch.IsSubscribed))
+                    continue;
+
+                var existing = await _branchCampaignRepo.GetByBranchAndCampaignAsync(branch.BranchId, campaign.CampaignId);
+                if (existing != null)
+                    continue;
+
+                await _branchCampaignRepo.CreateAsync(new BO.Entities.BranchCampaign
+                {
+                    BranchId = branch.BranchId,
+                    CampaignId = campaign.CampaignId,
+                    // If campaign is inactive, reflect that in join row as well.
+                    IsActive = campaign.IsActive
+                });
+            }
+
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
 
@@ -257,6 +279,19 @@ namespace Service
                 CreatedByBranchId = branchId
             };
             await _campaignRepo.CreateAsync(campaign);
+
+            // For branch-created campaigns, create a BranchCampaign row for management UI
+            // (even though vouchers/orders can also rely on CreatedByBranchId directly).
+            var existing = await _branchCampaignRepo.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);
+            if (existing == null)
+            {
+                await _branchCampaignRepo.CreateAsync(new BO.Entities.BranchCampaign
+                {
+                    BranchId = branchId,
+                    CampaignId = campaign.CampaignId,
+                    IsActive = campaign.IsActive
+                });
+            }
 
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
