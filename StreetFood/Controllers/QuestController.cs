@@ -3,6 +3,7 @@ using BO.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using StreetFood.Services;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -14,14 +15,29 @@ namespace StreetFood.Controllers
     {
         private readonly IQuestService _questService;
         private readonly IQuestProgressService _questProgressService;
+        private readonly IS3Service _s3Service;
 
-        public QuestController(IQuestService questService, IQuestProgressService questProgressService)
+        public QuestController(IQuestService questService, IQuestProgressService questProgressService, IS3Service s3Service)
         {
             _questService = questService;
             _questProgressService = questProgressService;
+            _s3Service = s3Service;
         }
 
         // ==================== Admin CRUD ====================
+
+        [HttpPost("{id}/image")]
+        [Authorize(Roles = "Admin,Moderator")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadQuestImage(int id, IFormFile imageFile)
+        {
+            if (imageFile == null || imageFile.Length == 0)
+                return BadRequest(new { message = "Image file is required" });
+
+            var imageUrl = await _s3Service.UploadFileAsync(imageFile, "quests");
+            var result = await _questService.UpdateQuestImageAsync(id, imageUrl);
+            return Ok(new { message = "Quest image uploaded successfully", data = result });
+        }
 
         [HttpPost]
         [Authorize(Roles = "Admin,Moderator")]

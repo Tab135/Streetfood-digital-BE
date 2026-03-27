@@ -202,6 +202,16 @@ namespace Service
             return userQuests.Select(MapToProgressDto).ToList();
         }
 
+        public async Task<QuestResponseDto> UpdateQuestImageAsync(int questId, string imageUrl)
+        {
+            var quest = await _questRepository.GetByIdAsync(questId)
+                ?? throw new Exception($"Quest with ID {questId} not found");
+
+            quest.ImageUrl = imageUrl;
+            await _questRepository.UpdateAsync(quest);
+            return MapToResponseDto(quest);
+        }
+
         private async Task ValidateTaskRewardAsync(QuestRewardType rewardType, int rewardValue)
         {
             switch (rewardType)
