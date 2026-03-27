@@ -39,7 +39,7 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Restaurant campaign created successfully", data = result });
         }
 
-                        [HttpPost("vendor")]
+        [HttpPost("vendor")]
         [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> CreateVendorCampaign([FromBody] CreateVendorCampaignDto dto)
         {
@@ -69,7 +69,8 @@ namespace StreetFood.Controllers
             return BadRequest(new { message = paymentResult.Message });
         }
 
-                [HttpGet("system")]
+        [HttpGet("system")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetSystemCampaigns([FromQuery] CampaignQueryDto query)
         {
             var result = await _campaignService.GetSystemCampaignsAsync(query);

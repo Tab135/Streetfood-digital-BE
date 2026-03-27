@@ -305,24 +305,26 @@ public class VoucherService : IVoucherService
             if (voucher.CampaignId.HasValue)
             {
                 var campaign = voucher.Campaign;
-                if (campaign != null)
+                if (campaign == null)
                 {
-                    if (campaign.CreatedByBranchId.HasValue)
+                    continue;
+                }
+
+                if (campaign.CreatedByBranchId.HasValue)
+                {
+                    // Branch campaign voucher can only be redeemed on the branch that created that campaign.
+                    if (branchId == campaign.CreatedByBranchId.Value)
                     {
-                        // Branch Campaign: Must be the same branch
-                        if (branchId == campaign.CreatedByBranchId.Value)
-                        {
-                            applicableVouchers.Add(uv);
-                        }
+                        applicableVouchers.Add(uv);
                     }
-                    else
+                }
+                else
+                {
+                    // System campaign voucher is valid only after the branch has joined and paid.
+                    var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);
+                    if (joinInfo != null && joinInfo.IsActive == true)
                     {
-                        // System Campaign: Branch must have joined
-                        var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);
-                        if (joinInfo != null && joinInfo.IsActive == true)
-                        {
-                            applicableVouchers.Add(uv);
-                        }
+                        applicableVouchers.Add(uv);
                     }
                 }
             }
