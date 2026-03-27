@@ -12,4 +12,5 @@ public interface IVoucherRepository
     Task DeleteAsync(int voucherId);
     Task<bool> ExistsByIdAsync(int voucherId);
     Task<List<Voucher>> GetByCampaignIdAsync(int campaignId);
+    Task<List<Voucher>> GetMarketplaceVouchersAsync(DateTime now);
 }
