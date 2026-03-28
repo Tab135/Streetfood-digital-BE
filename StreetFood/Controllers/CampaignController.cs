@@ -41,6 +41,7 @@ namespace StreetFood.Controllers
                 response.Payment = new VendorJoinSystemCampaignPaymentInfoDto
                 {
                     PaymentUrl = paymentSource.PaymentUrl,
+                    QrCode = paymentSource.QrCode,
                     OrderCode = paymentSource.OrderCode,
                     PaymentLinkId = paymentSource.PaymentLinkId
                 };

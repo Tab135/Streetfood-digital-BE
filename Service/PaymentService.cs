@@ -294,6 +294,7 @@ namespace Service.PaymentsService
                             Success = true,
                             Message = "Using existing pending payment link",
                             PaymentUrl = latestPayment.CheckoutUrl,
+                            QrCode = latestPayment.CheckoutUrl,
                             OrderCode = latestPayment.OrderCode,
                             PaymentLinkId = latestPayment.PaymentLinkId
                         };
@@ -331,16 +332,19 @@ namespace Service.PaymentsService
 
                 string paymentLinkId;
                 string checkoutUrl;
+                string qrCode;
                 if (_isDebugMode)
                 {
                     paymentLinkId = $"DEBUG-ORDER-{orderCode}";
                     checkoutUrl = $"{returnUrl}?debug=true&orderCode={orderCode}";
+                    qrCode = checkoutUrl;
                 }
                 else
                 {
                     var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                    qrCode = paymentLinkResponse.QrCode;
                 }
 
                 await _paymentRepo.UpdatePaymentWithPayOSDetails(
@@ -354,6 +358,7 @@ namespace Service.PaymentsService
                     Success = true,
                     Message = _isDebugMode ? "Debug payment link created" : "Create payment link successfully",
                     PaymentUrl = checkoutUrl,
+                    QrCode = qrCode,
                     OrderCode = orderCode,
                     PaymentLinkId = paymentLinkId
                 };
@@ -456,16 +461,19 @@ namespace Service.PaymentsService
 
                 string paymentLinkId;
                 string checkoutUrl;
+                string qrCode;
                 if (_isDebugMode)
                 {
                     paymentLinkId = $"DEBUG-SUB-{orderCode}";
                     checkoutUrl = $"{returnUrl}?debug=true&orderCode={orderCode}";
+                    qrCode = checkoutUrl;
                 }
                 else
                 {
                     var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                    qrCode = paymentLinkResponse.QrCode;
                 }
 
                 // 9. Persist PayOS details
@@ -483,6 +491,7 @@ namespace Service.PaymentsService
                 {
                     Success = true,
                     PaymentUrl = checkoutUrl,
+                    QrCode = qrCode,
                     OrderCode = orderCode,
                     PaymentLinkId = paymentLinkId,
                     Message = _isDebugMode ? "Tạo link thanh toán debug thành công" : "Tạo link thanh toán thành công"
@@ -717,22 +726,31 @@ namespace Service.PaymentsService
                     ReturnUrl = returnUrl
                 };
 
-                string paymentLinkId, checkoutUrl;
+                string paymentLinkId, checkoutUrl, qrCode;
                 if (_isDebugMode)
                 {
                     paymentLinkId = "DEBUG-CAMP-" + orderCode;
                     checkoutUrl = returnUrl + "?debug=true&orderCode=" + orderCode;
+                    qrCode = checkoutUrl;
                 }
                 else
                 {
                     var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                    qrCode = paymentLinkResponse.QrCode;
                 }
 
                 await _paymentRepo.UpdatePaymentWithPayOSDetails(orderCode, "PENDING", paymentLinkId, checkoutUrl);
 
-                return new PaymentLinkResult { Success = true, PaymentUrl = checkoutUrl, OrderCode = orderCode, PaymentLinkId = paymentLinkId };
+                return new PaymentLinkResult
+                {
+                    Success = true,
+                    PaymentUrl = checkoutUrl,
+                    QrCode = qrCode,
+                    OrderCode = orderCode,
+                    PaymentLinkId = paymentLinkId
+                };
             }
             catch (Exception ex)
             {
@@ -829,17 +847,19 @@ namespace Service.PaymentsService
                     ReturnUrl = returnUrl
                 };
 
-                string paymentLinkId, checkoutUrl;
+                string paymentLinkId, checkoutUrl, qrCode;
                 if (_isDebugMode)
                 {
                     paymentLinkId = "DEBUG-VENDOR-CAMP-" + orderCode;
                     checkoutUrl = returnUrl + "?debug=true&orderCode=" + orderCode;
+                    qrCode = checkoutUrl;
                 }
                 else
                 {
                     var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                    qrCode = paymentLinkResponse.QrCode;
                 }
 
                 await _paymentRepo.UpdatePaymentWithPayOSDetails(orderCode, "PENDING", paymentLinkId, checkoutUrl);
@@ -848,6 +868,7 @@ namespace Service.PaymentsService
                 {
                     Success = true,
                     PaymentUrl = checkoutUrl,
+                    QrCode = qrCode,
                     OrderCode = orderCode,
                     PaymentLinkId = paymentLinkId
                 };
@@ -1075,6 +1096,7 @@ namespace Service.PaymentsService
                 Amount = payment.Amount,
                 Status = payment.Status,
                 Description = payment.Description,
+                QrCode = payment.CheckoutUrl,
                 CreatedAt = payment.CreatedAt,
                 PaidAt = payment.PaidAt,
                 TransactionCode = payment.TransactionCode

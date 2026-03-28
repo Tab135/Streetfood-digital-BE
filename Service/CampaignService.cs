@@ -198,6 +198,7 @@ namespace Service
                 }
 
                 dto.PaymentUrl = paymentResult.PaymentUrl;
+                dto.QrCode = paymentResult.QrCode;
                 dto.OrderCode = paymentResult.OrderCode;
                 dto.PaymentLinkId = paymentResult.PaymentLinkId;
             }
@@ -315,6 +316,7 @@ namespace Service
                 }
 
                 dto.PaymentUrl = paymentResult.PaymentUrl;
+                dto.QrCode = paymentResult.QrCode;
                 dto.OrderCode = paymentResult.OrderCode;
                 dto.PaymentLinkId = paymentResult.PaymentLinkId;
             }

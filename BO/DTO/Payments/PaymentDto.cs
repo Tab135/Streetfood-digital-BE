@@ -29,6 +29,7 @@ namespace BO.DTO.Payments
         public bool Success { get; set; }
         public string? Message { get; set; }
         public string? PaymentUrl { get; set; }
+        public string? QrCode { get; set; }
         public long? OrderCode { get; set; }
         public string? PaymentLinkId { get; set; }
         public bool RequiresConfirmation { get; set; }
@@ -40,6 +41,7 @@ namespace BO.DTO.Payments
         public int Amount { get; set; }
         public string? Status { get; set; }
         public string? Description { get; set; }
+        public string? QrCode { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? PaidAt { get; set; }
         public string? TransactionCode { get; set; }
