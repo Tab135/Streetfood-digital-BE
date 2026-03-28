@@ -224,6 +224,47 @@ namespace Ielts_System.Controllers.Payments
             }
         }
 
+        [HttpPost("webhook")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ReceiveWebhook([FromBody] Webhook webhook)
+        {
+            try
+            {
+                var handled = await _paymentService.HandleWebhookAsync(webhook);
+                if (!handled)
+                {
+                    return BadRequest(new { message = "Webhook processing failed" });
+                }
+
+                return Ok(new { message = "Webhook received" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing PayOS webhook");
+                return StatusCode(500, new { message = "Failed to process webhook" });
+            }
+        }
+
+        [HttpPost("webhook/register")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> RegisterWebhook([FromBody] RegisterWebhookDto request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.WebhookUrl))
+            {
+                return BadRequest(new { message = "WebhookUrl is required" });
+            }
+
+            var success = await _paymentService.RegisterWebhookUrl(request.WebhookUrl);
+            if (!success)
+            {
+                return BadRequest(new { message = "Failed to register webhook URL" });
+            }
+
+            return Ok(new { message = "Webhook URL registered successfully", data = new { request.WebhookUrl } });
+        }
+
         [HttpGet("cancel")]
         [AllowAnonymous]
         public IActionResult PaymentCancel([FromQuery] long orderCode)

@@ -24,6 +24,11 @@ namespace BO.DTO.Payments
         public string? TransactionId { get; set; }
     }
 
+    public class RegisterWebhookDto
+    {
+        public string WebhookUrl { get; set; } = string.Empty;
+    }
+
     public class PaymentLinkResult
     {
         public bool Success { get; set; }

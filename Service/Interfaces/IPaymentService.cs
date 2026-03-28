@@ -39,5 +39,7 @@ namespace Service.PaymentsService
         Task<bool> VerifyPaymentOwnership(long orderCode, int userId);
 
         Task<bool> RegisterWebhookUrl(string webhookUrl);
+
+        Task<bool> HandleWebhookAsync(Webhook webhook);
     }
 }

@@ -673,6 +673,64 @@ namespace Service.PaymentsService
             }
         }
 
+        public async Task<bool> HandleWebhookAsync(Webhook webhook)
+        {
+            try
+            {
+                if (webhook?.Data == null)
+                {
+                    _logger.LogWarning("Received invalid PayOS webhook payload");
+                    return false;
+                }
+
+                WebhookData verifiedData;
+                if (_isDebugMode)
+                {
+                    verifiedData = webhook.Data;
+                }
+                else
+                {
+                    verifiedData = await _payOS.Webhooks.VerifyAsync(webhook);
+                }
+
+                if (verifiedData.OrderCode <= 0)
+                {
+                    _logger.LogWarning("Webhook missing valid orderCode");
+                    return false;
+                }
+
+                var payment = await _paymentRepo.GetPaymentByOrderCode(verifiedData.OrderCode);
+                if (payment == null)
+                {
+                    _logger.LogWarning("Webhook received for unknown OrderCode={OrderCode}", verifiedData.OrderCode);
+                    // Acknowledge unknown events to avoid endless retries from provider.
+                    return true;
+                }
+
+                if (payment.Status != "PENDING")
+                {
+                    _logger.LogInformation(
+                        "Webhook ignored for OrderCode={OrderCode} because status is {Status}",
+                        verifiedData.OrderCode,
+                        payment.Status);
+                    return true;
+                }
+
+                // Reuse existing confirmation flow so side-effects are consistent
+                // (order move, subscription activation, branch campaign activation).
+                var provisionalStatus = webhook.Success || verifiedData.Code == "00" ? "PAID" : "CANCELLED";
+                await ConfirmPaymentFromRedirect(verifiedData.OrderCode, provisionalStatus, verifiedData.Reference);
+
+                _logger.LogInformation("Webhook processed successfully for OrderCode={OrderCode}", verifiedData.OrderCode);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to process PayOS webhook");
+                return false;
+            }
+        }
+
                 public async Task<PaymentLinkResult> CreateCampaignPaymentLink(int userId, int branchId, int branchCampaignId)
         {
             try
