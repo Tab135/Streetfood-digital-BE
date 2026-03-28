@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace BO.DTO.Campaigns
@@ -14,5 +15,10 @@ namespace BO.DTO.Campaigns
         public DateTime EndDate { get; set; }
 
         public bool IsActive { get; set; } = true;
+
+        /// <summary>
+        /// Null or omitted: attach every eligible branch (tier + subscription). Non-empty: only these branches (must belong to the vendor).
+        /// </summary>
+        public List<int>? BranchIds { get; set; }
     }
 }

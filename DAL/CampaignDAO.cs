@@ -108,23 +108,6 @@ namespace DAL
             return (items, totalCount);
         }
 
-        public async Task<(List<Campaign> Items, int TotalCount)> GetCampaignsByBranchAsync(int branchId, int page, int pageSize)
-        {
-            var query = _context.Campaigns
-                .Include(c => c.CreatedByBranch)
-                .Where(c =>
-                    // Internal campaign created by this branch
-                    c.CreatedByBranchId == branchId
-                    // System campaigns must be paid (BranchCampaign.IsActive == true)
-                    || (c.CreatedByBranchId == null && c.CreatedByVendorId == null &&
-                        c.BranchCampaigns.Any(bc => bc.BranchId == branchId && bc.IsActive)))
-                .OrderByDescending(c => c.CreatedAt);
-
-            int totalCount = await query.CountAsync();
-            var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
-            return (items, totalCount);
-        }
-
         // --- Campaign Image Methods ---
     }
 }

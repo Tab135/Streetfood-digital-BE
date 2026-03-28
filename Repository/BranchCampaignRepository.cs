@@ -20,5 +20,9 @@ namespace Repository
         public Task<BranchCampaign?> GetByBranchAndCampaignAsync(int branchId, int campaignId) => _dao.GetByBranchAndCampaignAsync(branchId, campaignId);
         public Task<List<BranchCampaign>> GetPendingByCampaignAndVendorAsync(int campaignId, int vendorId) => _dao.GetPendingByCampaignAndVendorAsync(campaignId, vendorId);
         public Task UpdateAsync(BranchCampaign branchCampaign) => _dao.UpdateAsync(branchCampaign);
+        public Task<bool> DeleteByBranchAndCampaignAsync(int branchId, int campaignId) => _dao.DeleteByBranchAndCampaignAsync(branchId, campaignId);
+        public Task<List<int>> GetBranchIdsByCampaignAndVendorAsync(int campaignId, int vendorId) => _dao.GetBranchIdsByCampaignAndVendorAsync(campaignId, vendorId);
+        public Task<int> CountByCampaignIdAsync(int campaignId) => _dao.CountByCampaignIdAsync(campaignId);
+        public Task SetAllIsActiveForCampaignAsync(int campaignId, bool isActive) => _dao.SetAllIsActiveForCampaignAsync(campaignId, isActive);
     }
 }

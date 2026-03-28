@@ -78,7 +78,6 @@ public class OrderService : IOrderService
 
                 if (campaign.CreatedByBranchId.HasValue)
                 {
-                    // Branch campaign voucher can only be redeemed on the branch that created that campaign.
                     if (branch.BranchId != campaign.CreatedByBranchId.Value)
                     {
                         throw new DomainExceptions("This voucher is only applicable to a specific branch.");
@@ -86,10 +85,11 @@ public class OrderService : IOrderService
                 }
                 else
                 {
-                    // System campaign voucher is valid only after the branch has joined and paid.
                     var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branch.BranchId, campaign.CampaignId);
                     if (joinInfo == null || joinInfo.IsActive != true)
                     {
+                        if (campaign.CreatedByVendorId.HasValue)
+                            throw new DomainExceptions("This branch is not included in this vendor campaign.");
                         throw new DomainExceptions("This branch has not completed campaign joining payment yet.");
                     }
                 }

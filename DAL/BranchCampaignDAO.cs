@@ -55,5 +55,36 @@ namespace DAL
             _context.BranchCampaigns.Update(branchCampaign);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<bool> DeleteByBranchAndCampaignAsync(int branchId, int campaignId)
+        {
+            var bc = await GetByBranchAndCampaignAsync(branchId, campaignId);
+            if (bc == null)
+                return false;
+            _context.BranchCampaigns.Remove(bc);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        /// <summary>Branch IDs participating in this campaign for the given vendor (BranchCampaign rows).</summary>
+        public async Task<List<int>> GetBranchIdsByCampaignAndVendorAsync(int campaignId, int vendorId)
+        {
+            return await _context.BranchCampaigns
+                .AsNoTracking()
+                .Where(bc => bc.CampaignId == campaignId && bc.Branch.VendorId == vendorId)
+                .OrderBy(bc => bc.BranchId)
+                .Select(bc => bc.BranchId)
+                .ToListAsync();
+        }
+
+        public Task<int> CountByCampaignIdAsync(int campaignId) =>
+            _context.BranchCampaigns.AsNoTracking().CountAsync(bc => bc.CampaignId == campaignId);
+
+        public async Task SetAllIsActiveForCampaignAsync(int campaignId, bool isActive)
+        {
+            await _context.BranchCampaigns
+                .Where(bc => bc.CampaignId == campaignId)
+                .ExecuteUpdateAsync(s => s.SetProperty(bc => bc.IsActive, isActive));
+        }
     }
 }

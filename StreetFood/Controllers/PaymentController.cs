@@ -57,22 +57,22 @@ namespace Ielts_System.Controllers.Payments
             }
         }
 
-        [HttpGet("status/{orderCode}")]
-        [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<PaymentStatusResponse>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<PaymentStatusResponse>> GetPaymentStatus(long orderCode)
-        {
-            try
-            {
-                var result = await _paymentService.GetPaymentStatus(orderCode);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting payment status for OrderCode={OrderCode}", orderCode);
-                return StatusCode(500, new { message = "Failed to retrieve payment status" });
-            }
-        }
+        // [HttpGet("status/{orderCode}")]
+        // [Authorize]
+        // [ProducesResponseType(typeof(ApiResponse<PaymentStatusResponse>), StatusCodes.Status200OK)]
+        // public async Task<ActionResult<PaymentStatusResponse>> GetPaymentStatus(long orderCode)
+        // {
+        //     try
+        //     {
+        //         var result = await _paymentService.GetPaymentStatus(orderCode);
+        //         return Ok(result);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "Error getting payment status for OrderCode={OrderCode}", orderCode);
+        //         return StatusCode(500, new { message = "Failed to retrieve payment status" });
+        //     }
+        // }
 
 
         [HttpGet("history")]
@@ -101,21 +101,21 @@ namespace Ielts_System.Controllers.Payments
 
 
 
-        [HttpGet("success")]
-        [AllowAnonymous]
-        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-        public IActionResult PaymentSuccess([FromQuery] long orderCode, [FromQuery] string? status)
-        {
-            _logger.LogInformation("Payment success redirect: OrderCode={OrderCode}, Status={Status}",
-                orderCode, status);
+        // [HttpGet("success")]
+        // [AllowAnonymous]
+        // [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        // public IActionResult PaymentSuccess([FromQuery] long orderCode, [FromQuery] string? status)
+        // {
+        //     _logger.LogInformation("Payment success redirect: OrderCode={OrderCode}, Status={Status}",
+        //         orderCode, status);
 
-            return Ok(new
-            {
-                message = "Payment completed successfully",
-                orderCode = orderCode,
-                status = status ?? "PAID"
-            });
-        }
+        //     return Ok(new
+        //     {
+        //         message = "Payment completed successfully",
+        //         orderCode = orderCode,
+        //         status = status ?? "PAID"
+        //     });
+        // }
 
 
         [HttpPost("confirm")]
@@ -224,18 +224,18 @@ namespace Ielts_System.Controllers.Payments
             }
         }
 
-        [HttpGet("cancel")]
-        [AllowAnonymous]
-        public IActionResult PaymentCancel([FromQuery] long orderCode)
-        {
-            _logger.LogInformation("Payment cancelled: OrderCode={OrderCode}", orderCode);
+        // [HttpGet("cancel")]
+        // [AllowAnonymous]
+        // public IActionResult PaymentCancel([FromQuery] long orderCode)
+        // {
+        //     _logger.LogInformation("Payment cancelled: OrderCode={OrderCode}", orderCode);
 
-            return Ok(new
-            {
-                message = "Payment was cancelled",
-                orderCode = orderCode
-            });
-        }
+        //     return Ok(new
+        //     {
+        //         message = "Payment was cancelled",
+        //         orderCode = orderCode
+        //     });
+        // }
 
         [HttpGet("user/balance")]
         [Authorize(Roles = "User")]

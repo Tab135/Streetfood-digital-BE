@@ -318,23 +318,15 @@ public class VoucherService : IVoucherService
 
                 if (campaign.CreatedByBranchId.HasValue)
                 {
-                    // Requirement: Voucher created by vendor for that specific branch
+                    // Requirement: Voucher created for that single branch (restaurant campaign)
                     if (branchId == campaign.CreatedByBranchId.Value)
-                    {
-                        applicableVouchers.Add(uv);
-                    }
-                }
-                else if (campaign.CreatedByVendorId.HasValue)
-                {
-                    // Requirement: Vendor-wide campaign (applying to ALL branches of that vendor)
-                    if (branch.VendorId == campaign.CreatedByVendorId.Value)
                     {
                         applicableVouchers.Add(uv);
                     }
                 }
                 else
                 {
-                    // Requirement: System campaign voucher - only usable at branches that joined
+                    // Vendor-wide or system campaign: only branches linked via BranchCampaign (active)
                     var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);
                     if (joinInfo != null && joinInfo.IsActive == true)
                     {

@@ -57,16 +57,6 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Campaign created successfully", data = result });
         }
 
-        [HttpPost("branch/{branchId}")]
-        [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> CreateRestaurantCampaign(int branchId, [FromBody] CreateVendorCampaignDto dto)
-        {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            
-            var result = await _campaignService.CreateRestaurantCampaignAsync(userId, branchId, dto);
-            return Ok(new { message = "Restaurant campaign created successfully", data = result });
-        }
-
         [HttpPost("vendor")]
         [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> CreateVendorCampaign([FromBody] CreateVendorCampaignDto dto)
@@ -140,6 +130,34 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Lấy danh sách chiến dịch của vendor thành công", data = result });
         }
 
+        /// <summary>Danh sách chi nhánh đang tham gia campaign do vendor tạo (theo BranchCampaign).</summary>
+        [HttpGet("vendor/{campaignId}/branches")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> GetVendorCampaignBranches(int campaignId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.GetVendorCampaignBranchesAsync(userId, campaignId);
+            return Ok(new { message = "Lấy danh sách chi nhánh tham gia campaign thành công", data = result });
+        }
+
+        [HttpPost("vendor/{campaignId}/branches/add")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> AddBranchesToVendorCampaign(int campaignId, [FromBody] VendorCampaignBranchIdsDto dto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.AddBranchesToVendorCampaignAsync(userId, campaignId, dto?.BranchIds ?? new());
+            return Ok(new { message = "Đã thêm chi nhánh vào campaign", data = result });
+        }
+
+        [HttpPost("vendor/{campaignId}/branches/remove")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> RemoveBranchesFromVendorCampaign(int campaignId, [FromBody] VendorCampaignBranchIdsDto dto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.RemoveBranchesFromVendorCampaignAsync(userId, campaignId, dto?.BranchIds ?? new());
+            return Ok(new { message = "Đã gỡ chi nhánh khỏi campaign", data = result });
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCampaignById(int id)
         {
@@ -156,17 +174,6 @@ namespace StreetFood.Controllers
 
             var result = await _campaignService.UpdateCampaignAsync(userId, userRole, id, dto);
             return Ok(new { message = "Cập nhật chiến dịch thành công", data = result });
-        }
-
-        [HttpGet("branch/{branchId}")]
-        [Authorize(Roles = "Vendor,Manager,Admin")]
-        public async Task<IActionResult> GetCampaignsByBranchAsync(int branchId, [FromQuery] CampaignQueryDto query)
-        {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
-
-            var result = await _campaignService.GetCampaignsByBranchAsync(userId, userRole, branchId, query);
-            return Ok(new { message = "Lấy danh sách chiến dịch của chi nhánh thành công", data = result });
         }
 
         // NEW: Get system campaign detail with eligible branches
