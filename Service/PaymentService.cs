@@ -530,8 +530,8 @@ namespace Service.PaymentsService
                         var paymentInfo = await _payOS.PaymentRequests.GetAsync((int)orderCode);
                         if (paymentInfo?.Status != null)
                         {
-                            string newStatus = paymentInfo.Status.ToString();
-                            if (newStatus == "PAID" || newStatus == "CANCELLED")
+                            var newStatus = paymentInfo.Status.ToString().ToUpperInvariant();
+                            if (newStatus is "PAID" or "CANCELLED" or "EXPIRED")
                             {
                                 DateTime? paidAt = newStatus == "PAID" ? DateTime.UtcNow : null;
                                 payment = await _paymentRepo.UpdatePaymentFromWebhook(

@@ -160,69 +160,69 @@ namespace Ielts_System.Controllers.Payments
             }
         }
 
-        [HttpPost("order/confirm")]
-        [Authorize(Roles = "User")]
-        public async Task<ActionResult<PaymentStatusResponse>> ConfirmOrderPayment([FromBody] ConfirmPaymentDto request)
-        {
-            try
-            {
-                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                {
-                    return Unauthorized(new { message = "User not authenticated" });
-                }
+        // [HttpPost("order/confirm")]
+        // [Authorize(Roles = "User")]
+        // public async Task<ActionResult<PaymentStatusResponse>> ConfirmOrderPayment([FromBody] ConfirmPaymentDto request)
+        // {
+        //     try
+        //     {
+        //         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        //         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        //         {
+        //             return Unauthorized(new { message = "User not authenticated" });
+        //         }
 
-                var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
-                if (!paymentOwnerCheck)
-                {
-                    return Forbid();
-                }
+        //         var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
+        //         if (!paymentOwnerCheck)
+        //         {
+        //             return Forbid();
+        //         }
 
-                var result = await _paymentService.ConfirmPaymentFromRedirect(
-                    request.OrderCode,
-                    request.Status ?? "",
-                    request.TransactionId);
+        //         var result = await _paymentService.ConfirmPaymentFromRedirect(
+        //             request.OrderCode,
+        //             request.Status ?? "",
+        //             request.TransactionId);
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error confirming order payment for OrderCode={OrderCode}", request.OrderCode);
-                return StatusCode(500, new { message = "Failed to confirm order payment" });
-            }
-        }
+        //         return Ok(result);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "Error confirming order payment for OrderCode={OrderCode}", request.OrderCode);
+        //         return StatusCode(500, new { message = "Failed to confirm order payment" });
+        //     }
+        // }
 
-        [HttpPost("campaign/confirm")]
-        [Authorize(Roles = "Vendor")]
-        public async Task<ActionResult<PaymentStatusResponse>> ConfirmCampaignPayment([FromBody] ConfirmPaymentDto request)
-        {
-            try
-            {
-                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                {
-                    return Unauthorized(new { message = "User not authenticated" });
-                }
+        // [HttpPost("campaign/confirm")]
+        // [Authorize(Roles = "Vendor")]
+        // public async Task<ActionResult<PaymentStatusResponse>> ConfirmCampaignPayment([FromBody] ConfirmPaymentDto request)
+        // {
+        //     try
+        //     {
+        //         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        //         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        //         {
+        //             return Unauthorized(new { message = "User not authenticated" });
+        //         }
 
-                var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
-                if (!paymentOwnerCheck)
-                {
-                    return Forbid();
-                }
+        //         var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
+        //         if (!paymentOwnerCheck)
+        //         {
+        //             return Forbid();
+        //         }
 
-                var result = await _paymentService.ConfirmPaymentFromRedirect(
-                    request.OrderCode,
-                    request.Status ?? "",
-                    request.TransactionId);
+        //         var result = await _paymentService.ConfirmPaymentFromRedirect(
+        //             request.OrderCode,
+        //             request.Status ?? "",
+        //             request.TransactionId);
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error confirming campaign payment for OrderCode={OrderCode}", request.OrderCode);
-                return StatusCode(500, new { message = "Failed to confirm campaign payment" });
-            }
-        }
+        //         return Ok(result);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "Error confirming campaign payment for OrderCode={OrderCode}", request.OrderCode);
+        //         return StatusCode(500, new { message = "Failed to confirm campaign payment" });
+        //     }
+        // }
 
         [HttpPost("webhook")]
         [AllowAnonymous]
