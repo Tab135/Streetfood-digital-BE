@@ -11,6 +11,7 @@ namespace BO.DTO.Campaigns
     public class VendorJoinSystemCampaignPaymentInfoDto
     {
         public string? PaymentUrl { get; set; }
+        public string? QrCode { get; set; }
         public long? OrderCode { get; set; }
         public string? PaymentLinkId { get; set; }
     }

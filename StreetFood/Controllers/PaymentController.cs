@@ -160,68 +160,109 @@ namespace Ielts_System.Controllers.Payments
             }
         }
 
-        [HttpPost("order/confirm")]
-        [Authorize(Roles = "User")]
-        public async Task<ActionResult<PaymentStatusResponse>> ConfirmOrderPayment([FromBody] ConfirmPaymentDto request)
+        // [HttpPost("order/confirm")]
+        // [Authorize(Roles = "User")]
+        // public async Task<ActionResult<PaymentStatusResponse>> ConfirmOrderPayment([FromBody] ConfirmPaymentDto request)
+        // {
+        //     try
+        //     {
+        //         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        //         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        //         {
+        //             return Unauthorized(new { message = "User not authenticated" });
+        //         }
+
+        //         var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
+        //         if (!paymentOwnerCheck)
+        //         {
+        //             return Forbid();
+        //         }
+
+        //         var result = await _paymentService.ConfirmPaymentFromRedirect(
+        //             request.OrderCode,
+        //             request.Status ?? "",
+        //             request.TransactionId);
+
+        //         return Ok(result);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "Error confirming order payment for OrderCode={OrderCode}", request.OrderCode);
+        //         return StatusCode(500, new { message = "Failed to confirm order payment" });
+        //     }
+        // }
+
+        // [HttpPost("campaign/confirm")]
+        // [Authorize(Roles = "Vendor")]
+        // public async Task<ActionResult<PaymentStatusResponse>> ConfirmCampaignPayment([FromBody] ConfirmPaymentDto request)
+        // {
+        //     try
+        //     {
+        //         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        //         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        //         {
+        //             return Unauthorized(new { message = "User not authenticated" });
+        //         }
+
+        //         var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
+        //         if (!paymentOwnerCheck)
+        //         {
+        //             return Forbid();
+        //         }
+
+        //         var result = await _paymentService.ConfirmPaymentFromRedirect(
+        //             request.OrderCode,
+        //             request.Status ?? "",
+        //             request.TransactionId);
+
+        //         return Ok(result);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "Error confirming campaign payment for OrderCode={OrderCode}", request.OrderCode);
+        //         return StatusCode(500, new { message = "Failed to confirm campaign payment" });
+        //     }
+        // }
+
+        [HttpPost("webhook")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ReceiveWebhook([FromBody] Webhook webhook)
         {
             try
             {
-                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                var handled = await _paymentService.HandleWebhookAsync(webhook);
+                if (!handled)
                 {
-                    return Unauthorized(new { message = "User not authenticated" });
+                    return BadRequest(new { message = "Webhook processing failed" });
                 }
 
-                var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
-                if (!paymentOwnerCheck)
-                {
-                    return Forbid();
-                }
-
-                var result = await _paymentService.ConfirmPaymentFromRedirect(
-                    request.OrderCode,
-                    request.Status ?? "",
-                    request.TransactionId);
-
-                return Ok(result);
+                return Ok(new { message = "Webhook received" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error confirming order payment for OrderCode={OrderCode}", request.OrderCode);
-                return StatusCode(500, new { message = "Failed to confirm order payment" });
+                _logger.LogError(ex, "Error processing PayOS webhook");
+                return StatusCode(500, new { message = "Failed to process webhook" });
             }
         }
 
-        [HttpPost("campaign/confirm")]
-        [Authorize(Roles = "Vendor")]
-        public async Task<ActionResult<PaymentStatusResponse>> ConfirmCampaignPayment([FromBody] ConfirmPaymentDto request)
+        [HttpPost("webhook/register")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> RegisterWebhook([FromBody] RegisterWebhookDto request)
         {
-            try
+            if (request == null || string.IsNullOrWhiteSpace(request.WebhookUrl))
             {
-                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                {
-                    return Unauthorized(new { message = "User not authenticated" });
-                }
-
-                var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
-                if (!paymentOwnerCheck)
-                {
-                    return Forbid();
-                }
-
-                var result = await _paymentService.ConfirmPaymentFromRedirect(
-                    request.OrderCode,
-                    request.Status ?? "",
-                    request.TransactionId);
-
-                return Ok(result);
+                return BadRequest(new { message = "WebhookUrl is required" });
             }
-            catch (Exception ex)
+
+            var success = await _paymentService.RegisterWebhookUrl(request.WebhookUrl);
+            if (!success)
             {
-                _logger.LogError(ex, "Error confirming campaign payment for OrderCode={OrderCode}", request.OrderCode);
-                return StatusCode(500, new { message = "Failed to confirm campaign payment" });
+                return BadRequest(new { message = "Failed to register webhook URL" });
             }
+
+            return Ok(new { message = "Webhook URL registered successfully", data = new { request.WebhookUrl } });
         }
 
         // [HttpGet("cancel")]

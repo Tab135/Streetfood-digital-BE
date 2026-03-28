@@ -294,6 +294,7 @@ namespace Service.PaymentsService
                             Success = true,
                             Message = "Using existing pending payment link",
                             PaymentUrl = latestPayment.CheckoutUrl,
+                            QrCode = latestPayment.CheckoutUrl,
                             OrderCode = latestPayment.OrderCode,
                             PaymentLinkId = latestPayment.PaymentLinkId
                         };
@@ -307,7 +308,8 @@ namespace Service.PaymentsService
                     return new PaymentLinkResult { Success = false, Message = "Order amount must be greater than 0" };
                 }
 
-                var description = $"Order {order.OrderId}";
+                var description = $"Thanh toan don hang {order.OrderId}";
+                var payOsDescription = BuildPayOSDescription(description, "Thanh toan don hang");
 
                 await _paymentRepo.CreatePayment(
                     userId: userId,
@@ -324,23 +326,26 @@ namespace Service.PaymentsService
                 {
                     OrderCode = (int)orderCode,
                     Amount = amount,
-                    Description = description,
+                    Description = payOsDescription,
                     CancelUrl = cancelUrl,
                     ReturnUrl = returnUrl
                 };
 
                 string paymentLinkId;
                 string checkoutUrl;
+                string qrCode;
                 if (_isDebugMode)
                 {
                     paymentLinkId = $"DEBUG-ORDER-{orderCode}";
                     checkoutUrl = $"{returnUrl}?debug=true&orderCode={orderCode}";
+                    qrCode = checkoutUrl;
                 }
                 else
                 {
                     var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                    qrCode = paymentLinkResponse.QrCode;
                 }
 
                 await _paymentRepo.UpdatePaymentWithPayOSDetails(
@@ -354,6 +359,7 @@ namespace Service.PaymentsService
                     Success = true,
                     Message = _isDebugMode ? "Debug payment link created" : "Create payment link successfully",
                     PaymentUrl = checkoutUrl,
+                    QrCode = qrCode,
                     OrderCode = orderCode,
                     PaymentLinkId = paymentLinkId
                 };
@@ -429,8 +435,8 @@ namespace Service.PaymentsService
                     if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
                 }
 
-                // 6. Description (max 25 chars for PayOS)
-                const string description = "Dang ky Vendor 30 ngay";
+                var description = $"Dang ky vendor {branch.Name} 30 ngay";
+                var payOsDescription = BuildPayOSDescription(description, "Dang ky vendor 30 ngay");
 
                 // 7. Create pending payment record
                 var payment = await _paymentRepo.CreatePayment(
@@ -449,23 +455,26 @@ namespace Service.PaymentsService
                 {
                     OrderCode = (int)orderCode,
                     Amount = SUBSCRIPTION_AMOUNT,
-                    Description = description,
+                    Description = payOsDescription,
                     CancelUrl = cancelUrl,
                     ReturnUrl = returnUrl
                 };
 
                 string paymentLinkId;
                 string checkoutUrl;
+                string qrCode;
                 if (_isDebugMode)
                 {
                     paymentLinkId = $"DEBUG-SUB-{orderCode}";
                     checkoutUrl = $"{returnUrl}?debug=true&orderCode={orderCode}";
+                    qrCode = checkoutUrl;
                 }
                 else
                 {
                     var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                    qrCode = paymentLinkResponse.QrCode;
                 }
 
                 // 9. Persist PayOS details
@@ -483,6 +492,7 @@ namespace Service.PaymentsService
                 {
                     Success = true,
                     PaymentUrl = checkoutUrl,
+                    QrCode = qrCode,
                     OrderCode = orderCode,
                     PaymentLinkId = paymentLinkId,
                     Message = _isDebugMode ? "Tạo link thanh toán debug thành công" : "Tạo link thanh toán thành công"
@@ -521,8 +531,8 @@ namespace Service.PaymentsService
                         var paymentInfo = await _payOS.PaymentRequests.GetAsync((int)orderCode);
                         if (paymentInfo?.Status != null)
                         {
-                            string newStatus = paymentInfo.Status.ToString();
-                            if (newStatus == "PAID" || newStatus == "CANCELLED")
+                            var newStatus = paymentInfo.Status.ToString().ToUpperInvariant();
+                            if (newStatus is "PAID" or "CANCELLED" or "EXPIRED")
                             {
                                 DateTime? paidAt = newStatus == "PAID" ? DateTime.UtcNow : null;
                                 payment = await _paymentRepo.UpdatePaymentFromWebhook(
@@ -664,6 +674,64 @@ namespace Service.PaymentsService
             }
         }
 
+        public async Task<bool> HandleWebhookAsync(Webhook webhook)
+        {
+            try
+            {
+                if (webhook?.Data == null)
+                {
+                    _logger.LogWarning("Received invalid PayOS webhook payload");
+                    return false;
+                }
+
+                WebhookData verifiedData;
+                if (_isDebugMode)
+                {
+                    verifiedData = webhook.Data;
+                }
+                else
+                {
+                    verifiedData = await _payOS.Webhooks.VerifyAsync(webhook);
+                }
+
+                if (verifiedData.OrderCode <= 0)
+                {
+                    _logger.LogWarning("Webhook missing valid orderCode");
+                    return false;
+                }
+
+                var payment = await _paymentRepo.GetPaymentByOrderCode(verifiedData.OrderCode);
+                if (payment == null)
+                {
+                    _logger.LogWarning("Webhook received for unknown OrderCode={OrderCode}", verifiedData.OrderCode);
+                    // Acknowledge unknown events to avoid endless retries from provider.
+                    return true;
+                }
+
+                if (payment.Status != "PENDING")
+                {
+                    _logger.LogInformation(
+                        "Webhook ignored for OrderCode={OrderCode} because status is {Status}",
+                        verifiedData.OrderCode,
+                        payment.Status);
+                    return true;
+                }
+
+                // Reuse existing confirmation flow so side-effects are consistent
+                // (order move, subscription activation, branch campaign activation).
+                var provisionalStatus = webhook.Success || verifiedData.Code == "00" ? "PAID" : "CANCELLED";
+                await ConfirmPaymentFromRedirect(verifiedData.OrderCode, provisionalStatus, verifiedData.Reference);
+
+                _logger.LogInformation("Webhook processed successfully for OrderCode={OrderCode}", verifiedData.OrderCode);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to process PayOS webhook");
+                return false;
+            }
+        }
+
                 public async Task<PaymentLinkResult> CreateCampaignPaymentLink(int userId, int branchId, int branchCampaignId)
         {
             try
@@ -692,8 +760,8 @@ namespace Service.PaymentsService
                 }
 
                 int campaignFee = 20000;
-                // Used later during webhook confirmation to activate only one branch-campaign
-                var description = "Phi tham gia chien dich";
+                var description = $"Phi tham gia campaign {branch.Name}";
+                var payOsDescription = BuildPayOSDescription(description, "Phi tham gia campaign");
 
                 var payment = await _paymentRepo.CreatePayment(
                     userId: userId,
@@ -712,27 +780,36 @@ namespace Service.PaymentsService
                 {
                     OrderCode = (int)orderCode,
                     Amount = campaignFee,
-                    Description = description,
+                    Description = payOsDescription,
                     CancelUrl = cancelUrl,
                     ReturnUrl = returnUrl
                 };
 
-                string paymentLinkId, checkoutUrl;
+                string paymentLinkId, checkoutUrl, qrCode;
                 if (_isDebugMode)
                 {
                     paymentLinkId = "DEBUG-CAMP-" + orderCode;
                     checkoutUrl = returnUrl + "?debug=true&orderCode=" + orderCode;
+                    qrCode = checkoutUrl;
                 }
                 else
                 {
                     var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                    qrCode = paymentLinkResponse.QrCode;
                 }
 
                 await _paymentRepo.UpdatePaymentWithPayOSDetails(orderCode, "PENDING", paymentLinkId, checkoutUrl);
 
-                return new PaymentLinkResult { Success = true, PaymentUrl = checkoutUrl, OrderCode = orderCode, PaymentLinkId = paymentLinkId };
+                return new PaymentLinkResult
+                {
+                    Success = true,
+                    PaymentUrl = checkoutUrl,
+                    QrCode = qrCode,
+                    OrderCode = orderCode,
+                    PaymentLinkId = paymentLinkId
+                };
             }
             catch (Exception ex)
             {
@@ -802,9 +879,9 @@ namespace Service.PaymentsService
                     if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
                 }
 
-                // Used later during webhook confirmation to activate selected BranchCampaignIds
-                // Keep it short but include marker + ids
-                var description = $"Phi tham gia:{string.Join(",", distinct)}";
+                // Keep selected ids marker in DB description for webhook activation logic.
+                var description = $"Phi tham gia campaign {branch.Name} | VENDOR_SYSTEM_CAMPAIGN_BATCH:{string.Join(",", distinct)}";
+                var payOsDescription = BuildPayOSDescription($"Phi tham gia campaign {branch.Name}", "Phi tham gia campaign");
 
                 var payment = await _paymentRepo.CreatePayment(
                     userId: userId,
@@ -824,22 +901,24 @@ namespace Service.PaymentsService
                 {
                     OrderCode = (int)orderCode,
                     Amount = totalAmount,
-                    Description = description,
+                    Description = payOsDescription,
                     CancelUrl = cancelUrl,
                     ReturnUrl = returnUrl
                 };
 
-                string paymentLinkId, checkoutUrl;
+                string paymentLinkId, checkoutUrl, qrCode;
                 if (_isDebugMode)
                 {
                     paymentLinkId = "DEBUG-VENDOR-CAMP-" + orderCode;
                     checkoutUrl = returnUrl + "?debug=true&orderCode=" + orderCode;
+                    qrCode = checkoutUrl;
                 }
                 else
                 {
                     var paymentLinkResponse = await _payOS.PaymentRequests.CreateAsync(paymentData);
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
+                    qrCode = paymentLinkResponse.QrCode;
                 }
 
                 await _paymentRepo.UpdatePaymentWithPayOSDetails(orderCode, "PENDING", paymentLinkId, checkoutUrl);
@@ -848,6 +927,7 @@ namespace Service.PaymentsService
                 {
                     Success = true,
                     PaymentUrl = checkoutUrl,
+                    QrCode = qrCode,
                     OrderCode = orderCode,
                     PaymentLinkId = paymentLinkId
                 };
@@ -1075,6 +1155,7 @@ namespace Service.PaymentsService
                 Amount = payment.Amount,
                 Status = payment.Status,
                 Description = payment.Description,
+                QrCode = payment.CheckoutUrl,
                 CreatedAt = payment.CreatedAt,
                 PaidAt = payment.PaidAt,
                 TransactionCode = payment.TransactionCode
@@ -1087,6 +1168,21 @@ namespace Service.PaymentsService
             if (!string.IsNullOrEmpty(data.VirtualAccountNumber))
                 return "Virtual Account";
             return "QR Code";
+        }
+
+        private static string BuildPayOSDescription(string? raw, string fallback)
+        {
+            var normalized = string.IsNullOrWhiteSpace(raw)
+                ? fallback
+                : string.Join(" ", raw.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+            const int maxLen = 25;
+            if (normalized.Length <= maxLen)
+            {
+                return normalized;
+            }
+
+            return normalized[..maxLen];
         }
     }
 }

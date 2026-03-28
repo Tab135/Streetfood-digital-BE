@@ -75,7 +75,13 @@ namespace StreetFood.Controllers
                 int claimedBranchId = claimResult.BranchId;
 
                 var paymentLink = await paymentService.CreatePaymentLink(userId, claimedBranchId);
-                return Ok(new { message = claimResult.Message, paymentLink = paymentLink.PaymentUrl, licenseUrls = licenseUrls });
+                return Ok(new
+                {
+                    message = claimResult.Message,
+                    paymentLink = paymentLink.PaymentUrl,
+                    qrCode = paymentLink.QrCode,
+                    licenseUrls = licenseUrls
+                });
             }
             catch (Exception ex)
             {
