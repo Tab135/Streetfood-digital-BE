@@ -95,10 +95,14 @@ namespace Service
             var eligibleBranchIds = new List<int>();
             foreach (var branch in branches)
             {
-                if (branch.Tier != null && branch.Tier.Weight >= 1 && branch.IsSubscribed)
-                {
-                    eligibleBranchIds.Add(branch.BranchId);
-                }
+                if (!(branch.Tier != null && branch.Tier.Weight >= 1 && branch.IsSubscribed))
+                    continue;
+
+                var branchCampaign = await _branchCampaignRepo.GetByBranchAndCampaignAsync(branch.BranchId, campaignId);
+                if (branchCampaign != null && branchCampaign.IsActive)
+                    continue;
+
+                eligibleBranchIds.Add(branch.BranchId);
             }
 
             return new SystemCampaignDetailDto
