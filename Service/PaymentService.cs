@@ -308,7 +308,8 @@ namespace Service.PaymentsService
                     return new PaymentLinkResult { Success = false, Message = "Order amount must be greater than 0" };
                 }
 
-                var description = $"Order {order.OrderId}";
+                var description = $"Thanh toan don hang {order.OrderId}";
+                var payOsDescription = BuildPayOSDescription(description, "Thanh toan don hang");
 
                 await _paymentRepo.CreatePayment(
                     userId: userId,
@@ -325,7 +326,7 @@ namespace Service.PaymentsService
                 {
                     OrderCode = (int)orderCode,
                     Amount = amount,
-                    Description = description,
+                    Description = payOsDescription,
                     CancelUrl = cancelUrl,
                     ReturnUrl = returnUrl
                 };
@@ -434,8 +435,8 @@ namespace Service.PaymentsService
                     if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
                 }
 
-                // 6. Description (max 25 chars for PayOS)
-                const string description = "Dang ky Vendor 30 ngay";
+                var description = $"Dang ky vendor {branch.Name} 30 ngay";
+                var payOsDescription = BuildPayOSDescription(description, "Dang ky vendor 30 ngay");
 
                 // 7. Create pending payment record
                 var payment = await _paymentRepo.CreatePayment(
@@ -454,7 +455,7 @@ namespace Service.PaymentsService
                 {
                     OrderCode = (int)orderCode,
                     Amount = SUBSCRIPTION_AMOUNT,
-                    Description = description,
+                    Description = payOsDescription,
                     CancelUrl = cancelUrl,
                     ReturnUrl = returnUrl
                 };
@@ -759,8 +760,8 @@ namespace Service.PaymentsService
                 }
 
                 int campaignFee = 20000;
-                // Used later during webhook confirmation to activate only one branch-campaign
-                var description = "Phi tham gia chien dich";
+                var description = $"Phi tham gia campaign {branch.Name}";
+                var payOsDescription = BuildPayOSDescription(description, "Phi tham gia campaign");
 
                 var payment = await _paymentRepo.CreatePayment(
                     userId: userId,
@@ -779,7 +780,7 @@ namespace Service.PaymentsService
                 {
                     OrderCode = (int)orderCode,
                     Amount = campaignFee,
-                    Description = description,
+                    Description = payOsDescription,
                     CancelUrl = cancelUrl,
                     ReturnUrl = returnUrl
                 };
@@ -878,9 +879,9 @@ namespace Service.PaymentsService
                     if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
                 }
 
-                // Used later during webhook confirmation to activate selected BranchCampaignIds
-                // Keep it short but include marker + ids
-                var description = $"Phi tham gia:{string.Join(",", distinct)}";
+                // Keep selected ids marker in DB description for webhook activation logic.
+                var description = $"Phi tham gia campaign {branch.Name} | VENDOR_SYSTEM_CAMPAIGN_BATCH:{string.Join(",", distinct)}";
+                var payOsDescription = BuildPayOSDescription($"Phi tham gia campaign {branch.Name}", "Phi tham gia campaign");
 
                 var payment = await _paymentRepo.CreatePayment(
                     userId: userId,
@@ -900,7 +901,7 @@ namespace Service.PaymentsService
                 {
                     OrderCode = (int)orderCode,
                     Amount = totalAmount,
-                    Description = description,
+                    Description = payOsDescription,
                     CancelUrl = cancelUrl,
                     ReturnUrl = returnUrl
                 };
@@ -1167,6 +1168,21 @@ namespace Service.PaymentsService
             if (!string.IsNullOrEmpty(data.VirtualAccountNumber))
                 return "Virtual Account";
             return "QR Code";
+        }
+
+        private static string BuildPayOSDescription(string? raw, string fallback)
+        {
+            var normalized = string.IsNullOrWhiteSpace(raw)
+                ? fallback
+                : string.Join(" ", raw.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+
+            const int maxLen = 25;
+            if (normalized.Length <= maxLen)
+            {
+                return normalized;
+            }
+
+            return normalized[..maxLen];
         }
     }
 }
