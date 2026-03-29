@@ -123,7 +123,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("vendor")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor, Admin")]
         public async Task<IActionResult> GetVendorCampaigns([FromQuery] CampaignQueryDto query)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
@@ -133,7 +133,7 @@ namespace StreetFood.Controllers
 
         /// <summary>Danh sách chi nhánh đang tham gia campaign do vendor tạo (theo BranchCampaign).</summary>
         [HttpGet("vendor/{campaignId}/branches")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor, Admin")]
         public async Task<IActionResult> GetVendorCampaignBranches(int campaignId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
