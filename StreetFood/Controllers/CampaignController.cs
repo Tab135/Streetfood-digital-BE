@@ -127,7 +127,8 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> GetVendorCampaigns([FromQuery] CampaignQueryDto query)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var result = await _campaignService.GetVendorCampaignsAsync(userId, query);
+            var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
+            var result = await _campaignService.GetVendorCampaignsAsync(userId, userRole, query);
             return Ok(new { message = "Lấy danh sách chiến dịch của vendor thành công", data = result });
         }
 
@@ -137,7 +138,8 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> GetVendorCampaignBranches(int campaignId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var result = await _campaignService.GetVendorCampaignBranchesAsync(userId, campaignId);
+            var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
+            var result = await _campaignService.GetVendorCampaignBranchesAsync(userId, userRole, campaignId);
             return Ok(new { message = "Lấy danh sách chi nhánh tham gia campaign thành công", data = result });
         }
 
