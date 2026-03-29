@@ -10,6 +10,7 @@ using PayOS.Models.V1.Payouts;
 using PayOS.Models.V2.PaymentRequests;
 using PayOS.Models.Webhooks;
 using Repository.Interfaces;
+using Service.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -31,6 +32,8 @@ namespace Service.PaymentsService
         private readonly IVendorRepository _vendorRepository;
         private readonly IOrderRepository _orderRepository;
         private readonly IBranchCampaignRepository _branchCampaignRepo;
+        private readonly ICartRepository _cartRepo;
+        private readonly INotificationPusher _notificationPusher;
         private readonly bool _isDebugMode;
 
         public PaymentService(
@@ -40,6 +43,8 @@ namespace Service.PaymentsService
             IVendorRepository vendorRepository,
             IOrderRepository orderRepository,
             IBranchCampaignRepository branchCampaignRepo,
+            ICartRepository cartRepo,
+            INotificationPusher notificationPusher,
             IConfiguration configuration,
             ILogger<PaymentService> logger)
         {
@@ -49,6 +54,8 @@ namespace Service.PaymentsService
             _vendorRepository = vendorRepository;
             _orderRepository = orderRepository;
             _branchCampaignRepo = branchCampaignRepo;
+            _cartRepo = cartRepo;
+            _notificationPusher = notificationPusher;
             _configuration = configuration;
             _logger = logger;
             _isDebugMode = bool.TryParse(_configuration["PayOS:DebugMode"], out var debugMode) && debugMode;
@@ -621,6 +628,17 @@ namespace Service.PaymentsService
                         if (payment.OrderId.HasValue)
                         {
                             await MoveOrderToVendorConfirmationAsync(payment.OrderId.Value);
+
+                            var cart = await _cartRepo.GetByUserIdAsync(payment.UserId);
+                            if (cart != null)
+                            {
+                                await _cartRepo.ClearItemsAsync(cart.CartId);
+                                cart.BranchId = null;
+                                await _cartRepo.UpdateAsync(cart);
+                            }
+
+                            await _notificationPusher.PushPaymentStatusAsync(
+                                payment.UserId, orderCode, "PAID", payment.OrderId.Value);
                         }
                         else if (payment.BranchCampaignId.HasValue)
                         {
@@ -636,6 +654,12 @@ namespace Service.PaymentsService
                 {
                     payment = await _paymentRepo.UpdatePaymentFromWebhook(
                         orderCode, actualStatus, null, null, null);
+
+                    if (payment != null)
+                    {
+                        await _notificationPusher.PushPaymentStatusAsync(
+                            payment.UserId, orderCode, actualStatus, payment.OrderId);
+                    }
                 }
 
                 return BuildStatusResponse(payment!);
@@ -661,6 +685,16 @@ namespace Service.PaymentsService
                 {
                     _logger.LogInformation("Skipping webhook registration in debug mode: {WebhookUrl}", webhookUrl);
                     return true;
+                }
+
+                // Use config URL if caller passed a relative path or nothing
+                if (!Uri.TryCreate(webhookUrl, UriKind.Absolute, out _))
+                {
+                    var configUrl = _configuration["PayOS:WebhookUrl"];
+                    if (string.IsNullOrWhiteSpace(configUrl))
+                        throw new InvalidOperationException(
+                            "WebhookUrl must be an absolute URL. Set PayOS:WebhookUrl in appsettings.");
+                    webhookUrl = configUrl;
                 }
 
                 await _payOS.Webhooks.ConfirmAsync(webhookUrl);

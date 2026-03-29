@@ -20,4 +20,11 @@ public class SignalRNotificationPusher : INotificationPusher
             .Group(userId.ToString())
             .SendAsync("ReceiveNotification", notification);
     }
+
+    public async Task PushPaymentStatusAsync(int userId, long orderCode, string status, int? orderId)
+    {
+        await _hubContext.Clients
+            .Group(userId.ToString())
+            .SendAsync("PaymentStatusUpdate", new { orderCode, status, orderId });
+    }
 }
