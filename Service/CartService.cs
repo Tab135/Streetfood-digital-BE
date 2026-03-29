@@ -302,9 +302,9 @@ public class CartService : ICartService
             await _userVoucherRepository.UpdateAsync(redeemedUserVoucher);
         }
 
-        await _cartRepository.ClearItemsAsync(cart.CartId);
-        cart.BranchId = null;
-        await _cartRepository.UpdateAsync(cart);
+        // Cart is intentionally NOT cleared here.
+        // It will be cleared in PaymentService.ConfirmPaymentFromRedirect once payment is PAID,
+        // so the user can re-checkout if they abandon the payment.
 
         return new CheckoutCartResponseDto
         {
