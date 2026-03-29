@@ -54,6 +54,17 @@ public class VoucherController : ControllerBase
         return Ok(vouchers);
     }
 
+    [HttpGet("marketplace")]
+    public async Task<IActionResult> GetMarketplace()
+    {
+        var vouchers = await _voucherService.GetMarketplaceVouchersAsync();
+        return Ok(new
+        {
+            message = "Marketplace vouchers retrieved successfully",
+            data = vouchers
+        });
+    }
+
     [HttpGet("mine")]
     [Authorize(Roles = "User")]
     public async Task<IActionResult> GetMine()

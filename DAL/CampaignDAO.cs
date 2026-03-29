@@ -60,7 +60,10 @@ namespace DAL
             {
                 // Fetch campaigns created by the vendor OR created by any branch owned by this vendor
                 query = query.Where(c => c.CreatedByVendorId == vendorId.Value || 
-                                        (c.CreatedByBranchId != null && c.CreatedByBranch.VendorId == vendorId.Value));
+                                        (c.CreatedByBranchId != null && c.CreatedByBranch.VendorId == vendorId.Value) ||
+                                        // Additionally include system campaigns that the vendor has joined and paid
+                                        (c.CreatedByBranchId == null && c.CreatedByVendorId == null &&
+                                         c.BranchCampaigns.Any(bc => bc.Branch.VendorId == vendorId.Value && bc.IsActive)));
             }
 
             int totalCount = await query.CountAsync();
@@ -102,18 +105,6 @@ namespace DAL
                                    .Take(pageSize)
                                    .ToListAsync();
 
-            return (items, totalCount);
-        }
-
-        public async Task<(List<Campaign> Items, int TotalCount)> GetCampaignsByBranchAsync(int branchId, int page, int pageSize)
-        {
-            var query = _context.Campaigns
-                .Include(c => c.CreatedByBranch)
-                .Where(c => c.CreatedByBranchId == branchId || c.BranchCampaigns.Any(bc => bc.BranchId == branchId))
-                .OrderByDescending(c => c.CreatedAt);
-
-            int totalCount = await query.CountAsync();
-            var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
             return (items, totalCount);
         }
 

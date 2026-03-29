@@ -1,4 +1,4 @@
-﻿using BO.Entities;
+using BO.Entities;
 using DAL;
 using Repository.Interfaces;
 using System.Collections.Generic;
@@ -23,7 +23,6 @@ namespace Repository
         public Task<(List<Campaign> Items, int TotalCount)> GetCampaignsAsync(bool? isSystem, int? vendorId, int page, int pageSize) => _dao.GetCampaignsAsync(isSystem, vendorId, page, pageSize);
         public Task<(List<Campaign> Items, int TotalCount)> GetJoinableSystemCampaignsAsync(int page, int pageSize) => _dao.GetJoinableSystemCampaignsAsync(page, pageSize);
         public Task<(List<Campaign> Items, int TotalCount)> GetPublicCampaignsAsync(int page, int pageSize) => _dao.GetPublicCampaignsAsync(page, pageSize);
-        public Task<(List<Campaign> Items, int TotalCount)> GetCampaignsByBranchAsync(int branchId, int page, int pageSize) => _dao.GetCampaignsByBranchAsync(branchId, page, pageSize);
 
     }
 }

@@ -13,17 +13,20 @@ public class VoucherService : IVoucherService
     private readonly IUserVoucherRepository _userVoucherRepository;
     private readonly IUserRepository _userRepository;
     private readonly IBranchCampaignRepository _branchCampaignRepository;
+    private readonly IBranchRepository _branchRepository;
 
     public VoucherService(
         IVoucherRepository voucherRepository,
         IUserVoucherRepository userVoucherRepository,
         IUserRepository userRepository,
-        IBranchCampaignRepository branchCampaignRepository)
+        IBranchCampaignRepository branchCampaignRepository,
+        IBranchRepository branchRepository)
     {
         _voucherRepository = voucherRepository ?? throw new ArgumentNullException(nameof(voucherRepository));
         _userVoucherRepository = userVoucherRepository ?? throw new ArgumentNullException(nameof(userVoucherRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _branchCampaignRepository = branchCampaignRepository ?? throw new ArgumentNullException(nameof(branchCampaignRepository));
+        _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
     }
 
     public async Task<CreateVoucherResponseDto> CreateVoucherAsync(CreateVoucherDto createDto, int userId)
@@ -292,6 +295,9 @@ public class VoucherService : IVoucherService
 
     public async Task<List<UserVoucherResponseDto>> GetApplicableUserVouchersAsync(int userId, int branchId)
     {
+        var branch = await _branchRepository.GetByIdAsync(branchId)
+            ?? throw new DomainExceptions("Branch not found");
+
         var userVouchers = await _userVoucherRepository.GetByUserIdAsync(userId);
         var applicableVouchers = new List<UserVoucher>();
 
@@ -305,31 +311,36 @@ public class VoucherService : IVoucherService
             if (voucher.CampaignId.HasValue)
             {
                 var campaign = voucher.Campaign;
-                if (campaign != null)
+                if (campaign == null)
                 {
-                    if (campaign.CreatedByBranchId.HasValue)
+                    continue;
+                }
+
+                if (campaign.CreatedByBranchId.HasValue)
+                {
+                    // Requirement: Voucher created for that single branch (restaurant campaign)
+                    if (branchId == campaign.CreatedByBranchId.Value)
                     {
-                        // Branch Campaign: Must be the same branch
-                        if (branchId == campaign.CreatedByBranchId.Value)
-                        {
-                            applicableVouchers.Add(uv);
-                        }
+                        applicableVouchers.Add(uv);
                     }
-                    else
+                }
+                else
+                {
+                    // Vendor-wide or system campaign: only branches linked via BranchCampaign (active)
+                    var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);
+                    if (joinInfo != null && joinInfo.IsActive == true)
                     {
-                        // System Campaign: Branch must have joined
-                        var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);
-                        if (joinInfo != null && joinInfo.IsActive == true)
-                        {
-                            applicableVouchers.Add(uv);
-                        }
+                        applicableVouchers.Add(uv);
                     }
                 }
             }
             else
             {
-                // No campaign: currently assuming globally applicable
-                applicableVouchers.Add(uv);
+                // Requirement: System voucher (Marketplace) - usable everywhere with IsSubscribed == true
+                if (branch.IsSubscribed)
+                {
+                    applicableVouchers.Add(uv);
+                }
             }
         }
 
@@ -344,6 +355,13 @@ public class VoucherService : IVoucherService
             MaxDiscountValue = uv.Voucher?.MaxDiscountValue,
             Quantity = uv.Quantity
         }).ToList();
+    }
+
+    public async Task<List<VoucherDto>> GetMarketplaceVouchersAsync()
+    {
+        var now = DateTime.UtcNow;
+        var vouchers = await _voucherRepository.GetMarketplaceVouchersAsync(now);
+        return vouchers.Select(MapToDto).ToList();
     }
 
     private static void ValidateDateRange(DateTime startDate, DateTime endDate)

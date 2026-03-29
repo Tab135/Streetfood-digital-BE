@@ -13,4 +13,5 @@ public interface IVoucherService
     Task<List<UserVoucherResponseDto>> GetUserVouchersAsync(int userId);
     Task<List<VoucherDto>> GetVouchersByCampaignIdAsync(int campaignId);
     Task<List<UserVoucherResponseDto>> GetApplicableUserVouchersAsync(int userId, int branchId);
+    Task<List<VoucherDto>> GetMarketplaceVouchersAsync();
 }

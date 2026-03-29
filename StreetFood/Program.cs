@@ -49,7 +49,7 @@ namespace StreetFood
             {
                 options.AddPolicy("AllowFrontend", policy =>
                 {
-                    policy.WithOrigins("http://localhost:5173","https://lowca-seven.vercel.app")
+                    policy.SetIsOriginAllowed(_ => true)
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials();
@@ -68,6 +68,7 @@ namespace StreetFood
             builder.Services.AddScoped<IPaymentService, PaymentService>();
             builder.Services.AddHostedService<SubscriptionExpiryService>();
             builder.Services.AddHostedService<TierResetService>();
+            builder.Services.AddHostedService<CampaignExpiryService>();
             // Register DAL
             builder.Services.AddScoped<UserDAO>();
             builder.Services.AddScoped<OtpVerifyDAO>();

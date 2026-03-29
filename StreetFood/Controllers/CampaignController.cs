@@ -24,6 +24,35 @@ namespace StreetFood.Controllers
             _s3Service = s3Service;
         }
 
+        private static VendorJoinSystemCampaignPaymentResponseDto ToPaymentResponse(VendorJoinSystemCampaignResultDto result)
+        {
+            var response = new VendorJoinSystemCampaignPaymentResponseDto();
+            if (result?.Branches == null) return response;
+
+            foreach (var b in result.Branches)
+            {
+                response.Branches.Add(new VendorJoinSystemCampaignBranchStatusDto
+                {
+                    BranchId = b.BranchId,
+                    Status = b.Status
+                });
+            }
+
+            var paymentSource = result.Branches.Find(b => !string.IsNullOrWhiteSpace(b.PaymentUrl));
+            if (paymentSource != null)
+            {
+                response.Payment = new VendorJoinSystemCampaignPaymentInfoDto
+                {
+                    PaymentUrl = paymentSource.PaymentUrl,
+                    QrCode = paymentSource.QrCode,
+                    OrderCode = paymentSource.OrderCode,
+                    PaymentLinkId = paymentSource.PaymentLinkId
+                };
+            }
+
+            return response;
+        }
+
         [HttpPost("system")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> CreateSystemCampaign([FromBody] CreateCampaignDto dto)
@@ -32,17 +61,7 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Campaign created successfully", data = result });
         }
 
-        [HttpPost("branch/{branchId}")]
-        [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> CreateRestaurantCampaign(int branchId, [FromBody] CreateVendorCampaignDto dto)
-        {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            
-            var result = await _campaignService.CreateRestaurantCampaignAsync(userId, branchId, dto);
-            return Ok(new { message = "Restaurant campaign created successfully", data = result });
-        }
-
-                        [HttpPost("vendor")]
+        [HttpPost("vendor")]
         [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> CreateVendorCampaign([FromBody] CreateVendorCampaignDto dto)
         {
@@ -50,29 +69,42 @@ namespace StreetFood.Controllers
             var result = await _campaignService.CreateVendorCampaignAsync(userId, dto);
             return Ok(new { message = "Vendor campaign created successfully", data = result });
         }
-                [HttpPost("join/system/{campaignId}/branch/{branchId}")]
+        // Legacy route (kept for backward compatibility), hide from Swagger/UI.
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [HttpPost("join/system/{campaignId}/branch/{branchId}")]
         [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> JoinSystemCampaign(int campaignId, int branchId)
+        public async Task<IActionResult> JoinSystemCampaign(int campaignId, int branchId, [FromBody] JoinSystemCampaignBranchesRequestDto? request)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            
-            var branchCampaignId = await _campaignService.JoinSystemCampaignAsync(userId, branchId, campaignId);
-            
-            var paymentResult = await _paymentService.CreateCampaignPaymentLink(userId, branchId, branchCampaignId);
-            
-            if (paymentResult.Success)
+
+            // If caller sends BranchIds in body -> batch join + 1 payment link
+            if (request?.BranchIds != null && request.BranchIds.Count > 0)
             {
-                return Ok(new
-                {
-                    message = "Joined successfully. Please proceed to payment.",
-                    data = paymentResult
-                });
+                var result = await _campaignService.VendorJoinSystemCampaignForBranchesAsync(userId, campaignId, request.BranchIds);
+                return Ok(new { message = "Đã tạo yêu cầu tham gia và link thanh toán cho các chi nhánh được chọn", data = result });
             }
 
-            return BadRequest(new { message = paymentResult.Message });
+            // Backward-compatible: if no body, treat path branchId as single-item selection
+            var singleResult = await _campaignService.VendorJoinSystemCampaignForBranchesAsync(userId, campaignId, new() { branchId });
+            return Ok(new { message = "Đã tạo yêu cầu tham gia và link thanh toán cho các chi nhánh được chọn", data = singleResult });
         }
 
-                [HttpGet("system")]
+        // NEW primary route: branchIds only in body (no branchId variable in URL)
+        [HttpPost("join/system/{campaignId}/branch")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> JoinSystemCampaignByBody(int campaignId, [FromBody] JoinSystemCampaignBranchesRequestDto request)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.VendorJoinSystemCampaignForBranchesAsync(userId, campaignId, request?.BranchIds ?? new());
+            return Ok(new
+            {
+                message = "Đã tạo yêu cầu tham gia và link thanh toán cho các chi nhánh được chọn",
+                data = ToPaymentResponse(result)
+            });
+        }
+
+        [HttpGet("system")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetSystemCampaigns([FromQuery] CampaignQueryDto query)
         {
             var result = await _campaignService.GetSystemCampaignsAsync(query);
@@ -102,6 +134,34 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Lấy danh sách chiến dịch của vendor thành công", data = result });
         }
 
+        /// <summary>Danh sách chi nhánh đang tham gia campaign do vendor tạo (theo BranchCampaign).</summary>
+        [HttpGet("vendor/{campaignId}/branches")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> GetVendorCampaignBranches(int campaignId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.GetVendorCampaignBranchesAsync(userId, campaignId);
+            return Ok(new { message = "Lấy danh sách chi nhánh tham gia campaign thành công", data = result });
+        }
+
+        [HttpPost("vendor/{campaignId}/branches/add")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> AddBranchesToVendorCampaign(int campaignId, [FromBody] VendorCampaignBranchIdsDto dto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.AddBranchesToVendorCampaignAsync(userId, campaignId, dto?.BranchIds ?? new());
+            return Ok(new { message = "Đã thêm chi nhánh vào campaign", data = result });
+        }
+
+        [HttpPost("vendor/{campaignId}/branches/remove")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> RemoveBranchesFromVendorCampaign(int campaignId, [FromBody] VendorCampaignBranchIdsDto dto)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.RemoveBranchesFromVendorCampaignAsync(userId, campaignId, dto?.BranchIds ?? new());
+            return Ok(new { message = "Đã gỡ chi nhánh khỏi campaign", data = result });
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCampaignById(int id)
         {
@@ -120,15 +180,44 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Cập nhật chiến dịch thành công", data = result });
         }
 
-        [HttpGet("branch/{branchId}")]
-        [Authorize(Roles = "Vendor,Manager,Admin")]
-        public async Task<IActionResult> GetCampaignsByBranchAsync(int branchId, [FromQuery] CampaignQueryDto query)
+        // NEW: Get system campaign detail with eligible branches
+        [HttpGet("system/{campaignId}")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> GetSystemCampaignDetailWithJoinableBranches(int campaignId)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
+            var result = await _campaignService.GetSystemCampaignDetailWithJoinableBranchesAsync(userId, campaignId);
+            return Ok(new { message = "Lấy chi tiết chiến dịch hệ thống thành công", data = result });
+        }
 
-            var result = await _campaignService.GetCampaignsByBranchAsync(userId, userRole, branchId, query);
-            return Ok(new { message = "Lấy danh sách chiến dịch của chi nhánh thành công", data = result });
+        // NEW: Vendor join system campaign for all eligible branches
+        // Legacy route with query param; keep but hide from Swagger/UI.
+        [ApiExplorerSettings(IgnoreApi = true)]
+        [HttpPost("vendor/join")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> VendorJoinSystemCampaign([FromQuery] int campaignId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.VendorJoinSystemCampaignAsync(userId, campaignId);
+            return Ok(new
+            {
+                message = "Đã tham gia chiến dịch hệ thống cho các chi nhánh hợp lệ",
+                data = ToPaymentResponse(result)
+            });
+        }
+
+        // New (preferred) route: campaignId in path to avoid missing query param in clients
+        [HttpPost("vendor/join/{campaignId}")]
+        [Authorize(Roles = "Vendor")]
+        public async Task<IActionResult> VendorJoinSystemCampaignByPath(int campaignId)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var result = await _campaignService.VendorJoinSystemCampaignAsync(userId, campaignId);
+            return Ok(new
+            {
+                message = "Đã tham gia chiến dịch hệ thống cho các chi nhánh hợp lệ",
+                data = ToPaymentResponse(result)
+            });
         }
 
         // ==================== CAMPAIGN IMAGE OPERATIONS ====================

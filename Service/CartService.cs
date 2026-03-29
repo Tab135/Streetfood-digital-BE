@@ -12,6 +12,7 @@ public class CartService : ICartService
 {
     private readonly ICartRepository _cartRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IBranchRepository _branchRepository;
     private readonly IDishRepository _dishRepository;
     private readonly IUserVoucherRepository _userVoucherRepository;
     private readonly IOrderService _orderService;
@@ -20,6 +21,7 @@ public class CartService : ICartService
     public CartService(
         ICartRepository cartRepository,
         IUserRepository userRepository,
+        IBranchRepository branchRepository,
         IDishRepository dishRepository,
         IUserVoucherRepository userVoucherRepository,
         IOrderService orderService,
@@ -27,6 +29,7 @@ public class CartService : ICartService
     {
         _cartRepository = cartRepository ?? throw new ArgumentNullException(nameof(cartRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
         _dishRepository = dishRepository ?? throw new ArgumentNullException(nameof(dishRepository));
         _userVoucherRepository = userVoucherRepository ?? throw new ArgumentNullException(nameof(userVoucherRepository));
         _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
@@ -44,6 +47,7 @@ public class CartService : ICartService
     public async Task<CartResponseDto> AddItemAsync(int userId, AddCartItemRequest request)
     {
         await EnsureUserExistsAsync(userId);
+        await EnsureBranchAllowsOrderingAsync(request.BranchId);
 
         if (request.Quantity <= 0)
         {
@@ -133,6 +137,11 @@ public class CartService : ICartService
         var cart = await _cartRepository.GetByUserIdAsync(userId)
             ?? throw new DomainExceptions("Cart not found");
 
+        if (cart.BranchId.HasValue)
+        {
+            await EnsureBranchAllowsOrderingAsync(cart.BranchId.Value);
+        }
+
         var item = await _cartRepository.GetItemByDishIdAsync(cart.CartId, dishId)
             ?? throw new DomainExceptions("Item not found in cart");
 
@@ -203,6 +212,8 @@ public class CartService : ICartService
         {
             throw new DomainExceptions("Cart branch is not set");
         }
+
+        await EnsureBranchAllowsOrderingAsync(cart.BranchId.Value);
 
         if (cart.Items.Count == 0)
         {
@@ -291,9 +302,9 @@ public class CartService : ICartService
             await _userVoucherRepository.UpdateAsync(redeemedUserVoucher);
         }
 
-        await _cartRepository.ClearItemsAsync(cart.CartId);
-        cart.BranchId = null;
-        await _cartRepository.UpdateAsync(cart);
+        // Cart is intentionally NOT cleared here.
+        // It will be cleared in PaymentService.ConfirmPaymentFromRedirect once payment is PAID,
+        // so the user can re-checkout if they abandon the payment.
 
         return new CheckoutCartResponseDto
         {
@@ -308,6 +319,17 @@ public class CartService : ICartService
         if (user == null)
         {
             throw new DomainExceptions("User not found");
+        }
+    }
+
+    private async Task EnsureBranchAllowsOrderingAsync(int branchId)
+    {
+        var branch = await _branchRepository.GetByIdAsync(branchId)
+            ?? throw new DomainExceptions("Branch not found");
+
+        if (!branch.IsSubscribed)
+        {
+            throw new DomainExceptions("This branch is not subscribed and cannot accept cart or order checkout actions.");
         }
     }
 

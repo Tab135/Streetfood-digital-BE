@@ -21,7 +21,8 @@ namespace BO.Entities
         /// <summary>
         /// Trạng thái hoạt động của branch campaign
         /// </summary>
-        public bool IsActive { get; set; } = true;
+        // Default must be false so that "joined but unpaid" won't be treated as paid/active.
+        public bool IsActive { get; set; } = false;
 
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
     }

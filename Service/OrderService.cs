@@ -50,6 +50,11 @@ public class OrderService : IOrderService
         var branch = await _branchRepository.GetByIdAsync(request.BranchId)
             ?? throw new DomainExceptions("Branch not found");
 
+        if (!branch.IsSubscribed)
+        {
+            throw new DomainExceptions("This branch is not subscribed and cannot accept order checkout.");
+        }
+
         var (orderDishes, totalAmount) = await BuildValidatedOrderDishesAsync(request.BranchId, request.Items);
 
         // Voucher Validation Logic
@@ -64,28 +69,32 @@ public class OrderService : IOrderService
             if (!userVoucher.IsAvailable || userVoucher.Quantity <= 0)
                 throw new DomainExceptions("Voucher is already used or not available");
 
-            var voucher = userVoucher.Voucher;
+            var voucher = userVoucher.Voucher ?? throw new DomainExceptions("Voucher data is invalid");
+
+            // No campaign means system point voucher: it is globally applicable to any branch.
             if (voucher.CampaignId.HasValue)
             {
                 var campaign = voucher.Campaign;
-                if (campaign != null)
+                if (campaign == null)
                 {
-                    if (campaign.CreatedByBranchId.HasValue)
+                    throw new DomainExceptions("Campaign voucher is invalid");
+                }
+
+                if (campaign.CreatedByBranchId.HasValue)
+                {
+                    if (branch.BranchId != campaign.CreatedByBranchId.Value)
                     {
-                        // Branch Campaign: Must be the same branch
-                        if (branch.BranchId != campaign.CreatedByBranchId.Value)
-                        {
-                            throw new DomainExceptions("This voucher is only applicable to a specific branch.");
-                        }
+                        throw new DomainExceptions("This voucher is only applicable to a specific branch.");
                     }
-                    else
+                }
+                else
+                {
+                    var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branch.BranchId, campaign.CampaignId);
+                    if (joinInfo == null || joinInfo.IsActive != true)
                     {
-                        // System Campaign: Branch must have joined
-                        var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branch.BranchId, campaign.CampaignId);
-                        if (joinInfo == null || joinInfo.IsActive != true)
-                        {
-                            throw new DomainExceptions("This branch is not participating in the campaign for this voucher.");
-                        }
+                        if (campaign.CreatedByVendorId.HasValue)
+                            throw new DomainExceptions("This branch is not included in this vendor campaign.");
+                        throw new DomainExceptions("This branch has not completed campaign joining payment yet.");
                     }
                 }
             }

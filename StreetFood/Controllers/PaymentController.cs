@@ -57,22 +57,22 @@ namespace Ielts_System.Controllers.Payments
             }
         }
 
-        [HttpGet("status/{orderCode}")]
-        [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<PaymentStatusResponse>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<PaymentStatusResponse>> GetPaymentStatus(long orderCode)
-        {
-            try
-            {
-                var result = await _paymentService.GetPaymentStatus(orderCode);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error getting payment status for OrderCode={OrderCode}", orderCode);
-                return StatusCode(500, new { message = "Failed to retrieve payment status" });
-            }
-        }
+        // [HttpGet("status/{orderCode}")]
+        // [Authorize]
+        // [ProducesResponseType(typeof(ApiResponse<PaymentStatusResponse>), StatusCodes.Status200OK)]
+        // public async Task<ActionResult<PaymentStatusResponse>> GetPaymentStatus(long orderCode)
+        // {
+        //     try
+        //     {
+        //         var result = await _paymentService.GetPaymentStatus(orderCode);
+        //         return Ok(result);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "Error getting payment status for OrderCode={OrderCode}", orderCode);
+        //         return StatusCode(500, new { message = "Failed to retrieve payment status" });
+        //     }
+        // }
 
 
         [HttpGet("history")]
@@ -101,21 +101,21 @@ namespace Ielts_System.Controllers.Payments
 
 
 
-        [HttpGet("success")]
-        [AllowAnonymous]
-        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-        public IActionResult PaymentSuccess([FromQuery] long orderCode, [FromQuery] string? status)
-        {
-            _logger.LogInformation("Payment success redirect: OrderCode={OrderCode}, Status={Status}",
-                orderCode, status);
+        // [HttpGet("success")]
+        // [AllowAnonymous]
+        // [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        // public IActionResult PaymentSuccess([FromQuery] long orderCode, [FromQuery] string? status)
+        // {
+        //     _logger.LogInformation("Payment success redirect: OrderCode={OrderCode}, Status={Status}",
+        //         orderCode, status);
 
-            return Ok(new
-            {
-                message = "Payment completed successfully",
-                orderCode = orderCode,
-                status = status ?? "PAID"
-            });
-        }
+        //     return Ok(new
+        //     {
+        //         message = "Payment completed successfully",
+        //         orderCode = orderCode,
+        //         status = status ?? "PAID"
+        //     });
+        // }
 
 
         [HttpPost("confirm")]
@@ -160,82 +160,116 @@ namespace Ielts_System.Controllers.Payments
             }
         }
 
-        [HttpPost("order/confirm")]
-        [Authorize(Roles = "User")]
-        public async Task<ActionResult<PaymentStatusResponse>> ConfirmOrderPayment([FromBody] ConfirmPaymentDto request)
-        {
-            try
-            {
-                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                {
-                    return Unauthorized(new { message = "User not authenticated" });
-                }
+        // [HttpPost("order/confirm")]
+        // [Authorize(Roles = "User")]
+        // public async Task<ActionResult<PaymentStatusResponse>> ConfirmOrderPayment([FromBody] ConfirmPaymentDto request)
+        // {
+        //     try
+        //     {
+        //         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        //         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        //         {
+        //             return Unauthorized(new { message = "User not authenticated" });
+        //         }
 
-                var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
-                if (!paymentOwnerCheck)
-                {
-                    return Forbid();
-                }
+        //         var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
+        //         if (!paymentOwnerCheck)
+        //         {
+        //             return Forbid();
+        //         }
 
-                var result = await _paymentService.ConfirmPaymentFromRedirect(
-                    request.OrderCode,
-                    request.Status ?? "",
-                    request.TransactionId);
+        //         var result = await _paymentService.ConfirmPaymentFromRedirect(
+        //             request.OrderCode,
+        //             request.Status ?? "",
+        //             request.TransactionId);
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error confirming order payment for OrderCode={OrderCode}", request.OrderCode);
-                return StatusCode(500, new { message = "Failed to confirm order payment" });
-            }
-        }
+        //         return Ok(result);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "Error confirming order payment for OrderCode={OrderCode}", request.OrderCode);
+        //         return StatusCode(500, new { message = "Failed to confirm order payment" });
+        //     }
+        // }
 
-        [HttpPost("campaign/confirm")]
-        [Authorize(Roles = "Vendor")]
-        public async Task<ActionResult<PaymentStatusResponse>> ConfirmCampaignPayment([FromBody] ConfirmPaymentDto request)
-        {
-            try
-            {
-                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
-                {
-                    return Unauthorized(new { message = "User not authenticated" });
-                }
+        // [HttpPost("campaign/confirm")]
+        // [Authorize(Roles = "Vendor")]
+        // public async Task<ActionResult<PaymentStatusResponse>> ConfirmCampaignPayment([FromBody] ConfirmPaymentDto request)
+        // {
+        //     try
+        //     {
+        //         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        //         if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+        //         {
+        //             return Unauthorized(new { message = "User not authenticated" });
+        //         }
 
-                var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
-                if (!paymentOwnerCheck)
-                {
-                    return Forbid();
-                }
+        //         var paymentOwnerCheck = await _paymentService.VerifyPaymentOwnership(request.OrderCode, userId);
+        //         if (!paymentOwnerCheck)
+        //         {
+        //             return Forbid();
+        //         }
 
-                var result = await _paymentService.ConfirmPaymentFromRedirect(
-                    request.OrderCode,
-                    request.Status ?? "",
-                    request.TransactionId);
+        //         var result = await _paymentService.ConfirmPaymentFromRedirect(
+        //             request.OrderCode,
+        //             request.Status ?? "",
+        //             request.TransactionId);
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error confirming campaign payment for OrderCode={OrderCode}", request.OrderCode);
-                return StatusCode(500, new { message = "Failed to confirm campaign payment" });
-            }
-        }
+        //         return Ok(result);
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         _logger.LogError(ex, "Error confirming campaign payment for OrderCode={OrderCode}", request.OrderCode);
+        //         return StatusCode(500, new { message = "Failed to confirm campaign payment" });
+        //     }
+        // }
 
-        [HttpGet("cancel")]
+        [HttpPost("webhook")]
         [AllowAnonymous]
-        public IActionResult PaymentCancel([FromQuery] long orderCode)
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ReceiveWebhook([FromBody] Webhook webhook)
         {
-            _logger.LogInformation("Payment cancelled: OrderCode={OrderCode}", orderCode);
-
-            return Ok(new
+            // Always return 200 immediately — PayOS requires HTTP 200 for both
+            // validation pings and real events. Processing failures are logged, not surfaced.
+            try
             {
-                message = "Payment was cancelled",
-                orderCode = orderCode
-            });
+                await _paymentService.HandleWebhookAsync(webhook);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing PayOS webhook");
+            }
+
+            return Ok(new { message = "Webhook received" });
         }
+
+        [HttpPost("webhook/register")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> RegisterWebhook([FromBody] RegisterWebhookDto? request)
+        {
+            var url = request?.WebhookUrl ?? string.Empty;
+            var success = await _paymentService.RegisterWebhookUrl(url);
+            if (!success)
+            {
+                return BadRequest(new { message = "Failed to register webhook URL. Check that PayOS:WebhookUrl in appsettings is a reachable absolute URL." });
+            }
+
+            return Ok(new { message = "Webhook URL registered successfully" });
+        }
+
+        // [HttpGet("cancel")]
+        // [AllowAnonymous]
+        // public IActionResult PaymentCancel([FromQuery] long orderCode)
+        // {
+        //     _logger.LogInformation("Payment cancelled: OrderCode={OrderCode}", orderCode);
+
+        //     return Ok(new
+        //     {
+        //         message = "Payment was cancelled",
+        //         orderCode = orderCode
+        //     });
+        // }
 
         [HttpGet("user/balance")]
         [Authorize(Roles = "User")]

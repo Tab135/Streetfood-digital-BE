@@ -3,6 +3,7 @@ using BO.Entities;
 using Google.Apis.Auth;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using BO.DTO.Auth;
 
@@ -66,16 +67,55 @@ namespace DAL
 
             if (user == null)
             {
+                var firstName = (payload.GivenName ?? string.Empty).Trim();
+                var lastName = (payload.FamilyName ?? string.Empty).Trim();
+
+                if (string.IsNullOrWhiteSpace(firstName) || string.IsNullOrWhiteSpace(lastName))
+                {
+                    var fullName = (payload.Name ?? string.Empty).Trim();
+                    if (!string.IsNullOrWhiteSpace(fullName))
+                    {
+                        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length == 1)
+                        {
+                            firstName = string.IsNullOrWhiteSpace(firstName) ? parts[0] : firstName;
+                            lastName = string.IsNullOrWhiteSpace(lastName) ? "User" : lastName;
+                        }
+                        else
+                        {
+                            if (string.IsNullOrWhiteSpace(firstName))
+                            {
+                                firstName = parts[0];
+                            }
+
+                            if (string.IsNullOrWhiteSpace(lastName))
+                            {
+                                lastName = string.Join(" ", parts.Skip(1));
+                            }
+                        }
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(firstName))
+                {
+                    firstName = "Google";
+                }
+
+                if (string.IsNullOrWhiteSpace(lastName))
+                {
+                    lastName = "User";
+                }
+
                 user = new User
                 {
-                    UserName = payload.Name,
+                    UserName = payload.Name ?? payload.Email,
                     Email = payload.Email,
                     Password = "", // No password for Google users
                     Role = Role.User,
                     CreatedAt = DateTime.UtcNow,
                     EmailVerified = true, // Google auth implies verified email
-                    FirstName = payload.GivenName,
-                    LastName = payload.FamilyName,
+                    FirstName = firstName,
+                    LastName = lastName,
                     AvatarUrl = payload.Picture
                 };
 
