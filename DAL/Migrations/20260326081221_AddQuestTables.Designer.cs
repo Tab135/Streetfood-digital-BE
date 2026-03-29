@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260326081221_AddQuestTables")]
+    partial class AddQuestTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -490,32 +493,32 @@ namespace DAL.Migrations
                         new
                         {
                             DietaryPreferenceId = 1,
-                            Description = "Không thịt",
+                            Description = "Kh�ng th?t",
                             Name = "An chay"
                         },
                         new
                         {
                             DietaryPreferenceId = 2,
-                            Description = "Món an có vị cay nồng, sử dụng nhiều ớt hoặc tiêu",
+                            Description = "M�n an c� v? cay n?ng, s? d?ng nhi?u ?t ho?c ti�u",
                             Name = "Cay"
                         },
                         new
                         {
                             DietaryPreferenceId = 3,
-                            Description = "Món an có vị ngọt, hoặc các món tráng miệng",
-                            Name = "Ngọt"
+                            Description = "M�n an c� v? ng?t, ho?c c�c m�n tr�ng mi?ng",
+                            Name = "Ng?t"
                         },
                         new
                         {
                             DietaryPreferenceId = 4,
-                            Description = "Hương vị đậm đà, thích hợp ăn kèm với cơm",
-                            Name = "Mặn"
+                            Description = "Huong v? d?m d�, th�ch h?p an k�m v?i com",
+                            Name = "M?n"
                         },
                         new
                         {
                             DietaryPreferenceId = 5,
-                            Description = "Bao gồm các loại tôm, cua, cá, mực và các món biển khác",
-                            Name = "Hải sản"
+                            Description = "Bao g?m c�c lo?i t�m, cua, c�, m?c v� d? bi?n kh�c",
+                            Name = "H?i s?n"
                         });
                 });
 
@@ -1047,6 +1050,9 @@ namespace DAL.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -1054,8 +1060,8 @@ namespace DAL.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsStandalone")
-                        .HasColumnType("boolean");
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -1067,9 +1073,7 @@ namespace DAL.Migrations
 
                     b.HasKey("QuestId");
 
-                    b.HasIndex("CampaignId")
-                        .IsUnique()
-                        .HasFilter("\"CampaignId\" IS NOT NULL");
+                    b.HasIndex("CampaignId");
 
                     b.ToTable("Quests");
                 });

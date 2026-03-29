@@ -3,6 +3,7 @@ using BO.DTO.Branch;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using StreetFood.Services;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -18,11 +19,13 @@ namespace StreetFood.Controllers
     {
         private readonly IBranchService _branchService;
         private readonly Service.PaymentsService.IPaymentService _paymentService;
+        private readonly IS3Service _s3Service;
 
-        public BranchController(IBranchService branchService, Service.PaymentsService.IPaymentService paymentService)
+        public BranchController(IBranchService branchService, Service.PaymentsService.IPaymentService paymentService, IS3Service s3Service)
         {
             _branchService = branchService ?? throw new ArgumentNullException(nameof(branchService));
             _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
+            _s3Service = s3Service ?? throw new ArgumentNullException(nameof(s3Service));
         }
 
         /// <summary>
@@ -414,27 +417,14 @@ namespace StreetFood.Controllers
                     return Unauthorized(new { message = "User not authenticated" });
                 }
 
-                // Save the license images
-                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "licenses");
-                if (!Directory.Exists(uploadsFolder))
-                {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
                 var licenseUrls = new System.Collections.Generic.List<string>();
 
                 foreach(var image in licenseImages)
                 {
                     if (image.Length > 0)
                     {
-                        var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
-                        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                        using (var stream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await image.CopyToAsync(stream);
-                        }
-                        licenseUrls.Add("http://159.223.47.89:5298" + $"/uploads/licenses/{uniqueFileName}");
+                        var url = await _s3Service.UploadFileAsync(image, "licenses");
+                        licenseUrls.Add(url);
                     }
                 }
 
@@ -766,26 +756,12 @@ namespace StreetFood.Controllers
                     return Unauthorized(new { message = "User not authenticated" });
                 }
 
-                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "branches");
-                if (!Directory.Exists(uploadsFolder))
-                {
-                    Directory.CreateDirectory(uploadsFolder);
-                }
-
                 var addedImages = new List<object>();
                 foreach (var image in images)
                 {
                     if (image.Length == 0) continue;
 
-                    var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
-                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await image.CopyToAsync(stream);
-                    }
-
-                    var imageUrl = "http://159.223.47.89:5298" + $"/uploads/branches/{uniqueFileName}";
+                    var imageUrl = await _s3Service.UploadFileAsync(image, "branches");
                     var branchImage = await _branchService.AddBranchImageAsync(branchId, imageUrl, userId);
                     addedImages.Add(branchImage);
                 }

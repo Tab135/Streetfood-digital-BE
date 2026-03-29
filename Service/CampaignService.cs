@@ -1,6 +1,7 @@
 using BO.DTO.Campaigns;
 using BO.Entities;
 using BO.Exceptions;
+using Hangfire;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -561,6 +562,11 @@ namespace Service
             };
             await _campaignRepo.CreateAsync(campaign);
 
+            // Schedule quest expiration to fire exactly at EndDate
+            BackgroundJob.Schedule<IQuestExpirationJob>(
+                job => job.ExpireCampaignQuestsAsync(campaign.CampaignId),
+                campaign.EndDate);
+
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
 
@@ -815,6 +821,8 @@ namespace Service
                 }
             }
 
+            bool endDateChanged = campaign.EndDate != dto.EndDate;
+
             campaign.Name = dto.Name;
             campaign.Description = dto.Description;
             campaign.TargetSegment = dto.TargetSegment;
@@ -826,6 +834,15 @@ namespace Service
             campaign.UpdatedAt = DateTime.UtcNow;
 
             await _campaignRepo.UpdateAsync(campaign);
+
+            // If EndDate changed on a system campaign, schedule a new expiration job.
+            // The previously scheduled job will self-abort (EndDate > UtcNow guard).
+            if (endDateChanged && campaign.CreatedByVendorId == null)
+            {
+                BackgroundJob.Schedule<IQuestExpirationJob>(
+                    job => job.ExpireCampaignQuestsAsync(campaign.CampaignId),
+                    campaign.EndDate);
+            }
 
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
