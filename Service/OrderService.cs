@@ -503,8 +503,7 @@ public class OrderService : IOrderService
         order.Status = OrderStatus.Complete;
         order.CompletionCode = null;
 
-        var vendorSettlementAmount = await CalculateVendorSettlementAmountAsync(order);
-        vendor.MoneyBalance += vendorSettlementAmount;
+        vendor.MoneyBalance += order.FinalAmount;
         await _vendorRepository.UpdateAsync(vendor);
 
         var updated = await _orderRepository.Update(order);
@@ -617,46 +616,6 @@ public class OrderService : IOrderService
         {
             throw new DomainExceptions("User not found");
         }
-    }
-
-    private async Task<decimal> CalculateVendorSettlementAmountAsync(Order order)
-    {
-        if (!order.UserVoucherId.HasValue)
-        {
-            return order.FinalAmount;
-        }
-
-        var userVoucher = await _userVoucherRepository.GetByIdAsync(order.UserVoucherId.Value);
-        var voucher = userVoucher?.Voucher;
-        if (voucher == null)
-        {
-            return order.FinalAmount;
-        }
-
-        // System-funded vouchers compensate vendor for the discounted part.
-        // Vendor/branch-funded vouchers do not.
-        if (IsSystemFundedVoucher(voucher))
-        {
-            return order.TotalAmount;
-        }
-
-        return order.FinalAmount;
-    }
-
-    private static bool IsSystemFundedVoucher(Voucher voucher)
-    {
-        if (!voucher.CampaignId.HasValue)
-        {
-            return true;
-        }
-
-        var campaign = voucher.Campaign;
-        if (campaign == null)
-        {
-            return false;
-        }
-
-        return !campaign.CreatedByBranchId.HasValue && !campaign.CreatedByVendorId.HasValue;
     }
 
     private static string GenerateCompletionCode()
