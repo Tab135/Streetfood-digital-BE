@@ -311,7 +311,8 @@ namespace StreetFood.Controllers
                     firstName = user.FirstName,
                     lastName = user.LastName,
                     userInfoSetup = user.UserInfoSetup,
-                    dietarySetup = user.DietarySetup
+                    dietarySetup = user.DietarySetup,
+                    moneyBalance = user.MoneyBalance
                 });
             }
             catch (Exception ex)
@@ -447,7 +448,8 @@ namespace StreetFood.Controllers
                     firstName = updatedUser.FirstName,
                     lastName = updatedUser.LastName,
                     userInfoSetup = updatedUser.UserInfoSetup,
-                    dietarySetup = updatedUser.DietarySetup
+                    dietarySetup = updatedUser.DietarySetup,
+                    moneyBalance = updatedUser.MoneyBalance
                 });
             }
             catch (Exception ex)
