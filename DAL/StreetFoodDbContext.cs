@@ -1,5 +1,6 @@
 using BO.DTO.Payments;
 using BO.Entities;
+using BO.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace DAL;
@@ -61,6 +62,12 @@ public class StreetFoodDbContext : DbContext
     public DbSet<Campaign> Campaigns { get; set; }
     public DbSet<BranchCampaign> BranchCampaigns { get; set; }
 
+    // Quests
+    public DbSet<Quest> Quests { get; set; }
+    public DbSet<QuestTask> QuestTasks { get; set; }
+    public DbSet<UserQuest> UserQuests { get; set; }
+    public DbSet<UserQuestTask> UserQuestTasks { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -120,11 +127,11 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(255);
 
             entity.HasData(
-                new DietaryPreference { DietaryPreferenceId = 1, Name = "An chay", Description = "Kh�ng th?t" },
-                new DietaryPreference { DietaryPreferenceId = 2, Name = "Cay", Description = "M�n an c� v? cay n?ng, s? d?ng nhi?u ?t ho?c ti�u" },
-                new DietaryPreference { DietaryPreferenceId = 3, Name = "Ng?t", Description = "M�n an c� v? ng?t, ho?c c�c m�n tr�ng mi?ng" },
-                new DietaryPreference { DietaryPreferenceId = 4, Name = "M?n", Description = "Huong v? d?m d�, th�ch h?p an k�m v?i com" },
-                new DietaryPreference { DietaryPreferenceId = 5, Name = "H?i s?n", Description = "Bao g?m c�c lo?i t�m, cua, c�, m?c v� d? bi?n kh�c" }
+                new DietaryPreference { DietaryPreferenceId = 1, Name = "An chay", Description = "Không thịt" },
+                new DietaryPreference { DietaryPreferenceId = 2, Name = "Cay", Description = "Món an có vị cay nồng, sử dụng nhiều ớt hoặc tiêu" },
+                new DietaryPreference { DietaryPreferenceId = 3, Name = "Ngọt", Description = "Món an có vị ngọt, hoặc các món tráng miệng" },
+                new DietaryPreference { DietaryPreferenceId = 4, Name = "Mặn", Description = "Hương vị đậm đà, thích hợp ăn kèm với cơm" },
+                new DietaryPreference { DietaryPreferenceId = 5, Name = "Hải sản", Description = "Bao gồm các loại tôm, cua, cá, mực và các món biển khác" }
             );
         });
 
@@ -570,6 +577,77 @@ public class StreetFoodDbContext : DbContext
                   .WithMany(d => d.BranchDishes)
                   .HasForeignKey(e => e.DishId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ==================== QUEST ENTITIES ====================
+
+        modelBuilder.Entity<Quest>(entity =>
+        {
+            entity.HasKey(e => e.QuestId);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.ImageUrl).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(e => e.Campaign)
+                  .WithMany()
+                  .HasForeignKey(e => e.CampaignId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => e.CampaignId)
+                  .IsUnique()
+                  .HasFilter("\"CampaignId\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<QuestTask>(entity =>
+        {
+            entity.HasKey(e => e.QuestTaskId);
+            entity.Property(e => e.Type).IsRequired().HasMaxLength(50).HasConversion<string>();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.RewardType).IsRequired().HasMaxLength(50).HasConversion<string>();
+
+            entity.HasOne(e => e.Quest)
+                  .WithMany(q => q.QuestTasks)
+                  .HasForeignKey(e => e.QuestId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserQuest>(entity =>
+        {
+            entity.HasKey(e => e.UserQuestId);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.StartedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => new { e.UserId, e.QuestId }).IsUnique();
+
+            entity.HasOne(e => e.User)
+                  .WithMany()
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Quest)
+                  .WithMany(q => q.UserQuests)
+                  .HasForeignKey(e => e.QuestId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserQuestTask>(entity =>
+        {
+            entity.HasKey(e => e.UserQuestTaskId);
+            entity.Property(e => e.CurrentValue).HasDefaultValue(0);
+            entity.Property(e => e.IsCompleted).HasDefaultValue(false);
+            entity.Property(e => e.RewardClaimed).HasDefaultValue(false);
+
+            entity.HasIndex(e => new { e.UserQuestId, e.QuestTaskId }).IsUnique();
+
+            entity.HasOne(e => e.UserQuest)
+                  .WithMany(uq => uq.UserQuestTasks)
+                  .HasForeignKey(e => e.UserQuestId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.QuestTask)
+                  .WithMany(qt => qt.UserQuestTasks)
+                  .HasForeignKey(e => e.QuestTaskId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

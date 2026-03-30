@@ -3,6 +3,7 @@ using BO.DTO.Vendor;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using StreetFood.Services;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -17,15 +18,18 @@ namespace StreetFood.Controllers
         private readonly IVendorService _vendorService;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly IVendorDietaryPreferenceService _vendorDietaryPreferenceService;
+        private readonly IS3Service _s3Service;
 
         public VendorController(
             IVendorService vendorService,
             IWebHostEnvironment webHostEnvironment,
-            IVendorDietaryPreferenceService vendorDietaryPreferenceService)
+            IVendorDietaryPreferenceService vendorDietaryPreferenceService,
+            IS3Service s3Service)
         {
             _vendorService = vendorService ?? throw new ArgumentNullException(nameof(vendorService));
             _webHostEnvironment = webHostEnvironment ?? throw new ArgumentNullException(nameof(webHostEnvironment));
             _vendorDietaryPreferenceService = vendorDietaryPreferenceService ?? throw new ArgumentNullException(nameof(vendorDietaryPreferenceService));
+            _s3Service = s3Service ?? throw new ArgumentNullException(nameof(s3Service));
         }
 
         // CRUD Operations
@@ -50,23 +54,12 @@ namespace StreetFood.Controllers
 
                 if (licenseImages != null && licenseImages.Count > 0)
                 {
-                    var uploadsFolder = System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "uploads", "licenses");
-                    if (!System.IO.Directory.Exists(uploadsFolder))
-                    {
-                        System.IO.Directory.CreateDirectory(uploadsFolder);
-                    }
-
                     foreach(var image in licenseImages)
                     {
                         if (image.Length > 0)
                         {
-                            var uniqueFileName = $"{Guid.NewGuid()}_{image.FileName}";
-                            var filePath = System.IO.Path.Combine(uploadsFolder, uniqueFileName);
-                            using (var stream = new System.IO.FileStream(filePath, System.IO.FileMode.Create))
-                            {
-                                await image.CopyToAsync(stream);
-                            }
-                            licenseUrls.Add("http://159.223.47.89:5298" + $"/uploads/licenses/{uniqueFileName}");
+                            var url = await _s3Service.UploadFileAsync(image, "licenses");
+                            licenseUrls.Add(url);
                         }
                     }
                 }

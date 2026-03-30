@@ -4,5 +4,7 @@ public enum NotificationType
 {
     NewFeedback = 0,
     VendorReply = 1,
-    OrderStatusUpdate = 2
+    OrderStatusUpdate = 2,
+    QuestTaskCompleted = 3,
+    QuestCompleted = 4
 }

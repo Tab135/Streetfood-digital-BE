@@ -1,6 +1,7 @@
 using BO.Common;
 using BO.DTO.Branch;
 using BO.Entities;
+using BO.Enums;
 using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
@@ -16,15 +17,18 @@ namespace Service
         private readonly IBranchRepository _branchRepository;
         private readonly IVendorRepository _vendorRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IQuestProgressService _questProgressService;
 
         public BranchService(
             IBranchRepository branchRepository,
             IVendorRepository vendorRepository,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            IQuestProgressService questProgressService)
         {
             _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
             _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+            _questProgressService = questProgressService ?? throw new ArgumentNullException(nameof(questProgressService));
         }
 
         public async Task<Branch> CreateBranchAsync(CreateBranchDto createBranchDto, int vendorId, int userId)
@@ -110,8 +114,10 @@ namespace Service
             };
             await _branchRepository.AddBranchRequestAsync(branchRequest);
 
+            await _questProgressService.UpdateProgressAsync(userId, QuestTaskType.CREATE_GHOST_PIN, 1);
+
             var responseDto = await MapToResponseDtoAsync(createdBranch);
-            
+
             // Set these fields to null to match the exact JSON output requirement
             responseDto.LicenseUrls = null;
             responseDto.LicenseStatus = null;
