@@ -683,7 +683,8 @@ namespace Service
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
                     CreatedAt = item.CreatedAt,
-                    UpdatedAt = item.UpdatedAt
+                    UpdatedAt = item.UpdatedAt,
+                    ImageUrl = item.ImageUrl
                 });
             }
 
@@ -716,7 +717,8 @@ namespace Service
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
                     CreatedAt = item.CreatedAt,
-                    UpdatedAt = item.UpdatedAt
+                    UpdatedAt = item.UpdatedAt,
+                    ImageUrl = item.ImageUrl
                 });
             }
 
@@ -749,7 +751,8 @@ namespace Service
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
                     CreatedAt = item.CreatedAt,
-                    UpdatedAt = item.UpdatedAt
+                    UpdatedAt = item.UpdatedAt,
+                    ImageUrl = item.ImageUrl
                 });
             }
 
