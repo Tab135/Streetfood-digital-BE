@@ -19,8 +19,11 @@ namespace Service.PaymentsService
 {
     public class PaymentService : IPaymentService
     {
-        private const int SUBSCRIPTION_AMOUNT = 20000; // VND — hardcoded vendor registration fee
-        private const int SUBSCRIPTION_DURATION_DAYS = 30;
+        // Fees and durations are now loaded from the Settings table at runtime.
+        // Keys match Setting.Name seeds: "SubscriptionFee", "SubscriptionDurationDays", "CampaignJoinFee".
+        private int SubscriptionAmount      => _settings.GetInt("SubscriptionFee", 20000);
+        private int SubscriptionDurationDays => _settings.GetInt("SubscriptionDurationDays", 30);
+        private int CampaignJoinFee         => _settings.GetInt("CampaignJoinFee", 20000);
 
         private readonly IPaymentRepository _paymentRepo;
         private readonly IBranchRepository _branchRepo;
@@ -34,6 +37,7 @@ namespace Service.PaymentsService
         private readonly IBranchCampaignRepository _branchCampaignRepo;
         private readonly ICartRepository _cartRepo;
         private readonly INotificationPusher _notificationPusher;
+        private readonly ISettingService _settings;
         private readonly bool _isDebugMode;
 
         public PaymentService(
@@ -45,6 +49,7 @@ namespace Service.PaymentsService
             IBranchCampaignRepository branchCampaignRepo,
             ICartRepository cartRepo,
             INotificationPusher notificationPusher,
+            ISettingService settings,
             IConfiguration configuration,
             ILogger<PaymentService> logger)
         {
@@ -56,6 +61,7 @@ namespace Service.PaymentsService
             _branchCampaignRepo = branchCampaignRepo;
             _cartRepo = cartRepo;
             _notificationPusher = notificationPusher;
+            _settings = settings;
             _configuration = configuration;
             _logger = logger;
             _isDebugMode = bool.TryParse(_configuration["PayOS:DebugMode"], out var debugMode) && debugMode;
@@ -442,7 +448,7 @@ namespace Service.PaymentsService
                     if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
                 }
 
-                var description = $"Dang ky vendor {branch.Name} 30 ngay";
+                var description = $"Dang ky vendor {branch.Name} {SubscriptionDurationDays} ngay";
                 var payOsDescription = BuildPayOSDescription(description, "Dang ky vendor 30 ngay");
 
                 // 7. Create pending payment record
@@ -450,7 +456,7 @@ namespace Service.PaymentsService
                     userId: userId,
                     orderCode: orderCode,
                     branchId: branchId,
-                    amount: SUBSCRIPTION_AMOUNT,
+                    amount: SubscriptionAmount,
                     description: description
                 );
 
@@ -461,7 +467,7 @@ namespace Service.PaymentsService
                 var paymentData = new CreatePaymentLinkRequest
                 {
                     OrderCode = (int)orderCode,
-                    Amount = SUBSCRIPTION_AMOUNT,
+                    Amount = SubscriptionAmount,
                     Description = payOsDescription,
                     CancelUrl = cancelUrl,
                     ReturnUrl = returnUrl
@@ -493,7 +499,7 @@ namespace Service.PaymentsService
 
                 _logger.LogInformation(
                     "Payment link created: OrderCode={OrderCode}, UserId={UserId}, BranchId={BranchId}, Amount={Amount}",
-                    orderCode, userId, branchId, SUBSCRIPTION_AMOUNT);
+                    orderCode, userId, branchId, SubscriptionAmount);
 
                 return new PaymentLinkResult
                 {
@@ -793,7 +799,7 @@ namespace Service.PaymentsService
                     if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
                 }
 
-                int campaignFee = 20000;
+                int campaignFee = CampaignJoinFee;
                 var description = $"Phi tham gia campaign {branch.Name}";
                 var payOsDescription = BuildPayOSDescription(description, "Phi tham gia campaign");
 
@@ -1111,7 +1117,7 @@ namespace Service.PaymentsService
                 branch.VendorId = vendor.VendorId;
             }
             branch.IsSubscribed = true;
-            branch.SubscriptionExpiresAt = DateTime.UtcNow.AddDays(SUBSCRIPTION_DURATION_DAYS);
+            branch.SubscriptionExpiresAt = DateTime.UtcNow.AddDays(SubscriptionDurationDays);
             await _branchRepo.UpdateAsync(branch);
 
             // Promote user to Vendor role

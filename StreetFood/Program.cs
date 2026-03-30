@@ -60,12 +60,19 @@ namespace StreetFood
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
             // DAL
             builder.Services.AddScoped<PaymentDAO>();
+            builder.Services.AddScoped<SettingDAO>();
 
             // Repository
             builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+            builder.Services.AddScoped<ISettingRepository, SettingRepository>();
 
             // Service
             builder.Services.AddScoped<IPaymentService, PaymentService>();
+            // SettingService is a singleton that also acts as a hosted-service
+            // so it pre-loads from DB before the first request.
+            builder.Services.AddSingleton<SettingService>();
+            builder.Services.AddSingleton<ISettingService>(sp => sp.GetRequiredService<SettingService>());
+            builder.Services.AddHostedService(sp => sp.GetRequiredService<SettingService>());
             builder.Services.AddHostedService<SubscriptionExpiryService>();
             builder.Services.AddHostedService<TierResetService>();
             builder.Services.AddHostedService<CampaignExpiryService>();
