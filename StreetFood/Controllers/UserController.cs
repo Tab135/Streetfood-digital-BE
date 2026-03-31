@@ -44,5 +44,52 @@ namespace StreetFood.Controllers
             var user = await _userService.GetUserProfileByIdAsync(id);
             return Ok(new { message = "User retrieved successfully", data = user });
         }
+        [HttpPost("{id}/promote-moderator")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> PromoteToModerator(int id)
+        {
+            try
+            {
+                await _userService.PromoteToModeratorAsync(id);
+                return Ok(new ApiResponse<string> { Message = "User successfully promoted to Moderator" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string> { Message = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/ban")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> BanUser(int id)
+        {
+            try
+            {
+                await _userService.BanUserAsync(id);
+                return Ok(new ApiResponse<string> { Message = "User successfully banned" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string> { Message = ex.Message });
+            }
+        }
+
+        [HttpPost("{id}/unban")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> UnbanUser(int id)
+        {
+            try
+            {
+                await _userService.UnbanUserAsync(id);
+                return Ok(new ApiResponse<string> { Message = "User successfully unbanned" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string> { Message = ex.Message });
+            }
+        }
     }
 }

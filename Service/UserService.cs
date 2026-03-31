@@ -75,6 +75,10 @@ namespace Service
             {
                 throw new Exception("Account is not verified. Please verify your email first.");
             }
+            if (user.Status == "Banned")
+            {
+                throw new Exception("Your account has been banned.");
+            }
 
             var token = _jwt_service.GenerateToken(user);
             return (token, user);
@@ -203,6 +207,11 @@ namespace Service
                 }
 
                 var user = await _userRepository.FindOrCreateUserFromGoogleAsync(payload);
+                if (user.Status == "Banned")
+                {
+                    throw new Exception("Your account has been banned.");
+                }
+
                 var token = _jwt_service.GenerateToken(user);
 
                 return new LoginResponse
@@ -339,6 +348,10 @@ namespace Service
                 };
 
                 user = await _userRepository.CreateAsync(newUser);
+            }
+            else if (user.Status == "Banned")
+            {
+                throw new Exception("Your account has been banned.");
             }
 
             var token = _jwt_service.GenerateToken(user);
@@ -489,6 +502,11 @@ namespace Service
                     AvatarUrl = info.AvatarUrl
                 });
 
+                if (user.Status == "Banned")
+                {
+                    throw new Exception("Your account has been banned.");
+                }
+
                 var token = _jwt_service.GenerateToken(user);
                 return new LoginResponse { Token = token, User = user };
             }
@@ -496,6 +514,33 @@ namespace Service
             {
                 throw new Exception("Invalid Facebook token");
             }
+        }
+
+        public async Task<bool> PromoteToModeratorAsync(int userId)
+        {
+            var user = await GetUserByIdAsync(userId);
+            if (user.Role == Role.Moderator) return true;
+            user.Role = Role.Moderator;
+            await _userRepository.UpdateAsync(user);
+            return true;
+        }
+
+        public async Task<bool> BanUserAsync(int userId)
+        {
+            var user = await GetUserByIdAsync(userId);
+            if (user.Status == "Banned") return true;
+            user.Status = "Banned";
+            await _userRepository.UpdateAsync(user);
+            return true;
+        }
+
+        public async Task<bool> UnbanUserAsync(int userId)
+        {
+            var user = await GetUserByIdAsync(userId);
+            if (user.Status != "Banned") return true;
+            user.Status = "Active";
+            await _userRepository.UpdateAsync(user);
+            return true;
         }
 
         // Helper methods
