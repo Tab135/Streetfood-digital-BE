@@ -48,7 +48,6 @@ namespace Service
             _configuration = configuration;
             _facebookService = facebookService;
         }
-
         public async Task<User> GetUserById(int userId)
         {
 
@@ -153,7 +152,6 @@ namespace Service
 
             return "Registration successful. Please log in with your credentials.";
         }
-
         public async Task<LoginResponse> GoogleLoginAsync(GoogleAuthDto googleAuthDto)
         {
             try
@@ -225,8 +223,6 @@ namespace Service
                 throw new Exception($"Google authentication failed: {ex.Message}");
             }
         }
-
-
         public async Task<string> ResendRegistrationOtpAsync(string email, string username)
         {
             await CheckOtpRequestLimitAsync(email); //
@@ -256,7 +252,6 @@ namespace Service
 
             return $"New OTP sent to {email}. Please check your email and verify within {OtpExpiryMinutes} minutes.";
         }
-
         public async Task<string> SendForgetPasswordOtpAsync(string email)
         {
             var user = await GetUserByEmailAsync(email);
@@ -271,13 +266,11 @@ namespace Service
 
             return $"Password reset OTP sent to {email}. Please check your email and verify within {OtpExpiryMinutes} minutes.";
         }
-
         public async Task<string> VerifyOtpAsync(string email, string otp)
         {
             await GetValidOtpAsync(email, otp);
             return "OTP is valid";
         }
-
         public async Task<string> ResetPasswordAsync(ResetPasswordRequest request)
         {
             var validOtp = await GetValidOtpAsync(request.Email, request.Otp);
@@ -289,7 +282,6 @@ namespace Service
 
             return "Password reset successful. Please log in with your new password.";
         }
-
         public async Task<string> ResendForgetPasswordOtpAsync(string email)
         {
             await CheckOtpRequestLimitAsync(email);
@@ -321,7 +313,6 @@ namespace Service
             //TODO: Fucking implement the phonenumber send OTP here
             return otpCode;
         }
-
         public async Task<LoginResponse> VerifyPhoneOtpAsync(string phoneNumber, string otp)
         {
             if (string.IsNullOrWhiteSpace(phoneNumber) || string.IsNullOrWhiteSpace(otp))
@@ -341,7 +332,7 @@ namespace Service
                     Password = string.Empty,
                     Role = Role.User,
                     CreatedAt = DateTime.UtcNow,
-                    EmailVerified = true, 
+                    EmailVerified = true,
                     PhoneNumber = phoneNumber,
                     FirstName = string.Empty,
                     LastName = string.Empty
@@ -356,12 +347,10 @@ namespace Service
 
             var token = _jwt_service.GenerateToken(user);
 
-            // Mark OTP as used and delete it
             await MarkOtpAsUsedAsync(validOtp.Id, phoneNumber, otp);
 
             return new LoginResponse { Token = token, User = user };
         }
-
         public async Task<User> UpdateUserProfile(int userId, UpdateUserProfileDto updateDto)
         {
             var user = await GetUserByIdAsync(userId);
@@ -515,7 +504,6 @@ namespace Service
                 throw new Exception("Invalid Facebook token");
             }
         }
-
         public async Task<bool> PromoteToModeratorAsync(int userId)
         {
             var user = await GetUserByIdAsync(userId);
@@ -524,16 +512,14 @@ namespace Service
             await _userRepository.UpdateAsync(user);
             return true;
         }
-
-        public async Task<bool> BanUserAsync(int userId)
+       public async Task<bool> BanUserAsync(int userId)
         {
             var user = await GetUserByIdAsync(userId);
-            if (user.Status == "Banned") return true;
+            if (user.Status == "Banned") return false;
             user.Status = "Banned";
             await _userRepository.UpdateAsync(user);
             return true;
         }
-
         public async Task<bool> UnbanUserAsync(int userId)
         {
             var user = await GetUserByIdAsync(userId);
@@ -549,7 +535,6 @@ namespace Service
             if (await _userRepository.EmailExistsAsync(email))
                 throw new Exception("Email already exists");
         }
-
         private async Task<User> GetUserByEmailAsync(string email)
         {
             var user = await _userRepository.GetByEmailAsync(email);
@@ -557,21 +542,18 @@ namespace Service
                 throw new Exception("Email not found");
             return user;
         }
-
         private async Task<User> GetUserByIdAsync(int userId)
         {
             var user = await _userRepository.GetUserById(userId);
             if (user == null) throw new Exception("User not found");
             return user;
         }
-
         private async Task CheckOtpRequestLimitAsync(string email)
         {
             var recentOtps = await _otpRepository.GetRecentOtpsAsync(email, TimeSpan.FromMinutes(1));
             if (recentOtps.Count >= MaxOtpRequestsPerMinute)
                 throw new Exception("Too many OTP requests. Please wait before trying again.");
         }
-
         private async Task<string> GenerateAndStoreOtpAsync(string email)
         {
             var otpCode = GenerateOtp();
@@ -652,7 +634,6 @@ namespace Service
   </body>
 </html>";
         }
-
         private string GenerateOtp()
         {
             var random = new Random();
