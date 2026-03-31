@@ -72,7 +72,6 @@ namespace Service
             setting.Value = newValue;
             await repo.UpdateAsync(setting);
 
-            // Reflect the change in the in-memory cache immediately
             _cache[name] = setting;
 
             _logger.LogInformation("Setting '{Name}' updated to '{Value}'.", name, newValue);
