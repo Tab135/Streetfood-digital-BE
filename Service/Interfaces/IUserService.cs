@@ -25,6 +25,10 @@ namespace Service.Interfaces
         Task<string> ChangePassword(string userId, string oldPassword, string newPassword, string confirmNewPassword);
         Task<User> GetUserById(int userId);
 
+        Task<bool> PromoteToModeratorAsync(int userId);
+        Task<bool> BanUserAsync(int userId);
+        Task<bool> UnbanUserAsync(int userId);
+
         // Setup flags
         Task<(bool UserInfoSetup, bool DietarySetup)> GetUserSetupStatusAsync(int userId);
         Task<bool> MarkUserInfoSetupAsync(int userId);

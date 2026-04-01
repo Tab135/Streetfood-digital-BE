@@ -68,6 +68,9 @@ public class StreetFoodDbContext : DbContext
     public DbSet<UserQuest> UserQuests { get; set; }
     public DbSet<UserQuestTask> UserQuestTasks { get; set; }
 
+    // System Settings
+    public DbSet<Setting> Settings { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -648,6 +651,21 @@ public class StreetFoodDbContext : DbContext
                   .WithMany(qt => qt.UserQuestTasks)
                   .HasForeignKey(e => e.QuestTaskId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ==================== SYSTEM SETTINGS ====================
+        modelBuilder.Entity<Setting>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Value).IsRequired().HasMaxLength(500);
+            entity.HasIndex(e => e.Name).IsUnique();
+
+            entity.HasData(
+                new Setting { Id = 1, Name = "SubscriptionFee",          Value = "20000" },
+                new Setting { Id = 2, Name = "SubscriptionDurationDays", Value = "30"    },
+                new Setting { Id = 3, Name = "CampaignJoinFee",          Value = "20000" }
+            );
         });
     }
 }
