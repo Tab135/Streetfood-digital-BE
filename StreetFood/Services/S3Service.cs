@@ -29,8 +29,7 @@ namespace StreetFood.Services
                 BucketName = _bucketName,
                 Key = key,
                 InputStream = stream,
-                ContentType = file.ContentType,
-                CannedACL = S3CannedACL.PublicRead
+                ContentType = file.ContentType
             };
 
             await _s3Client.PutObjectAsync(request);
