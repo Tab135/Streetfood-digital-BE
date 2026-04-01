@@ -6,5 +6,6 @@ public enum NotificationType
     VendorReply = 1,
     OrderStatusUpdate = 2,
     QuestTaskCompleted = 3,
-    QuestCompleted = 4
+    QuestCompleted = 4,
+    NewOrder = 5
 }
