@@ -10,9 +10,6 @@ public class UpdateBadgeDto
     [Range(1, int.MaxValue, ErrorMessage = "Point must be greater than 0")]
     public int? PointToGet { get; set; }
 
-    [StringLength(500)]
-    public string? IconUrl { get; set; }
-
     [StringLength(255)]
     public string? Description { get; set; }
 }

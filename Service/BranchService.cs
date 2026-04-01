@@ -866,6 +866,22 @@ namespace Service
             await _branchRepository.DeleteBranchImageAsync(imageId);
         }
 
+        public async Task<List<SimilarBranchResponseDto>> GetSimilarBranchesByDishesAsync(int branchId, int limit)
+        {
+            if (limit <= 0)
+            {
+                throw new DomainExceptions("Limit must be greater than 0");
+            }
+
+            var branch = await _branchRepository.GetByIdAsync(branchId);
+            if (branch == null || !branch.IsActive || !branch.IsVerified)
+            {
+                throw new DomainExceptions($"Không tìm thấy chi nhánh hoạt động với ID {branchId}");
+            }
+
+            return await _branchRepository.GetSimilarBranchesByDishesAsync(branchId, limit);
+        }
+
         // Helper method
         private async Task<bool> UserCanManageBranchAsync(int branchId, int userId)
         {

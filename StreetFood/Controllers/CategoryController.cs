@@ -3,6 +3,7 @@ using BO.DTO.Category;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using StreetFood.Services;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -15,19 +16,25 @@ namespace StreetFood.Controllers
     public class CategoryController : ControllerBase
     {
         private readonly ICategoryService _categoryService;
+        private readonly IS3Service _s3Service;
 
-        public CategoryController(ICategoryService categoryService)
+        public CategoryController(ICategoryService categoryService, IS3Service s3Service)
         {
             _categoryService = categoryService ?? throw new ArgumentNullException(nameof(categoryService));
+            _s3Service = s3Service ?? throw new ArgumentNullException(nameof(s3Service));
         }
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
+        [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(ApiResponse<CategoryDto>), StatusCodes.Status201Created)]
-        public async Task<IActionResult> Create([FromBody] CreateCategoryDto createDto)
+        public async Task<IActionResult> Create([FromForm] CreateCategoryDto createDto, IFormFile imageFile)
         {
             if (!ModelState.IsValid)
                 return BadRequest(new { message = "Model is not valid" });
+
+            if (imageFile == null || imageFile.Length == 0)
+                return BadRequest(new { message = "Category image is required" });
 
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
@@ -35,7 +42,8 @@ namespace StreetFood.Controllers
                 return BadRequest(new { message = "Model is not valid" });
             }
 
-            var created = await _categoryService.CreateCategoryAsync(createDto, userId);
+            var imageUrl = await _s3Service.UploadFileAsync(imageFile, "categories");
+            var created = await _categoryService.CreateCategoryAsync(createDto, userId, imageUrl);
             return CreatedAtAction(nameof(GetById), new { id = created.CategoryId }, created);
         }
 
@@ -60,8 +68,9 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
+        [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(ApiResponse<CategoryDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateCategoryDto updateDto)
+        public async Task<IActionResult> Update(int id, [FromForm] UpdateCategoryDto updateDto, IFormFile? imageFile)
         {
             if (!ModelState.IsValid)
                 return BadRequest(new { message = "Model is not valid" });
@@ -72,7 +81,13 @@ namespace StreetFood.Controllers
                 return BadRequest(new { message = "Model is not valid" });
             }
 
-            var updated = await _categoryService.UpdateCategoryAsync(id, updateDto, userId);
+            string? imageUrl = null;
+            if (imageFile != null && imageFile.Length > 0)
+            {
+                imageUrl = await _s3Service.UploadFileAsync(imageFile, "categories");
+            }
+
+            var updated = await _categoryService.UpdateCategoryAsync(id, updateDto, userId, imageUrl);
             return Ok(updated);
         }
 

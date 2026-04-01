@@ -10,8 +10,8 @@ namespace Service.Interfaces
     public interface IBadgeService
     {
         // Admin operations
-        Task<BadgeDto> CreateBadge(CreateBadgeDto createBadgeDto);
-        Task<BadgeDto> UpdateBadge(int badgeId, UpdateBadgeDto updateBadgeDto);
+        Task<BadgeDto> CreateBadge(CreateBadgeDto createBadgeDto, string iconUrl);
+        Task<BadgeDto> UpdateBadge(int badgeId, UpdateBadgeDto updateBadgeDto, string? iconUrl);
         Task<bool> DeleteBadge(int badgeId);
         
         // Badge queries
