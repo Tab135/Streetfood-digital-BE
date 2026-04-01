@@ -79,14 +79,23 @@ namespace Service
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
 
-        public async Task<VendorCampaignBranchesResponseDto> GetVendorCampaignBranchesAsync(int userId, int campaignId)
+        public async Task<VendorCampaignBranchesResponseDto> GetVendorCampaignBranchesAsync(int userId, string userRole, int campaignId)
         {
+            if (userRole == "Admin")
+            {
+                var campaign = await _campaignRepo.GetByIdAsync(campaignId);
+                if (campaign == null || !campaign.CreatedByVendorId.HasValue)
+                    throw new DomainExceptions("Chiến dịch không tồn tại hoặc không phải campaign do vendor tạo.");
+
+                return await BuildVendorCampaignBranchesResponseAsync(campaign.CreatedByVendorId.Value, campaignId);
+            }
+
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
             if (vendor == null)
                 throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
 
-            var campaign = await _campaignRepo.GetByIdAsync(campaignId);
-            if (campaign == null || campaign.CreatedByVendorId != vendor.VendorId)
+            var campaignForVendor = await _campaignRepo.GetByIdAsync(campaignId);
+            if (campaignForVendor == null || campaignForVendor.CreatedByVendorId != vendor.VendorId)
                 throw new DomainExceptions("Chiến dịch không tồn tại hoặc không phải campaign của vendor này.");
 
             return await BuildVendorCampaignBranchesResponseAsync(vendor.VendorId, campaignId);
@@ -659,12 +668,29 @@ namespace Service
             );
         }
 
-        public async Task<BO.Common.PaginatedResponse<CampaignResponseDto>> GetVendorCampaignsAsync(int userId, CampaignQueryDto query)
+        public async Task<BO.Common.PaginatedResponse<CampaignResponseDto>> GetVendorCampaignsAsync(int userId, string userRole, CampaignQueryDto query)
         {
-            var vendor = await _vendorRepo.GetByUserIdAsync(userId);
-            if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+            int vendorIdToQuery;
+            if (userRole == "Admin")
+            {
+                if (!query.VendorId.HasValue || query.VendorId.Value <= 0)
+                    throw new DomainExceptions("Admin cần truyền VendorId (query) để xem danh sách campaign của vendor.");
 
-            var (items, totalCount) = await _campaignRepo.GetCampaignsAsync(false, vendor.VendorId, query.PageNumber, query.PageSize);
+                var vendorById = await _vendorRepo.GetByIdAsync(query.VendorId.Value);
+                if (vendorById == null)
+                    throw new DomainExceptions("Vendor không tồn tại.");
+
+                vendorIdToQuery = query.VendorId.Value;
+            }
+            else
+            {
+                var vendor = await _vendorRepo.GetByUserIdAsync(userId);
+                if (vendor == null) throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+
+                vendorIdToQuery = vendor.VendorId;
+            }
+
+            var (items, totalCount) = await _campaignRepo.GetCampaignsAsync(false, vendorIdToQuery, query.PageNumber, query.PageSize);
             
             var mappedItems = new List<CampaignResponseDto>();
             foreach(var item in items)

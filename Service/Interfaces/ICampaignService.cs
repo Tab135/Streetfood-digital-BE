@@ -9,12 +9,12 @@ namespace Service.Interfaces
     {
         Task<CampaignResponseDto> CreateSystemCampaignAsync(CreateCampaignDto dto);
         Task<CampaignResponseDto> CreateVendorCampaignAsync(int userId, CreateVendorCampaignDto dto);
-        Task<VendorCampaignBranchesResponseDto> GetVendorCampaignBranchesAsync(int userId, int campaignId);
+        Task<VendorCampaignBranchesResponseDto> GetVendorCampaignBranchesAsync(int userId, string userRole, int campaignId);
         Task<VendorCampaignBranchesResponseDto> AddBranchesToVendorCampaignAsync(int userId, int campaignId, List<int> branchIds);
         Task<VendorCampaignBranchesResponseDto> RemoveBranchesFromVendorCampaignAsync(int userId, int campaignId, List<int> branchIds);
         Task<int> JoinSystemCampaignAsync(int userId, int branchId, int campaignId);
         Task<PaginatedResponse<CampaignResponseDto>> GetSystemCampaignsAsync(CampaignQueryDto query);
-        Task<PaginatedResponse<CampaignResponseDto>> GetVendorCampaignsAsync(int userId, CampaignQueryDto query);
+        Task<PaginatedResponse<CampaignResponseDto>> GetVendorCampaignsAsync(int userId, string userRole, CampaignQueryDto query);
         Task<PaginatedResponse<CampaignResponseDto>> GetJoinableSystemCampaignsAsync(CampaignQueryDto query);
         Task<PaginatedResponse<CampaignResponseDto>> GetPublicCampaignsAsync(CampaignQueryDto query);
         Task<CampaignResponseDto> GetCampaignByIdAsync(int id);
