@@ -8,5 +8,6 @@ namespace BO.DTO.Campaigns
         public int PageSize { get; set; } = 10;
 
         public int? VendorId { get; set; }
+        public bool? IsSystem { get; set; }
     }
 }

@@ -14,7 +14,7 @@ namespace Repository.Interfaces
         Task UpdateAsync(Campaign campaign);
         Task<(List<Campaign> Items, int TotalCount)> GetCampaignsAsync(bool? isSystem, int? vendorId, int page, int pageSize);
         Task<(List<Campaign> Items, int TotalCount)> GetJoinableSystemCampaignsAsync(int page, int pageSize);
-        Task<(List<Campaign> Items, int TotalCount)> GetPublicCampaignsAsync(int page, int pageSize);
+        Task<(List<Campaign> Items, int TotalCount)> GetPublicCampaignsAsync(bool? isSystem, int page, int pageSize);
 
         // Images
     }

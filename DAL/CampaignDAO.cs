@@ -93,11 +93,18 @@ namespace DAL
             return (items, totalCount);
         }
 
-        public async Task<(List<Campaign> Items, int TotalCount)> GetPublicCampaignsAsync(int page, int pageSize)
+        public async Task<(List<Campaign> Items, int TotalCount)> GetPublicCampaignsAsync(bool? isSystem, int page, int pageSize)
         {
             var now = DateTime.UtcNow;
             var query = _context.Campaigns.Include(c => c.CreatedByBranch)
                 .Where(c => c.IsActive && c.StartDate <= now && c.EndDate >= now);
+
+            if (isSystem.HasValue)
+            {
+                query = isSystem.Value
+                    ? query.Where(c => c.CreatedByBranchId == null && c.CreatedByVendorId == null)
+                    : query.Where(c => c.CreatedByBranchId != null || c.CreatedByVendorId != null);
+            }
 
             int totalCount = await query.CountAsync();
             var items = await query.OrderByDescending(c => c.CreatedAt)

@@ -758,7 +758,7 @@ namespace Service
 
         public async Task<BO.Common.PaginatedResponse<CampaignResponseDto>> GetPublicCampaignsAsync(CampaignQueryDto query)
         {
-            var (items, totalCount) = await _campaignRepo.GetPublicCampaignsAsync(query.PageNumber, query.PageSize);
+            var (items, totalCount) = await _campaignRepo.GetPublicCampaignsAsync(query.IsSystem, query.PageNumber, query.PageSize);
             
             var mappedItems = new List<CampaignResponseDto>();
             foreach(var item in items)
