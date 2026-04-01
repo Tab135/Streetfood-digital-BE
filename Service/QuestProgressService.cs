@@ -66,7 +66,7 @@ namespace Service
                         NotificationType.QuestTaskCompleted,
                         "Nhiệm vụ hoàn thành!",
                         $"Bạn đã hoàn thành nhiệm vụ: {taskLabel}",
-                        userQuestTask.UserQuestId);
+                        userQuestTask.QuestTask.QuestId);
 
                     await CheckAndCompleteQuestAsync(userId, userQuestTask.UserQuestId);
                 }
@@ -155,7 +155,7 @@ namespace Service
                 NotificationType.QuestCompleted,
                 "Thử thách hoàn tất!",
                 $"Chúc mừng! Bạn đã hoàn tất thử thách \"{userQuest.Quest.Title}\"",
-                userQuestId);
+                userQuest.QuestId);
         }
     }
 }
