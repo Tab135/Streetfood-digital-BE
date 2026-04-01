@@ -407,10 +407,8 @@ namespace DAL
                 .ToListAsync();
         }
 
-        public async Task<List<SimilarBranchResponseDto>> GetSimilarBranchesByDishesAsync(int branchId, int limit)
+        public async Task<(List<SimilarBranchResponseDto> items, int totalCount)> GetSimilarBranchesByDishesAsync(int branchId, int pageNumber, int pageSize)
         {
-            var cappedLimit = Math.Min(limit, 20);
-
             var activeBranches = await _context.Branches
                 .AsNoTracking()
                 .AsSplitQuery()
@@ -423,7 +421,7 @@ namespace DAL
             var currentBranch = activeBranches.FirstOrDefault(b => b.BranchId == branchId);
             if (currentBranch == null)
             {
-                return new List<SimilarBranchResponseDto>();
+                return (new List<SimilarBranchResponseDto>(), 0);
             }
 
             var currentDishIds = (currentBranch.BranchDishes ?? new List<BranchDish>())
@@ -433,10 +431,10 @@ namespace DAL
 
             if (currentDishIds.Count == 0)
             {
-                return new List<SimilarBranchResponseDto>();
+                return (new List<SimilarBranchResponseDto>(), 0);
             }
 
-            return activeBranches
+            var recommendations = activeBranches
                 .Where(branch => branch.BranchId != branchId)
                 .Select(branch =>
                 {
@@ -497,9 +495,16 @@ namespace DAL
                 .OrderByDescending(item => item!.CommonDishCount)
                 .ThenByDescending(item => item!.SimilarityScore)
                 .ThenByDescending(item => item!.AvgRating)
-                .Take(cappedLimit)
                 .Select(item => item!)
                 .ToList();
+
+            var totalCount = recommendations.Count;
+            var items = recommendations
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return (items, totalCount);
         }
 
         /// <summary>

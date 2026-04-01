@@ -187,9 +187,9 @@ namespace Repository
             return await _branchDAO.GetAllActiveBranchesWithoutFilterAsync();
         }
 
-        public async Task<List<SimilarBranchResponseDto>> GetSimilarBranchesByDishesAsync(int branchId, int limit)
+        public async Task<(List<SimilarBranchResponseDto> items, int totalCount)> GetSimilarBranchesByDishesAsync(int branchId, int pageNumber, int pageSize)
         {
-            return await _branchDAO.GetSimilarBranchesByDishesAsync(branchId, limit);
+            return await _branchDAO.GetSimilarBranchesByDishesAsync(branchId, pageNumber, pageSize);
         }
 
         public async Task<List<(Branch branch, double distanceKm)>> GetActiveBranchesFilteredAsync(

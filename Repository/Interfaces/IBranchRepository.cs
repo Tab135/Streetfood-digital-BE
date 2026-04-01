@@ -48,7 +48,7 @@ namespace Repository.Interfaces
         // Get all active branches without any filtering
         Task<List<Branch>> GetAllActiveBranchesWithoutFilterAsync();
 
-        Task<List<SimilarBranchResponseDto>> GetSimilarBranchesByDishesAsync(int branchId, int limit);
+        Task<(List<SimilarBranchResponseDto> items, int totalCount)> GetSimilarBranchesByDishesAsync(int branchId, int pageNumber, int pageSize);
 
         // Active branches with dynamic filtering - returns all matching results
         Task<List<(Branch branch, double distanceKm)>> GetActiveBranchesFilteredAsync(

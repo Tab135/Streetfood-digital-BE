@@ -866,11 +866,16 @@ namespace Service
             await _branchRepository.DeleteBranchImageAsync(imageId);
         }
 
-        public async Task<List<SimilarBranchResponseDto>> GetSimilarBranchesByDishesAsync(int branchId, int limit)
+        public async Task<PaginatedResponse<SimilarBranchResponseDto>> GetSimilarBranchesByDishesAsync(int branchId, int pageNumber, int pageSize)
         {
-            if (limit <= 0)
+            if (pageNumber <= 0)
             {
-                throw new DomainExceptions("Limit must be greater than 0");
+                throw new DomainExceptions("Page number must be greater than 0");
+            }
+
+            if (pageSize <= 0)
+            {
+                throw new DomainExceptions("Page size must be greater than 0");
             }
 
             var branch = await _branchRepository.GetByIdAsync(branchId);
@@ -879,7 +884,8 @@ namespace Service
                 throw new DomainExceptions($"Không tìm thấy chi nhánh hoạt động với ID {branchId}");
             }
 
-            return await _branchRepository.GetSimilarBranchesByDishesAsync(branchId, limit);
+            var (items, totalCount) = await _branchRepository.GetSimilarBranchesByDishesAsync(branchId, pageNumber, pageSize);
+            return new PaginatedResponse<SimilarBranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
         // Helper method

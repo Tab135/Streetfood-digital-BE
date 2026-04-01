@@ -348,12 +348,12 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("{branchId}/similar")]
-        [ProducesResponseType(typeof(ApiResponse<List<SimilarBranchResponseDto>>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetSimilarBranches(int branchId, [FromQuery] int limit = 6)
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<SimilarBranchResponseDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetSimilarBranches(int branchId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var branches = await _branchService.GetSimilarBranchesByDishesAsync(branchId, limit);
+                var branches = await _branchService.GetSimilarBranchesByDishesAsync(branchId, pageNumber, pageSize);
                 return Ok(new { message = "Similar branches retrieved successfully", data = branches });
             }
             catch (Exception ex)
