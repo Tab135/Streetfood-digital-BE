@@ -1,4 +1,3 @@
-using BO.DTO.Notification;
 using BO.DTO.Payments;
 using BO.Entities;
 using BO.Exceptions;
@@ -38,6 +37,7 @@ namespace Service.PaymentsService
         private readonly IBranchCampaignRepository _branchCampaignRepo;
         private readonly ICartRepository _cartRepo;
         private readonly INotificationPusher _notificationPusher;
+        private readonly INotificationService _notificationService;
         private readonly ISettingService _settings;
         private readonly bool _isDebugMode;
 
@@ -50,6 +50,7 @@ namespace Service.PaymentsService
             IBranchCampaignRepository branchCampaignRepo,
             ICartRepository cartRepo,
             INotificationPusher notificationPusher,
+            INotificationService notificationService,
             ISettingService settings,
             IConfiguration configuration,
             ILogger<PaymentService> logger)
@@ -62,6 +63,7 @@ namespace Service.PaymentsService
             _branchCampaignRepo = branchCampaignRepo;
             _cartRepo = cartRepo;
             _notificationPusher = notificationPusher;
+            _notificationService = notificationService;
             _settings = settings;
             _configuration = configuration;
             _logger = logger;
@@ -1164,14 +1166,12 @@ namespace Service.PaymentsService
 
                 if (branch.ManagerId.HasValue)
                 {
-                    await _notificationPusher.PushToUserAsync(branch.ManagerId.Value, new NotificationDto
-                    {
-                        Type = NotificationType.OrderStatusUpdate.ToString(),
-                        Title = "Đơn hàng mới",
-                        Message = $"Có đơn hàng #{orderId} vừa thanh toán, cần xác nhận.",
-                        ReferenceId = orderId,
-                        CreatedAt = DateTime.UtcNow
-                    });
+                    await _notificationService.NotifyAsync(
+                        branch.ManagerId.Value,
+                        NotificationType.NewOrder,
+                        "Đơn hàng mới",
+                        $"Có đơn hàng #{orderId} vừa thanh toán, cần xác nhận.",
+                        orderId);
                 }
             }
         }
