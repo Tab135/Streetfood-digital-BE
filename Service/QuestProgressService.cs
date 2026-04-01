@@ -13,6 +13,8 @@ namespace Service
         private readonly IUserBadgeRepository _userBadgeRepository;
         private readonly IUserRepository _userRepository;
         private readonly IUserVoucherRepository _userVoucherRepository;
+        private readonly IVoucherRepository _voucherRepository;
+        private readonly IQuestRepository _questRepository;
         private readonly INotificationService _notificationService;
 
         public QuestProgressService(
@@ -20,12 +22,16 @@ namespace Service
             IUserBadgeRepository userBadgeRepository,
             IUserRepository userRepository,
             IUserVoucherRepository userVoucherRepository,
+            IVoucherRepository voucherRepository,
+            IQuestRepository questRepository,
             INotificationService notificationService)
         {
             _userQuestRepository = userQuestRepository;
             _userBadgeRepository = userBadgeRepository;
             _userRepository = userRepository;
             _userVoucherRepository = userVoucherRepository;
+            _voucherRepository = voucherRepository;
+            _questRepository = questRepository;
             _notificationService = notificationService;
         }
 
@@ -98,22 +104,35 @@ namespace Service
                     break;
 
                 case QuestRewardType.VOUCHER:
-                    var existingUserVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, rewardValue);
-                    if (existingUserVoucher != null)
+                    var voucher = await _voucherRepository.GetByIdAsync(rewardValue);
+                    if (voucher != null && voucher.UsedQuantity < voucher.Quantity)
                     {
-                        existingUserVoucher.Quantity += 1;
-                        await _userVoucherRepository.UpdateAsync(existingUserVoucher);
-                    }
-                    else
-                    {
-                        var userVoucher = new UserVoucher
+                        voucher.UsedQuantity += 1;
+                        await _voucherRepository.UpdateAsync(voucher);
+
+                        var existingUserVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, rewardValue);
+                        if (existingUserVoucher != null)
                         {
-                            UserId = userId,
-                            VoucherId = rewardValue,
-                            Quantity = 1,
-                            IsAvailable = true
-                        };
-                        await _userVoucherRepository.CreateAsync(userVoucher);
+                            existingUserVoucher.Quantity += 1;
+                            await _userVoucherRepository.UpdateAsync(existingUserVoucher);
+                        }
+                        else
+                        {
+                            var userVoucher = new UserVoucher
+                            {
+                                UserId = userId,
+                                VoucherId = rewardValue,
+                                Quantity = 1,
+                                IsAvailable = true
+                            };
+                            await _userVoucherRepository.CreateAsync(userVoucher);
+                        }
+
+                        if (voucher.UsedQuantity >= voucher.Quantity)
+                        {
+                            userQuestTask.QuestTask.IsActive = false;
+                            await _questRepository.UpdateTaskAsync(userQuestTask.QuestTask);
+                        }
                     }
                     break;
             }

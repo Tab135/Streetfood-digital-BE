@@ -29,6 +29,8 @@ namespace BO.Entities
 
         public int RewardValue { get; set; }
 
+        public bool IsActive { get; set; } = true;
+
         [JsonIgnore]
         public virtual ICollection<UserQuestTask> UserQuestTasks { get; set; } = new List<UserQuestTask>();
     }

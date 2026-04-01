@@ -103,6 +103,12 @@ namespace DAL
                 (!excludeQuestId.HasValue || q.QuestId != excludeQuestId.Value));
         }
 
+        public async Task UpdateTaskAsync(QuestTask task)
+        {
+            _context.QuestTasks.Update(task);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task RemoveTasksAsync(List<QuestTask> tasks)
         {
             _context.QuestTasks.RemoveRange(tasks);
