@@ -280,10 +280,18 @@ public class VoucherService : IVoucherService
             VoucherId = uv.VoucherId,
             VoucherCode = uv.Voucher?.VoucherCode ?? string.Empty,
             VoucherName = uv.Voucher?.Name ?? string.Empty,
+            Description = uv.Voucher?.Description,
             VoucherType = uv.Voucher?.Type ?? string.Empty,
             DiscountValue = uv.Voucher?.DiscountValue ?? 0m,
+            MinAmountRequired = uv.Voucher?.MinAmountRequired,
             MaxDiscountValue = uv.Voucher?.MaxDiscountValue,
-            Quantity = uv.Quantity
+            StartDate = uv.Voucher?.StartDate,
+            EndDate = uv.Voucher?.EndDate,
+            ExpiredDate = uv.Voucher?.ExpiredDate,
+            IsActive = uv.Voucher?.IsActive ?? false,
+            CampaignId = uv.Voucher?.CampaignId,
+            Quantity = uv.Quantity,
+            IsAvailable = uv.IsAvailable
         }).ToList();
     }
 
@@ -350,10 +358,18 @@ public class VoucherService : IVoucherService
             VoucherId = uv.VoucherId,
             VoucherCode = uv.Voucher?.VoucherCode ?? string.Empty,
             VoucherName = uv.Voucher?.Name ?? string.Empty,
+            Description = uv.Voucher?.Description,
             VoucherType = uv.Voucher?.Type ?? string.Empty,
             DiscountValue = uv.Voucher?.DiscountValue ?? 0m,
+            MinAmountRequired = uv.Voucher?.MinAmountRequired,
             MaxDiscountValue = uv.Voucher?.MaxDiscountValue,
-            Quantity = uv.Quantity
+            StartDate = uv.Voucher?.StartDate,
+            EndDate = uv.Voucher?.EndDate,
+            ExpiredDate = uv.Voucher?.ExpiredDate,
+            IsActive = uv.Voucher?.IsActive ?? false,
+            CampaignId = uv.Voucher?.CampaignId,
+            Quantity = uv.Quantity,
+            IsAvailable = uv.IsAvailable
         }).ToList();
     }
 
