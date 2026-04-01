@@ -36,12 +36,12 @@ namespace Service
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
             if (vendor == null)
             {
-                throw new Exception($"Vendor with ID {vendorId} not found");
+                throw new DomainExceptions($"Không tìm thấy cửa hàng với ID {vendorId}");
             }
 
             if (vendor.UserId != userId)
             {
-                throw new Exception("User does not own this vendor");
+                throw new DomainExceptions("Người dùng không sở hữu cửa hàng này");
             }
 
             var branch = new Branch
@@ -132,10 +132,10 @@ namespace Service
         public async Task<(string Message, int BranchId)> ClaimUserBranchAsync(int branchId, int userId, List<string> licenseUrls)
         {
             var branch = await _branchRepository.GetByIdAsync(branchId);
-            if (branch == null) throw new Exception("Branch not found");
+            if (branch == null) throw new DomainExceptions("Không tìm thấy chi nhánh");
 
             if (branch.VendorId != null)
-                throw new Exception("This branch has already been claimed or owned by a vendor.");
+                throw new DomainExceptions("Chi nhánh này đã được nhận hoặc thuộc sở hữu của một cửa hàng.");
 
             // Do NOT assign VendorId yet. Just set the ManagerId so we know WHO is claiming.
             // VendorId will be created/assigned upon Moderator approval in VerifyBranchAsync.
@@ -160,7 +160,7 @@ namespace Service
             };
             await _branchRepository.AddBranchRequestAsync(registrationRequest);
 
-            return ("Claim request submitted. Pending moderator approval.", branch.BranchId);
+            return ("Yêu cầu nhận chi nhánh đã được gửi. Đang chờ kiểm duyệt.", branch.BranchId);
         }
         private double CalculateDistance(double lat1, double lon1, double lat2, double lon2)
         {
@@ -179,7 +179,7 @@ namespace Service
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId}");
             }
 
             return await MapToResponseDtoAsync(branch);
@@ -248,7 +248,7 @@ namespace Service
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId}");
             }
 
             // Allow vendor owner or assigned manager to update branch
@@ -257,7 +257,7 @@ namespace Service
             var isBranchManager = branch.ManagerId.HasValue && branch.ManagerId.Value == userId;
             if (!isVendorOwner && !isBranchManager)
             {
-                throw new Exception("Unauthorized: You do not manage this branch");
+                throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
 
             // Update only non-null fields
@@ -295,20 +295,20 @@ namespace Service
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId}");
             }
 
             var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
             if (vendor == null || vendor.UserId != userId)
             {
-                throw new Exception("User does not own this vendor");
+                throw new DomainExceptions("Người dùng không sở hữu cửa hàng này");
             }
 
             // Check if this is the only branch
             var branches = await _branchRepository.GetAllByVendorIdAsync(branch.VendorId ?? 0);
             if (branches.Count <= 1)
             {
-                throw new Exception("Cannot delete the last branch. A vendor must have at least one branch.");
+                throw new DomainExceptions("Không thể xóa chi nhánh cuối cùng. Một cửa hàng phải có ít nhất một chi nhánh.");
             }
 
             await _branchRepository.DeleteAsync(branchId);
@@ -388,13 +388,13 @@ namespace Service
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId}");
             }
 
             // Verify user can manage the branch (vendor owner or assigned manager)
             if (!await UserCanManageBranchAsync(branchId, userId))
             {
-                throw new Exception("Unauthorized: You do not manage this branch");
+                throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
 
             // Serialize list of URLs to JSON
@@ -434,13 +434,13 @@ namespace Service
         {
             if (!await UserCanManageBranchAsync(branchId, userId))
             {
-                throw new Exception("Unauthorized: You do not manage this branch");
+                throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
 
             var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
             if (registrationRequest == null)
             {
-                throw new Exception($"No registration request found for branch ID {branchId}");
+                throw new DomainExceptions($"Không tìm thấy yêu cầu đăng ký cho chi nhánh với ID {branchId}");
             }
 
             return registrationRequest;
@@ -503,7 +503,7 @@ namespace Service
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId}");
             }
 
             // Handle ghost pin / vendor creation claim mechanism upon verification
@@ -578,7 +578,7 @@ namespace Service
             var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
             if (registrationRequest == null)
             {
-                throw new Exception($"No registration request found for branch ID {branchId}");
+                throw new DomainExceptions($"Không tìm thấy yêu cầu đăng ký cho chi nhánh với ID {branchId}");
             }
 
             registrationRequest.Status = RegisterVendorStatusEnum.Reject;
@@ -694,7 +694,7 @@ namespace Service
             // Verify user can manage the branch
             if (!await UserCanManageBranchAsync(branchId, userId))
             {
-                throw new Exception("Unauthorized: You do not manage this branch");
+                throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
 
             var workSchedules = dto.Weekdays.Select(weekday => new WorkSchedule
@@ -732,13 +732,13 @@ namespace Service
             var schedule = await _branchRepository.GetWorkScheduleByIdAsync(scheduleId);
             if (schedule == null)
             {
-                throw new Exception($"Work schedule with ID {scheduleId} not found");
+                throw new DomainExceptions($"Không tìm thấy lịch làm việc với ID {scheduleId}");
             }
 
             // Verify user can manage the branch
             if (!await UserCanManageBranchAsync(schedule.BranchId, userId))
             {
-                throw new Exception("Unauthorized: You do not manage this branch");
+                throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
 
             schedule.Weekday = dto.Weekday;
@@ -754,13 +754,13 @@ namespace Service
             var schedule = await _branchRepository.GetWorkScheduleByIdAsync(scheduleId);
             if (schedule == null)
             {
-                throw new Exception($"Work schedule with ID {scheduleId} not found");
+                throw new DomainExceptions($"Không tìm thấy lịch làm việc với ID {scheduleId}");
             }
 
             // Verify user can manage the branch
             if (!await UserCanManageBranchAsync(schedule.BranchId, userId))
             {
-                throw new Exception("Unauthorized: You do not manage this branch");
+                throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
 
             await _branchRepository.DeleteWorkScheduleAsync(scheduleId);
@@ -772,7 +772,7 @@ namespace Service
             // Verify user can manage the branch
             if (!await UserCanManageBranchAsync(branchId, userId))
             {
-                throw new Exception("Unauthorized: You do not manage this branch");
+                throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
 
             var dayOff = new DayOff
@@ -807,13 +807,13 @@ namespace Service
             var dayOff = await _branchRepository.GetDayOffByIdAsync(dayOffId);
             if (dayOff == null)
             {
-                throw new Exception($"Day off with ID {dayOffId} not found");
+                throw new DomainExceptions($"Không tìm thấy ngày nghỉ với ID {dayOffId}");
             }
 
             // Verify user can manage the branch
             if (!await UserCanManageBranchAsync(dayOff.BranchId, userId))
             {
-                throw new Exception("Unauthorized: You do not manage this branch");
+                throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
 
             await _branchRepository.DeleteDayOffAsync(dayOffId);
@@ -825,7 +825,7 @@ namespace Service
             // Verify user can manage the branch
             if (!await UserCanManageBranchAsync(branchId, userId))
             {
-                throw new Exception("Unauthorized: You do not manage this branch");
+                throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
 
             var branchImage = new BranchImage
@@ -854,13 +854,13 @@ namespace Service
             var image = await _branchRepository.GetBranchImageByIdAsync(imageId);
             if (image == null)
             {
-                throw new Exception($"Branch image with ID {imageId} not found");
+                throw new DomainExceptions($"Không tìm thấy ảnh chi nhánh với ID {imageId}");
             }
 
             // Verify user can manage the branch
             if (!await UserCanManageBranchAsync(image.BranchId, userId))
             {
-                throw new Exception("Unauthorized: You do not manage this branch");
+                throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
 
             await _branchRepository.DeleteBranchImageAsync(imageId);
@@ -969,7 +969,7 @@ namespace Service
 
             // If filters provided, use filtered logic
             if (filter.MinPrice.HasValue && filter.MaxPrice.HasValue && filter.MinPrice > filter.MaxPrice)
-                throw new Exception("MinPrice cannot be greater than MaxPrice");
+                throw new DomainExceptions("Giá tối thiểu không được lớn hơn giá tối đa");
 
             // User coordinates (nullable)
             double? userLat = filter.Lat;

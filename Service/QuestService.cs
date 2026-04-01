@@ -2,6 +2,7 @@ using BO.Common;
 using BO.DTO.Quest;
 using BO.Entities;
 using BO.Enums;
+using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -36,7 +37,7 @@ namespace Service
         public async Task<QuestResponseDto> CreateQuestAsync(CreateQuestDto dto)
         {
             if (dto.Tasks == null || dto.Tasks.Count == 0)
-                throw new Exception("At least one task is required");
+                throw new DomainExceptions("Cần có ít nhất một nhiệm vụ");
 
             ValidateStandaloneCampaignConsistency(dto.IsStandalone, dto.CampaignId);
 
@@ -44,12 +45,12 @@ namespace Service
             {
                 var campaign = await _campaignRepository.GetByIdAsync(dto.CampaignId.Value);
                 if (campaign == null)
-                    throw new Exception("Campaign not found");
+                    throw new DomainExceptions("Không tìm thấy chiến dịch");
                 if (campaign.CreatedByVendorId != null)
-                    throw new Exception("Quests cannot be linked to vendor-created campaigns. Only system campaigns support quests.");
+                    throw new DomainExceptions("Không thể liên kết quest với chiến dịch của cửa hàng. Chỉ chiến dịch hệ thống mới hỗ trợ quest.");
 
                 if (await _questRepository.ExistsByCampaignIdAsync(dto.CampaignId.Value))
-                    throw new Exception("A quest already exists for this campaign. Each campaign can only have one quest.");
+                    throw new DomainExceptions("Chiến dịch này đã có quest. Mỗi chiến dịch chỉ có thể có một quest.");
             }
 
             foreach (var taskDto in dto.Tasks)
@@ -83,7 +84,7 @@ namespace Service
         {
             var quest = await _questRepository.GetByIdAsync(questId);
             if (quest == null)
-                throw new Exception($"Quest with ID {questId} not found");
+                throw new DomainExceptions($"Không tìm thấy quest với ID {questId}");
 
             // Determine effective standalone/campaign values after update
             bool effectiveIsStandalone = dto.IsStandalone ?? quest.IsStandalone;
@@ -106,12 +107,12 @@ namespace Service
             {
                 var campaign = await _campaignRepository.GetByIdAsync(dto.CampaignId.Value);
                 if (campaign == null)
-                    throw new Exception("Campaign not found");
+                    throw new DomainExceptions("Không tìm thấy chiến dịch");
                 if (campaign.CreatedByVendorId != null)
-                    throw new Exception("Quests cannot be linked to vendor-created campaigns. Only system campaigns support quests.");
+                    throw new DomainExceptions("Không thể liên kết quest với chiến dịch của cửa hàng. Chỉ chiến dịch hệ thống mới hỗ trợ quest.");
 
                 if (await _questRepository.ExistsByCampaignIdAsync(dto.CampaignId.Value, excludeQuestId: questId))
-                    throw new Exception("A quest already exists for this campaign. Each campaign can only have one quest.");
+                    throw new DomainExceptions("Chiến dịch này đã có quest. Mỗi chiến dịch chỉ có thể có một quest.");
 
                 quest.CampaignId = dto.CampaignId.Value;
             }
@@ -145,7 +146,7 @@ namespace Service
         {
             var hasUsers = await _questRepository.HasEnrolledUsersAsync(questId);
             if (hasUsers)
-                throw new Exception("Cannot delete quest while users are enrolled");
+                throw new DomainExceptions("Không thể xóa quest khi vẫn còn người dùng đang tham gia");
 
             return await _questRepository.DeleteAsync(questId);
         }
@@ -182,10 +183,10 @@ namespace Service
         {
             var quest = await _questRepository.GetByIdAsync(questId);
             if (quest == null)
-                throw new Exception("Quest not found");
+                throw new DomainExceptions("Không tìm thấy quest");
 
             if (!quest.IsActive)
-                throw new Exception("Quest is not available");
+                throw new DomainExceptions("Quest hiện không khả dụng");
 
             // Check if the user has any previous record for this quest
             var existing = await _userQuestRepository.GetByUserAndQuestAnyStatusAsync(userId, questId);
@@ -193,13 +194,13 @@ namespace Service
             if (existing != null)
             {
                 if (existing.Status == "IN_PROGRESS")
-                    throw new Exception("You are already enrolled in this quest");
+                    throw new DomainExceptions("Bạn đã tham gia quest này rồi");
 
                 if (existing.Status == "COMPLETED")
-                    throw new Exception("You have already completed this quest");
+                    throw new DomainExceptions("Bạn đã hoàn thành quest này rồi");
 
                 if (existing.Status == "EXPIRED")
-                    throw new Exception("This quest has expired for you");
+                    throw new DomainExceptions("Quest này đã hết hạn với bạn");
 
                 // STOPPED: allow re-enrollment (resume)
                 if (existing.Status == "STOPPED")
@@ -209,7 +210,7 @@ namespace Service
                     {
                         var activeStandalone = await _userQuestRepository.GetActiveStandaloneQuestAsync(userId);
                         if (activeStandalone != null && activeStandalone.UserQuestId != existing.UserQuestId)
-                            throw new Exception("You already have an active standalone quest. Stop it before starting another.");
+                            throw new DomainExceptions("Bạn đang có một quest độc lập đang hoạt động. Hãy dừng nó trước khi bắt đầu quest khác.");
                     }
 
                     existing.Status = "IN_PROGRESS";
@@ -225,7 +226,7 @@ namespace Service
             {
                 var activeStandalone = await _userQuestRepository.GetActiveStandaloneQuestAsync(userId);
                 if (activeStandalone != null)
-                    throw new Exception("You already have an active standalone quest. Stop it before starting another.");
+                    throw new DomainExceptions("Bạn đang có một quest độc lập đang hoạt động. Hãy dừng nó trước khi bắt đầu quest khác.");
             }
 
             var userQuest = new UserQuest
@@ -257,14 +258,14 @@ namespace Service
         {
             var existing = await _userQuestRepository.GetByUserAndQuestAnyStatusAsync(userId, questId);
             if (existing == null)
-                throw new Exception("You are not enrolled in this quest");
+                throw new DomainExceptions("Bạn chưa tham gia quest này");
 
             if (existing.Status != "IN_PROGRESS")
-                throw new Exception($"Quest cannot be stopped — current status is {existing.Status}");
+                throw new DomainExceptions($"Không thể dừng quest — trạng thái hiện tại là {existing.Status}");
 
             var quest = await _questRepository.GetByIdAsync(questId);
             if (quest != null && !quest.IsStandalone)
-                throw new Exception("Only standalone quests can be manually stopped");
+                throw new DomainExceptions("Chỉ quest độc lập mới có thể dừng thủ công");
 
             existing.Status = "STOPPED";
             await _userQuestRepository.UpdateUserQuestAsync(existing);
@@ -282,7 +283,7 @@ namespace Service
         public async Task<QuestResponseDto> UpdateQuestImageAsync(int questId, string imageUrl)
         {
             var quest = await _questRepository.GetByIdAsync(questId)
-                ?? throw new Exception($"Quest with ID {questId} not found");
+                ?? throw new DomainExceptions($"Không tìm thấy quest với ID {questId}");
 
             quest.ImageUrl = imageUrl;
             await _questRepository.UpdateAsync(quest);
@@ -294,10 +295,10 @@ namespace Service
         private static void ValidateStandaloneCampaignConsistency(bool isStandalone, int? campaignId)
         {
             if (isStandalone && campaignId.HasValue)
-                throw new Exception("A standalone quest cannot belong to a campaign.");
+                throw new DomainExceptions("Quest độc lập không thể thuộc về một chiến dịch.");
 
             if (!isStandalone && !campaignId.HasValue)
-                throw new Exception("A campaign quest must specify a campaign (CampaignId is required).");
+                throw new DomainExceptions("Quest chiến dịch phải chỉ định một chiến dịch (CampaignId là bắt buộc).");
         }
 
         private async Task ValidateTaskRewardAsync(QuestRewardType rewardType, int rewardValue)
@@ -307,12 +308,12 @@ namespace Service
                 case QuestRewardType.BADGE:
                     var badgeExists = await _badgeRepository.Exists(rewardValue);
                     if (!badgeExists)
-                        throw new Exception($"Badge with ID {rewardValue} not found");
+                        throw new DomainExceptions($"Không tìm thấy huy hiệu với ID {rewardValue}");
                     break;
                 case QuestRewardType.VOUCHER:
                     var voucher = await _voucherRepository.GetByIdAsync(rewardValue);
                     if (voucher == null)
-                        throw new Exception($"Voucher with ID {rewardValue} not found");
+                        throw new DomainExceptions($"Không tìm thấy voucher với ID {rewardValue}");
                     break;
                 case QuestRewardType.POINTS:
                     break;

@@ -1,5 +1,6 @@
 using BO.DTO.Dietary;
 using BO.Entities;
+using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -26,7 +27,7 @@ namespace Service
         {
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
             if (vendor == null)
-                throw new Exception($"Vendor with ID {vendorId} not found");
+                throw new DomainExceptions($"Không tìm thấy cửa hàng với ID {vendorId}");
 
             var prefs = await _repository.GetPreferencesByVendorId(vendorId);
             return prefs.Select(MapToDto).ToList();
@@ -36,7 +37,7 @@ namespace Service
         {
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
             if (vendor == null)
-                throw new Exception($"Vendor with ID {vendorId} not found");
+                throw new DomainExceptions($"Không tìm thấy cửa hàng với ID {vendorId}");
 
             await _repository.AssignPreferencesToVendor(vendorId, dietaryPreferenceIds);
             var prefs = await _repository.GetPreferencesByVendorId(vendorId);

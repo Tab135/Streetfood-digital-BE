@@ -1,5 +1,6 @@
 using BO.DTO.Feedback;
 using BO.Entities;
+using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 
@@ -34,13 +35,13 @@ public class VendorReplyService : IVendorReplyService
     {
         var feedback = await _feedbackRepository.GetById(feedbackId);
         if (feedback == null)
-            throw new Exception("Feedback not found");
+            throw new DomainExceptions("Không tìm thấy đánh giá");
 
         await ValidateVendorAuthorization(feedback.BranchId, userId);
 
         var existingReply = await _replyRepository.GetByFeedbackId(feedbackId);
         if (existingReply != null)
-            throw new Exception("A reply already exists for this feedback");
+            throw new DomainExceptions("Đã có phản hồi cho đánh giá này");
 
         var reply = new VendorReply
         {
@@ -81,13 +82,13 @@ public class VendorReplyService : IVendorReplyService
     {
         var feedback = await _feedbackRepository.GetById(feedbackId);
         if (feedback == null)
-            throw new Exception("Feedback not found");
+            throw new DomainExceptions("Không tìm thấy đánh giá");
 
         await ValidateVendorAuthorization(feedback.BranchId, userId);
 
         var reply = await _replyRepository.GetByFeedbackId(feedbackId);
         if (reply == null)
-            throw new Exception("Reply not found");
+            throw new DomainExceptions("Không tìm thấy phản hồi");
 
         reply.Content = dto.Content;
         await _replyRepository.Update(reply);
@@ -99,13 +100,13 @@ public class VendorReplyService : IVendorReplyService
     {
         var feedback = await _feedbackRepository.GetById(feedbackId);
         if (feedback == null)
-            throw new Exception("Feedback not found");
+            throw new DomainExceptions("Không tìm thấy đánh giá");
 
         await ValidateVendorAuthorization(feedback.BranchId, userId);
 
         var reply = await _replyRepository.GetByFeedbackId(feedbackId);
         if (reply == null)
-            throw new Exception("Reply not found");
+            throw new DomainExceptions("Không tìm thấy phản hồi");
 
         await _replyRepository.Delete(reply);
         return true;
@@ -115,7 +116,7 @@ public class VendorReplyService : IVendorReplyService
     {
         var branch = await _branchRepository.GetByIdAsync(branchId);
         if (branch == null)
-            throw new Exception("Branch not found");
+            throw new DomainExceptions("Không tìm thấy chi nhánh");
 
         // Check if user is branch manager
         if (branch.ManagerId == userId) return;
@@ -124,7 +125,7 @@ public class VendorReplyService : IVendorReplyService
         var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId ?? 0);
         if (vendor != null && vendor.UserId == userId) return;
 
-        throw new UnauthorizedAccessException("Only the branch manager or vendor owner can reply");
+        throw new UnauthorizedAccessException("Chỉ quản lý chi nhánh hoặc chủ cửa hàng mới có thể trả lời");
     }
 
     private async Task<VendorReplyDto> MapToDto(VendorReply reply)

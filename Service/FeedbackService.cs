@@ -2,6 +2,7 @@ using BO.Common;
 using BO.DTO.Feedback;
 using BO.Entities;
 using BO.Enums;
+using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -51,14 +52,14 @@ namespace Service
             var user = await _userRepository.GetUserById(userId);
             if (user == null)
             {
-                throw new Exception($"User with ID {userId} not found");
+                throw new DomainExceptions($"Không tìm thấy người dùng với ID {userId}");
             }
 
             // Verify branch exists
             var branch = await _branchRepository.GetByIdAsync(createFeedbackDto.BranchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {createFeedbackDto.BranchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {createFeedbackDto.BranchId}");
             }
 
             // If DishId is provided, verify it exists and belongs to the branch
@@ -67,14 +68,14 @@ namespace Service
                 var dish = await _dishRepository.GetByIdAsync(createFeedbackDto.DishId.Value);
                 if (dish == null)
                 {
-                    throw new Exception($"Dish with ID {createFeedbackDto.DishId.Value} not found");
+                    throw new DomainExceptions($"Không tìm thấy món ăn với ID {createFeedbackDto.DishId.Value}");
                 }
 
                 // Validate dish belongs to the specified branch
                 var branchDish = await _dishRepository.GetBranchDishAsync(createFeedbackDto.BranchId, createFeedbackDto.DishId.Value);
                 if (branchDish == null)
                 {
-                    throw new Exception($"Dish with ID {createFeedbackDto.DishId.Value} does not belong to Branch with ID {createFeedbackDto.BranchId}");
+                    throw new DomainExceptions($"Món ăn với ID {createFeedbackDto.DishId.Value} không thuộc chi nhánh với ID {createFeedbackDto.BranchId}");
                 }
             }
 
@@ -83,18 +84,18 @@ namespace Service
             {
                 var order = await _orderRepository.GetById(createFeedbackDto.OrderId.Value);
                 if (order == null)
-                    throw new Exception("Order not found");
+                    throw new DomainExceptions("Không tìm thấy đơn hàng");
                 if (order.UserId != userId)
-                    throw new Exception("Order does not belong to this user");
+                    throw new DomainExceptions("Đơn hàng không thuộc về người dùng này");
                 if (order.BranchId != createFeedbackDto.BranchId)
-                    throw new Exception("Order does not belong to this branch");
+                    throw new DomainExceptions("Đơn hàng không thuộc chi nhánh này");
                 if (order.Status != OrderStatus.Paid)
-                    throw new Exception("Order must be paid before leaving feedback");
+                    throw new DomainExceptions("Đơn hàng phải được thanh toán trước khi đánh giá");
 
                 // One review per order
                 var hasFeedback = await _feedbackRepository.HasFeedbackForOrder(userId, createFeedbackDto.OrderId.Value);
                 if (hasFeedback)
-                    throw new Exception("You have already reviewed this order");
+                    throw new DomainExceptions("Bạn đã đánh giá đơn hàng này rồi");
             }
 
             // Velocity Limits - Check daily total limit (3 reviews per day)
@@ -104,20 +105,20 @@ namespace Service
             var todayCount = await _feedbackRepository.GetDailyFeedbackCountAsync(userId, today);
             if (todayCount >= dailyLimit)
             {
-                throw new Exception("You have reached the maximum number of reviews allowed for today.");
+                throw new DomainExceptions("Bạn đã đạt giới hạn số lượng đánh giá cho phép trong ngày hôm nay.");
             }
 
             // Velocity Limits - Check one review per branch per day
             var hasReviewedBranchToday = await _feedbackRepository.HasReviewedBranchTodayAsync(userId, createFeedbackDto.BranchId, today);
             if (hasReviewedBranchToday)
             {
-                throw new Exception("You have already reviewed this branch today.");
+                throw new DomainExceptions("Bạn đã đánh giá chi nhánh này hôm nay rồi.");
             }
 
             // Validate rating
             if (createFeedbackDto.Rating < 1 || createFeedbackDto.Rating > 5)
             {
-                throw new Exception("Rating must be between 1 and 5");
+                throw new DomainExceptions("Điểm đánh giá phải nằm trong khoảng từ 1 đến 5");
             }
 
             var feedback = new Feedback
@@ -165,13 +166,13 @@ namespace Service
             var feedback = await _feedbackRepository.GetById(feedbackId);
             if (feedback == null)
             {
-                throw new Exception($"Feedback with ID {feedbackId} not found");
+                throw new DomainExceptions($"Không tìm thấy đánh giá với ID {feedbackId}");
             }
 
             // Verify the user owns this feedback
             if (feedback.UserId != userId)
             {
-                throw new Exception("You can only add images to your own feedback");
+                throw new DomainExceptions("Bạn chỉ có thể thêm ảnh vào đánh giá của chính mình");
             }
 
             // Add images to feedback
@@ -187,7 +188,7 @@ namespace Service
             var feedback = await _feedbackRepository.GetById(feedbackId);
             if (feedback == null)
             {
-                throw new Exception($"Feedback with ID {feedbackId} not found");
+                throw new DomainExceptions($"Không tìm thấy đánh giá với ID {feedbackId}");
             }
 
             return await MapToResponseDtoAsync(feedback);
@@ -200,7 +201,7 @@ namespace Service
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId}");
             }
 
             var (feedbacks, totalCount) = await _feedbackRepository.GetByBranchId(branchId, pageNumber, pageSize, sortBy);
@@ -220,7 +221,7 @@ namespace Service
             var user = await _userRepository.GetUserById(userId);
             if (user == null)
             {
-                throw new Exception($"User with ID {userId} not found");
+                throw new DomainExceptions($"Không tìm thấy người dùng với ID {userId}");
             }
 
             var (feedbacks, totalCount) = await _feedbackRepository.GetByUserId(userId, pageNumber, pageSize);
@@ -239,13 +240,13 @@ namespace Service
             var feedback = await _feedbackRepository.GetById(feedbackId);
             if (feedback == null)
             {
-                throw new Exception($"Feedback with ID {feedbackId} not found");
+                throw new DomainExceptions($"Không tìm thấy đánh giá với ID {feedbackId}");
             }
 
             // Verify user owns this feedback
             if (feedback.UserId != userId)
             {
-                throw new Exception("User does not own this feedback");
+                throw new DomainExceptions("Người dùng không sở hữu đánh giá này");
             }
 
             // Validate and update DishId if provided
@@ -254,14 +255,14 @@ namespace Service
                 var dish = await _dishRepository.GetByIdAsync(updateFeedbackDto.DishId.Value);
                 if (dish == null)
                 {
-                    throw new Exception($"Dish with ID {updateFeedbackDto.DishId.Value} not found");
+                    throw new DomainExceptions($"Không tìm thấy món ăn với ID {updateFeedbackDto.DishId.Value}");
                 }
 
                 // Validate dish belongs to the feedback's branch
                 var branchDish = await _dishRepository.GetBranchDishAsync(feedback.BranchId, updateFeedbackDto.DishId.Value);
                 if (branchDish == null)
                 {
-                    throw new Exception($"Dish with ID {updateFeedbackDto.DishId.Value} does not belong to the same branch as the feedback");
+                    throw new DomainExceptions($"Món ăn với ID {updateFeedbackDto.DishId.Value} không thuộc chi nhánh của đánh giá này");
                 }
 
                 feedback.DishId = updateFeedbackDto.DishId;
@@ -270,7 +271,7 @@ namespace Service
             // Validate rating if being updated
             if (updateFeedbackDto.Rating < 1 || updateFeedbackDto.Rating > 5)
             {
-                throw new Exception("Rating must be between 1 and 5");
+                throw new DomainExceptions("Điểm đánh giá phải nằm trong khoảng từ 1 đến 5");
             }
 
             // Capture old rating for metrics
@@ -318,7 +319,7 @@ namespace Service
                     var tagExists = await _feedbackTagRepository.Exists(tagId);
                     if (!tagExists)
                     {
-                        throw new Exception($"Tag with ID {tagId} not found");
+                        throw new DomainExceptions($"Không tìm thấy tag với ID {tagId}");
                     }
                 }
 
@@ -342,13 +343,13 @@ namespace Service
             var feedback = await _feedbackRepository.GetById(feedbackId);
             if (feedback == null)
             {
-                throw new Exception($"Feedback with ID {feedbackId} not found");
+                throw new DomainExceptions($"Không tìm thấy đánh giá với ID {feedbackId}");
             }
 
             // Verify user owns this feedback
             if (feedback.UserId != userId)
             {
-                throw new Exception("User does not own this feedback");
+                throw new DomainExceptions("Người dùng không sở hữu đánh giá này");
             }
 
             int rating = feedback.Rating;
@@ -370,7 +371,7 @@ namespace Service
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId}");
             }
 
             return await _feedbackRepository.GetAverageRatingByBranchId(branchId);
@@ -382,7 +383,7 @@ namespace Service
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId}");
             }
 
             var count = await _feedbackRepository.GetCountByBranchId(branchId);
@@ -413,13 +414,13 @@ namespace Service
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
-                throw new Exception($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId}");
             }
 
             // Validate rating range
             if (minRating < 1 || maxRating > 5 || minRating > maxRating)
             {
-                throw new Exception("Rating range must be between 1 and 5, and min must be less than or equal to max");
+                throw new DomainExceptions("Khoảng điểm đánh giá phải từ 1 đến 5, và min phải nhỏ hơn hoặc bằng max");
             }
 
             var (feedbacks, totalCount) = await _feedbackRepository.GetByRatingRange(branchId, minRating, maxRating, pageNumber, pageSize);
@@ -438,7 +439,7 @@ namespace Service
             var feedback = await _feedbackRepository.GetById(feedbackId);
             if (feedback == null)
             {
-                throw new Exception($"Feedback with ID {feedbackId} not found");
+                throw new DomainExceptions($"Không tìm thấy đánh giá với ID {feedbackId}");
             }
 
             var images = await _feedbackRepository.GetImagesByFeedbackId(feedbackId);

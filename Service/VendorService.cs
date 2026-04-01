@@ -2,6 +2,7 @@ using BO.Common;
 using BO.DTO.Dietary;
 using BO.DTO.Vendor;
 using BO.Entities;
+using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -32,14 +33,14 @@ namespace Service
             var user = await _userRepository.GetUserById(userId);
             if (user == null)
             {
-                throw new Exception($"User with ID {userId} not found");
+                throw new DomainExceptions($"Không tìm thấy người dùng với ID {userId}");
             }
 
             // Check if user already has a vendor
             var existingVendor = await _vendorRepository.GetByUserIdAsync(userId);
             if (existingVendor != null)
             {
-                throw new Exception("User already has a vendor account");
+                throw new DomainExceptions("Đã có tài khoản cửa hàng cho người dùng này");
             }
 
             var vendor = new Vendor
@@ -94,7 +95,7 @@ namespace Service
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
             if (vendor == null)
             {
-                throw new Exception($"Vendor with ID {vendorId} not found");
+                throw new DomainExceptions($"Không tìm thấy cửa hàng với ID {vendorId}");
             }
 
             return MapToResponseDto(vendor);
@@ -105,7 +106,7 @@ namespace Service
             var vendor = await _vendorRepository.GetByUserIdAsync(userId);
             if (vendor == null)
             {
-                throw new Exception($"Vendor for user ID {userId} not found");
+                throw new DomainExceptions($"Không tìm thấy cửa hàng của người dùng với ID {userId}");
             }
 
             return MapToResponseDto(vendor);
@@ -130,7 +131,7 @@ namespace Service
             var exists = await _vendorRepository.ExistsByIdAsync(vendorId);
             if (!exists)
             {
-                throw new Exception($"Vendor with ID {vendorId} not found");
+                throw new DomainExceptions($"Không tìm thấy cửa hàng với ID {vendorId}");
             }
 
             await _vendorRepository.DeleteAsync(vendorId);
@@ -141,7 +142,7 @@ namespace Service
             var vendor = await _vendorRepository.GetByUserIdAsync(userId);
             if (vendor == null)
             {
-                throw new Exception($"Vendor for user ID {userId} not found");
+                throw new DomainExceptions($"Không tìm thấy cửa hàng của người dùng với ID {userId}");
             }
 
             vendor.Name = updateVendorDto.Name;
@@ -156,7 +157,7 @@ namespace Service
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
             if (vendor == null)
             {
-                throw new Exception($"Vendor with ID {vendorId} not found");
+                throw new DomainExceptions($"Không tìm thấy cửa hàng với ID {vendorId}");
             }
 
             vendor.IsActive = false;
@@ -183,7 +184,7 @@ namespace Service
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
             if (vendor == null)
             {
-                throw new Exception($"Vendor with ID {vendorId} not found");
+                throw new DomainExceptions($"Không tìm thấy cửa hàng với ID {vendorId}");
             }
 
             vendor.IsActive = true;

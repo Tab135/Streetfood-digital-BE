@@ -1,5 +1,6 @@
 using BO.DTO.Feedback;
 using BO.Entities;
+using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 
@@ -22,23 +23,23 @@ public class FeedbackVoteService : IFeedbackVoteService
     {
         // Parse vote type
         if (voteType != "up" && voteType != "down")
-            throw new Exception("VoteType must be 'up' or 'down'");
+            throw new DomainExceptions("Loại vote phải là 'up' hoặc 'down'");
 
         var parsedVoteType = voteType == "up" ? VoteType.Up : VoteType.Down;
 
         // Validate feedback exists
         var feedback = await _feedbackRepository.GetById(feedbackId);
         if (feedback == null)
-            throw new Exception("Feedback not found");
+            throw new DomainExceptions("Không tìm thấy đánh giá");
 
         // Cannot vote on own feedback
         if (feedback.UserId == userId)
-            throw new Exception("You cannot vote on your own review");
+            throw new DomainExceptions("Bạn không thể vote cho đánh giá của chính mình");
 
         // Must have visited branch (has existing feedback on the same branch)
         var hasVisited = await _feedbackRepository.HasUserFeedbackOnBranch(feedback.BranchId, userId);
         if (!hasVisited)
-            throw new UnauthorizedAccessException("You must have reviewed this branch to vote on reviews");
+            throw new DomainExceptions("Bạn cần đã đánh giá chi nhánh này để có thể vote");
 
         // Check for existing vote
         var existingVote = await _voteRepository.GetByFeedbackAndUser(feedbackId, userId);

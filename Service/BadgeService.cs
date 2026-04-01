@@ -2,6 +2,7 @@ using BO.Common;
 using BO.DTO;
 using BO.DTO.Badge;
 using BO.Entities;
+using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 
@@ -40,7 +41,7 @@ namespace Service
         {
             var badge = await _badgeRepository.GetById(badgeId);
             if (badge == null)
-                throw new Exception($"Badge with ID {badgeId} not found");
+                throw new DomainExceptions($"Không tìm thấy huy hiệu với ID {badgeId}");
 
             if (!string.IsNullOrEmpty(updateBadgeDto.BadgeName))
                 badge.BadgeName = updateBadgeDto.BadgeName;
@@ -63,7 +64,7 @@ namespace Service
         {
             var exists = await _badgeRepository.Exists(badgeId);
             if (!exists)
-                throw new Exception($"Badge with ID {badgeId} not found");
+                throw new DomainExceptions($"Không tìm thấy huy hiệu với ID {badgeId}");
 
             return await _badgeRepository.Delete(badgeId);
         }
@@ -84,7 +85,7 @@ namespace Service
         {
             var user = await _userRepository.GetUserById(userId);
             if (user == null)
-                throw new Exception($"User with ID {userId} not found");
+                throw new DomainExceptions($"Không tìm thấy người dùng với ID {userId}");
             return await _userBadgeRepository.GetUserBadgesWithInfo(userId);
         }
 
@@ -98,7 +99,7 @@ namespace Service
         {
             var user = await _userRepository.GetUserById(userId);
             if (user == null)
-                throw new Exception($"User with ID {userId} not found");
+                throw new DomainExceptions($"Không tìm thấy người dùng với ID {userId}");
 
             // Get all badges that the user qualifies for based on points
             var eligibleBadges = await _badgeRepository.GetBadgesByPointThreshold(user.Point);
@@ -127,15 +128,15 @@ namespace Service
         {
             var user = await _userRepository.GetUserById(userId);
             if (user == null)
-                throw new Exception($"User with ID {userId} not found");
+                throw new DomainExceptions($"Không tìm thấy người dùng với ID {userId}");
 
             var badge = await _badgeRepository.GetById(badgeId);
             if (badge == null)
-                throw new Exception($"Badge with ID {badgeId} not found");
+                throw new DomainExceptions($"Không tìm thấy huy hiệu với ID {badgeId}");
 
             var exists = await _userBadgeRepository.Exists(userId, badgeId);
             if (exists)
-                throw new Exception($"User already has this badge");
+                throw new DomainExceptions($"Người dùng đã có huy hiệu này rồi");
 
             var userBadge = new UserBadge
             {
@@ -158,7 +159,7 @@ namespace Service
         {
             var exists = await _userBadgeRepository.Exists(userId, badgeId);
             if (!exists)
-                throw new Exception($"User badge not found");
+                throw new DomainExceptions($"Không tìm thấy huy hiệu của người dùng");
 
             return await _userBadgeRepository.Delete(userId, badgeId);
         }

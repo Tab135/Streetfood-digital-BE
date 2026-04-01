@@ -55,11 +55,11 @@ namespace Service
 
             if (user == null)
             {
-                throw new Exception("User not found");
+                throw new DomainExceptions("Không tìm thấy người dùng");
             }
             if (!user.EmailVerified)
             {
-                throw new Exception("User is not verified");
+                throw new DomainExceptions("Người dùng chưa được xác minh");
             }
 
             return user;
@@ -69,14 +69,14 @@ namespace Service
             var user = await _userRepository.GetByEmailAsync(loginDto.Email); //
 
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password))
-                throw new Exception("Invalid credentials");
+                throw new DomainExceptions("Email hoặc mật khẩu không đúng");
             if (!user.EmailVerified)
             {
-                throw new Exception("Account is not verified. Please verify your email first.");
+                throw new DomainExceptions("Tài khoản chưa được xác minh. Vui lòng xác minh email trước.");
             }
             if (user.Status == "Banned")
             {
-                throw new Exception("Your account has been banned.");
+                throw new DomainExceptions("Tài khoản của bạn đã bị khóa.");
             }
 
             var token = _jwt_service.GenerateToken(user);
@@ -92,7 +92,7 @@ namespace Service
             {
                 if (existingUser.EmailVerified)
                 {
-                    throw new Exception("Email already exists");
+                    throw new DomainExceptions("Email đã tồn tại");
                 }
                 else
                 {
@@ -138,19 +138,19 @@ namespace Service
             var user = await _userRepository.GetByEmailAsync(request.Email);
             if (user == null)
             {
-                throw new Exception("User not found. Please register first.");
+                throw new DomainExceptions("Không tìm thấy người dùng. Vui lòng đăng ký trước.");
             }
 
             if (user.EmailVerified)
             {
-                return "User is already verified. Please log in.";
+                return "Người dùng đã được xác minh. Vui lòng đăng nhập.";
             }
             user.EmailVerified = true;
             await _userRepository.UpdateAsync(user); 
 
             await MarkOtpAsUsedAsync(validOtp.Id, request.Email, request.Otp); 
 
-            return "Registration successful. Please log in with your credentials.";
+            return "Đăng ký thành công. Vui lòng đăng nhập bằng thông tin của bạn.";
         }
         public async Task<LoginResponse> GoogleLoginAsync(GoogleAuthDto googleAuthDto)
         {
@@ -166,7 +166,7 @@ namespace Service
                     
                     if (!response.IsSuccessStatusCode)
                     {
-                        throw new Exception("Invalid Google access token");
+                        throw new DomainExceptions("Token Google không hợp lệ");
                     }
 
                     var userInfoJson = await response.Content.ReadAsStringAsync();
@@ -174,7 +174,7 @@ namespace Service
 
                     if (userInfo == null || string.IsNullOrEmpty(userInfo.Sub))
                     {
-                        throw new Exception("Failed to retrieve user information from Google");
+                        throw new DomainExceptions("Không lấy được thông tin người dùng từ Google");
                     }
 
                     // Convert Google user info to payload format
@@ -201,13 +201,13 @@ namespace Service
                 }
                 else
                 {
-                    throw new Exception("Either IdToken or AccessToken must be provided");
+                    throw new DomainExceptions("Cần cung cấp IdToken hoặc AccessToken");
                 }
 
                 var user = await _userRepository.FindOrCreateUserFromGoogleAsync(payload);
                 if (user.Status == "Banned")
                 {
-                    throw new Exception("Your account has been banned.");
+                    throw new DomainExceptions("Tài khoản của bạn đã bị khóa.");
                 }
 
                 var token = _jwt_service.GenerateToken(user);
@@ -220,7 +220,7 @@ namespace Service
             }
             catch (Exception ex)
             {
-                throw new Exception($"Google authentication failed: {ex.Message}");
+                throw new DomainExceptions($"Đăng nhập Google thất bại: {ex.Message}");
             }
         }
         public async Task<string> ResendRegistrationOtpAsync(string email, string username)
@@ -233,12 +233,12 @@ namespace Service
             {
                 if (user.EmailVerified)
                 {
-                    throw new Exception("Email is already registered and verified. Please login.");
+                    throw new DomainExceptions("Email đã được đăng ký và xác minh. Vui lòng đăng nhập.");
                 }
             }
             else
             {
-                throw new Exception("No registration request found for this email.");
+                throw new DomainExceptions("Không tìm thấy yêu cầu đăng ký cho email này.");
             }
 
             var otpCode = await GenerateAndStoreOtpAsync(email);
@@ -250,7 +250,7 @@ namespace Service
 
             await _email_sender.SendEmailAsync(email, subject, body);
 
-            return $"New OTP sent to {email}. Please check your email and verify within {OtpExpiryMinutes} minutes.";
+            return $"OTP mới đã được gửi đến {email}. Vui lòng kiểm tra email và xác minh trong vòng {OtpExpiryMinutes} phút.";
         }
         public async Task<string> SendForgetPasswordOtpAsync(string email)
         {
@@ -264,12 +264,12 @@ namespace Service
 
             await _email_sender.SendEmailAsync(email, subject, body);
 
-            return $"Password reset OTP sent to {email}. Please check your email and verify within {OtpExpiryMinutes} minutes.";
+            return $"OTP đặt lại mật khẩu đã gửi đến {email}. Vui lòng kiểm tra email và xác minh trong vòng {OtpExpiryMinutes} phút.";
         }
         public async Task<string> VerifyOtpAsync(string email, string otp)
         {
             await GetValidOtpAsync(email, otp);
-            return "OTP is valid";
+            return "OTP hợp lệ";
         }
         public async Task<string> ResetPasswordAsync(ResetPasswordRequest request)
         {
@@ -280,7 +280,7 @@ namespace Service
             await _userRepository.UpdateAsync(user);
             await MarkOtpAsUsedAsync(validOtp.Id, request.Email, request.Otp);
 
-            return "Password reset successful. Please log in with your new password.";
+            return "Đổi mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.";
         }
         public async Task<string> ResendForgetPasswordOtpAsync(string email)
         {
@@ -295,14 +295,14 @@ namespace Service
 
             await _email_sender.SendEmailAsync(email, subject, body);
 
-            return $"New password reset OTP sent to {email}. Please check your email and verify within {OtpExpiryMinutes} minutes.";
+            return $"OTP đặt lại mật khẩu mới đã gửi đến {email}. Vui lòng kiểm tra email và xác minh trong vòng {OtpExpiryMinutes} phút.";
         }
 
         // Send OTP for phone-based login 
         public async Task<string> SendPhoneLoginOtpAsync(string phoneNumber)
         {
             if (string.IsNullOrWhiteSpace(phoneNumber))
-                throw new Exception("Phone number is required");
+                throw new DomainExceptions("Số điện thoại là bắt buộc");
 
            
             await CheckOtpRequestLimitAsync(phoneNumber);
@@ -316,7 +316,7 @@ namespace Service
         public async Task<LoginResponse> VerifyPhoneOtpAsync(string phoneNumber, string otp)
         {
             if (string.IsNullOrWhiteSpace(phoneNumber) || string.IsNullOrWhiteSpace(otp))
-                throw new Exception("Phone number and OTP are required");
+                throw new DomainExceptions("Số điện thoại và OTP là bắt buộc");
 
             var validOtp = await GetValidOtpAsync(phoneNumber, otp);
 
@@ -342,7 +342,7 @@ namespace Service
             }
             else if (user.Status == "Banned")
             {
-                throw new Exception("Your account has been banned.");
+                throw new DomainExceptions("Tài khoản của bạn đã bị khóa.");
             }
 
             var token = _jwt_service.GenerateToken(user);
@@ -364,8 +364,15 @@ namespace Service
                 user.Email = updateDto.Email;
             }
 
-            if (!string.IsNullOrWhiteSpace(updateDto.PhoneNumber))
+            if (!string.IsNullOrWhiteSpace(updateDto.PhoneNumber) && updateDto.PhoneNumber != user.PhoneNumber)
+            {
+                var existingUser = await _userRepository.GetByPhoneNumberAsync(updateDto.PhoneNumber);
+                if (existingUser != null)
+                {
+                    throw new DomainExceptions("Số điện thoại đã tồn tại");
+                }
                 user.PhoneNumber = updateDto.PhoneNumber;
+            }
 
             if (!string.IsNullOrWhiteSpace(updateDto.AvatarUrl))
                 user.AvatarUrl = updateDto.AvatarUrl;
@@ -431,7 +438,7 @@ namespace Service
             var u = await _userRepository.GetUserById(userId);
             if (u == null)
             {
-                throw new DomainExceptions("User not found", "ERR_USER_NOT_FOUND");
+                throw new DomainExceptions("Không tìm thấy người dùng", "ERR_USER_NOT_FOUND");
             }
 
             return new UserProfileDto
@@ -452,23 +459,23 @@ namespace Service
         public async Task<string> ChangePassword(string userId, string oldPassword, string newPassword, string confirmNewPassword)
         {
             if (string.IsNullOrWhiteSpace(userId))
-                throw new Exception("Invalid user id");
+                throw new DomainExceptions("ID người dùng không hợp lệ");
 
             if (newPassword != confirmNewPassword)
-                throw new Exception("New password and confirmation do not match");
+                throw new DomainExceptions("Mật khẩu mới và xác nhận không khớp");
 
             if (!int.TryParse(userId, out int parsedUserId))
-                throw new Exception("Invalid user id format");
+                throw new DomainExceptions("Sai định dạng ID người dùng");
 
             var user = await GetUserByIdAsync(parsedUserId);
 
             if (!BCrypt.Net.BCrypt.Verify(oldPassword, user.Password))
-                throw new Exception("Old password is incorrect");
+                throw new DomainExceptions("Mật khẩu cũ không đúng");
 
             var hashed = BCrypt.Net.BCrypt.HashPassword(newPassword);
             await _userRepository.UpdatePasswordAsync(parsedUserId, hashed);
 
-            return "Password changed successfully";
+            return "Đổi mật khẩu thành công";
         }
 
         // Refactored Facebook login implementation
@@ -493,7 +500,7 @@ namespace Service
 
                 if (user.Status == "Banned")
                 {
-                    throw new Exception("Your account has been banned.");
+                    throw new DomainExceptions("Tài khoản của bạn đã bị khóa.");
                 }
 
                 var token = _jwt_service.GenerateToken(user);
@@ -501,7 +508,7 @@ namespace Service
             }
             catch (Exception)
             {
-                throw new Exception("Invalid Facebook token");
+                throw new DomainExceptions("Token Facebook không hợp lệ");
             }
         }
         public async Task<bool> PromoteToModeratorAsync(int userId)
@@ -533,26 +540,26 @@ namespace Service
         private async Task ValidateEmailNotExistsAsync(string email)
         {
             if (await _userRepository.EmailExistsAsync(email))
-                throw new Exception("Email already exists");
+                throw new DomainExceptions("Email đã tồn tại");
         }
         private async Task<User> GetUserByEmailAsync(string email)
         {
             var user = await _userRepository.GetByEmailAsync(email);
             if (user == null)
-                throw new Exception("Email not found");
+                throw new DomainExceptions("Không tìm thấy email");
             return user;
         }
         private async Task<User> GetUserByIdAsync(int userId)
         {
             var user = await _userRepository.GetUserById(userId);
-            if (user == null) throw new Exception("User not found");
+            if (user == null) throw new DomainExceptions("Không tìm thấy người dùng");
             return user;
         }
         private async Task CheckOtpRequestLimitAsync(string email)
         {
             var recentOtps = await _otpRepository.GetRecentOtpsAsync(email, TimeSpan.FromMinutes(1));
             if (recentOtps.Count >= MaxOtpRequestsPerMinute)
-                throw new Exception("Too many OTP requests. Please wait before trying again.");
+                throw new DomainExceptions("Yêu cầu OTP quá nhiều. Vui lòng đợi trước khi thử lại.");
         }
         private async Task<string> GenerateAndStoreOtpAsync(string email)
         {
@@ -574,7 +581,7 @@ namespace Service
         {
             var (validOtp, errorMessage) = await _otpRepository.GetValidOtpWithDetailAsync(email, otp);
             if (validOtp == null)
-                throw new Exception(errorMessage ?? "Invalid or expired OTP");
+                throw new DomainExceptions(errorMessage ?? "OTP không hợp lệ hoặc đã hết hạn");
             return validOtp;
         }
 

@@ -534,7 +534,7 @@ namespace Service.PaymentsService
             {
                 var payment = await _paymentRepo.GetPaymentByOrderCode(orderCode);
                 if (payment == null)
-                    throw new Exception($"Payment not found for OrderCode: {orderCode}");
+                    throw new DomainExceptions($"Không tìm thấy thanh toán cho mã đơn hàng: {orderCode}");
 
                 // Try sync with PayOS if still PENDING
                 if (payment.Status == "PENDING" && !_isDebugMode)
@@ -600,7 +600,7 @@ namespace Service.PaymentsService
                 {
                     var payosPaymentInfo = await _payOS.PaymentRequests.GetAsync((int)orderCode);
                     if (payosPaymentInfo == null)
-                        throw new Exception($"Payment not found in PayOS: OrderCode={orderCode}");
+                        throw new DomainExceptions($"Không tìm thấy thanh toán trên PayOS: Mã đơn hàng={orderCode}");
 
                     actualStatus = payosPaymentInfo.Status.ToString().ToUpper();
                     externalTxnId = transactionId ?? payosPaymentInfo.Id?.ToString();

@@ -1,6 +1,7 @@
 using BO.Common;
 using BO.DTO.Notification;
 using BO.Entities;
+using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 
@@ -51,9 +52,9 @@ public class NotificationService : INotificationService
     {
         var notification = await _notificationRepository.GetById(notificationId);
         if (notification == null)
-            throw new Exception("Notification not found");
+            throw new DomainExceptions("Không tìm thấy thông báo");
         if (notification.UserId != userId)
-            throw new Exception("Notification does not belong to this user");
+            throw new DomainExceptions("Thông báo này không thuộc về người dùng này");
 
         await _notificationRepository.MarkAsRead(notificationId);
     }
