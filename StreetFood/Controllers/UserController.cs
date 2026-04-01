@@ -52,11 +52,11 @@ namespace StreetFood.Controllers
             try
             {
                 await _userService.PromoteToModeratorAsync(id);
-                return Ok(new ApiResponse<string> { Message = "User successfully promoted to Moderator" });
+                return Ok(new { Message = "User successfully promoted to Moderator" });
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<string> { Message = ex.Message });
+                return BadRequest(new  { Message = ex.Message });
             }
         }
 
@@ -68,11 +68,11 @@ namespace StreetFood.Controllers
             try
             {
                 await _userService.BanUserAsync(id);
-                return Ok(new ApiResponse<string> { Message = "User successfully banned" });
+                return Ok(new { Message = "User successfully banned" });
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<string> { Message = ex.Message });
+                return BadRequest(new { Message = ex.Message });
             }
         }
 
@@ -84,11 +84,11 @@ namespace StreetFood.Controllers
             try
             {
                 await _userService.UnbanUserAsync(id);
-                return Ok(new ApiResponse<string> { Message = "User successfully unbanned" });
+                return Ok(new { Message = "User successfully unbanned" });
             }
             catch (Exception ex)
             {
-                return BadRequest(new ApiResponse<string> { Message = ex.Message });
+                return BadRequest(new { Message = ex.Message });
             }
         }
     }
