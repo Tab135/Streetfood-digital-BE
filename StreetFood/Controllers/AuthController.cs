@@ -128,7 +128,8 @@ namespace StreetFood.Controllers
                         lastName = response.User?.LastName,
                         userInfoSetup = response.User?.UserInfoSetup,
                         dietarySetup = response.User?.DietarySetup,
-                        status = response.User?.Status
+                        status = response.User?.Status,
+                        moneyBalance = response.User?.MoneyBalance
                     }
                 });
             }
@@ -173,7 +174,8 @@ namespace StreetFood.Controllers
                         lastName = response.User?.LastName,
                         userInfoSetup = response.User?.UserInfoSetup,
                         dietarySetup = response.User?.DietarySetup,
-                        status = response.User?.Status
+                        status = response.User?.Status,
+                        moneyBalance = response.User?.MoneyBalance
                     }
                 });
             }
@@ -240,7 +242,8 @@ namespace StreetFood.Controllers
                         lastName = response.User?.LastName,
                         userInfoSetup = response.User?.UserInfoSetup,
                         dietarySetup = response.User?.DietarySetup,
-                        status = response.User?.Status
+                        status = response.User?.Status,
+                        moneyBalance = response.User?.MoneyBalance
                     }
                 });
             }
