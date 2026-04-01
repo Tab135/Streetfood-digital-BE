@@ -78,7 +78,7 @@ namespace StreetFood.Controllers
                 return Ok(new
                 {
                     message = "Badge updated successfully",
-                    badge = badge
+                    data = badge
                 });
             }
             catch (Exception ex)
