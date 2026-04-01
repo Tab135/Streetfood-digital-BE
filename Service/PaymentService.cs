@@ -1,3 +1,4 @@
+using BO.DTO.Notification;
 using BO.DTO.Payments;
 using BO.Entities;
 using BO.Exceptions;
@@ -1160,6 +1161,18 @@ namespace Service.PaymentsService
                 // Instead of adding balance here, it will be handled when the vendor decides (OrderService)
                 order.Status = OrderStatus.AwaitingVendorConfirmation;
                 await _orderRepository.Update(order);
+
+                if (branch.ManagerId.HasValue)
+                {
+                    await _notificationPusher.PushToUserAsync(branch.ManagerId.Value, new NotificationDto
+                    {
+                        Type = NotificationType.OrderStatusUpdate.ToString(),
+                        Title = "Đơn hàng mới",
+                        Message = $"Có đơn hàng #{orderId} vừa thanh toán, cần xác nhận.",
+                        ReferenceId = orderId,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
             }
         }
 
