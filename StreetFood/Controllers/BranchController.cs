@@ -347,6 +347,21 @@ namespace StreetFood.Controllers
             }
         }
 
+        [HttpGet("{branchId}/similar")]
+        [ProducesResponseType(typeof(ApiResponse<List<SimilarBranchResponseDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetSimilarBranches(int branchId, [FromQuery] int limit = 6)
+        {
+            try
+            {
+                var branches = await _branchService.GetSimilarBranchesByDishesAsync(branchId, limit);
+                return Ok(new { message = "Similar branches retrieved successfully", data = branches });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpPut("{id}")]
         [Authorize(Roles = "User,Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<BranchResponseDto>), StatusCodes.Status200OK)]

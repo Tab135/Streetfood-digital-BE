@@ -1,3 +1,4 @@
+using BO.DTO.Branch;
 using BO.Entities;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -404,6 +405,101 @@ namespace DAL
                 .OrderByDescending(b => b.AvgRating)
                 .ThenBy(b => b.Name)
                 .ToListAsync();
+        }
+
+        public async Task<List<SimilarBranchResponseDto>> GetSimilarBranchesByDishesAsync(int branchId, int limit)
+        {
+            var cappedLimit = Math.Min(limit, 20);
+
+            var activeBranches = await _context.Branches
+                .AsNoTracking()
+                .AsSplitQuery()
+                .Where(b => b.IsActive && b.IsVerified)
+                .Include(b => b.Vendor)
+                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
+                    .ThenInclude(bd => bd.Dish)
+                .ToListAsync();
+
+            var currentBranch = activeBranches.FirstOrDefault(b => b.BranchId == branchId);
+            if (currentBranch == null)
+            {
+                return new List<SimilarBranchResponseDto>();
+            }
+
+            var currentDishIds = (currentBranch.BranchDishes ?? new List<BranchDish>())
+                .Where(bd => bd.Dish != null && bd.Dish.IsActive)
+                .Select(bd => bd.DishId)
+                .ToHashSet();
+
+            if (currentDishIds.Count == 0)
+            {
+                return new List<SimilarBranchResponseDto>();
+            }
+
+            return activeBranches
+                .Where(branch => branch.BranchId != branchId)
+                .Select(branch =>
+                {
+                    var candidateDishes = (branch.BranchDishes ?? new List<BranchDish>())
+                        .Where(bd => bd.Dish != null && bd.Dish.IsActive)
+                        .ToList();
+
+                    var candidateDishIds = candidateDishes
+                        .Select(bd => bd.DishId)
+                        .ToHashSet();
+
+                    if (candidateDishIds.Count == 0)
+                    {
+                        return null;
+                    }
+
+                    var sharedDishIds = candidateDishIds
+                        .Where(currentDishIds.Contains)
+                        .ToHashSet();
+
+                    if (sharedDishIds.Count == 0)
+                    {
+                        return null;
+                    }
+
+                    var unionCount = currentDishIds.Union(candidateDishIds).Count();
+                    var jaccard = unionCount == 0 ? 0 : (double)sharedDishIds.Count / unionCount;
+                    var similarityScore = Math.Round((jaccard * 0.8) + ((branch.AvgRating / 5.0) * 0.2), 4);
+
+                    var sharedDishNames = candidateDishes
+                        .Where(bd => sharedDishIds.Contains(bd.DishId))
+                        .Select(bd => bd.Dish.Name)
+                        .Where(name => !string.IsNullOrWhiteSpace(name))
+                        .Distinct()
+                        .Take(5)
+                        .ToList();
+
+                    return new SimilarBranchResponseDto
+                    {
+                        BranchId = branch.BranchId,
+                        VendorId = branch.VendorId ?? 0,
+                        VendorName = branch.Vendor?.Name ?? string.Empty,
+                        Name = branch.Name,
+                        AddressDetail = branch.AddressDetail,
+                        Ward = branch.Ward,
+                        City = branch.City,
+                        Lat = branch.Lat,
+                        Long = branch.Long,
+                        AvgRating = branch.AvgRating,
+                        TotalReviewCount = branch.TotalReviewCount,
+                        IsSubscribed = branch.IsSubscribed,
+                        CommonDishCount = sharedDishIds.Count,
+                        SimilarityScore = similarityScore,
+                        SharedDishNames = sharedDishNames
+                    };
+                })
+                .Where(item => item != null)
+                .OrderByDescending(item => item!.CommonDishCount)
+                .ThenByDescending(item => item!.SimilarityScore)
+                .ThenByDescending(item => item!.AvgRating)
+                .Take(cappedLimit)
+                .Select(item => item!)
+                .ToList();
         }
 
         /// <summary>

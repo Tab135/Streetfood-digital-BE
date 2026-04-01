@@ -1,3 +1,4 @@
+using BO.DTO.Branch;
 using BO.Entities;
 using DAL;
 using Repository.Interfaces;
@@ -184,6 +185,11 @@ namespace Repository
         public async Task<List<Branch>> GetAllActiveBranchesWithoutFilterAsync()
         {
             return await _branchDAO.GetAllActiveBranchesWithoutFilterAsync();
+        }
+
+        public async Task<List<SimilarBranchResponseDto>> GetSimilarBranchesByDishesAsync(int branchId, int limit)
+        {
+            return await _branchDAO.GetSimilarBranchesByDishesAsync(branchId, limit);
         }
 
         public async Task<List<(Branch branch, double distanceKm)>> GetActiveBranchesFilteredAsync(

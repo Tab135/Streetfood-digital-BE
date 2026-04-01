@@ -26,12 +26,13 @@ namespace Service
             _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
         }
 
-        public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryDto createDto, int userId)
+        public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryDto createDto, int userId, string imageUrl)
         {
             var entity = new Category
             {
                 Name = createDto.Name,
-                Description = createDto.Description
+                Description = createDto.Description,
+                ImageUrl = imageUrl
             };
 
             var created = await _repo.CreateAsync(entity);
@@ -50,7 +51,7 @@ namespace Service
             return list.Select(MapToDto).ToList();
         }
 
-        public async Task<CategoryDto> UpdateCategoryAsync(int id, UpdateCategoryDto updateDto, int userId)
+        public async Task<CategoryDto> UpdateCategoryAsync(int id, UpdateCategoryDto updateDto, int userId, string? imageUrl)
         {
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null)
@@ -61,6 +62,9 @@ namespace Service
 
             if (updateDto.Description != null)
                 existing.Description = updateDto.Description;
+
+            if (!string.IsNullOrWhiteSpace(imageUrl))
+                existing.ImageUrl = imageUrl;
 
             await _repo.UpdateAsync(existing);
             return MapToDto(existing);
@@ -98,7 +102,8 @@ namespace Service
             {
                 CategoryId = c.CategoryId,
                 Name = c.Name,
-                Description = c.Description
+                Description = c.Description,
+                ImageUrl = c.ImageUrl
             };
         }
     }

@@ -22,13 +22,13 @@ namespace Service
         }
 
         // Admin operations
-        public async Task<BadgeDto> CreateBadge(CreateBadgeDto createBadgeDto)
+        public async Task<BadgeDto> CreateBadge(CreateBadgeDto createBadgeDto, string iconUrl)
         {
             var badge = new Badge
             {
                 BadgeName = createBadgeDto.BadgeName,
                 PointToGet = createBadgeDto.PointToGet,
-                IconUrl = createBadgeDto.IconUrl,
+                IconUrl = iconUrl,
                 Description = createBadgeDto.Description
             };
 
@@ -37,7 +37,7 @@ namespace Service
             return MapToDto(createdBadge);
         }
 
-        public async Task<BadgeDto> UpdateBadge(int badgeId, UpdateBadgeDto updateBadgeDto)
+        public async Task<BadgeDto> UpdateBadge(int badgeId, UpdateBadgeDto updateBadgeDto, string? iconUrl)
         {
             var badge = await _badgeRepository.GetById(badgeId);
             if (badge == null)
@@ -49,8 +49,8 @@ namespace Service
             if (updateBadgeDto.PointToGet.HasValue)
                 badge.PointToGet = updateBadgeDto.PointToGet.Value;
 
-            if (!string.IsNullOrEmpty(updateBadgeDto.IconUrl))
-                badge.IconUrl = updateBadgeDto.IconUrl;
+            if (!string.IsNullOrWhiteSpace(iconUrl))
+                badge.IconUrl = iconUrl;
 
             if (updateBadgeDto.Description != null)
                 badge.Description = updateBadgeDto.Description;

@@ -15,6 +15,9 @@ namespace BO.Entities
         [StringLength(500)]
         public string? Description { get; set; }
 
+        [StringLength(500)]
+        public string? ImageUrl { get; set; }
+
         // Navigation
         public virtual ICollection<Dish> Dishes { get; set; } = new List<Dish>();
     }

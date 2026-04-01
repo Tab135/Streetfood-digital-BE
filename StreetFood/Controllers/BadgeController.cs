@@ -5,6 +5,7 @@ using BO.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using StreetFood.Services;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -17,17 +18,20 @@ namespace StreetFood.Controllers
     public class BadgeController : ControllerBase
     {
         private readonly IBadgeService _badgeService;
+        private readonly IS3Service _s3Service;
 
-        public BadgeController(IBadgeService badgeService)
+        public BadgeController(IBadgeService badgeService, IS3Service s3Service)
         {
             _badgeService = badgeService;
+            _s3Service = s3Service;
         }
 
         // Admin endpoints
         [HttpPost]
         [Authorize(Roles = "Admin")]
+        [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(ApiResponse<BadgeDto>), StatusCodes.Status201Created)]
-        public async Task<IActionResult> CreateBadge([FromBody] CreateBadgeDto createBadgeDto)
+        public async Task<IActionResult> CreateBadge([FromForm] CreateBadgeDto createBadgeDto, IFormFile imageFile)
         {
             try
             {
@@ -36,7 +40,13 @@ namespace StreetFood.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var badge = await _badgeService.CreateBadge(createBadgeDto);
+                if (imageFile == null || imageFile.Length == 0)
+                {
+                    return BadRequest(new { message = "Badge image is required" });
+                }
+
+                var iconUrl = await _s3Service.UploadFileAsync(imageFile, "badges");
+                var badge = await _badgeService.CreateBadge(createBadgeDto, iconUrl);
                 return CreatedAtAction(nameof(GetBadgeById), new { id = badge.BadgeId }, badge);
             }
             catch (Exception ex)
@@ -47,8 +57,9 @@ namespace StreetFood.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
+        [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(ApiResponse<BadgeDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> UpdateBadge(int id, [FromBody] UpdateBadgeDto updateBadgeDto)
+        public async Task<IActionResult> UpdateBadge(int id, [FromForm] UpdateBadgeDto updateBadgeDto, IFormFile? imageFile)
         {
             try
             {
@@ -57,7 +68,13 @@ namespace StreetFood.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var badge = await _badgeService.UpdateBadge(id, updateBadgeDto);
+                string? iconUrl = null;
+                if (imageFile != null && imageFile.Length > 0)
+                {
+                    iconUrl = await _s3Service.UploadFileAsync(imageFile, "badges");
+                }
+
+                var badge = await _badgeService.UpdateBadge(id, updateBadgeDto, iconUrl);
                 return Ok(new
                 {
                     message = "Badge updated successfully",
