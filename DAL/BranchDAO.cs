@@ -38,6 +38,26 @@ namespace DAL
         }
 
         // Non-paginated version for internal use
+        public async Task<List<Branch>> GetBranchesByCampaignIdAsync(int campaignId)
+        {
+            return await _context.Branches
+                .AsNoTracking()
+                .Include(b => b.Tier)
+                .Where(b => _context.BranchCampaigns
+                    .Any(bc => bc.CampaignId == campaignId && bc.BranchId == b.BranchId && bc.IsActive))
+                .ToListAsync();
+        }
+
+        public async Task<List<Branch>> GetBranchesInAnyVendorCampaignAsync()
+        {
+            return await _context.Branches
+                .AsNoTracking()
+                .Include(b => b.Tier)
+                .Where(b => _context.BranchCampaigns
+                    .Any(bc => bc.BranchId == b.BranchId && bc.IsActive && bc.Campaign.CreatedByVendorId != null && bc.Campaign.IsActive))
+                .ToListAsync();
+        }
+
         public async Task<List<Branch>> GetAllByVendorIdAsync(int vendorId)
         {
             return await _context.Branches

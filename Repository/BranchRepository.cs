@@ -27,6 +27,10 @@ namespace Repository
             return await _branchDAO.GetByIdAsync(branchId);
         }
 
+        public Task<List<Branch>> GetBranchesByCampaignIdAsync(int campaignId) => _branchDAO.GetBranchesByCampaignIdAsync(campaignId);
+
+        public Task<List<Branch>> GetBranchesInAnyVendorCampaignAsync() => _branchDAO.GetBranchesInAnyVendorCampaignAsync();
+
         public async Task<List<Branch>> GetAllByVendorIdAsync(int vendorId)
         {
             return await _branchDAO.GetAllByVendorIdAsync(vendorId);
