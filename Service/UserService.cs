@@ -646,5 +646,25 @@ namespace Service
             var random = new Random();
             return random.Next(100000, 999999).ToString();
         }
+
+        public async Task<bool> AddXPAsync(int userId, int xpAmount)
+        {
+            if (xpAmount <= 0) return false;
+
+            var user = await _userRepository.GetUserById(userId);
+            if (user == null) return false;
+
+            user.XP += xpAmount;
+
+            if (user.XP >= 10000)
+                user.TierId = 4; // Diamond
+            else if (user.XP >= 3000)
+                user.TierId = 3; // Gold
+            else
+                user.TierId = 2; // Silver
+
+            await _userRepository.UpdateAsync(user);
+            return true;
+        }
     }
 }

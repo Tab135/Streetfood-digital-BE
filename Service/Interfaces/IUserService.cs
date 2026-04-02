@@ -36,5 +36,7 @@ namespace Service.Interfaces
 
         Task<BO.Common.PaginatedResponse<UserProfileDto>> SearchUsersAsync(string keyword, int pageNumber, int pageSize);
         Task<UserProfileDto> GetUserProfileByIdAsync(int userId);
+
+        Task<bool> AddXPAsync(int userId, int xpAmount);
     }
 }

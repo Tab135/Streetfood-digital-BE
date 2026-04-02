@@ -11,6 +11,7 @@ public class FeedbackResponseDto
     public string? Comment { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public int? FeedbackXP { get; set; }
     public List<FeedbackImageDto>? Images { get; set; }
     public List<FeedbackTagDto>? Tags { get; set; }
     public int UpVotes { get; set; }

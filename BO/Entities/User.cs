@@ -20,6 +20,13 @@ public class User
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int Point {  get; set; }
+    public int XP { get; set; } = 0;
+    
+    public int? TierId { get; set; } = 2; // Default Customer Tier = Silver
+    [ForeignKey("TierId")]
+    [System.Text.Json.Serialization.JsonIgnore]
+    public virtual Tier? Tier { get; set; }
+
     public bool EmailVerified { get; set; } = false;
 
     [StringLength(20)]

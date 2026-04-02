@@ -20,6 +20,8 @@ public class OrderService : IOrderService
     private readonly IBranchCampaignRepository _branchCampaignRepository;
     private readonly INotificationService _notificationService;
     private readonly IQuestProgressService _questProgressService;
+    private readonly ISettingService _settingService;
+    private readonly IUserService _userService;
 
     public OrderService(
         IOrderRepository orderRepository,
@@ -30,7 +32,9 @@ public class OrderService : IOrderService
         IUserVoucherRepository userVoucherRepository,
         IBranchCampaignRepository branchCampaignRepository,
         INotificationService notificationService,
-        IQuestProgressService questProgressService
+        IQuestProgressService questProgressService,
+        ISettingService settingService,
+        IUserService userService
     )
     {
         _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
@@ -42,6 +46,8 @@ public class OrderService : IOrderService
         _branchCampaignRepository = branchCampaignRepository ?? throw new ArgumentNullException(nameof(branchCampaignRepository));
         _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         _questProgressService = questProgressService ?? throw new ArgumentNullException(nameof(questProgressService));
+        _settingService = settingService ?? throw new ArgumentNullException(nameof(settingService));
+        _userService = userService ?? throw new ArgumentNullException(nameof(userService));
     }
 
     public async Task<OrderResponseDto> CreateOrderAsync(CreateOrderRequest request, int userId)
@@ -503,6 +509,14 @@ public class OrderService : IOrderService
         order.Status = OrderStatus.Complete;
         order.CompletionCode = null;
 
+        // Give XP to user for completing the order
+        var orderXP = _settingService.GetInt("orderXP", 0);
+        if (orderXP > 0)
+        {
+            await _userService.AddXPAsync(order.UserId, orderXP);
+            order.OrderXP = orderXP;
+        }
+
         var vendorSettlementAmount = await CalculateVendorSettlementAmountAsync(order);
         vendor.MoneyBalance += vendorSettlementAmount;
         await _vendorRepository.UpdateAsync(vendor);
@@ -526,7 +540,6 @@ public class OrderService : IOrderService
             order.OrderId,
             pushData);
 
-        // Update quest progress for ORDER_AMOUNT tasks
         await _questProgressService.UpdateProgressAsync(order.UserId, QuestTaskType.ORDER_AMOUNT, (int)order.FinalAmount);
 
         return MapToDto(updated);
@@ -682,6 +695,7 @@ public class OrderService : IOrderService
             IsTakeAway = order.IsTakeAway,
             LockedAt = order.LockedAt,
             CreatedAt = order.CreatedAt,
+            OrderXP = order.OrderXP,
             UpdatedAt = order.UpdatedAt,
             Items = order.OrderDishes.Select(od => new OrderDishResponseDto
             {

@@ -25,6 +25,7 @@ public class OrderResponseDto
     public decimal FinalAmount { get; set; }
     public bool IsTakeAway { get; set; }
     public DateTime? LockedAt { get; set; }
+    public int? OrderXP { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public List<OrderDishResponseDto> Items { get; set; } = new();

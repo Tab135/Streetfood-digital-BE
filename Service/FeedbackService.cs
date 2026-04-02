@@ -23,6 +23,8 @@ namespace Service
         private readonly INotificationService _notificationService;
         private readonly IOrderRepository _orderRepository;
         private readonly IQuestProgressService _questProgressService;
+        private readonly ISettingService _settingService;
+        private readonly IUserService _userService;
 
         public FeedbackService(
             IFeedbackRepository feedbackRepository,
@@ -33,7 +35,9 @@ namespace Service
             IBranchMetricsService branchMetricsService,
             INotificationService notificationService,
             IOrderRepository orderRepository,
-            IQuestProgressService questProgressService)
+            IQuestProgressService questProgressService,
+            ISettingService settingService,
+            IUserService userService)
         {
             _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
@@ -44,6 +48,8 @@ namespace Service
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
             _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
             _questProgressService = questProgressService ?? throw new ArgumentNullException(nameof(questProgressService));
+            _settingService = settingService ?? throw new ArgumentNullException(nameof(settingService));
+            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
         }
 
         public async Task<FeedbackResponseDto> CreateFeedback(CreateFeedbackDto createFeedbackDto, int userId)
@@ -121,6 +127,8 @@ namespace Service
                 throw new DomainExceptions("Điểm đánh giá phải nằm trong khoảng từ 1 đến 5");
             }
 
+            var feedbackXP = _settingService.GetInt("feedbackXP", 0);
+
             var feedback = new Feedback
             {
                 UserId = userId,
@@ -129,6 +137,7 @@ namespace Service
                 OrderId = createFeedbackDto.OrderId,
                 Rating = createFeedbackDto.Rating,
                 Comment = createFeedbackDto.Comment,
+                FeedbackXP = feedbackXP > 0 ? feedbackXP : null,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -136,6 +145,12 @@ namespace Service
                 feedback,
                 null,
                 createFeedbackDto.TagIds);
+
+            // Award XP from config
+            if (feedbackXP > 0)
+            {
+                await _userService.AddXPAsync(userId, feedbackXP);
+            }
 
             // Recalculate branch metrics
             await _branchMetricsService.OnFeedbackCreated(createFeedbackDto.BranchId, createFeedbackDto.Rating);
@@ -523,8 +538,9 @@ namespace Service
                 Dish = dishDto,
                 BranchId = feedback.BranchId,
                 Rating = feedback.Rating,
-                Comment = feedback.Comment,
-                CreatedAt = feedback.CreatedAt,
+                  Comment = feedback.Comment,
+                  FeedbackXP = feedback.FeedbackXP,
+                  CreatedAt = feedback.CreatedAt,
                 UpdatedAt = feedback.UpdatedAt,
                 Images = images,
                 Tags = tags,

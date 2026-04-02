@@ -18,17 +18,23 @@ namespace Service
         private readonly IVendorRepository _vendorRepository;
         private readonly IUserRepository _userRepository;
         private readonly IQuestProgressService _questProgressService;
+        private readonly ISettingService _settingService;
+        private readonly IUserService _userService;
 
         public BranchService(
             IBranchRepository branchRepository,
             IVendorRepository vendorRepository,
             IUserRepository userRepository,
-            IQuestProgressService questProgressService)
+            IQuestProgressService questProgressService,
+            ISettingService settingService,
+            IUserService userService)
         {
             _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
             _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
             _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
             _questProgressService = questProgressService ?? throw new ArgumentNullException(nameof(questProgressService));
+            _settingService = settingService ?? throw new ArgumentNullException(nameof(settingService));
+            _userService = userService ?? throw new ArgumentNullException(nameof(userService));
         }
 
         public async Task<Branch> CreateBranchAsync(CreateBranchDto createBranchDto, int vendorId, int userId)
@@ -83,6 +89,8 @@ namespace Service
 
         public async Task<BranchResponseDto> CreateUserBranchAsync(CreateUserBranchRequest request, int userId)
         {
+            var ghostpinXP = _settingService.GetInt("ghostpinXP", 0);
+
             var branch = new Branch
             {
                 VendorId = null,
@@ -97,6 +105,7 @@ namespace Service
                 IsVerified = false,
                 IsActive = false,
                 IsSubscribed = false,
+                GhostpinXP = ghostpinXP > 0 ? ghostpinXP : null,
                 AvgRating = 0
             };
 
@@ -112,9 +121,10 @@ namespace Service
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-            await _branchRepository.AddBranchRequestAsync(branchRequest);
-
-            await _questProgressService.UpdateProgressAsync(userId, QuestTaskType.CREATE_GHOST_PIN, 1);
+            if (ghostpinXP > 0)
+            {
+                await _userService.AddXPAsync(userId, ghostpinXP);
+            }
 
             var responseDto = await MapToResponseDtoAsync(createdBranch);
 
@@ -650,6 +660,7 @@ namespace Service
                 TotalRatingSum = branch.TotalRatingSum,
                 BatchReviewCount = branch.BatchReviewCount,
                 BatchRatingSum = branch.BatchRatingSum,
+                GhostpinXP = branch.GhostpinXP,
                 IsActive = branch.IsActive,
                 IsSubscribed = branch.IsSubscribed,
                 SubscriptionExpiresAt = branch.SubscriptionExpiresAt,
@@ -1070,6 +1081,7 @@ namespace Service
         }
     }
 }
+
 
 
 

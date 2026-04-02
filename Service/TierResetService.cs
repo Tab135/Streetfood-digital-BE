@@ -77,9 +77,34 @@ namespace Service
                     .SetProperty(b => b.BatchReviewCount, 0)
                     .SetProperty(b => b.BatchRatingSum, 0), ct);
 
+                // Customer Tier reset
+                // Diamond (4) -> Gold (3) XP 3000
+                // Gold (3) -> Silver (2) XP 0
+                // Silver (2) -> Silver (2) XP 0
+                var customers = await db.Users.Where(u => (int)u.Role == 0).ToListAsync(ct); // Role.User = 0
+                foreach(var c in customers)
+                {
+                    if (c.TierId == 4) // Diamond
+                    {
+                        c.TierId = 3;
+                        c.XP = 3000;
+                    }
+                    else if (c.TierId == 3) // Gold
+                    {
+                        c.TierId = 2;
+                        c.XP = 0;
+                    }
+                    else // Silver and others
+                    {
+                        c.TierId = 2;
+                        c.XP = 0;
+                    }
+                }
+                await db.SaveChangesAsync(ct);
+
+
                 await File.WriteAllTextAsync(_logFile, todayString, ct);
-                
-                _logger.LogInformation("Branch Tiers successfully reset for {Date}.", todayString);
+                _logger.LogInformation("Tiers successfully reset for {Date}.", todayString);
             }
         }
     }

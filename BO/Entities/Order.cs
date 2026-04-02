@@ -34,6 +34,8 @@ public class Order
     public decimal? DiscountAmount { get; set; }
     public decimal FinalAmount { get; set; }
 
+    public int? OrderXP { get; set; }
+
     public bool IsTakeAway { get; set; }
     public DateTime? LockedAt { get; set; }
 

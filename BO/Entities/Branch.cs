@@ -68,6 +68,8 @@ namespace BO.Entities
         // --- Tier Configuration ---
         public int TierId { get; set; } = 2; // Default to Silver (2)
 
+        public int? GhostpinXP { get; set; }
+
         public int BatchReviewCount { get; set; } = 0;
 
         public int BatchRatingSum { get; set; } = 0;
