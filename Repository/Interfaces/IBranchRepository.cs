@@ -9,6 +9,8 @@ namespace Repository.Interfaces
     {
         Task<Branch> CreateAsync(Branch branch);
         Task<Branch> GetByIdAsync(int branchId);
+        Task<List<Branch>> GetBranchesByCampaignIdAsync(int campaignId);
+        Task<List<Branch>> GetBranchesInAnyVendorCampaignAsync();
         Task<List<Branch>> GetAllByVendorIdAsync(int vendorId);  // Non-paginated for internal use
         Task<(List<Branch> items, int totalCount)> GetByCreatedByIdAsync(int userId, int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize);

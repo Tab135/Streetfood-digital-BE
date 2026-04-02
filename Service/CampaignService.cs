@@ -79,26 +79,144 @@ namespace Service
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
 
-        public async Task<VendorCampaignBranchesResponseDto> GetVendorCampaignBranchesAsync(int userId, string userRole, int campaignId)
+        public async Task<BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>> GetBranchesInAnyVendorCampaignAsync(int pageNumber, int pageSize, double? userLat, double? userLng)
         {
-            if (userRole == "Admin")
+            var branches = await _branchRepo.GetBranchesInAnyVendorCampaignAsync();
+            
+            var branchList = branches.Select(b => 
             {
-                var campaign = await _campaignRepo.GetByIdAsync(campaignId);
-                if (campaign == null || !campaign.CreatedByVendorId.HasValue)
-                    throw new DomainExceptions("Chiến dịch không tồn tại hoặc không phải campaign do vendor tạo.");
+                double distanceKm = 0;
+                if (userLat.HasValue && userLng.HasValue)
+                {
+                    distanceKm = Math.Round(HaversineDistance(userLat.Value, userLng.Value, b.Lat, b.Long), 2);
+                }
 
-                return await BuildVendorCampaignBranchesResponseAsync(campaign.CreatedByVendorId.Value, campaignId);
+                double wDist = 0.6;
+                double wRate = 0.4;
+                double tierWeight = b.Tier != null ? b.Tier.Weight : 1.0;
+                double subMultiplier = b.IsSubscribed ? 1.2 : 0.7;
+
+                double distanceScore = (distanceKm == 0 && (!userLat.HasValue || !userLng.HasValue))
+                    ? 0
+                    : (1 / (distanceKm + 1)) * wDist;
+
+                double ratingScore = (b.AvgRating / 5) * wRate;
+                double finalScore = Math.Round((distanceScore + ratingScore) * tierWeight * subMultiplier, 4);
+
+                return new BO.DTO.Campaigns.CampaignBranchResponseDto
+                {
+                    BranchId = b.BranchId,
+                    VendorId = b.VendorId ?? 0,
+                    ManagerId = b.ManagerId,
+                    Name = b.Name,
+                    PhoneNumber = b.PhoneNumber,
+                    Email = b.Email,
+                    AddressDetail = b.AddressDetail,
+                    Ward = b.Ward,
+                    City = b.City,
+                    Lat = b.Lat,
+                    Long = b.Long,
+                    CreatedAt = b.CreatedAt,
+                    UpdatedAt = b.UpdatedAt,
+                    IsVerified = b.IsVerified,
+                    AvgRating = b.AvgRating,
+                    TotalReviewCount = b.TotalReviewCount,
+                    IsActive = b.IsActive,
+                    TierId = b.TierId,
+                    TierName = b.Tier?.Name,
+                    FinalScore = finalScore,
+                    DistanceKm = (userLat.HasValue && userLng.HasValue) ? distanceKm : null
+                };
+            })
+            .OrderByDescending(x => x.FinalScore)
+            .ToList();
+
+            var totalCount = branchList.Count;
+            var paginatedItems = branchList
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>(paginatedItems, totalCount, pageNumber, pageSize);
+        }
+
+        public async Task<BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>> GetCampaignBranchesAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng)
+        {
+            var campaign = await _campaignRepo.GetByIdAsync(campaignId);
+            if (campaign == null)
+            {
+                throw new DomainExceptions("Chiến dịch không tồn tại.");
             }
 
-            var vendor = await _vendorRepo.GetByUserIdAsync(userId);
-            if (vendor == null)
-                throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+            var branches = await _branchRepo.GetBranchesByCampaignIdAsync(campaignId);
+            
+            var branchList = branches.Select(b => 
+            {
+                double distanceKm = 0;
+                if (userLat.HasValue && userLng.HasValue)
+                {
+                    distanceKm = Math.Round(HaversineDistance(userLat.Value, userLng.Value, b.Lat, b.Long), 2);
+                }
 
-            var campaignForVendor = await _campaignRepo.GetByIdAsync(campaignId);
-            if (campaignForVendor == null || campaignForVendor.CreatedByVendorId != vendor.VendorId)
-                throw new DomainExceptions("Chiến dịch không tồn tại hoặc không phải campaign của vendor này.");
+                double wDist = 0.6;
+                double wRate = 0.4;
+                double tierWeight = b.Tier != null ? b.Tier.Weight : 1.0;
+                double subMultiplier = b.IsSubscribed ? 1.2 : 0.7;
 
-            return await BuildVendorCampaignBranchesResponseAsync(vendor.VendorId, campaignId);
+                double distanceScore = (distanceKm == 0 && (!userLat.HasValue || !userLng.HasValue))
+                    ? 0
+                    : (1 / (distanceKm + 1)) * wDist;
+
+                double ratingScore = (b.AvgRating / 5) * wRate;
+                double finalScore = Math.Round((distanceScore + ratingScore) * tierWeight * subMultiplier, 4);
+
+                return new BO.DTO.Campaigns.CampaignBranchResponseDto
+                {
+                    BranchId = b.BranchId,
+                    VendorId = b.VendorId ?? 0,
+                    ManagerId = b.ManagerId,
+                    Name = b.Name,
+                    PhoneNumber = b.PhoneNumber,
+                    Email = b.Email,
+                    AddressDetail = b.AddressDetail,
+                    Ward = b.Ward,
+                    City = b.City,
+                    Lat = b.Lat,
+                    Long = b.Long,
+                    CreatedAt = b.CreatedAt,
+                    UpdatedAt = b.UpdatedAt,
+                    IsVerified = b.IsVerified,
+                    AvgRating = b.AvgRating,
+                    TotalReviewCount = b.TotalReviewCount,
+                    IsActive = b.IsActive,
+                    TierId = b.TierId,
+                    TierName = b.Tier?.Name,
+                    FinalScore = finalScore,
+                    DistanceKm = (userLat.HasValue && userLng.HasValue) ? distanceKm : null
+                };
+            })
+            .OrderByDescending(x => x.FinalScore)
+            .ToList();
+
+            var totalCount = branchList.Count;
+            var paginatedItems = branchList
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>(paginatedItems, totalCount, pageNumber, pageSize);
+        }
+
+        private static double HaversineDistance(double lat1, double long1, double lat2, double long2)
+        {
+            const double R = 6371; // Earth radius in km
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLong = (long2 - long1) * Math.PI / 180;
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
+                    Math.Sin(dLong / 2) * Math.Sin(dLong / 2);
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return R * c;
         }
 
         public async Task<VendorCampaignBranchesResponseDto> AddBranchesToVendorCampaignAsync(int userId, int campaignId, List<int> branchIds)

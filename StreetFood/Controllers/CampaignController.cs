@@ -135,15 +135,21 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Lấy danh sách chiến dịch của vendor thành công", data = result });
         }
 
-        /// <summary>Danh sách chi nhánh đang tham gia campaign do vendor tạo (theo BranchCampaign).</summary>
-        [HttpGet("vendor/{campaignId}/branches")]
-        [Authorize(Roles = "Vendor, Admin")]
-        public async Task<IActionResult> GetVendorCampaignBranches(int campaignId)
+        /// <summary>Danh sách tất cả chi nhánh đang tham gia bất kì campaign nào do vendor tạo.</summary>
+        [HttpGet("vendor/branches")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetVendorCampaignBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] double? lat = null, [FromQuery] double? lng = null)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
-            var result = await _campaignService.GetVendorCampaignBranchesAsync(userId, userRole, campaignId);
-            return Ok(new { message = "Lấy danh sách chi nhánh tham gia campaign thành công", data = result });
+            var result = await _campaignService.GetBranchesInAnyVendorCampaignAsync(pageNumber, pageSize, lat, lng);
+            return Ok(new { message = "Lấy danh sách chi nhánh tham gia vendor campaign thành công", data = result });
+        }
+
+        [HttpGet("system/{campaignId}/branches")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetSystemCampaignBranches(int campaignId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] double? lat = null, [FromQuery] double? lng = null)
+        {
+            var result = await _campaignService.GetCampaignBranchesAsync(campaignId, pageNumber, pageSize, lat, lng);
+            return Ok(new { message = "Lấy danh sách chi nhánh tham gia chiến dịch hệ thống thành công", data = result });
         }
 
         [HttpPost("vendor/{campaignId}/branches/add")]
