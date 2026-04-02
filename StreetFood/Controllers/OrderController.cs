@@ -19,7 +19,7 @@ public class OrderController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    [Authorize(Roles = "User")]
+    [Authorize(Roles = "User,Vendor,Manager")]
     [ProducesResponseType(typeof(ApiResponse<OrderResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetById(int id)
     {

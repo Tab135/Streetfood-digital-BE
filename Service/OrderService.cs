@@ -140,7 +140,7 @@ public class OrderService : IOrderService
             return null;
         }
 
-        EnsureOrderOwnership(order, userId);
+
         return MapToDto(order);
     }
 
