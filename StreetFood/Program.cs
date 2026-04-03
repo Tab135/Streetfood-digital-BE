@@ -96,6 +96,7 @@ namespace StreetFood
             builder.Services.AddScoped<VendorReplyDAO>();
             builder.Services.AddScoped<NotificationDAO>();
             builder.Services.AddScoped<ExpoPushTokenDAO>();
+            builder.Services.AddScoped<CurrentPickDAO>();
             // Menu Management DAOs
             builder.Services.AddScoped<CategoryDAO>();
             builder.Services.AddScoped<TasteDAO>();
@@ -126,6 +127,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<IVendorReplyRepository, VendorReplyRepository>();
             builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
             builder.Services.AddScoped<IExpoPushTokenRepository, ExpoPushTokenRepository>();
+            builder.Services.AddScoped<ICurrentPickRepository, CurrentPickRepository>();
             // Menu Management Repositories
             builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
             builder.Services.AddScoped<ITasteRepository, TasteRepository>();
@@ -151,12 +153,14 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<IBranchMetricsService, BranchMetricsService>();
             builder.Services.AddScoped<INotificationService, NotificationService>();
             builder.Services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
+            builder.Services.AddScoped<ICurrentPickPusher, SignalRCurrentPickPusher>();
             builder.Services.AddScoped<IExpoPushService, ExpoPushService>();
             builder.Services.AddHttpClient();
             builder.Services.AddScoped<IFeedbackVoteService, FeedbackVoteService>();
             builder.Services.AddScoped<IVendorReplyService, VendorReplyService>();
             builder.Services.AddScoped<IOrderService, OrderService>();
             builder.Services.AddScoped<ICartService, CartService>();
+            builder.Services.AddScoped<ICurrentPickService, CurrentPickService>();
             // Menu Management Services
             builder.Services.AddScoped<ICategoryService, CategoryService>();
             builder.Services.AddScoped<ITasteService, TasteService>();
@@ -307,6 +311,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             app.UseStaticFiles();
             app.MapControllers();
             app.MapHub<NotificationHub>("/hubs/notifications");
+            app.MapHub<CurrentPickHub>("/hubs/current-pick");
 
             app.Run();
         }
