@@ -7,5 +7,6 @@ public enum NotificationType
     OrderStatusUpdate = 2,
     QuestTaskCompleted = 3,
     QuestCompleted = 4,
-    NewOrder = 5
+    NewOrder = 5,
+    CurrentPickInvite = 6
 }

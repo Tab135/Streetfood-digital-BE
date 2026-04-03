@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260403061757_AddCurrentPickInvites")]
+    partial class AddCurrentPickInvites
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -89,9 +92,6 @@ namespace DAL.Migrations
                     b.Property<string>("Email")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
-
-                    b.Property<int?>("GhostpinXP")
-                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -870,9 +870,6 @@ namespace DAL.Migrations
                     b.Property<int?>("DishId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("FeedbackXP")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("OrderId")
                         .HasColumnType("integer");
 
@@ -1074,9 +1071,6 @@ namespace DAL.Migrations
 
                     b.Property<DateTime?>("LockedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("OrderXP")
-                        .HasColumnType("integer");
 
                     b.Property<string>("PaymentMethod")
                         .HasMaxLength(255)
@@ -1371,24 +1365,6 @@ namespace DAL.Migrations
                             Id = 3,
                             Name = "CampaignJoinFee",
                             Value = "20000"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Name = "orderXP",
-                            Value = "50"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Name = "feedbackXP",
-                            Value = "20"
-                        },
-                        new
-                        {
-                            Id = 6,
-                            Name = "ghostpinXP",
-                            Value = "100"
                         });
                 });
 
@@ -1519,9 +1495,6 @@ namespace DAL.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int?>("TierId")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1532,12 +1505,7 @@ namespace DAL.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<int>("XP")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("TierId");
 
                     b.ToTable("Users");
                 });
@@ -2380,16 +2348,6 @@ namespace DAL.Migrations
                         .IsRequired();
 
                     b.Navigation("Quest");
-                });
-
-            modelBuilder.Entity("BO.Entities.User", b =>
-                {
-                    b.HasOne("BO.Entities.Tier", "Tier")
-                        .WithMany()
-                        .HasForeignKey("TierId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Tier");
                 });
 
             modelBuilder.Entity("BO.Entities.UserDietaryPreference", b =>

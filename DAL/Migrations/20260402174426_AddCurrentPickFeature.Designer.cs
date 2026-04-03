@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260402174426_AddCurrentPickFeature")]
+    partial class AddCurrentPickFeature
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -89,9 +92,6 @@ namespace DAL.Migrations
                     b.Property<string>("Email")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
-
-                    b.Property<int?>("GhostpinXP")
-                        .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -474,48 +474,6 @@ namespace DAL.Migrations
                     b.ToTable("CurrentPickBranches");
                 });
 
-            modelBuilder.Entity("BO.Entities.CurrentPickInvite", b =>
-                {
-                    b.Property<int>("CurrentPickInviteId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CurrentPickInviteId"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("CurrentPickRoomId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("InvitedByUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("InvitedUserId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("RespondedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Status")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
-                    b.HasKey("CurrentPickInviteId");
-
-                    b.HasIndex("InvitedByUserId");
-
-                    b.HasIndex("InvitedUserId");
-
-                    b.HasIndex("CurrentPickRoomId", "InvitedUserId")
-                        .IsUnique();
-
-                    b.ToTable("CurrentPickInvites");
-                });
-
             modelBuilder.Entity("BO.Entities.CurrentPickMember", b =>
                 {
                     b.Property<int>("CurrentPickMemberId")
@@ -870,9 +828,6 @@ namespace DAL.Migrations
                     b.Property<int?>("DishId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("FeedbackXP")
-                        .HasColumnType("integer");
-
                     b.Property<int?>("OrderId")
                         .HasColumnType("integer");
 
@@ -1074,9 +1029,6 @@ namespace DAL.Migrations
 
                     b.Property<DateTime?>("LockedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("OrderXP")
-                        .HasColumnType("integer");
 
                     b.Property<string>("PaymentMethod")
                         .HasMaxLength(255)
@@ -1371,24 +1323,6 @@ namespace DAL.Migrations
                             Id = 3,
                             Name = "CampaignJoinFee",
                             Value = "20000"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Name = "orderXP",
-                            Value = "50"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Name = "feedbackXP",
-                            Value = "20"
-                        },
-                        new
-                        {
-                            Id = 6,
-                            Name = "ghostpinXP",
-                            Value = "100"
                         });
                 });
 
@@ -1519,9 +1453,6 @@ namespace DAL.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<int?>("TierId")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1532,12 +1463,7 @@ namespace DAL.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
-                    b.Property<int>("XP")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("TierId");
 
                     b.ToTable("Users");
                 });
@@ -2066,33 +1992,6 @@ namespace DAL.Migrations
                     b.Navigation("CurrentPickRoom");
                 });
 
-            modelBuilder.Entity("BO.Entities.CurrentPickInvite", b =>
-                {
-                    b.HasOne("BO.Entities.CurrentPickRoom", "CurrentPickRoom")
-                        .WithMany("Invites")
-                        .HasForeignKey("CurrentPickRoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BO.Entities.User", "InvitedByUser")
-                        .WithMany()
-                        .HasForeignKey("InvitedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BO.Entities.User", "InvitedUser")
-                        .WithMany()
-                        .HasForeignKey("InvitedUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CurrentPickRoom");
-
-                    b.Navigation("InvitedByUser");
-
-                    b.Navigation("InvitedUser");
-                });
-
             modelBuilder.Entity("BO.Entities.CurrentPickMember", b =>
                 {
                     b.HasOne("BO.Entities.CurrentPickRoom", "CurrentPickRoom")
@@ -2382,16 +2281,6 @@ namespace DAL.Migrations
                     b.Navigation("Quest");
                 });
 
-            modelBuilder.Entity("BO.Entities.User", b =>
-                {
-                    b.HasOne("BO.Entities.Tier", "Tier")
-                        .WithMany()
-                        .HasForeignKey("TierId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Tier");
-                });
-
             modelBuilder.Entity("BO.Entities.UserDietaryPreference", b =>
                 {
                     b.HasOne("BO.Entities.DietaryPreference", "DietaryPreference")
@@ -2572,8 +2461,6 @@ namespace DAL.Migrations
             modelBuilder.Entity("BO.Entities.CurrentPickRoom", b =>
                 {
                     b.Navigation("Branches");
-
-                    b.Navigation("Invites");
 
                     b.Navigation("Members");
 

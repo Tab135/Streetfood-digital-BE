@@ -45,6 +45,11 @@ public class StreetFoodDbContext : DbContext
     public DbSet<FeedbackVote> FeedbackVotes { get; set; }
     public DbSet<VendorReply> VendorReplies { get; set; }
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<CurrentPickRoom> CurrentPickRooms { get; set; }
+    public DbSet<CurrentPickMember> CurrentPickMembers { get; set; }
+    public DbSet<CurrentPickBranch> CurrentPickBranches { get; set; }
+    public DbSet<CurrentPickVote> CurrentPickVotes { get; set; }
+    public DbSet<CurrentPickInvite> CurrentPickInvites { get; set; }
 
     // Menu Management DbSets
     public DbSet<Category> Categories { get; set; }
@@ -544,6 +549,118 @@ public class StreetFoodDbContext : DbContext
                   .HasForeignKey(e => e.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
+
+          // Current Pick
+          modelBuilder.Entity<CurrentPickRoom>(entity =>
+          {
+            entity.HasKey(e => e.CurrentPickRoomId);
+            entity.Property(e => e.RoomCode).IsRequired().HasMaxLength(12);
+            entity.Property(e => e.Title).HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsFinalized).HasDefaultValue(false);
+
+            entity.HasIndex(e => e.RoomCode).IsUnique();
+
+            entity.HasOne(e => e.HostUser)
+                .WithMany()
+                .HasForeignKey(e => e.HostUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.FinalizedBranch)
+                .WithMany()
+                .HasForeignKey(e => e.FinalizedBranchId)
+                .OnDelete(DeleteBehavior.SetNull);
+          });
+
+          modelBuilder.Entity<CurrentPickMember>(entity =>
+          {
+            entity.HasKey(e => e.CurrentPickMemberId);
+            entity.Property(e => e.JoinedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => new { e.CurrentPickRoomId, e.UserId }).IsUnique();
+
+            entity.HasOne(e => e.CurrentPickRoom)
+                .WithMany(r => r.Members)
+                .HasForeignKey(e => e.CurrentPickRoomId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+          });
+
+          modelBuilder.Entity<CurrentPickBranch>(entity =>
+          {
+            entity.HasKey(e => e.CurrentPickBranchId);
+            entity.Property(e => e.AddedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => new { e.CurrentPickRoomId, e.BranchId }).IsUnique();
+
+            entity.HasOne(e => e.CurrentPickRoom)
+                .WithMany(r => r.Branches)
+                .HasForeignKey(e => e.CurrentPickRoomId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.AddedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.AddedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+          });
+
+          modelBuilder.Entity<CurrentPickVote>(entity =>
+          {
+            entity.HasKey(e => e.CurrentPickVoteId);
+            entity.Property(e => e.VotedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => new { e.CurrentPickRoomId, e.UserId }).IsUnique();
+            entity.HasIndex(e => new { e.CurrentPickRoomId, e.BranchId });
+
+            entity.HasOne(e => e.CurrentPickRoom)
+                .WithMany(r => r.Votes)
+                .HasForeignKey(e => e.CurrentPickRoomId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Branch)
+                .WithMany()
+                .HasForeignKey(e => e.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+          });
+
+          modelBuilder.Entity<CurrentPickInvite>(entity =>
+          {
+            entity.HasKey(e => e.CurrentPickInviteId);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.Status).HasDefaultValue(CurrentPickInviteStatus.Pending);
+
+            entity.HasIndex(e => new { e.CurrentPickRoomId, e.InvitedUserId }).IsUnique();
+
+            entity.HasOne(e => e.CurrentPickRoom)
+                .WithMany(r => r.Invites)
+                .HasForeignKey(e => e.CurrentPickRoomId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.InvitedUser)
+                .WithMany()
+                .HasForeignKey(e => e.InvitedUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.InvitedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.InvitedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+          });
 
         // ExpoPushToken
         modelBuilder.Entity<ExpoPushToken>(entity =>
