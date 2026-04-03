@@ -81,63 +81,8 @@ namespace Service
 
         public async Task<BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>> GetBranchesInAnyVendorCampaignAsync(int pageNumber, int pageSize, double? userLat, double? userLng)
         {
-            var branches = await _branchRepo.GetBranchesInAnyVendorCampaignAsync();
-            
-            var branchList = branches.Select(b => 
-            {
-                double distanceKm = 0;
-                if (userLat.HasValue && userLng.HasValue)
-                {
-                    distanceKm = Math.Round(HaversineDistance(userLat.Value, userLng.Value, b.Lat, b.Long), 2);
-                }
-
-                double wDist = 0.6;
-                double wRate = 0.4;
-                double tierWeight = b.Tier != null ? b.Tier.Weight : 1.0;
-                double subMultiplier = b.IsSubscribed ? 1.2 : 0.7;
-
-                double distanceScore = (distanceKm == 0 && (!userLat.HasValue || !userLng.HasValue))
-                    ? 0
-                    : (1 / (distanceKm + 1)) * wDist;
-
-                double ratingScore = (b.AvgRating / 5) * wRate;
-                double finalScore = Math.Round((distanceScore + ratingScore) * tierWeight * subMultiplier, 4);
-
-                return new BO.DTO.Campaigns.CampaignBranchResponseDto
-                {
-                    BranchId = b.BranchId,
-                    VendorId = b.VendorId ?? 0,
-                    ManagerId = b.ManagerId,
-                    Name = b.Name,
-                    PhoneNumber = b.PhoneNumber,
-                    Email = b.Email,
-                    AddressDetail = b.AddressDetail,
-                    Ward = b.Ward,
-                    City = b.City,
-                    Lat = b.Lat,
-                    Long = b.Long,
-                    CreatedAt = b.CreatedAt,
-                    UpdatedAt = b.UpdatedAt,
-                    IsVerified = b.IsVerified,
-                    AvgRating = b.AvgRating,
-                    TotalReviewCount = b.TotalReviewCount,
-                    IsActive = b.IsActive,
-                    TierId = b.TierId,
-                    TierName = b.Tier?.Name,
-                    FinalScore = finalScore,
-                    DistanceKm = (userLat.HasValue && userLng.HasValue) ? distanceKm : null
-                };
-            })
-            .OrderByDescending(x => x.FinalScore)
-            .ToList();
-
-            var totalCount = branchList.Count;
-            var paginatedItems = branchList
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            return new BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>(paginatedItems, totalCount, pageNumber, pageSize);
+            var (items, totalCount) = await _campaignRepo.GetBranchesInAnyVendorCampaignPaginatedAsync(pageNumber, pageSize, userLat, userLng);
+            return new BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task<BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>> GetCampaignBranchesAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng)
@@ -148,63 +93,8 @@ namespace Service
                 throw new DomainExceptions("Chiến dịch không tồn tại.");
             }
 
-            var branches = await _branchRepo.GetBranchesByCampaignIdAsync(campaignId);
-            
-            var branchList = branches.Select(b => 
-            {
-                double distanceKm = 0;
-                if (userLat.HasValue && userLng.HasValue)
-                {
-                    distanceKm = Math.Round(HaversineDistance(userLat.Value, userLng.Value, b.Lat, b.Long), 2);
-                }
-
-                double wDist = 0.6;
-                double wRate = 0.4;
-                double tierWeight = b.Tier != null ? b.Tier.Weight : 1.0;
-                double subMultiplier = b.IsSubscribed ? 1.2 : 0.7;
-
-                double distanceScore = (distanceKm == 0 && (!userLat.HasValue || !userLng.HasValue))
-                    ? 0
-                    : (1 / (distanceKm + 1)) * wDist;
-
-                double ratingScore = (b.AvgRating / 5) * wRate;
-                double finalScore = Math.Round((distanceScore + ratingScore) * tierWeight * subMultiplier, 4);
-
-                return new BO.DTO.Campaigns.CampaignBranchResponseDto
-                {
-                    BranchId = b.BranchId,
-                    VendorId = b.VendorId ?? 0,
-                    ManagerId = b.ManagerId,
-                    Name = b.Name,
-                    PhoneNumber = b.PhoneNumber,
-                    Email = b.Email,
-                    AddressDetail = b.AddressDetail,
-                    Ward = b.Ward,
-                    City = b.City,
-                    Lat = b.Lat,
-                    Long = b.Long,
-                    CreatedAt = b.CreatedAt,
-                    UpdatedAt = b.UpdatedAt,
-                    IsVerified = b.IsVerified,
-                    AvgRating = b.AvgRating,
-                    TotalReviewCount = b.TotalReviewCount,
-                    IsActive = b.IsActive,
-                    TierId = b.TierId,
-                    TierName = b.Tier?.Name,
-                    FinalScore = finalScore,
-                    DistanceKm = (userLat.HasValue && userLng.HasValue) ? distanceKm : null
-                };
-            })
-            .OrderByDescending(x => x.FinalScore)
-            .ToList();
-
-            var totalCount = branchList.Count;
-            var paginatedItems = branchList
-                .Skip((pageNumber - 1) * pageSize)
-                .Take(pageSize)
-                .ToList();
-
-            return new BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>(paginatedItems, totalCount, pageNumber, pageSize);
+            var (items, totalCount) = await _campaignRepo.GetCampaignBranchesPaginatedAsync(campaignId, pageNumber, pageSize, userLat, userLng);
+            return new BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
         private static double HaversineDistance(double lat1, double long1, double lat2, double long2)

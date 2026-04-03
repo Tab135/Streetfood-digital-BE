@@ -1,3 +1,4 @@
+using BO.DTO.Campaigns;
 using BO.Entities;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -113,6 +114,101 @@ namespace DAL
                                    .ToListAsync();
 
             return (items, totalCount);
+        }
+
+        public async Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetBranchesInAnyVendorCampaignPaginatedAsync(int pageNumber, int pageSize, double? userLat, double? userLng)
+        {
+            var branches = await _context.Branches
+                .AsNoTracking()
+                .Include(b => b.Tier)
+                .Where(b => _context.BranchCampaigns
+                    .Any(bc => bc.BranchId == b.BranchId && bc.IsActive && bc.Campaign.CreatedByVendorId != null && bc.Campaign.IsActive))
+                .ToListAsync();
+
+            return MapAndPaginateBranches(branches, pageNumber, pageSize, userLat, userLng);
+        }
+
+        public async Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetCampaignBranchesPaginatedAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng)
+        {
+            var branches = await _context.Branches
+                .AsNoTracking()
+                .Include(b => b.Tier)
+                .Where(b => _context.BranchCampaigns
+                    .Any(bc => bc.CampaignId == campaignId && bc.BranchId == b.BranchId && bc.IsActive))
+                .ToListAsync();
+
+            return MapAndPaginateBranches(branches, pageNumber, pageSize, userLat, userLng);
+        }
+
+        private (List<CampaignBranchResponseDto> Items, int TotalCount) MapAndPaginateBranches(List<Branch> branches, int pageNumber, int pageSize, double? userLat, double? userLng)
+        {
+            var branchList = branches.Select(b => 
+            {
+                double distanceKm = 0;
+                if (userLat.HasValue && userLng.HasValue)
+                {
+                    distanceKm = Math.Round(HaversineDistance(userLat.Value, userLng.Value, b.Lat, b.Long), 2);
+                }
+
+                double wDist = 0.6;
+                double wRate = 0.4;
+                double tierWeight = b.Tier != null ? b.Tier.Weight : 1.0;
+                double subMultiplier = b.IsSubscribed ? 1.2 : 0.7;
+
+                double distanceScore = (distanceKm == 0 && (!userLat.HasValue || !userLng.HasValue))
+                    ? 0
+                    : (1 / (distanceKm + 1)) * wDist;
+
+                double ratingScore = (b.AvgRating / 5) * wRate;
+                double finalScore = Math.Round((distanceScore + ratingScore) * tierWeight * subMultiplier, 4);
+
+                return new CampaignBranchResponseDto
+                {
+                    BranchId = b.BranchId,
+                    VendorId = b.VendorId ?? 0,
+                    ManagerId = b.ManagerId,
+                    Name = b.Name,
+                    PhoneNumber = b.PhoneNumber,
+                    Email = b.Email,
+                    AddressDetail = b.AddressDetail,
+                    Ward = b.Ward,
+                    City = b.City,
+                    Lat = b.Lat,
+                    Long = b.Long,
+                    CreatedAt = b.CreatedAt,
+                    UpdatedAt = b.UpdatedAt,
+                    IsVerified = b.IsVerified,
+                    AvgRating = b.AvgRating,
+                    TotalReviewCount = b.TotalReviewCount,
+                    IsActive = b.IsActive,
+                    TierId = b.TierId,
+                    TierName = b.Tier?.Name,
+                    FinalScore = finalScore,
+                    DistanceKm = (userLat.HasValue && userLng.HasValue) ? distanceKm : null
+                };
+            })
+            .OrderByDescending(x => x.FinalScore)
+            .ToList();
+
+            var totalCount = branchList.Count;
+            var items = branchList
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return (items, totalCount);
+        }
+
+        private static double HaversineDistance(double lat1, double long1, double lat2, double long2)
+        {
+            const double R = 6371; // Earth radius in km
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLong = (long2 - long1) * Math.PI / 180;
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
+                    Math.Sin(dLong / 2) * Math.Sin(dLong / 2);
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return R * c;
         }
 
         // --- Campaign Image Methods ---
