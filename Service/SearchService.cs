@@ -100,6 +100,7 @@ namespace Service
                         Long = x.Branch.Long,
                         AvgRating = x.Branch.AvgRating,
                         FinalScore = x.FinalScore,
+                        DistanceKm = x.DistanceKm,
                         IsVerified = x.Branch.IsVerified,
                         IsActive = x.Branch.IsActive,
                         Dishes = x.Branch.BranchDishes
