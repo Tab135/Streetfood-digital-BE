@@ -163,15 +163,31 @@ namespace Service.PaymentsService
                 throw new DomainExceptions("Insufficient user balance");
             }
 
+            var payoutOrderCode = await CreatePayoutPaymentRecordAsync(
+                userId,
+                request.Amount,
+                request.Description,
+                "USER_PAYOUT");
+
             if (_isDebugMode)
             {
+                var debugReferenceId = $"DEBUG-USER-{Guid.NewGuid():N}";
+                var debugPayoutId = $"DEBUG-PAYOUT-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+
                 user.MoneyBalance -= amount;
                 await _userRepo.UpdateAsync(user);
 
+                await TryUpdatePayoutPaymentStatusAsync(
+                    payoutOrderCode,
+                    "PAID",
+                    debugPayoutId,
+                    debugReferenceId,
+                    "PAYOS_PAYOUT_DEBUG");
+
                 return new VendorPayoutResponseDto
                 {
-                    ReferenceId = $"DEBUG-USER-{Guid.NewGuid():N}",
-                    PayoutId = $"DEBUG-PAYOUT-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                    ReferenceId = debugReferenceId,
+                    PayoutId = debugPayoutId,
                     ApprovalState = "APPROVED_DEBUG",
                     CurrentVendorBalance = user.MoneyBalance
                 };
@@ -194,13 +210,37 @@ namespace Service.PaymentsService
             }
             catch (ForbiddenException ex)
             {
+                await TryUpdatePayoutPaymentStatusAsync(
+                    payoutOrderCode,
+                    "CANCELLED",
+                    null,
+                    null,
+                    "PAYOS_PAYOUT");
+
                 _logger.LogError(ex,
                     "PayOS payout forbidden. Verify PayoutClientId/PayoutApiKey/PayoutChecksumKey and payout permission for this merchant.");
                 throw new DomainExceptions("PayOS payout is forbidden. Please verify payout credentials and payout permission with PayOS.");
             }
+            catch
+            {
+                await TryUpdatePayoutPaymentStatusAsync(
+                    payoutOrderCode,
+                    "CANCELLED",
+                    null,
+                    null,
+                    "PAYOS_PAYOUT");
+                throw;
+            }
 
             user.MoneyBalance -= amount;
             await _userRepo.UpdateAsync(user);
+
+            await TryUpdatePayoutPaymentStatusAsync(
+                payoutOrderCode,
+                "PAID",
+                payout.Id,
+                payout.ReferenceId,
+                "PAYOS_PAYOUT");
 
             return new VendorPayoutResponseDto
             {
@@ -227,15 +267,31 @@ namespace Service.PaymentsService
                 throw new DomainExceptions("Insufficient vendor balance");
             }
 
+            var payoutOrderCode = await CreatePayoutPaymentRecordAsync(
+                vendorUserId,
+                request.Amount,
+                request.Description,
+                "VENDOR_PAYOUT");
+
             if (_isDebugMode)
             {
+                var debugReferenceId = $"DEBUG-VENDOR-{Guid.NewGuid():N}";
+                var debugPayoutId = $"DEBUG-PAYOUT-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+
                 vendor.MoneyBalance -= amount;
                 await _vendorRepository.UpdateAsync(vendor);
 
+                await TryUpdatePayoutPaymentStatusAsync(
+                    payoutOrderCode,
+                    "PAID",
+                    debugPayoutId,
+                    debugReferenceId,
+                    "PAYOS_PAYOUT_DEBUG");
+
                 return new VendorPayoutResponseDto
                 {
-                    ReferenceId = $"DEBUG-VENDOR-{Guid.NewGuid():N}",
-                    PayoutId = $"DEBUG-PAYOUT-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                    ReferenceId = debugReferenceId,
+                    PayoutId = debugPayoutId,
                     ApprovalState = "APPROVED_DEBUG",
                     CurrentVendorBalance = vendor.MoneyBalance
                 };
@@ -258,13 +314,37 @@ namespace Service.PaymentsService
             }
             catch (ForbiddenException ex)
             {
+                await TryUpdatePayoutPaymentStatusAsync(
+                    payoutOrderCode,
+                    "CANCELLED",
+                    null,
+                    null,
+                    "PAYOS_PAYOUT");
+
                 _logger.LogError(ex,
                     "PayOS payout forbidden. Verify PayoutClientId/PayoutApiKey/PayoutChecksumKey and payout permission for this merchant.");
                 throw new DomainExceptions("PayOS payout is forbidden. Please verify payout credentials and payout permission with PayOS.");
             }
+            catch
+            {
+                await TryUpdatePayoutPaymentStatusAsync(
+                    payoutOrderCode,
+                    "CANCELLED",
+                    null,
+                    null,
+                    "PAYOS_PAYOUT");
+                throw;
+            }
 
             vendor.MoneyBalance -= amount;
             await _vendorRepository.UpdateAsync(vendor);
+
+            await TryUpdatePayoutPaymentStatusAsync(
+                payoutOrderCode,
+                "PAID",
+                payout.Id,
+                payout.ReferenceId,
+                "PAYOS_PAYOUT");
 
             return new VendorPayoutResponseDto
             {
@@ -1173,6 +1253,46 @@ namespace Service.PaymentsService
                         $"Có đơn hàng #{orderId} vừa thanh toán, cần xác nhận.",
                         orderId);
                 }
+            }
+        }
+
+        private async Task<long> CreatePayoutPaymentRecordAsync(int userId, int amount, string description, string payoutType)
+        {
+            var payoutOrderCode = await GenerateUniqueOrderCodeAsync();
+            var payoutDescription = $"{payoutType}: {description}";
+
+            await _paymentRepo.CreatePayment(
+                userId: userId,
+                orderCode: payoutOrderCode,
+                branchId: null,
+                amount: -Math.Abs(amount),
+                description: payoutDescription);
+
+            return payoutOrderCode;
+        }
+
+        private async Task TryUpdatePayoutPaymentStatusAsync(
+            long orderCode,
+            string status,
+            string? transactionCode,
+            string? referenceId,
+            string paymentMethod)
+        {
+            try
+            {
+                await _paymentRepo.UpdatePaymentStatus(
+                    orderCode,
+                    status,
+                    transactionCode,
+                    referenceId,
+                    paymentMethod);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Failed to update payout payment status for OrderCode={OrderCode}, Status={Status}",
+                    orderCode,
+                    status);
             }
         }
 
