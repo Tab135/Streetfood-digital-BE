@@ -1,5 +1,6 @@
 using BO.Common;
 using BO.DTO.Users;
+using BO.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,22 @@ namespace StreetFood.Controllers
         public UserController(IUserService userService)
         {
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<UserProfileDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetUsers([FromQuery] Role? role, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _userService.GetUsersAsync(role, pageNumber, pageSize);
+                return Ok(new { message = "Users retrieved successfully", data = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet("search")]

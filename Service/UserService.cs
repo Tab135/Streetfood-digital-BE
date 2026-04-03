@@ -411,6 +411,31 @@ namespace Service
             return true;
         }
 
+        public async Task<BO.Common.PaginatedResponse<UserProfileDto>> GetUsersAsync(Role? role, int pageNumber, int pageSize)
+        {
+            var (users, totalCount) = await _userRepository.GetUsersAsync(role, pageNumber, pageSize);
+            var mappedUsers = new List<UserProfileDto>();
+
+            foreach (var u in users)
+            {
+                mappedUsers.Add(new UserProfileDto
+                {
+                    Id = u.Id,
+                    UserName = u.UserName,
+                    Email = u.Email,
+                    PhoneNumber = u.PhoneNumber,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    AvatarUrl = u.AvatarUrl,
+                    Status = u.Status,
+                    Role = u.Role.ToString(),
+                    Point = u.Point
+                });
+            }
+
+            return new BO.Common.PaginatedResponse<UserProfileDto>(mappedUsers, totalCount, pageNumber, pageSize);
+        }
+
         public async Task<BO.Common.PaginatedResponse<UserProfileDto>> SearchUsersAsync(string keyword, int pageNumber, int pageSize)
         {
             var (users, totalCount) = await _userRepository.SearchUsersAsync(keyword, pageNumber, pageSize);
@@ -426,6 +451,7 @@ namespace Service
                     FirstName = u.FirstName,
                     LastName = u.LastName,
                     AvatarUrl = u.AvatarUrl,
+                    Status = u.Status,
                     Role = u.Role.ToString(),
                     Point = u.Point
                 });
@@ -450,6 +476,7 @@ namespace Service
                 FirstName = u.FirstName,
                 LastName = u.LastName,
                 AvatarUrl = u.AvatarUrl,
+                Status = u.Status,
                 Role = u.Role.ToString(),
                 Point = u.Point
             };

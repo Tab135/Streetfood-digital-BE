@@ -21,7 +21,9 @@ namespace BO.DTO.Search
         public double Lat { get; set; }
         public double Long { get; set; }
         public double AvgRating { get; set; }
+        public int TotalReviewCount { get; set; }
         public double FinalScore { get; set; }
+        public double DistanceKm { get; set; }
         public bool IsVerified { get; set; }
         public bool IsActive { get; set; }
         public List<DishSearchDto> Dishes { get; set; } = new List<DishSearchDto>();

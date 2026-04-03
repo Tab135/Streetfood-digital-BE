@@ -9,7 +9,7 @@ namespace StreetFood.Controllers
 
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
+
     public class SettingController : ControllerBase
     {
         private readonly ISettingService _settingService;
@@ -27,6 +27,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPatch("{name}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update(string name, [FromBody] UpdateSettingRequest request)
         {
             if (!ModelState.IsValid)
@@ -49,6 +50,7 @@ namespace StreetFood.Controllers
 
 
         [HttpPost("reload")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Reload()
         {
             await _settingService.ReloadAsync();
