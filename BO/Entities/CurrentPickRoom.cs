@@ -40,4 +40,6 @@ public class CurrentPickRoom
     public virtual ICollection<CurrentPickBranch> Branches { get; set; } = new List<CurrentPickBranch>();
 
     public virtual ICollection<CurrentPickVote> Votes { get; set; } = new List<CurrentPickVote>();
+
+    public virtual ICollection<CurrentPickInvite> Invites { get; set; } = new List<CurrentPickInvite>();
 }

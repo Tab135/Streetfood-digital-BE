@@ -34,26 +34,6 @@ public class CurrentPickHub : Hub
         await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupName(roomId));
     }
 
-    public async Task JoinRoomByCode(string roomCode)
-    {
-        var userId = GetCurrentUserId();
-
-        var normalizedCode = roomCode.Trim().ToUpperInvariant();
-        var room = await _currentPickRepository.GetRoomByCodeAsync(normalizedCode);
-        if (room == null)
-        {
-            throw new HubException("Khong tim thay phong Current Pick");
-        }
-
-        var isMember = await _currentPickRepository.IsMemberAsync(room.CurrentPickRoomId, userId);
-        if (!isMember)
-        {
-            throw new HubException("Ban chua tham gia phong nay");
-        }
-
-        await Groups.AddToGroupAsync(Context.ConnectionId, GetGroupName(room.CurrentPickRoomId));
-    }
-
     public async Task LeaveRoom(int roomId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGroupName(roomId));

@@ -22,8 +22,6 @@ public class CurrentPickRoomResponseDto
 
     public int? MyVotedBranchId { get; set; }
 
-    public string ShareLink { get; set; } = string.Empty;
-
     public List<CurrentPickMemberDto> Members { get; set; } = new();
 
     public List<CurrentPickBranchDto> Branches { get; set; } = new();

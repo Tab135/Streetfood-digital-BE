@@ -49,6 +49,7 @@ public class StreetFoodDbContext : DbContext
     public DbSet<CurrentPickMember> CurrentPickMembers { get; set; }
     public DbSet<CurrentPickBranch> CurrentPickBranches { get; set; }
     public DbSet<CurrentPickVote> CurrentPickVotes { get; set; }
+    public DbSet<CurrentPickInvite> CurrentPickInvites { get; set; }
 
     // Menu Management DbSets
     public DbSet<Category> Categories { get; set; }
@@ -628,6 +629,30 @@ public class StreetFoodDbContext : DbContext
             entity.HasOne(e => e.User)
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+          });
+
+          modelBuilder.Entity<CurrentPickInvite>(entity =>
+          {
+            entity.HasKey(e => e.CurrentPickInviteId);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.Status).HasDefaultValue(CurrentPickInviteStatus.Pending);
+
+            entity.HasIndex(e => new { e.CurrentPickRoomId, e.InvitedUserId }).IsUnique();
+
+            entity.HasOne(e => e.CurrentPickRoom)
+                .WithMany(r => r.Invites)
+                .HasForeignKey(e => e.CurrentPickRoomId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.InvitedUser)
+                .WithMany()
+                .HasForeignKey(e => e.InvitedUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.InvitedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.InvitedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
           });
 

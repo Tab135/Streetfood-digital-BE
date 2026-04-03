@@ -12,19 +12,21 @@ public class CurrentPickService : ICurrentPickService
     private readonly ICurrentPickRepository _currentPickRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentPickPusher _currentPickPusher;
+    private readonly INotificationService _notificationService;
 
-    private const string DefaultShareBaseUrl = "streetfood://current-pick/join";
     private const int RoomCodeLength = 6;
     private const string RoomCodeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
     public CurrentPickService(
         ICurrentPickRepository currentPickRepository,
         IUserRepository userRepository,
-        ICurrentPickPusher currentPickPusher)
+        ICurrentPickPusher currentPickPusher,
+        INotificationService notificationService)
     {
         _currentPickRepository = currentPickRepository ?? throw new ArgumentNullException(nameof(currentPickRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _currentPickPusher = currentPickPusher ?? throw new ArgumentNullException(nameof(currentPickPusher));
+        _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
     }
 
     public async Task<CurrentPickRoomResponseDto> CreateRoomAsync(int hostUserId, CreateCurrentPickRoomDto dto)
@@ -70,15 +72,115 @@ public class CurrentPickService : ICurrentPickService
         return MapToRoomDto(latest, hostUserId);
     }
 
-    public async Task<CurrentPickRoomResponseDto> JoinRoomAsync(int userId, JoinCurrentPickRoomDto dto)
+    public async Task<CurrentPickRoomResponseDto> GetRoomAsync(int roomId, int userId)
+    {
+        var room = await RequireMemberRoomAsync(roomId, userId);
+        return MapToRoomDto(room, userId);
+    }
+
+    public async Task<CurrentPickInviteResponseDto> InviteUserAsync(int roomId, int hostUserId, InviteCurrentPickUserDto dto)
+    {
+        var room = await RequireMemberRoomAsync(roomId, hostUserId);
+        EnsureHost(room, hostUserId);
+        EnsureRoomNotFinalized(room);
+
+        if (dto.UserId == hostUserId)
+        {
+            throw new DomainExceptions("Khong the tu moi chinh minh vao phong");
+        }
+
+        var invitedUser = await _userRepository.GetUserById(dto.UserId);
+        if (invitedUser == null)
+        {
+            throw new DomainExceptions("Khong tim thay nguoi dung duoc moi");
+        }
+
+        if (room.Members.Any(m => m.UserId == invitedUser.Id))
+        {
+            throw new DomainExceptions("Nguoi dung nay da o trong phong");
+        }
+
+        var invite = await _currentPickRepository.GetInviteAsync(roomId, invitedUser.Id);
+        if (invite == null)
+        {
+            invite = new CurrentPickInvite
+            {
+                CurrentPickRoomId = roomId,
+                InvitedUserId = invitedUser.Id,
+                InvitedByUserId = hostUserId,
+                Status = CurrentPickInviteStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _currentPickRepository.AddInviteAsync(invite);
+        }
+        else
+        {
+            invite.Status = CurrentPickInviteStatus.Pending;
+            invite.InvitedByUserId = hostUserId;
+            invite.CreatedAt = DateTime.UtcNow;
+            invite.RespondedAt = null;
+
+            await _currentPickRepository.UpdateInviteAsync(invite);
+        }
+
+        var hostName = room.Members
+            .Where(m => m.UserId == hostUserId)
+            .Select(m => BuildDisplayName(m.User))
+            .FirstOrDefault() ?? $"User {hostUserId}";
+
+        await _notificationService.NotifyAsync(
+            invitedUser.Id,
+            NotificationType.CurrentPickInvite,
+            "Loi moi Current Pick",
+            $"{hostName} da moi ban tham gia phong Current Pick",
+            room.CurrentPickRoomId,
+            new
+            {
+                type = "current_pick_invite",
+                roomId = room.CurrentPickRoomId,
+                roomTitle = room.Title,
+                invitedByUserId = hostUserId
+            });
+
+        return new CurrentPickInviteResponseDto
+        {
+            CurrentPickRoomId = room.CurrentPickRoomId,
+            InvitedUserId = invitedUser.Id,
+            InvitedByUserId = hostUserId,
+            Status = invite.Status.ToString(),
+            CreatedAt = invite.CreatedAt
+        };
+    }
+
+    public async Task<CurrentPickRoomResponseDto> AcceptInviteAsync(int roomId, int userId)
     {
         await EnsureUserExistsAsync(userId);
 
-        var roomCode = NormalizeRoomCode(dto.RoomCode);
-        var room = await _currentPickRepository.GetRoomByCodeAsync(roomCode)
-            ?? throw new DomainExceptions("Khong tim thay phong Current Pick");
+        var room = await RequireActiveRoomAsync(roomId);
+        var invite = await _currentPickRepository.GetInviteAsync(roomId, userId);
 
-        var isMember = await _currentPickRepository.IsMemberAsync(room.CurrentPickRoomId, userId);
+        if (invite == null)
+        {
+            throw new DomainExceptions("Ban khong co loi moi hop le vao phong nay", "ERR_FORBIDDEN");
+        }
+
+        if (invite.Status == CurrentPickInviteStatus.Accepted && room.Members.Any(m => m.UserId == userId))
+        {
+            return MapToRoomDto(room, userId);
+        }
+
+        if (room.IsFinalized)
+        {
+            throw new DomainExceptions("Phong da duoc chot quan", "ERR_FORBIDDEN");
+        }
+
+        if (invite.Status != CurrentPickInviteStatus.Pending)
+        {
+            throw new DomainExceptions("Loi moi nay khong con hieu luc", "ERR_FORBIDDEN");
+        }
+
+        var isMember = room.Members.Any(m => m.UserId == userId);
         if (!isMember)
         {
             await _currentPickRepository.AddMemberAsync(new CurrentPickMember
@@ -88,20 +190,19 @@ public class CurrentPickService : ICurrentPickService
                 IsHost = false,
                 JoinedAt = DateTime.UtcNow
             });
-
-            var updatedRoom = await RequireActiveRoomAsync(room.CurrentPickRoomId);
-            await BroadcastRoomUpdateAsync(updatedRoom, "member_joined");
-            return MapToRoomDto(updatedRoom, userId);
         }
 
-        var snapshot = await RequireActiveRoomAsync(room.CurrentPickRoomId);
-        return MapToRoomDto(snapshot, userId);
-    }
+        invite.Status = CurrentPickInviteStatus.Accepted;
+        invite.RespondedAt = DateTime.UtcNow;
+        await _currentPickRepository.UpdateInviteAsync(invite);
 
-    public async Task<CurrentPickRoomResponseDto> GetRoomAsync(int roomId, int userId)
-    {
-        var room = await RequireMemberRoomAsync(roomId, userId);
-        return MapToRoomDto(room, userId);
+        var snapshot = await RequireActiveRoomAsync(roomId);
+        if (!isMember)
+        {
+            await BroadcastRoomUpdateAsync(snapshot, "member_joined");
+        }
+
+        return MapToRoomDto(snapshot, userId);
     }
 
     public async Task<CurrentPickBranchDto> AddBranchAsync(int roomId, int userId, AddCurrentPickBranchDto dto)
@@ -195,17 +296,6 @@ public class CurrentPickService : ICurrentPickService
             Long = finalizedBranch.Long,
             MapUrl = $"https://www.google.com/maps/search/?api=1&query={lat},{lng}",
             Room = MapToRoomDto(snapshot, userId)
-        };
-    }
-
-    public async Task<CurrentPickShareLinkDto> GetShareLinkAsync(int roomId, int userId)
-    {
-        var room = await RequireMemberRoomAsync(roomId, userId);
-        return new CurrentPickShareLinkDto
-        {
-            CurrentPickRoomId = room.CurrentPickRoomId,
-            RoomCode = room.RoomCode,
-            ShareLink = BuildShareLink(room.RoomCode)
         };
     }
 
@@ -354,7 +444,6 @@ public class CurrentPickService : ICurrentPickService
             MyVotedBranchId = requesterUserId.HasValue
                 ? room.Votes.FirstOrDefault(v => v.UserId == requesterUserId.Value)?.BranchId
                 : null,
-            ShareLink = BuildShareLink(room.RoomCode),
             Members = room.Members
                 .OrderBy(m => m.JoinedAt)
                 .Select(m => new CurrentPickMemberDto
@@ -416,13 +505,4 @@ public class CurrentPickService : ICurrentPickService
         return $"User {user.Id}";
     }
 
-    private static string NormalizeRoomCode(string roomCode)
-    {
-        return roomCode.Trim().ToUpperInvariant();
-    }
-
-    private static string BuildShareLink(string roomCode)
-    {
-        return $"{DefaultShareBaseUrl}?roomCode={Uri.EscapeDataString(roomCode)}";
-    }
 }

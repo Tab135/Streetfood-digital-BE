@@ -52,12 +52,6 @@ public class CurrentPickDAO
             .FirstOrDefaultAsync(r => r.CurrentPickRoomId == roomId && r.IsActive);
     }
 
-    public async Task<CurrentPickRoom?> GetRoomByCodeAsync(string roomCode, bool asNoTracking = true)
-    {
-        return await BuildRoomQuery(asNoTracking)
-            .FirstOrDefaultAsync(r => r.RoomCode == roomCode && r.IsActive);
-    }
-
     public async Task<CurrentPickMember?> GetMemberAsync(int roomId, int userId)
     {
         return await _context.CurrentPickMembers
@@ -114,6 +108,28 @@ public class CurrentPickDAO
         if (_context.Entry(vote).State == EntityState.Detached)
         {
             _context.CurrentPickVotes.Update(vote);
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<CurrentPickInvite?> GetInviteAsync(int roomId, int invitedUserId)
+    {
+        return await _context.CurrentPickInvites
+            .FirstOrDefaultAsync(i => i.CurrentPickRoomId == roomId && i.InvitedUserId == invitedUserId);
+    }
+
+    public async Task AddInviteAsync(CurrentPickInvite invite)
+    {
+        _context.CurrentPickInvites.Add(invite);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task UpdateInviteAsync(CurrentPickInvite invite)
+    {
+        if (_context.Entry(invite).State == EntityState.Detached)
+        {
+            _context.CurrentPickInvites.Update(invite);
         }
 
         await _context.SaveChangesAsync();

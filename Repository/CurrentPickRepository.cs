@@ -28,11 +28,6 @@ public class CurrentPickRepository : ICurrentPickRepository
         return _currentPickDao.GetRoomByIdAsync(roomId, asNoTracking);
     }
 
-    public Task<CurrentPickRoom?> GetRoomByCodeAsync(string roomCode, bool asNoTracking = true)
-    {
-        return _currentPickDao.GetRoomByCodeAsync(roomCode, asNoTracking);
-    }
-
     public Task<CurrentPickMember?> GetMemberAsync(int roomId, int userId)
     {
         return _currentPickDao.GetMemberAsync(roomId, userId);
@@ -76,6 +71,21 @@ public class CurrentPickRepository : ICurrentPickRepository
     public Task UpdateVoteAsync(CurrentPickVote vote)
     {
         return _currentPickDao.UpdateVoteAsync(vote);
+    }
+
+    public Task<CurrentPickInvite?> GetInviteAsync(int roomId, int invitedUserId)
+    {
+        return _currentPickDao.GetInviteAsync(roomId, invitedUserId);
+    }
+
+    public Task AddInviteAsync(CurrentPickInvite invite)
+    {
+        return _currentPickDao.AddInviteAsync(invite);
+    }
+
+    public Task UpdateInviteAsync(CurrentPickInvite invite)
+    {
+        return _currentPickDao.UpdateInviteAsync(invite);
     }
 
     public Task UpdateRoomAsync(CurrentPickRoom room)

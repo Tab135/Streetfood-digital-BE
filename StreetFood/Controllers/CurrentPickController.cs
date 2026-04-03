@@ -34,27 +34,6 @@ public class CurrentPickController : ControllerBase
         });
     }
 
-    [HttpPost("join")]
-    public async Task<IActionResult> JoinRoom([FromBody] JoinCurrentPickRoomDto dto)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        if (!TryGetCurrentUserId(out var userId))
-        {
-            return Unauthorized(new { message = "User not authenticated" });
-        }
-
-        var room = await _currentPickService.JoinRoomAsync(userId, dto);
-        return Ok(new
-        {
-            message = "Joined Current Pick room successfully",
-            data = room
-        });
-    }
-
     [HttpGet("rooms/{roomId:int}")]
     public async Task<IActionResult> GetRoom(int roomId)
     {
@@ -71,19 +50,40 @@ public class CurrentPickController : ControllerBase
         });
     }
 
-    [HttpGet("rooms/{roomId:int}/share-link")]
-    public async Task<IActionResult> GetShareLink(int roomId)
+    [HttpPost("rooms/{roomId:int}/invites")]
+    public async Task<IActionResult> InviteUser(int roomId, [FromBody] InviteCurrentPickUserDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var result = await _currentPickService.InviteUserAsync(roomId, userId, dto);
+        return Ok(new
+        {
+            message = "Current Pick invitation sent successfully",
+            data = result
+        });
+    }
+
+    [HttpPost("rooms/{roomId:int}/invites/accept")]
+    public async Task<IActionResult> AcceptInvite(int roomId)
     {
         if (!TryGetCurrentUserId(out var userId))
         {
             return Unauthorized(new { message = "User not authenticated" });
         }
 
-        var result = await _currentPickService.GetShareLinkAsync(roomId, userId);
+        var room = await _currentPickService.AcceptInviteAsync(roomId, userId);
         return Ok(new
         {
-            message = "Current Pick share link generated",
-            data = result
+            message = "Current Pick invitation accepted successfully",
+            data = room
         });
     }
 
