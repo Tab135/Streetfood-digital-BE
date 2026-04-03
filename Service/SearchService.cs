@@ -99,6 +99,7 @@ namespace Service
                         Lat = x.Branch.Lat,
                         Long = x.Branch.Long,
                         AvgRating = x.Branch.AvgRating,
+                        TotalReviewCount = x.Branch.TotalReviewCount,
                         FinalScore = x.FinalScore,
                         DistanceKm = x.DistanceKm,
                         IsVerified = x.Branch.IsVerified,
