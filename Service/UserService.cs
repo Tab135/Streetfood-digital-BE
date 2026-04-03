@@ -427,6 +427,7 @@ namespace Service
                     FirstName = u.FirstName,
                     LastName = u.LastName,
                     AvatarUrl = u.AvatarUrl,
+                    Status = u.Status,
                     Role = u.Role.ToString(),
                     Point = u.Point
                 });
@@ -450,6 +451,7 @@ namespace Service
                     FirstName = u.FirstName,
                     LastName = u.LastName,
                     AvatarUrl = u.AvatarUrl,
+                    Status = u.Status,
                     Role = u.Role.ToString(),
                     Point = u.Point
                 });
@@ -474,6 +476,7 @@ namespace Service
                 FirstName = u.FirstName,
                 LastName = u.LastName,
                 AvatarUrl = u.AvatarUrl,
+                Status = u.Status,
                 Role = u.Role.ToString(),
                 Point = u.Point
             };
