@@ -5,6 +5,7 @@ using BO.Enums;
 using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
+using Service.Utils;
 using System.Security.Cryptography;
 
 namespace Service;
@@ -76,6 +77,14 @@ public class OrderService : IOrderService
                 throw new DomainExceptions("Voucher is already used or not available");
 
             var voucher = userVoucher.Voucher ?? throw new DomainExceptions("Voucher data is invalid");
+
+            if (!voucher.IsActive)
+            {
+                throw new DomainExceptions("Voucher is inactive");
+            }
+
+            var now = DateTime.UtcNow;
+            VoucherRules.EnsureVoucherIsWithinValidDateRange(voucher, now);
 
             // No campaign means system point voucher: it is globally applicable to any branch.
             if (voucher.CampaignId.HasValue)

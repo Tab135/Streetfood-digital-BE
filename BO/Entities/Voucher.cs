@@ -27,8 +27,7 @@ public class Voucher
     public decimal? MaxDiscountValue { get; set; }
 
     public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
-    public DateTime? ExpiredDate { get; set; }
+    public DateTime? EndDate { get; set; }
 
     public bool IsActive { get; set; } = true;
 

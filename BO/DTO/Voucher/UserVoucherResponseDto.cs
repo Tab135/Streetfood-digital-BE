@@ -13,7 +13,6 @@ public class UserVoucherResponseDto
     public decimal? MaxDiscountValue { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
-    public DateTime? ExpiredDate { get; set; }
     public bool IsActive { get; set; }
     public int? CampaignId { get; set; }
     public int Quantity { get; set; }

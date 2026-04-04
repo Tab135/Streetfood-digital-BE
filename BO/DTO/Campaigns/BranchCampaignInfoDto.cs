@@ -28,7 +28,7 @@ namespace BO.DTO.Campaigns
         public int UsedQuantity { get; set; }
         public int Remain => Quantity - UsedQuantity;
         public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public DateTime? EndDate { get; set; }
         public string VoucherCode { get; set; } = string.Empty;
     }
 }

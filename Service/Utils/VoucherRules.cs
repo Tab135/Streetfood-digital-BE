@@ -57,6 +57,20 @@ public static class VoucherRules
         return Math.Min(calculatedDiscount, amount);
     }
 
+    public static bool IsWithinValidDateRange(Voucher voucher, DateTime now)
+    {
+        return now >= voucher.StartDate
+            && (!voucher.EndDate.HasValue || now <= voucher.EndDate.Value);
+    }
+
+    public static void EnsureVoucherIsWithinValidDateRange(Voucher voucher, DateTime now)
+    {
+        if (!IsWithinValidDateRange(voucher, now))
+        {
+            throw new DomainExceptions("Voucher is out of valid time range");
+        }
+    }
+
     public static void ValidateDiscountValue(string discountType, decimal discountValue)
     {
         var normalizedType = NormalizeDiscountType(discountType);

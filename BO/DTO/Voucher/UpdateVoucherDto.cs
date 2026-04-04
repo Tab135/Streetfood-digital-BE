@@ -25,7 +25,6 @@ public class UpdateVoucherDto
 
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
-    public DateTime? ExpiredDate { get; set; }
 
     [MaxLength(100)]
     public string? VoucherCode { get; set; }

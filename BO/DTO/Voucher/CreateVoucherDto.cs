@@ -28,10 +28,7 @@ public class CreateVoucherDto
     [Required]
     public DateTime StartDate { get; set; }
 
-    [Required]
-    public DateTime EndDate { get; set; }
-
-    public DateTime? ExpiredDate { get; set; }
+    public DateTime? EndDate { get; set; }
 
     [Required]
     [MaxLength(100)]

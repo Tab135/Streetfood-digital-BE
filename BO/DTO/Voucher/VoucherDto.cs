@@ -10,8 +10,7 @@ public class VoucherDto
     public decimal MinAmountRequired { get; set; }
     public decimal? MaxDiscountValue { get; set; }
     public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
-    public DateTime? ExpiredDate { get; set; }
+    public DateTime? EndDate { get; set; }
     public bool IsActive { get; set; }
     public string VoucherCode { get; set; } = string.Empty;
     public int RedeemPoint { get; set; }

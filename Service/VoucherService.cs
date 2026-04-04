@@ -51,7 +51,6 @@ public class VoucherService : IVoucherService
             MaxDiscountValue = createDto.MaxDiscountValue,
             StartDate = createDto.StartDate,
             EndDate = createDto.EndDate,
-            ExpiredDate = createDto.ExpiredDate,
             IsActive = createDto.IsActive,
             VoucherCode = createDto.VoucherCode,
             RedeemPoint = createDto.RedeemPoint,
@@ -124,10 +123,6 @@ public class VoucherService : IVoucherService
         ValidateDateRange(voucher.StartDate, voucher.EndDate);
         VoucherRules.ValidateDiscountValue(voucher.Type, voucher.DiscountValue);
 
-        if (updateDto.ExpiredDate.HasValue)
-        {
-            voucher.ExpiredDate = updateDto.ExpiredDate;
-        }
 
         if (!string.IsNullOrWhiteSpace(updateDto.VoucherCode) && !string.Equals(voucher.VoucherCode, updateDto.VoucherCode, StringComparison.OrdinalIgnoreCase))
         {
@@ -183,15 +178,8 @@ public class VoucherService : IVoucherService
             throw new DomainExceptions("Voucher is inactive");
         }
 
-        if (now < voucher.StartDate || now > voucher.EndDate)
-        {
-            throw new DomainExceptions("Voucher is out of valid time range");
-        }
 
-        if (voucher.ExpiredDate.HasValue && now > voucher.ExpiredDate.Value)
-        {
-            throw new DomainExceptions("Voucher has expired");
-        }
+        VoucherRules.EnsureVoucherIsWithinValidDateRange(voucher, now);
 
         if (voucher.UsedQuantity >= voucher.Quantity)
         {
@@ -287,7 +275,6 @@ public class VoucherService : IVoucherService
             MaxDiscountValue = uv.Voucher?.MaxDiscountValue,
             StartDate = uv.Voucher?.StartDate,
             EndDate = uv.Voucher?.EndDate,
-            ExpiredDate = uv.Voucher?.ExpiredDate,
             IsActive = uv.Voucher?.IsActive ?? false,
             CampaignId = uv.Voucher?.CampaignId,
             Quantity = uv.Quantity,
@@ -308,6 +295,7 @@ public class VoucherService : IVoucherService
 
         var userVouchers = await _userVoucherRepository.GetByUserIdAsync(userId);
         var applicableVouchers = new List<UserVoucher>();
+        var now = DateTime.UtcNow;
 
         foreach (var uv in userVouchers)
         {
@@ -315,6 +303,8 @@ public class VoucherService : IVoucherService
 
             var voucher = uv.Voucher;
             if (voucher == null) continue;
+
+            if (!VoucherRules.IsWithinValidDateRange(voucher, now)) continue;
 
             if (voucher.CampaignId.HasValue)
             {
@@ -365,7 +355,6 @@ public class VoucherService : IVoucherService
             MaxDiscountValue = uv.Voucher?.MaxDiscountValue,
             StartDate = uv.Voucher?.StartDate,
             EndDate = uv.Voucher?.EndDate,
-            ExpiredDate = uv.Voucher?.ExpiredDate,
             IsActive = uv.Voucher?.IsActive ?? false,
             CampaignId = uv.Voucher?.CampaignId,
             Quantity = uv.Quantity,
@@ -380,9 +369,9 @@ public class VoucherService : IVoucherService
         return vouchers.Select(MapToDto).ToList();
     }
 
-    private static void ValidateDateRange(DateTime startDate, DateTime endDate)
+    private static void ValidateDateRange(DateTime startDate, DateTime? endDate)
     {
-        if (endDate < startDate)
+        if (endDate.HasValue && endDate.Value < startDate)
         {
             throw new DomainExceptions("End date must be greater than or equal to start date");
         }
@@ -401,7 +390,6 @@ public class VoucherService : IVoucherService
             MaxDiscountValue = voucher.MaxDiscountValue,
             StartDate = voucher.StartDate,
             EndDate = voucher.EndDate,
-            ExpiredDate = voucher.ExpiredDate,
             IsActive = voucher.IsActive,
             VoucherCode = voucher.VoucherCode,
             RedeemPoint = voucher.RedeemPoint,
@@ -425,7 +413,6 @@ public class VoucherService : IVoucherService
             MaxDiscountValue = voucher.MaxDiscountValue,
             StartDate = voucher.StartDate,
             EndDate = voucher.EndDate,
-            ExpiredDate = voucher.ExpiredDate,
             IsActive = voucher.IsActive,
             VoucherCode = voucher.VoucherCode,
             RedeemPoint = voucher.RedeemPoint,

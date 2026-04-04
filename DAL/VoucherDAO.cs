@@ -68,7 +68,7 @@ public class VoucherDAO
     public async Task<List<Voucher>> GetMarketplaceVouchersAsync(DateTime now)
     {
         return await _context.Vouchers
-            .Where(v => v.IsActive && v.StartDate <= now && v.EndDate >= now && v.CampaignId == null && v.RedeemPoint > 0)
+            .Where(v => v.IsActive && v.StartDate <= now && (!v.EndDate.HasValue || v.EndDate >= now) && v.CampaignId == null && v.RedeemPoint > 0)
             .OrderByDescending(v => v.VoucherId)
             .ToListAsync();
     }

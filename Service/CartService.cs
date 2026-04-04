@@ -247,15 +247,7 @@ public class CartService : ICartService
             }
 
             var now = DateTime.UtcNow;
-            if (now < voucher.StartDate || now > voucher.EndDate)
-            {
-                throw new DomainExceptions("Voucher is out of valid time range");
-            }
-
-            if (voucher.ExpiredDate.HasValue && now > voucher.ExpiredDate.Value)
-            {
-                throw new DomainExceptions("Voucher has expired");
-            }
+            VoucherRules.EnsureVoucherIsWithinValidDateRange(voucher, now);
 
             if (voucher.MinAmountRequired > cartTotal)
             {
