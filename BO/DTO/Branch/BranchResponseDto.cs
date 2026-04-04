@@ -29,6 +29,8 @@ namespace BO.DTO.Branch
         public DateTime? SubscriptionExpiresAt { get; set; }
         public int? DaysRemaining { get; set; }
 
+        public int? CreatedById { get; set; }
+        public DateTime? LastTierResetAt { get; set; }
         public int? GhostpinXP { get; set; }
         public int TierId { get; set; }
         public string TierName { get; set; }

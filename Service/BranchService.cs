@@ -661,6 +661,8 @@ namespace Service
                 BatchReviewCount = branch.BatchReviewCount,
                 BatchRatingSum = branch.BatchRatingSum,
                 GhostpinXP = branch.GhostpinXP,
+                CreatedById = branch.CreatedById,
+                LastTierResetAt = branch.LastTierResetAt,
                 IsActive = branch.IsActive,
                 IsSubscribed = branch.IsSubscribed,
                 SubscriptionExpiresAt = branch.SubscriptionExpiresAt,
