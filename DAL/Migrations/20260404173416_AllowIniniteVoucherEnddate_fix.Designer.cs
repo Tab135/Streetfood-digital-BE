@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    [Migration("20260404091421_AllowIniniteVoucherEnddate")]
-    partial class AllowIniniteVoucherEnddate
+    [Migration("20260404173416_AllowIniniteVoucherEnddate_fix")]
+    partial class AllowIniniteVoucherEnddate_fix
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
