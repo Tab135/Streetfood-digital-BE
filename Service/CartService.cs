@@ -14,7 +14,9 @@ public class CartService : ICartService
     private readonly IUserRepository _userRepository;
     private readonly IBranchRepository _branchRepository;
     private readonly IDishRepository _dishRepository;
+    private readonly IVoucherRepository _voucherRepository;
     private readonly IUserVoucherRepository _userVoucherRepository;
+    private readonly IBranchCampaignRepository _branchCampaignRepository;
     private readonly IOrderService _orderService;
     private readonly IPaymentService _paymentService;
 
@@ -23,7 +25,9 @@ public class CartService : ICartService
         IUserRepository userRepository,
         IBranchRepository branchRepository,
         IDishRepository dishRepository,
+        IVoucherRepository voucherRepository,
         IUserVoucherRepository userVoucherRepository,
+        IBranchCampaignRepository branchCampaignRepository,
         IOrderService orderService,
         IPaymentService paymentService)
     {
@@ -31,7 +35,9 @@ public class CartService : ICartService
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
         _dishRepository = dishRepository ?? throw new ArgumentNullException(nameof(dishRepository));
+        _voucherRepository = voucherRepository ?? throw new ArgumentNullException(nameof(voucherRepository));
         _userVoucherRepository = userVoucherRepository ?? throw new ArgumentNullException(nameof(userVoucherRepository));
+        _branchCampaignRepository = branchCampaignRepository ?? throw new ArgumentNullException(nameof(branchCampaignRepository));
         _orderService = orderService ?? throw new ArgumentNullException(nameof(orderService));
         _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
     }
@@ -224,23 +230,13 @@ public class CartService : ICartService
 
         decimal discountAmount = 0m;
         BO.Entities.UserVoucher? redeemedUserVoucher = null;
+        BO.Entities.Voucher? redeemedVendorVoucher = null;
 
-        if (request.UserVoucherId.HasValue)
+        if (request.VoucherId.HasValue)
         {
-            var userVoucher = await _userVoucherRepository.GetByIdAsync(request.UserVoucherId.Value)
-                ?? throw new DomainExceptions("User voucher not found");
+            var voucher = await _voucherRepository.GetByIdAsync(request.VoucherId.Value)
+                ?? throw new DomainExceptions("Voucher not found");
 
-            if (userVoucher.UserId != userId)
-            {
-                throw new DomainExceptions("You do not own this voucher", "ERR_FORBIDDEN");
-            }
-
-            if (!userVoucher.IsAvailable || userVoucher.Quantity <= 0)
-            {
-                throw new DomainExceptions("Voucher is not available");
-            }
-
-            var voucher = userVoucher.Voucher ?? throw new DomainExceptions("Voucher not found");
             if (!voucher.IsActive)
             {
                 throw new DomainExceptions("Voucher is inactive");
@@ -249,19 +245,68 @@ public class CartService : ICartService
             var now = DateTime.UtcNow;
             VoucherRules.EnsureVoucherIsWithinValidDateRange(voucher, now);
 
+            if (voucher.UsedQuantity >= voucher.Quantity)
+            {
+                throw new DomainExceptions("Voucher is out of stock");
+            }
+
+            if (voucher.CampaignId.HasValue)
+            {
+                var campaign = voucher.Campaign
+                    ?? throw new DomainExceptions("Campaign voucher is invalid");
+
+                if (campaign.CreatedByBranchId.HasValue)
+                {
+                    if (cart.BranchId.Value != campaign.CreatedByBranchId.Value)
+                    {
+                        throw new DomainExceptions("This voucher is only applicable to a specific branch.");
+                    }
+                }
+                else
+                {
+                    var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(cart.BranchId.Value, campaign.CampaignId);
+                    if (joinInfo == null || joinInfo.IsActive != true)
+                    {
+                        if (campaign.CreatedByVendorId.HasValue)
+                        {
+                            throw new DomainExceptions("This branch is not included in this vendor campaign.");
+                        }
+
+                        throw new DomainExceptions("This voucher campaign is not active for this branch.");
+                    }
+                }
+
+                if (campaign.CreatedByVendorId.HasValue || campaign.CreatedByBranchId.HasValue)
+                {
+                    redeemedVendorVoucher = voucher;
+                }
+            }
+
+            if (redeemedVendorVoucher == null)
+            {
+                var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, voucher.VoucherId)
+                    ?? throw new DomainExceptions("You have not claimed this voucher yet");
+
+                if (!userVoucher.IsAvailable || userVoucher.Quantity <= 0)
+                {
+                    throw new DomainExceptions("Voucher is not available");
+                }
+
+                redeemedUserVoucher = userVoucher;
+            }
+
             if (voucher.MinAmountRequired > cartTotal)
             {
                 throw new DomainExceptions("Order amount does not meet voucher minimum requirement");
             }
 
             discountAmount = VoucherRules.CalculateDiscountAmount(cartTotal, voucher);
-            redeemedUserVoucher = userVoucher;
         }
 
         var createOrderRequest = new CreateOrderRequest
         {
             BranchId = cart.BranchId.Value,
-            UserVoucherId = request.UserVoucherId,
+            UserVoucherId = redeemedUserVoucher?.UserVoucherId,
             Table = request.Table,
             PaymentMethod = request.PaymentMethod,
             DiscountAmount = discountAmount,
@@ -292,6 +337,17 @@ public class CartService : ICartService
             }
 
             await _userVoucherRepository.UpdateAsync(redeemedUserVoucher);
+        }
+
+        if (redeemedVendorVoucher != null)
+        {
+            redeemedVendorVoucher.UsedQuantity += 1;
+            if (redeemedVendorVoucher.UsedQuantity > redeemedVendorVoucher.Quantity)
+            {
+                throw new DomainExceptions("Voucher is out of stock");
+            }
+
+            await _voucherRepository.UpdateAsync(redeemedVendorVoucher);
         }
 
         // Cart is intentionally NOT cleared here.

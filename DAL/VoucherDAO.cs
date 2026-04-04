@@ -21,7 +21,9 @@ public class VoucherDAO
 
     public async Task<Voucher?> GetByIdAsync(int voucherId)
     {
-        return await _context.Vouchers.FindAsync(voucherId);
+        return await _context.Vouchers
+            .Include(v => v.Campaign)
+            .FirstOrDefaultAsync(v => v.VoucherId == voucherId);
     }
 
     public async Task<Voucher?> GetByCodeAsync(string voucherCode)
@@ -31,7 +33,10 @@ public class VoucherDAO
 
     public async Task<List<Voucher>> GetAllAsync()
     {
-        return await _context.Vouchers.OrderByDescending(v => v.VoucherId).ToListAsync();
+        return await _context.Vouchers
+            .Include(v => v.Campaign)
+            .OrderByDescending(v => v.VoucherId)
+            .ToListAsync();
     }
 
     public async Task UpdateAsync(Voucher voucher)

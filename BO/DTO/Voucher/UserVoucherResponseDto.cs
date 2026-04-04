@@ -2,7 +2,7 @@ namespace BO.DTO.Voucher;
 
 public class UserVoucherResponseDto
 {
-    public int UserVoucherId { get; set; }
+    public int? UserVoucherId { get; set; }
     public int VoucherId { get; set; }
     public string VoucherCode { get; set; } = string.Empty;
     public string VoucherName { get; set; } = string.Empty;

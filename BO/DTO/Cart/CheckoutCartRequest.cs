@@ -4,7 +4,7 @@ namespace BO.DTO.Cart;
 
 public class CheckoutCartRequest
 {
-    public int? UserVoucherId { get; set; }
+    public int? VoucherId { get; set; }
 
     [MaxLength(255)]
     public string? Table { get; set; }

@@ -294,7 +294,7 @@ public class VoucherService : IVoucherService
             ?? throw new DomainExceptions("Branch not found");
 
         var userVouchers = await _userVoucherRepository.GetByUserIdAsync(userId);
-        var applicableVouchers = new List<UserVoucher>();
+        var applicableByVoucherId = new Dictionary<int, UserVoucherResponseDto>();
         var now = DateTime.UtcNow;
 
         foreach (var uv in userVouchers)
@@ -304,62 +304,115 @@ public class VoucherService : IVoucherService
             var voucher = uv.Voucher;
             if (voucher == null) continue;
 
+            if (!voucher.IsActive) continue;
             if (!VoucherRules.IsWithinValidDateRange(voucher, now)) continue;
 
-            if (voucher.CampaignId.HasValue)
-            {
-                var campaign = voucher.Campaign;
-                if (campaign == null)
-                {
-                    continue;
-                }
+            var isApplicable = await IsVoucherApplicableToBranchAsync(voucher, branchId, branch.IsSubscribed);
+            if (!isApplicable) continue;
 
-                if (campaign.CreatedByBranchId.HasValue)
-                {
-                    // Requirement: Voucher created for that single branch (restaurant campaign)
-                    if (branchId == campaign.CreatedByBranchId.Value)
-                    {
-                        applicableVouchers.Add(uv);
-                    }
-                }
-                else
-                {
-                    // Vendor-wide or system campaign: only branches linked via BranchCampaign (active)
-                    var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);
-                    if (joinInfo != null && joinInfo.IsActive == true)
-                    {
-                        applicableVouchers.Add(uv);
-                    }
-                }
-            }
-            else
+            applicableByVoucherId[voucher.VoucherId] = new UserVoucherResponseDto
             {
-                // Requirement: System voucher (Marketplace) - usable everywhere with IsSubscribed == true
-                if (branch.IsSubscribed)
-                {
-                    applicableVouchers.Add(uv);
-                }
-            }
+                UserVoucherId = uv.UserVoucherId,
+                VoucherId = uv.VoucherId,
+                VoucherCode = voucher.VoucherCode,
+                VoucherName = voucher.Name,
+                Description = voucher.Description,
+                VoucherType = voucher.Type,
+                DiscountValue = voucher.DiscountValue,
+                MinAmountRequired = voucher.MinAmountRequired,
+                MaxDiscountValue = voucher.MaxDiscountValue,
+                StartDate = voucher.StartDate,
+                EndDate = voucher.EndDate,
+                IsActive = voucher.IsActive,
+                CampaignId = voucher.CampaignId,
+                Quantity = uv.Quantity,
+                IsAvailable = uv.IsAvailable
+            };
         }
 
-        return applicableVouchers.Select(uv => new UserVoucherResponseDto
+        // Vendor-created vouchers can be applied directly without claiming.
+        var allVouchers = await _voucherRepository.GetAllAsync();
+        foreach (var voucher in allVouchers)
         {
-            UserVoucherId = uv.UserVoucherId,
-            VoucherId = uv.VoucherId,
-            VoucherCode = uv.Voucher?.VoucherCode ?? string.Empty,
-            VoucherName = uv.Voucher?.Name ?? string.Empty,
-            Description = uv.Voucher?.Description,
-            VoucherType = uv.Voucher?.Type ?? string.Empty,
-            DiscountValue = uv.Voucher?.DiscountValue ?? 0m,
-            MinAmountRequired = uv.Voucher?.MinAmountRequired,
-            MaxDiscountValue = uv.Voucher?.MaxDiscountValue,
-            StartDate = uv.Voucher?.StartDate,
-            EndDate = uv.Voucher?.EndDate,
-            IsActive = uv.Voucher?.IsActive ?? false,
-            CampaignId = uv.Voucher?.CampaignId,
-            Quantity = uv.Quantity,
-            IsAvailable = uv.IsAvailable
-        }).ToList();
+            if (!voucher.CampaignId.HasValue || voucher.Campaign == null)
+            {
+                continue;
+            }
+
+            if (!voucher.IsActive || voucher.UsedQuantity >= voucher.Quantity)
+            {
+                continue;
+            }
+
+            if (!VoucherRules.IsWithinValidDateRange(voucher, now))
+            {
+                continue;
+            }
+
+            var isVendorCreatedCampaign = voucher.Campaign.CreatedByVendorId.HasValue || voucher.Campaign.CreatedByBranchId.HasValue;
+            if (!isVendorCreatedCampaign)
+            {
+                continue;
+            }
+
+            var isApplicable = await IsVoucherApplicableToBranchAsync(voucher, branchId, branch.IsSubscribed);
+            if (!isApplicable)
+            {
+                continue;
+            }
+
+            if (applicableByVoucherId.ContainsKey(voucher.VoucherId))
+            {
+                continue;
+            }
+
+            applicableByVoucherId[voucher.VoucherId] = new UserVoucherResponseDto
+            {
+                UserVoucherId = null,
+                VoucherId = voucher.VoucherId,
+                VoucherCode = voucher.VoucherCode,
+                VoucherName = voucher.Name,
+                Description = voucher.Description,
+                VoucherType = voucher.Type,
+                DiscountValue = voucher.DiscountValue,
+                MinAmountRequired = voucher.MinAmountRequired,
+                MaxDiscountValue = voucher.MaxDiscountValue,
+                StartDate = voucher.StartDate,
+                EndDate = voucher.EndDate,
+                IsActive = voucher.IsActive,
+                CampaignId = voucher.CampaignId,
+                Quantity = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0),
+                IsAvailable = true
+            };
+        }
+
+        return applicableByVoucherId
+            .Values
+            .OrderByDescending(v => v.UserVoucherId.HasValue)
+            .ThenBy(v => v.VoucherId)
+            .ToList();
+    }
+
+    private async Task<bool> IsVoucherApplicableToBranchAsync(Voucher voucher, int branchId, bool isBranchSubscribed)
+    {
+        if (voucher.CampaignId.HasValue)
+        {
+            var campaign = voucher.Campaign;
+            if (campaign == null)
+            {
+                return false;
+            }
+
+            if (campaign.CreatedByBranchId.HasValue)
+            {
+                return branchId == campaign.CreatedByBranchId.Value;
+            }
+
+            var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);
+            return joinInfo != null && joinInfo.IsActive == true;
+        }
+
+        return isBranchSubscribed;
     }
 
     public async Task<List<VoucherDto>> GetMarketplaceVouchersAsync()
