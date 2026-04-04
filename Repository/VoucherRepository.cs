@@ -28,5 +28,6 @@ public class VoucherRepository : IVoucherRepository
     public Task<bool> ExistsByIdAsync(int voucherId) => _voucherDAO.ExistsByIdAsync(voucherId);
 
     public Task<List<Voucher>> GetByCampaignIdAsync(int campaignId) => _voucherDAO.GetByCampaignIdAsync(campaignId);
+    public Task<List<Voucher>> GetByCampaignIdsAsync(List<int> campaignIds) => _voucherDAO.GetByCampaignIdsAsync(campaignIds);
     public Task<List<Voucher>> GetMarketplaceVouchersAsync(DateTime now) => _voucherDAO.GetMarketplaceVouchersAsync(now);
 }

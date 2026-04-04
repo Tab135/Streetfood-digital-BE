@@ -86,5 +86,17 @@ namespace DAL
                 .Where(bc => bc.CampaignId == campaignId)
                 .ExecuteUpdateAsync(s => s.SetProperty(bc => bc.IsActive, isActive));
         }
+
+        public async Task<List<BranchCampaign>> GetActiveByBranchIdsWithCampaignAsync(List<int> branchIds)
+        {
+            return await _context.BranchCampaigns
+                .AsNoTracking()
+                .Where(bc => branchIds.Contains(bc.BranchId)
+                    && bc.IsActive
+                    && bc.Campaign.CreatedByVendorId != null
+                    && bc.Campaign.IsActive)
+                .Include(bc => bc.Campaign)
+                .ToListAsync();
+        }
     }
 }

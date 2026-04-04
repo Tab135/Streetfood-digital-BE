@@ -24,5 +24,6 @@ namespace Repository
         public Task<List<int>> GetBranchIdsByCampaignAndVendorAsync(int campaignId, int vendorId) => _dao.GetBranchIdsByCampaignAndVendorAsync(campaignId, vendorId);
         public Task<int> CountByCampaignIdAsync(int campaignId) => _dao.CountByCampaignIdAsync(campaignId);
         public Task SetAllIsActiveForCampaignAsync(int campaignId, bool isActive) => _dao.SetAllIsActiveForCampaignAsync(campaignId, isActive);
+        public Task<List<BranchCampaign>> GetActiveByBranchIdsWithCampaignAsync(List<int> branchIds) => _dao.GetActiveByBranchIdsWithCampaignAsync(branchIds);
     }
 }

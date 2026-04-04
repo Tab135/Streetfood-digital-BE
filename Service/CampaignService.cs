@@ -16,8 +16,6 @@ namespace Service
         private readonly ICampaignRepository _campaignRepo;
         private readonly IBranchCampaignRepository _branchCampaignRepo;
         private readonly IBranchRepository _branchRepo;
-        private readonly ITierRepository _tierRepo;
-        private readonly IPaymentRepository _paymentRepo;
         private readonly IVendorRepository _vendorRepo;
         private readonly Service.PaymentsService.IPaymentService _paymentService;
 
@@ -25,16 +23,12 @@ namespace Service
             ICampaignRepository campaignRepo,
             IBranchCampaignRepository branchCampaignRepo,
             IBranchRepository branchRepo,
-            ITierRepository tierRepo,
-            IPaymentRepository paymentRepo,
             IVendorRepository vendorRepo,
             Service.PaymentsService.IPaymentService paymentService)
         {
             _campaignRepo = campaignRepo;
             _branchCampaignRepo = branchCampaignRepo;
             _branchRepo = branchRepo;
-            _tierRepo = tierRepo;
-            _paymentRepo = paymentRepo;
             _vendorRepo = vendorRepo;
             _paymentService = paymentService;
         }
@@ -97,17 +91,6 @@ namespace Service
             return new BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
-        private static double HaversineDistance(double lat1, double long1, double lat2, double long2)
-        {
-            const double R = 6371; // Earth radius in km
-            var dLat = (lat2 - lat1) * Math.PI / 180;
-            var dLong = (long2 - long1) * Math.PI / 180;
-            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
-                    Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180) *
-                    Math.Sin(dLong / 2) * Math.Sin(dLong / 2);
-            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
-            return R * c;
-        }
 
         public async Task<VendorCampaignBranchesResponseDto> AddBranchesToVendorCampaignAsync(int userId, int campaignId, List<int> branchIds)
         {

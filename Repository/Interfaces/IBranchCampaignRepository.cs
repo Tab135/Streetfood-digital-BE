@@ -16,5 +16,6 @@ namespace Repository.Interfaces
         Task<List<int>> GetBranchIdsByCampaignAndVendorAsync(int campaignId, int vendorId);
         Task<int> CountByCampaignIdAsync(int campaignId);
         Task SetAllIsActiveForCampaignAsync(int campaignId, bool isActive);
+        Task<List<BranchCampaign>> GetActiveByBranchIdsWithCampaignAsync(List<int> branchIds);
     }
 }

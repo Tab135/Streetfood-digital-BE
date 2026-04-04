@@ -72,4 +72,12 @@ public class VoucherDAO
             .OrderByDescending(v => v.VoucherId)
             .ToListAsync();
     }
+
+    public async Task<List<Voucher>> GetByCampaignIdsAsync(List<int> campaignIds)
+    {
+        return await _context.Vouchers
+            .AsNoTracking()
+            .Where(v => v.CampaignId.HasValue && campaignIds.Contains(v.CampaignId.Value) && v.IsActive)
+            .ToListAsync();
+    }
 }
