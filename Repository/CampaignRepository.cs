@@ -24,7 +24,7 @@ namespace Repository
         public Task<(List<Campaign> Items, int TotalCount)> GetCampaignsAsync(bool? isSystem, int? vendorId, int page, int pageSize) => _dao.GetCampaignsAsync(isSystem, vendorId, page, pageSize);
         public Task<(List<Campaign> Items, int TotalCount)> GetJoinableSystemCampaignsAsync(int page, int pageSize) => _dao.GetJoinableSystemCampaignsAsync(page, pageSize);
         public Task<(List<Campaign> Items, int TotalCount)> GetPublicCampaignsAsync(bool? isSystem, int page, int pageSize) => _dao.GetPublicCampaignsAsync(isSystem, page, pageSize);
-        public Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetBranchesInAnyVendorCampaignPaginatedAsync(int pageNumber, int pageSize, double? userLat, double? userLng) => _dao.GetBranchesInAnyVendorCampaignPaginatedAsync(pageNumber, pageSize, userLat, userLng);
+        public Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetBranchesInAnyVendorCampaignPaginatedAsync(int pageNumber, int pageSize, double? userLat, double? userLng, double? maxDistance = 5.0) => _dao.GetBranchesInAnyVendorCampaignPaginatedAsync(pageNumber, pageSize, userLat, userLng, maxDistance);
         public Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetCampaignBranchesPaginatedAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng) => _dao.GetCampaignBranchesPaginatedAsync(campaignId, pageNumber, pageSize, userLat, userLng);
 
     }

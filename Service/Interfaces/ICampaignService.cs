@@ -10,7 +10,7 @@ namespace Service.Interfaces
         Task<CampaignResponseDto> CreateSystemCampaignAsync(CreateCampaignDto dto);
         Task<CampaignResponseDto> CreateVendorCampaignAsync(int userId, CreateVendorCampaignDto dto);
         Task<PaginatedResponse<CampaignBranchResponseDto>> GetCampaignBranchesAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng);
-        Task<PaginatedResponse<CampaignBranchResponseDto>> GetBranchesInAnyVendorCampaignAsync(int pageNumber, int pageSize, double? userLat, double? userLng);
+        Task<PaginatedResponse<CampaignBranchResponseDto>> GetBranchesInAnyVendorCampaignAsync(int pageNumber, int pageSize, double? userLat, double? userLng, double? maxDistance = 5.0);
         Task<VendorCampaignBranchesResponseDto> AddBranchesToVendorCampaignAsync(int userId, int campaignId, List<int> branchIds);
         Task<VendorCampaignBranchesResponseDto> RemoveBranchesFromVendorCampaignAsync(int userId, int campaignId, List<int> branchIds);
         Task<int> JoinSystemCampaignAsync(int userId, int branchId, int campaignId);

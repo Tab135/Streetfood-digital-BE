@@ -79,9 +79,9 @@ namespace Service
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
 
-        public async Task<BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>> GetBranchesInAnyVendorCampaignAsync(int pageNumber, int pageSize, double? userLat, double? userLng)
+        public async Task<BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>> GetBranchesInAnyVendorCampaignAsync(int pageNumber, int pageSize, double? userLat, double? userLng, double? maxDistance = 5.0)
         {
-            var (items, totalCount) = await _campaignRepo.GetBranchesInAnyVendorCampaignPaginatedAsync(pageNumber, pageSize, userLat, userLng);
+            var (items, totalCount) = await _campaignRepo.GetBranchesInAnyVendorCampaignPaginatedAsync(pageNumber, pageSize, userLat, userLng, maxDistance);
             return new BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 

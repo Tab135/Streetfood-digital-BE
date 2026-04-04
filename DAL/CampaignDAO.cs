@@ -116,16 +116,19 @@ namespace DAL
             return (items, totalCount);
         }
 
-        public async Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetBranchesInAnyVendorCampaignPaginatedAsync(int pageNumber, int pageSize, double? userLat, double? userLng)
+        public async Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetBranchesInAnyVendorCampaignPaginatedAsync(int pageNumber, int pageSize, double? userLat, double? userLng, double? maxDistance = 5.0)
         {
             var branches = await _context.Branches
                 .AsNoTracking()
                 .Include(b => b.Tier)
                 .Where(b => _context.BranchCampaigns
-                    .Any(bc => bc.BranchId == b.BranchId && bc.IsActive && bc.Campaign.CreatedByVendorId != null && bc.Campaign.IsActive))
+                    .Any(bc => bc.BranchId == b.BranchId && bc.IsActive 
+                        && bc.Campaign.CreatedByVendorId != null 
+                        && bc.Campaign.IsActive 
+                        && _context.Vouchers.Any(v => v.CampaignId == bc.CampaignId)))
                 .ToListAsync();
 
-            return MapAndPaginateBranches(branches, pageNumber, pageSize, userLat, userLng);
+            return MapAndPaginateBranches(branches, pageNumber, pageSize, userLat, userLng, maxDistance);
         }
 
         public async Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetCampaignBranchesPaginatedAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng)
@@ -137,10 +140,10 @@ namespace DAL
                     .Any(bc => bc.CampaignId == campaignId && bc.BranchId == b.BranchId && bc.IsActive))
                 .ToListAsync();
 
-            return MapAndPaginateBranches(branches, pageNumber, pageSize, userLat, userLng);
+            return MapAndPaginateBranches(branches, pageNumber, pageSize, userLat, userLng, null);
         }
 
-        private (List<CampaignBranchResponseDto> Items, int TotalCount) MapAndPaginateBranches(List<Branch> branches, int pageNumber, int pageSize, double? userLat, double? userLng)
+        private (List<CampaignBranchResponseDto> Items, int TotalCount) MapAndPaginateBranches(List<Branch> branches, int pageNumber, int pageSize, double? userLat, double? userLng, double? maxDistance = null)
         {
             var branchList = branches.Select(b => 
             {
@@ -187,6 +190,7 @@ namespace DAL
                     DistanceKm = (userLat.HasValue && userLng.HasValue) ? distanceKm : null
                 };
             })
+            .Where(x => !maxDistance.HasValue || !x.DistanceKm.HasValue || x.DistanceKm.Value <= maxDistance.Value)
             .OrderByDescending(x => x.FinalScore)
             .ToList();
 
