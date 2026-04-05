@@ -19,11 +19,16 @@ public class VoucherController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Admin,Moderator,Vendor")]
-    public async Task<IActionResult> Create([FromBody] CreateVoucherDto createDto)
+    public async Task<IActionResult> Create([FromBody] List<CreateVoucherDto> createDtos)
     {
         if (!ModelState.IsValid)
         {
             return BadRequest(new { message = "Model is not valid" });
+        }
+
+        if (createDtos == null || createDtos.Count == 0)
+        {
+            return BadRequest(new { message = "At least one voucher is required" });
         }
 
         if (!TryGetCurrentUserId(out var userId))
@@ -31,8 +36,12 @@ public class VoucherController : ControllerBase
             return Unauthorized(new { message = "User not authenticated" });
         }
 
-        var created = await _voucherService.CreateVoucherAsync(createDto, userId);
-        return CreatedAtAction(nameof(GetById), new { id = created.VoucherId }, created);
+        var created = await _voucherService.CreateVouchersAsync(createDtos, userId);
+        return StatusCode(StatusCodes.Status201Created, new
+        {
+            message = "Vouchers created successfully",
+            data = created
+        });
     }
 
     [HttpGet("{id}")]

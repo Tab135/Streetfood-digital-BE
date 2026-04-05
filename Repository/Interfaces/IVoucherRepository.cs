@@ -4,7 +4,7 @@ namespace Repository.Interfaces;
 
 public interface IVoucherRepository
 {
-    Task<Voucher> CreateAsync(Voucher voucher);
+    Task<List<Voucher>> CreateRangeAsync(List<Voucher> vouchers);
     Task<Voucher?> GetByIdAsync(int voucherId);
     Task<Voucher?> GetByCodeAsync(string voucherCode);
     Task<List<Voucher>> GetAllAsync();
