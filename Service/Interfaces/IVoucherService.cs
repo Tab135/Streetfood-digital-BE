@@ -4,7 +4,7 @@ namespace Service.Interfaces;
 
 public interface IVoucherService
 {
-    Task<CreateVoucherResponseDto> CreateVoucherAsync(CreateVoucherDto createDto, int userId);
+    Task<List<CreateVoucherResponseDto>> CreateVouchersAsync(List<CreateVoucherDto> createDtos, int userId);
     Task<VoucherDto?> GetVoucherByIdAsync(int voucherId);
     Task<List<VoucherDto>> GetAllVouchersAsync();
     Task<VoucherDto> UpdateVoucherAsync(int voucherId, UpdateVoucherDto updateDto, int userId);

@@ -12,11 +12,11 @@ public class VoucherDAO
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
-    public async Task<Voucher> CreateAsync(Voucher voucher)
+    public async Task<List<Voucher>> CreateRangeAsync(List<Voucher> vouchers)
     {
-        _context.Vouchers.Add(voucher);
+        _context.Vouchers.AddRange(vouchers);
         await _context.SaveChangesAsync();
-        return voucher;
+        return vouchers;
     }
 
     public async Task<Voucher?> GetByIdAsync(int voucherId)

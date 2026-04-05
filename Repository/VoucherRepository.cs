@@ -13,7 +13,7 @@ public class VoucherRepository : IVoucherRepository
         _voucherDAO = voucherDAO ?? throw new ArgumentNullException(nameof(voucherDAO));
     }
 
-    public Task<Voucher> CreateAsync(Voucher voucher) => _voucherDAO.CreateAsync(voucher);
+    public Task<List<Voucher>> CreateRangeAsync(List<Voucher> vouchers) => _voucherDAO.CreateRangeAsync(vouchers);
 
     public Task<Voucher?> GetByIdAsync(int voucherId) => _voucherDAO.GetByIdAsync(voucherId);
 

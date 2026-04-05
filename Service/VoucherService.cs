@@ -29,38 +29,70 @@ public class VoucherService : IVoucherService
         _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
     }
 
-    public async Task<CreateVoucherResponseDto> CreateVoucherAsync(CreateVoucherDto createDto, int userId)
+    public async Task<List<CreateVoucherResponseDto>> CreateVouchersAsync(List<CreateVoucherDto> createDtos, int userId)
     {
-        ValidateDateRange(createDto.StartDate, createDto.EndDate);
-        var normalizedType = VoucherRules.NormalizeDiscountType(createDto.Type);
-        VoucherRules.ValidateDiscountValue(normalizedType, createDto.DiscountValue);
+        _ = userId;
 
-        var existed = await _voucherRepository.GetByCodeAsync(createDto.VoucherCode);
-        if (existed != null)
+        if (createDtos == null || createDtos.Count == 0)
         {
-            throw new DomainExceptions("Voucher code already exists");
+            throw new DomainExceptions("At least one voucher is required");
         }
 
-        var entity = new Voucher
-        {
-            Name = createDto.Name,
-            Description = createDto.Description,
-            Type = normalizedType,
-            DiscountValue = createDto.DiscountValue,
-            MinAmountRequired = createDto.MinAmountRequired,
-            MaxDiscountValue = createDto.MaxDiscountValue,
-            StartDate = createDto.StartDate,
-            EndDate = createDto.EndDate,
-            IsActive = createDto.IsActive,
-            VoucherCode = createDto.VoucherCode,
-            RedeemPoint = createDto.RedeemPoint,
-            Quantity = createDto.Quantity,
-            UsedQuantity = 0,
-            CampaignId = createDto.CampaignId
-        };
+        var duplicateCodes = createDtos
+            .Select(dto => dto.VoucherCode?.Trim())
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .GroupBy(code => code!, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToList();
 
-        var created = await _voucherRepository.CreateAsync(entity);
-        return MapToCreateResponseDto(created);
+        if (duplicateCodes.Count > 0)
+        {
+            throw new DomainExceptions($"Duplicate voucher codes in request: {string.Join(", ", duplicateCodes)}");
+        }
+
+        var vouchersToCreate = new List<Voucher>(createDtos.Count);
+
+        foreach (var createDto in createDtos)
+        {
+            ValidateDateRange(createDto.StartDate, createDto.EndDate);
+
+            var normalizedType = VoucherRules.NormalizeDiscountType(createDto.Type);
+            VoucherRules.ValidateDiscountValue(normalizedType, createDto.DiscountValue);
+
+            var voucherCode = createDto.VoucherCode?.Trim();
+            if (string.IsNullOrWhiteSpace(voucherCode))
+            {
+                throw new DomainExceptions("Voucher code is required");
+            }
+
+            var existed = await _voucherRepository.GetByCodeAsync(voucherCode);
+            if (existed != null)
+            {
+                throw new DomainExceptions($"Voucher code already exists: {voucherCode}");
+            }
+
+            vouchersToCreate.Add(new Voucher
+            {
+                Name = createDto.Name,
+                Description = createDto.Description,
+                Type = normalizedType,
+                DiscountValue = createDto.DiscountValue,
+                MinAmountRequired = createDto.MinAmountRequired,
+                MaxDiscountValue = createDto.MaxDiscountValue,
+                StartDate = createDto.StartDate,
+                EndDate = createDto.EndDate,
+                IsActive = createDto.IsActive,
+                VoucherCode = voucherCode,
+                RedeemPoint = createDto.RedeemPoint,
+                Quantity = createDto.Quantity,
+                UsedQuantity = 0,
+                CampaignId = createDto.CampaignId
+            });
+        }
+
+        var created = await _voucherRepository.CreateRangeAsync(vouchersToCreate);
+        return created.Select(MapToCreateResponseDto).ToList();
     }
 
     public async Task<VoucherDto?> GetVoucherByIdAsync(int voucherId)
