@@ -20,6 +20,4 @@ public class UserVoucher
     [JsonIgnore]
     public virtual User User { get; set; }
     public virtual Voucher Voucher { get; set; }
-    [JsonIgnore]
-    public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 }

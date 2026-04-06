@@ -65,6 +65,14 @@ public class OrderDAO
             .FirstOrDefaultAsync();
     }
 
+    public async Task<List<Order>> GetPendingOrdersNotUpdatedSinceAsync(DateTime staleBeforeUtc)
+    {
+        return await _context.Orders
+            .Where(o => o.Status == OrderStatus.Pending && o.UpdatedAt <= staleBeforeUtc)
+            .OrderBy(o => o.UpdatedAt)
+            .ToListAsync();
+    }
+
     public async Task<(List<Order> items, int totalCount)> GetByBranchIdsAsync(List<int> branchIds, int pageNumber, int pageSize, List<OrderStatus>? statuses = null)
     {
         var query = _context.Orders

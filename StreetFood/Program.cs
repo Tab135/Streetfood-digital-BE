@@ -74,6 +74,7 @@ namespace StreetFood
             builder.Services.AddSingleton<ISettingService>(sp => sp.GetRequiredService<SettingService>());
             builder.Services.AddHostedService(sp => sp.GetRequiredService<SettingService>());
             builder.Services.AddHostedService<SubscriptionExpiryService>();
+            builder.Services.AddHostedService<AbandonedCheckoutCleanupService>();
             builder.Services.AddHostedService<TierResetService>();
             // Register DAL
             builder.Services.AddScoped<UserDAO>();
