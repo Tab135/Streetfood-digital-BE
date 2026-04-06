@@ -142,6 +142,7 @@ public class OrderController : ControllerBase
             message = "Get manager orders successfully",
             data = orders
         });
+    }
 
     [HttpPut("{id}")]
     [Authorize(Roles = "User")]

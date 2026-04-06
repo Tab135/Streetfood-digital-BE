@@ -8,10 +8,6 @@ namespace Service.PaymentsService
 {
     public interface IPaymentService
     {
-        /// <summary>
-        /// Creates a PayOS checkout link for the 20,000 VND vendor subscription fee.
-        /// The branch must have been approved by a moderator (RegisterVendorStatus = Accept).
-        /// </summary>
         Task<PaymentLinkResult> CreatePaymentLink(int userId, int branchId);
         Task<PaymentLinkResult> CreateOrderPaymentLink(int userId, int orderId);
         Task<PaymentLinkResult> CreateCampaignPaymentLink(int userId, int branchId, int branchCampaignId);

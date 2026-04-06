@@ -23,6 +23,9 @@ public class OrderResponseDto
     public decimal TotalAmount { get; set; }
     public decimal? DiscountAmount { get; set; }
     public decimal FinalAmount { get; set; }
+    public int? AppliedVoucherId { get; set; }
+    public string? AppliedVoucherCode { get; set; }
+    public string? AppliedVoucherName { get; set; }
     public bool IsTakeAway { get; set; }
     public DateTime? LockedAt { get; set; }
     public int? OrderXP { get; set; }
