@@ -7,7 +7,6 @@ public class CreateOrderRequest
     [Required]
     public int BranchId { get; set; }
 
-    public int? UserVoucherId { get; set; }
     public int? AppliedVoucherId { get; set; }
 
     [MaxLength(255)]

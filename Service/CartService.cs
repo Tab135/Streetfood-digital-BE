@@ -306,7 +306,6 @@ public class CartService : ICartService
         var createOrderRequest = new CreateOrderRequest
         {
             BranchId = cart.BranchId.Value,
-            UserVoucherId = redeemedUserVoucher?.UserVoucherId,
             AppliedVoucherId = request.VoucherId,
             Table = request.Table,
             PaymentMethod = request.PaymentMethod,

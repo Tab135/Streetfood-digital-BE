@@ -7,6 +7,7 @@ using Repository.Interfaces;
 using Service.Interfaces;
 using Service.Utils;
 using System.Security.Cryptography;
+using System.Threading;
 
 namespace Service;
 
@@ -24,6 +25,7 @@ public class OrderService : IOrderService
     private readonly IQuestProgressService _questProgressService;
     private readonly ISettingService _settingService;
     private readonly IUserService _userService;
+    private static readonly TimeSpan PendingCheckoutAbandonmentThreshold = TimeSpan.FromMinutes(10);
 
     public OrderService(
         IOrderRepository orderRepository,
@@ -60,29 +62,13 @@ public class OrderService : IOrderService
         var branch = await _branchRepository.GetByIdAsync(request.BranchId)
             ?? throw new DomainExceptions("Branch not found");
 
-        int? appliedVoucherId = request.AppliedVoucherId;
-
         if (!branch.IsSubscribed)
         {
             throw new DomainExceptions("This branch is not subscribed and cannot accept order checkout.");
         }
 
         var (orderDishes, totalAmount) = await BuildValidatedOrderDishesAsync(request.BranchId, request.Items);
-
-        await ValidateOrderVoucherAsync(request.UserVoucherId, userId, branch);
-
-        if (request.UserVoucherId.HasValue)
-        {
-            var userVoucher = await _userVoucherRepository.GetByIdAsync(request.UserVoucherId.Value)
-                ?? throw new DomainExceptions("Voucher not found or do not own by you");
-
-            if (appliedVoucherId.HasValue && appliedVoucherId.Value != userVoucher.VoucherId)
-            {
-                throw new DomainExceptions("Applied voucher does not match claimed user voucher");
-            }
-
-            appliedVoucherId ??= userVoucher.VoucherId;
-        }
+        await ValidateOrderVoucherAsync(request.AppliedVoucherId, userId, branch);
 
         var discountAmount = request.DiscountAmount ?? 0m;
         if (discountAmount < 0)
@@ -100,8 +86,7 @@ public class OrderService : IOrderService
         {
             UserId = userId,
             BranchId = branch.BranchId,
-            UserVoucherId = request.UserVoucherId,
-            AppliedVoucherId = appliedVoucherId,
+            AppliedVoucherId = request.AppliedVoucherId,
             Status = OrderStatus.Pending,
             Table = request.Table,
             PaymentMethod = request.PaymentMethod,
@@ -129,7 +114,7 @@ public class OrderService : IOrderService
         }
 
         var (orderDishes, totalAmount) = await BuildValidatedOrderDishesAsync(request.BranchId, request.Items);
-        await ValidateOrderVoucherAsync(request.UserVoucherId, userId, branch);
+        await ValidateOrderVoucherAsync(request.AppliedVoucherId, userId, branch);
 
         var discountAmount = request.DiscountAmount ?? 0m;
         if (discountAmount < 0)
@@ -144,9 +129,19 @@ public class OrderService : IOrderService
         }
 
         var existingPendingOrder = await _orderRepository.GetLatestPendingByUserAndBranch(userId, branch.BranchId);
+        var staleBeforeUtc = DateTime.UtcNow.Subtract(PendingCheckoutAbandonmentThreshold);
+
         if (existingPendingOrder != null)
         {
-            existingPendingOrder.UserVoucherId = request.UserVoucherId;
+            var autoCancelled = await TryCancelPendingOrderForAbandonmentAsync(existingPendingOrder, staleBeforeUtc);
+            if (autoCancelled)
+            {
+                existingPendingOrder = null;
+            }
+        }
+
+        if (existingPendingOrder != null)
+        {
             existingPendingOrder.AppliedVoucherId = request.AppliedVoucherId;
             existingPendingOrder.Table = request.Table;
             existingPendingOrder.PaymentMethod = request.PaymentMethod;
@@ -163,7 +158,6 @@ public class OrderService : IOrderService
         {
             UserId = userId,
             BranchId = branch.BranchId,
-            UserVoucherId = request.UserVoucherId,
             AppliedVoucherId = request.AppliedVoucherId,
             Status = OrderStatus.Pending,
             Table = request.Table,
@@ -617,6 +611,41 @@ public class OrderService : IOrderService
         return true;
     }
 
+    public async Task<int> CancelAbandonedPendingOrdersAsync(TimeSpan inactivityTimeout, CancellationToken cancellationToken = default)
+    {
+        if (inactivityTimeout <= TimeSpan.Zero)
+        {
+            throw new DomainExceptions("Inactivity timeout must be greater than zero");
+        }
+
+        var staleBeforeUtc = DateTime.UtcNow.Subtract(inactivityTimeout);
+        var stalePendingOrders = await _orderRepository.GetPendingOrdersNotUpdatedSince(staleBeforeUtc);
+
+        var cancelledCount = 0;
+
+        foreach (var staleOrder in stalePendingOrders)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            var currentOrder = await _orderRepository.GetById(staleOrder.OrderId);
+            if (currentOrder == null)
+            {
+                continue;
+            }
+
+            var cancelled = await TryCancelPendingOrderForAbandonmentAsync(currentOrder, staleBeforeUtc);
+            if (cancelled)
+            {
+                cancelledCount++;
+            }
+        }
+
+        return cancelledCount;
+    }
+
     private async Task<(List<OrderDish> orderDishes, decimal totalAmount)> BuildValidatedOrderDishesAsync(int branchId, List<CreateOrderDishRequest> items)
     {
         if (items == null || items.Count == 0)
@@ -679,24 +708,24 @@ public class OrderService : IOrderService
         }
     }
 
-    private async Task RestoreVoucherUsageForCancellationAsync(Order order)
+    private async Task<bool> TryCancelPendingOrderForAbandonmentAsync(Order order, DateTime staleBeforeUtc)
     {
-        if (order.UserVoucherId.HasValue)
+        if (order.Status != OrderStatus.Pending || order.UpdatedAt > staleBeforeUtc)
         {
-            var userVoucher = await _userVoucherRepository.GetByIdAsync(order.UserVoucherId.Value)
-                ?? throw new DomainExceptions("User voucher not found for cancellation");
-
-            if (userVoucher.UserId != order.UserId)
-            {
-                throw new DomainExceptions("Voucher ownership mismatch on cancellation", "ERR_FORBIDDEN");
-            }
-
-            userVoucher.Quantity += 1;
-            userVoucher.IsAvailable = true;
-            await _userVoucherRepository.UpdateAsync(userVoucher);
-            return;
+            return false;
         }
 
+        await RestoreVoucherUsageForCancellationAsync(order);
+
+        order.Status = OrderStatus.Cancelled;
+        order.CompletionCode = null;
+        await _orderRepository.Update(order);
+
+        return true;
+    }
+
+    private async Task RestoreVoucherUsageForCancellationAsync(Order order)
+    {
         if (!order.AppliedVoucherId.HasValue)
         {
             return;
@@ -704,6 +733,17 @@ public class OrderService : IOrderService
 
         var voucher = await _voucherRepository.GetByIdAsync(order.AppliedVoucherId.Value)
             ?? throw new DomainExceptions("Voucher not found for cancellation");
+
+        if (IsSystemFundedVoucher(voucher))
+        {
+            var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(order.UserId, voucher.VoucherId)
+                ?? throw new DomainExceptions("Claimed voucher not found for this user");
+
+            userVoucher.Quantity += 1;
+            userVoucher.IsAvailable = true;
+            await _userVoucherRepository.UpdateAsync(userVoucher);
+            return;
+        }
 
         if (voucher.UsedQuantity <= 0)
         {
@@ -714,27 +754,16 @@ public class OrderService : IOrderService
         await _voucherRepository.UpdateAsync(voucher);
     }
 
-    private async Task ValidateOrderVoucherAsync(int? userVoucherId, int userId, Branch branch)
+    private async Task ValidateOrderVoucherAsync(int? appliedVoucherId, int userId, Branch branch)
     {
-        if (!userVoucherId.HasValue)
+        if (!appliedVoucherId.HasValue)
         {
             return;
         }
 
-        var userVoucher = await _userVoucherRepository.GetByIdAsync(userVoucherId.Value)
-            ?? throw new DomainExceptions("Voucher not found or do not own by you");
+        var voucher = await _voucherRepository.GetByIdAsync(appliedVoucherId.Value)
+            ?? throw new DomainExceptions("Voucher not found");
 
-        if (userVoucher.UserId != userId)
-        {
-            throw new DomainExceptions("You do not own this voucher");
-        }
-
-        if (!userVoucher.IsAvailable || userVoucher.Quantity <= 0)
-        {
-            throw new DomainExceptions("Voucher is already used or not available");
-        }
-
-        var voucher = userVoucher.Voucher ?? throw new DomainExceptions("Voucher data is invalid");
         if (!voucher.IsActive)
         {
             throw new DomainExceptions("Voucher is inactive");
@@ -743,40 +772,53 @@ public class OrderService : IOrderService
         var now = DateTime.UtcNow;
         VoucherRules.EnsureVoucherIsWithinValidDateRange(voucher, now);
 
-        // No campaign means system point voucher: it is globally applicable to any branch.
-        if (!voucher.CampaignId.HasValue)
+        if (voucher.CampaignId.HasValue)
         {
-            return;
-        }
-
-        var campaign = voucher.Campaign;
-        if (campaign == null)
-        {
-            throw new DomainExceptions("Campaign voucher is invalid");
-        }
-
-        if (campaign.CreatedByBranchId.HasValue)
-        {
-            if (branch.BranchId != campaign.CreatedByBranchId.Value)
+            var campaign = voucher.Campaign;
+            if (campaign == null)
             {
-                throw new DomainExceptions("This voucher is only applicable to a specific branch.");
+                throw new DomainExceptions("Campaign voucher is invalid");
+            }
+
+            if (campaign.CreatedByBranchId.HasValue)
+            {
+                if (branch.BranchId != campaign.CreatedByBranchId.Value)
+                {
+                    throw new DomainExceptions("This voucher is only applicable to a specific branch.");
+                }
+            }
+            else
+            {
+                var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branch.BranchId, campaign.CampaignId);
+                if (joinInfo == null || joinInfo.IsActive != true)
+                {
+                    if (campaign.CreatedByVendorId.HasValue)
+                    {
+                        throw new DomainExceptions("This branch is not included in this vendor campaign.");
+                    }
+
+                    throw new DomainExceptions("This branch has not completed campaign joining payment yet.");
+                }
+            }
+        }
+
+        if (IsSystemFundedVoucher(voucher))
+        {
+            var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, voucher.VoucherId)
+                ?? throw new DomainExceptions("You have not claimed this voucher yet");
+
+            if (!userVoucher.IsAvailable || userVoucher.Quantity <= 0)
+            {
+                throw new DomainExceptions("Voucher is already used or not available");
             }
 
             return;
         }
 
-        var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branch.BranchId, campaign.CampaignId);
-        if (joinInfo != null && joinInfo.IsActive == true)
+        if (voucher.UsedQuantity >= voucher.Quantity)
         {
-            return;
+            throw new DomainExceptions("Voucher is out of stock");
         }
-
-        if (campaign.CreatedByVendorId.HasValue)
-        {
-            throw new DomainExceptions("This branch is not included in this vendor campaign.");
-        }
-
-        throw new DomainExceptions("This branch has not completed campaign joining payment yet.");
     }
 
     private async Task EnsureUserExistsAsync(int userId)
@@ -790,13 +832,12 @@ public class OrderService : IOrderService
 
     private async Task<decimal> CalculateVendorSettlementAmountAsync(Order order)
     {
-        if (!order.UserVoucherId.HasValue)
+        if (!order.AppliedVoucherId.HasValue)
         {
             return order.FinalAmount;
         }
 
-        var userVoucher = await _userVoucherRepository.GetByIdAsync(order.UserVoucherId.Value);
-        var voucher = userVoucher?.Voucher;
+        var voucher = await _voucherRepository.GetByIdAsync(order.AppliedVoucherId.Value);
         if (voucher == null)
         {
             return order.FinalAmount;
@@ -830,37 +871,7 @@ public class OrderService : IOrderService
 
     private async Task RestoreVoucherAfterVendorRejectAsync(Order order)
     {
-        UserVoucher? usedUserVoucher = null;
-        Voucher? appliedVoucher = null;
-
-        if (order.UserVoucherId.HasValue)
-        {
-            usedUserVoucher = await _userVoucherRepository.GetByIdAsync(order.UserVoucherId.Value);
-            if (usedUserVoucher != null)
-            {
-                usedUserVoucher.Quantity += 1;
-                usedUserVoucher.IsAvailable = true;
-                await _userVoucherRepository.UpdateAsync(usedUserVoucher);
-            }
-
-            appliedVoucher = usedUserVoucher?.Voucher;
-        }
-
-        if (appliedVoucher == null && order.AppliedVoucherId.HasValue)
-        {
-            appliedVoucher = await _voucherRepository.GetByIdAsync(order.AppliedVoucherId.Value);
-        }
-
-        if (appliedVoucher == null || IsSystemFundedVoucher(appliedVoucher))
-        {
-            return;
-        }
-
-        if (appliedVoucher.UsedQuantity > 0)
-        {
-            appliedVoucher.UsedQuantity -= 1;
-            await _voucherRepository.UpdateAsync(appliedVoucher);
-        }
+        await RestoreVoucherUsageForCancellationAsync(order);
     }
 
     private static string GenerateCompletionCode()
