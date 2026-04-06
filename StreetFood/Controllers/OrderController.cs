@@ -44,14 +44,17 @@ public class OrderController : ControllerBase
     [HttpGet("my-orders")]
     [Authorize(Roles = "User")]
     [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<OrderResponseDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetMyOrders([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetMyOrders(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] BO.Entities.OrderStatus? status = null)
     {
         if (!TryGetCurrentUserId(out var userId))
         {
             return Unauthorized(new { message = "User not authenticated" });
         }
 
-        var orders = await _orderService.GetMyOrdersAsync(userId, pageNumber, pageSize);
+        var orders = await _orderService.GetMyOrdersAsync(userId, pageNumber, pageSize, status);
         return Ok(new
         {
             message = "Get orders successfully",
