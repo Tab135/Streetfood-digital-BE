@@ -15,8 +15,8 @@ public class OrderRepository : IOrderRepository
 
     public async Task<Order> Create(Order order, List<OrderDish> orderDishes) => await _orderDAO.CreateAsync(order, orderDishes);
     public async Task<Order?> GetById(int orderId) => await _orderDAO.GetByIdAsync(orderId);
-    public async Task<(List<Order> items, int totalCount)> GetByUserId(int userId, int pageNumber, int pageSize)
-        => await _orderDAO.GetByUserIdAsync(userId, pageNumber, pageSize);
+    public async Task<(List<Order> items, int totalCount)> GetByUserId(int userId, int pageNumber, int pageSize, List<OrderStatus>? statuses = null)
+        => await _orderDAO.GetByUserIdAsync(userId, pageNumber, pageSize, statuses);
     public async Task<(List<Order> items, int totalCount)> GetByBranchIds(List<int> branchIds, int pageNumber, int pageSize, List<OrderStatus>? statuses = null)
         => await _orderDAO.GetByBranchIdsAsync(branchIds, pageNumber, pageSize, statuses);
     public async Task<Order> Update(Order order, List<OrderDish>? orderDishes = null) => await _orderDAO.UpdateAsync(order, orderDishes);

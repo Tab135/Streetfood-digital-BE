@@ -159,7 +159,7 @@ public class OrderService : IOrderService
         return MapToDto(order);
     }
 
-    public async Task<PaginatedResponse<OrderResponseDto>> GetMyOrdersAsync(int userId, int pageNumber, int pageSize)
+    public async Task<PaginatedResponse<OrderResponseDto>> GetMyOrdersAsync(int userId, int pageNumber, int pageSize, OrderStatus? status = null)
     {
         await EnsureUserExistsAsync(userId);
 
@@ -173,7 +173,18 @@ public class OrderService : IOrderService
             pageSize = 10;
         }
 
-        var (orders, totalCount) = await _orderRepository.GetByUserId(userId, pageNumber, pageSize);
+        var effectiveStatuses = status.HasValue
+            ? new List<OrderStatus> { status.Value }
+            : new List<OrderStatus>
+            {
+                OrderStatus.Pending,
+                OrderStatus.AwaitingVendorConfirmation,
+                OrderStatus.Paid,
+                OrderStatus.Cancelled,
+                OrderStatus.Complete
+            };
+
+        var (orders, totalCount) = await _orderRepository.GetByUserId(userId, pageNumber, pageSize, effectiveStatuses);
         var items = orders.Select(MapToDto).ToList();
 
         return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);

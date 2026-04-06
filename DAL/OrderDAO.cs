@@ -23,7 +23,7 @@ public class OrderDAO
             .FirstOrDefaultAsync(o => o.OrderId == orderId);
     }
 
-    public async Task<(List<Order> items, int totalCount)> GetByUserIdAsync(int userId, int pageNumber, int pageSize)
+    public async Task<(List<Order> items, int totalCount)> GetByUserIdAsync(int userId, int pageNumber, int pageSize, List<OrderStatus>? statuses = null)
     {
         var query = _context.Orders
             .Where(o => o.UserId == userId)
@@ -33,6 +33,11 @@ public class OrderDAO
                     .ThenInclude(bd => bd.Dish)
             .OrderByDescending(o => o.CreatedAt)
             .AsQueryable();
+
+        if (statuses != null && statuses.Count > 0)
+        {
+            query = query.Where(o => statuses.Contains(o.Status));
+        }
 
         var totalCount = await query.CountAsync();
         var items = await query
