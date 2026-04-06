@@ -513,7 +513,7 @@ namespace StreetFood.Controllers
         /// Get all pending branch registrations (Moderator only)
         /// </summary>
         [HttpGet("pending-registrations")]
-        [Authorize(Roles = "Moderator")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> GetPendingBranchRegistrations([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] int? type = null)
         {
             try
@@ -531,7 +531,7 @@ namespace StreetFood.Controllers
         /// Get unverified branches (Moderator only)
         /// </summary>
         [HttpGet("unverified")]
-        [Authorize(Roles = "Moderator")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> GetUnverifiedBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
@@ -549,7 +549,7 @@ namespace StreetFood.Controllers
         /// Verify a branch (Moderator only)
         /// </summary>
         [HttpPut("{id}/verify")]
-        [Authorize(Roles = "Moderator")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> VerifyBranch(int id)
         {
             try
@@ -567,7 +567,7 @@ namespace StreetFood.Controllers
         /// Reject a branch registration (Moderator only)
         /// </summary>
         [HttpPut("{id}/reject")]
-        [Authorize(Roles = "Moderator")]
+        [Authorize(Roles = "Admin,Moderator")]
         public async Task<IActionResult> RejectBranchRegistration(int id, [FromBody] RejectBranchDto rejectDto)
         {
             try
