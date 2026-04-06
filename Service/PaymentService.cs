@@ -375,34 +375,57 @@ namespace Service.PaymentsService
                     return new PaymentLinkResult { Success = false, Message = "Only pending orders can be paid" };
                 }
 
-                var latestPayment = await _paymentRepo.GetLatestPaymentByOrderId(orderId);
-                if (latestPayment != null)
-                {
-                    if (latestPayment.Status == "PAID")
-                    {
-                        return new PaymentLinkResult { Success = false, Message = "This order is already paid" };
-                    }
-
-                    if (latestPayment.Status == "PENDING" && !string.IsNullOrEmpty(latestPayment.CheckoutUrl))
-                    {
-                        return new PaymentLinkResult
-                        {
-                            Success = true,
-                            Message = "Using existing pending payment link",
-                            PaymentUrl = latestPayment.CheckoutUrl,
-                            QrCode = latestPayment.CheckoutUrl,
-                            OrderCode = latestPayment.OrderCode,
-                            PaymentLinkId = latestPayment.PaymentLinkId
-                        };
-                    }
-                }
-
-                var orderCode = await GenerateUniqueOrderCodeAsync();
                 var amount = Convert.ToInt32(decimal.Round(order.FinalAmount, 0, MidpointRounding.AwayFromZero));
                 if (amount <= 0)
                 {
                     return new PaymentLinkResult { Success = false, Message = "Order amount must be greater than 0" };
                 }
+
+                var latestPayment = await _paymentRepo.GetLatestPaymentByOrderId(orderId);
+                if (latestPayment != null)
+                {
+                    if (string.Equals(latestPayment.Status, "PAID", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new PaymentLinkResult { Success = false, Message = "This order is already paid" };
+                    }
+
+                    if (string.Equals(latestPayment.Status, "PENDING", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var hasCheckoutUrl = !string.IsNullOrEmpty(latestPayment.CheckoutUrl);
+                        var hasMatchingAmount = latestPayment.Amount == amount;
+
+                        if (hasCheckoutUrl && hasMatchingAmount)
+                        {
+                            return new PaymentLinkResult
+                            {
+                                Success = true,
+                                Message = "Using existing pending payment link",
+                                PaymentUrl = latestPayment.CheckoutUrl,
+                                QrCode = latestPayment.CheckoutUrl,
+                                OrderCode = latestPayment.OrderCode,
+                                PaymentLinkId = latestPayment.PaymentLinkId
+                            };
+                        }
+
+                        if (!_isDebugMode)
+                        {
+                            try
+                            {
+                                await _payOS.PaymentRequests.CancelAsync(latestPayment.OrderCode, "Cart checkout changed", null);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex,
+                                    "Could not cancel old PayOS payment link for OrderCode={OrderCode}; proceeding to replace local payment record",
+                                    latestPayment.OrderCode);
+                            }
+                        }
+
+                        await _paymentRepo.UpdatePaymentStatus(latestPayment.OrderCode, "CANCELLED");
+                    }
+                }
+
+                var orderCode = await GenerateUniqueOrderCodeAsync();
 
                 var description = $"Thanh toan don hang {order.OrderId}";
                 var payOsDescription = BuildPayOSDescription(description, "Thanh toan don hang");

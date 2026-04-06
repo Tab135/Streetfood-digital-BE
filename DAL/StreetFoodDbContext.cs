@@ -389,6 +389,11 @@ public class StreetFoodDbContext : DbContext
                 .WithMany(uv => uv.Orders)
                 .HasForeignKey(e => e.UserVoucherId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.AppliedVoucher)
+                .WithMany()
+                .HasForeignKey(e => e.AppliedVoucherId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
           modelBuilder.Entity<Voucher>(entity =>

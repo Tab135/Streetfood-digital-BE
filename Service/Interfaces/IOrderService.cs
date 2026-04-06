@@ -7,6 +7,7 @@ namespace Service.Interfaces;
 public interface IOrderService
 {
     Task<OrderResponseDto> CreateOrderAsync(CreateOrderRequest request, int userId);
+    Task<(OrderResponseDto order, bool createdNew)> CreateOrUpdatePendingOrderForCartAsync(CreateOrderRequest request, int userId);
     Task<OrderResponseDto?> GetOrderByIdAsync(int orderId, int userId);
     Task<PaginatedResponse<OrderResponseDto>> GetMyOrdersAsync(int userId, int pageNumber, int pageSize, OrderStatus? status = null);
     Task<PaginatedResponse<OrderResponseDto>> GetVendorOrdersAsync(int vendorUserId, int pageNumber, int pageSize, OrderStatus? status = null);

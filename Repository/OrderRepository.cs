@@ -17,6 +17,8 @@ public class OrderRepository : IOrderRepository
     public async Task<Order?> GetById(int orderId) => await _orderDAO.GetByIdAsync(orderId);
     public async Task<(List<Order> items, int totalCount)> GetByUserId(int userId, int pageNumber, int pageSize, List<OrderStatus>? statuses = null)
         => await _orderDAO.GetByUserIdAsync(userId, pageNumber, pageSize, statuses);
+    public async Task<Order?> GetLatestPendingByUserAndBranch(int userId, int branchId)
+        => await _orderDAO.GetLatestPendingByUserAndBranchAsync(userId, branchId);
     public async Task<(List<Order> items, int totalCount)> GetByBranchIds(List<int> branchIds, int pageNumber, int pageSize, List<OrderStatus>? statuses = null)
         => await _orderDAO.GetByBranchIdsAsync(branchIds, pageNumber, pageSize, statuses);
     public async Task<Order> Update(Order order, List<OrderDish>? orderDishes = null) => await _orderDAO.UpdateAsync(order, orderDishes);

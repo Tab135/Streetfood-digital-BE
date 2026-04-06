@@ -307,6 +307,7 @@ public class CartService : ICartService
         {
             BranchId = cart.BranchId.Value,
             UserVoucherId = redeemedUserVoucher?.UserVoucherId,
+            AppliedVoucherId = request.VoucherId,
             Table = request.Table,
             PaymentMethod = request.PaymentMethod,
             DiscountAmount = discountAmount,
@@ -318,36 +319,43 @@ public class CartService : ICartService
             }).ToList()
         };
 
-        var order = await _orderService.CreateOrderAsync(createOrderRequest, userId);
+        var (order, createdNewOrder) = await _orderService.CreateOrUpdatePendingOrderForCartAsync(createOrderRequest, userId);
         var payment = await _paymentService.CreateOrderPaymentLink(userId, order.OrderId);
 
         if (!payment.Success)
         {
-            await _orderService.DeleteOrderAsync(order.OrderId, userId);
+            if (createdNewOrder)
+            {
+                await _orderService.DeleteOrderAsync(order.OrderId, userId);
+            }
+
             throw new DomainExceptions(payment.Message ?? "Failed to create payment link for order");
         }
 
-        if (redeemedUserVoucher != null)
+        if (createdNewOrder)
         {
-            redeemedUserVoucher.Quantity -= 1;
-            if (redeemedUserVoucher.Quantity <= 0)
+            if (redeemedUserVoucher != null)
             {
-                redeemedUserVoucher.Quantity = 0;
-                redeemedUserVoucher.IsAvailable = false;
+                redeemedUserVoucher.Quantity -= 1;
+                if (redeemedUserVoucher.Quantity <= 0)
+                {
+                    redeemedUserVoucher.Quantity = 0;
+                    redeemedUserVoucher.IsAvailable = false;
+                }
+
+                await _userVoucherRepository.UpdateAsync(redeemedUserVoucher);
             }
 
-            await _userVoucherRepository.UpdateAsync(redeemedUserVoucher);
-        }
-
-        if (redeemedVendorVoucher != null)
-        {
-            redeemedVendorVoucher.UsedQuantity += 1;
-            if (redeemedVendorVoucher.UsedQuantity > redeemedVendorVoucher.Quantity)
+            if (redeemedVendorVoucher != null)
             {
-                throw new DomainExceptions("Voucher is out of stock");
-            }
+                redeemedVendorVoucher.UsedQuantity += 1;
+                if (redeemedVendorVoucher.UsedQuantity > redeemedVendorVoucher.Quantity)
+                {
+                    throw new DomainExceptions("Voucher is out of stock");
+                }
 
-            await _voucherRepository.UpdateAsync(redeemedVendorVoucher);
+                await _voucherRepository.UpdateAsync(redeemedVendorVoucher);
+            }
         }
 
         // Cart is intentionally NOT cleared here.

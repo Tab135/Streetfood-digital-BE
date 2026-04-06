@@ -258,18 +258,18 @@ namespace Ielts_System.Controllers.Payments
             return Ok(new { message = "Webhook URL registered successfully" });
         }
 
-        // [HttpGet("cancel")]
-        // [AllowAnonymous]
-        // public IActionResult PaymentCancel([FromQuery] long orderCode)
-        // {
-        //     _logger.LogInformation("Payment cancelled: OrderCode={OrderCode}", orderCode);
+        [HttpGet("cancel")]
+        [AllowAnonymous]
+        public IActionResult PaymentCancel([FromQuery] long orderCode)
+        {
+            _logger.LogInformation("Payment cancelled: OrderCode={OrderCode}", orderCode);
 
-        //     return Ok(new
-        //     {
-        //         message = "Payment was cancelled",
-        //         orderCode = orderCode
-        //     });
-        // }
+            return Ok(new
+            {
+                message = "Payment was cancelled",
+                orderCode
+            });
+        }
 
         [HttpGet("user/balance")]
         [Authorize(Roles = "User")]

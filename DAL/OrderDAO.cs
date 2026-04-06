@@ -48,6 +48,21 @@ public class OrderDAO
         return (items, totalCount);
     }
 
+    public async Task<Order?> GetLatestPendingByUserAndBranchAsync(int userId, int branchId)
+    {
+        return await _context.Orders
+            .Include(o => o.User)
+            .Include(o => o.Branch)
+            .Include(o => o.OrderDishes)
+                .ThenInclude(od => od.BranchDish)
+                    .ThenInclude(bd => bd.Dish)
+            .Where(o => o.UserId == userId
+                     && o.BranchId == branchId
+                     && o.Status == OrderStatus.Pending)
+            .OrderByDescending(o => o.CreatedAt)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<(List<Order> items, int totalCount)> GetByBranchIdsAsync(List<int> branchIds, int pageNumber, int pageSize, List<OrderStatus>? statuses = null)
     {
         var query = _context.Orders

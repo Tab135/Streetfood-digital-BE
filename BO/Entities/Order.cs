@@ -19,6 +19,9 @@ public class Order
     [ForeignKey("UserVoucher")]
     public int? UserVoucherId { get; set; }
 
+    [ForeignKey("AppliedVoucher")]
+    public int? AppliedVoucherId { get; set; }
+
     public OrderStatus Status { get; set; } = OrderStatus.Pending;
 
     [StringLength(255)]
@@ -46,6 +49,7 @@ public class Order
     public virtual User User { get; set; }
     public virtual Branch Branch { get; set; }
     public virtual UserVoucher? UserVoucher { get; set; }
+    public virtual Voucher? AppliedVoucher { get; set; }
     public virtual ICollection<OrderDish> OrderDishes { get; set; } = new List<OrderDish>();
     public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
 }

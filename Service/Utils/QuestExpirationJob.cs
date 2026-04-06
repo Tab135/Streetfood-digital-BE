@@ -5,14 +5,7 @@ using System.Threading.Tasks;
 
 namespace Service
 {
-    /// <summary>
-    /// Hangfire job that expires all IN_PROGRESS campaign quest enrollments
-    /// when a campaign's EndDate is reached.
-    ///
-    /// Idempotent: if the campaign's EndDate was extended after this job was
-    /// scheduled, the check below aborts early — the new job (scheduled for
-    /// the updated EndDate) will handle it instead.
-    /// </summary>
+
     public class QuestExpirationJob : IQuestExpirationJob
     {
         private readonly IUserQuestRepository _userQuestRepository;

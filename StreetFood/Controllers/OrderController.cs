@@ -142,6 +142,45 @@ public class OrderController : ControllerBase
             message = "Get manager orders successfully",
             data = orders
         });
+
+    [HttpPut("{id}")]
+    [Authorize(Roles = "User")]
+    [ProducesResponseType(typeof(ApiResponse<OrderResponseDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> UpdateOrder(int id, [FromBody] UpdateOrderRequest request)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var updated = await _orderService.UpdateOrderAsync(id, request, userId);
+        return Ok(new
+        {
+            message = "Order updated successfully",
+            data = updated
+        });
+    }
+
+    [HttpPut("{id}/cancel")]
+    [Authorize(Roles = "User")]
+    [ProducesResponseType(typeof(ApiResponse<OrderResponseDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> CancelOrder(int id)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var updated = await _orderService.UpdateOrderAsync(
+            id,
+            new UpdateOrderRequest { Status = BO.Entities.OrderStatus.Cancelled },
+            userId);
+
+        return Ok(new
+        {
+            message = "Order cancelled successfully",
+            data = updated
+        });
     }
 
     [HttpPut("vendor/orders/{id}/decision")]
