@@ -75,7 +75,6 @@ namespace StreetFood
             builder.Services.AddHostedService(sp => sp.GetRequiredService<SettingService>());
             builder.Services.AddHostedService<SubscriptionExpiryService>();
             builder.Services.AddHostedService<TierResetService>();
-            builder.Services.AddHostedService<CampaignExpiryService>();
             // Register DAL
             builder.Services.AddScoped<UserDAO>();
             builder.Services.AddScoped<OtpVerifyDAO>();
@@ -182,6 +181,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
         builder.Services.AddScoped<Service.Interfaces.IQuestService, Service.QuestService>();
         builder.Services.AddScoped<Service.Interfaces.IQuestProgressService, Service.QuestProgressService>();
         builder.Services.AddScoped<Service.Interfaces.IQuestExpirationJob, Service.QuestExpirationJob>();
+        builder.Services.AddScoped<Service.Interfaces.ICampaignStatusJob, Service.CampaignStatusJob>();
 
         // Hangfire — stores jobs in the same PostgreSQL DB
         builder.Services.AddHangfire(config => config
@@ -302,6 +302,16 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             app.UseMiddleware<StreetFood.Middleware.ResponseMiddleware>();
             app.UseAuthentication();
             app.UseAuthorization();
+
+            // Safety-net pass for missed schedules or historical data drift.
+            var recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
+            recurringJobManager.AddOrUpdate<ICampaignStatusJob>(
+                "campaign-status-reconcile",
+                job => job.ReconcileCampaignStatusesAsync(),
+                Cron.Hourly);
+
+            var backgroundJobClient = app.Services.GetRequiredService<IBackgroundJobClient>();
+            backgroundJobClient.Enqueue<ICampaignStatusJob>(job => job.ReconcileCampaignStatusesAsync());
 
             app.UseHangfireDashboard("/hangfire", new DashboardOptions
             {

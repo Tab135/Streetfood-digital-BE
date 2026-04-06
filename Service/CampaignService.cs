@@ -18,19 +18,44 @@ namespace Service
         private readonly IBranchRepository _branchRepo;
         private readonly IVendorRepository _vendorRepo;
         private readonly Service.PaymentsService.IPaymentService _paymentService;
+        private readonly IBackgroundJobClient _backgroundJobClient;
 
         public CampaignService(
             ICampaignRepository campaignRepo,
             IBranchCampaignRepository branchCampaignRepo,
             IBranchRepository branchRepo,
             IVendorRepository vendorRepo,
-            Service.PaymentsService.IPaymentService paymentService)
+            Service.PaymentsService.IPaymentService paymentService,
+            IBackgroundJobClient backgroundJobClient)
         {
             _campaignRepo = campaignRepo;
             _branchCampaignRepo = branchCampaignRepo;
             _branchRepo = branchRepo;
             _vendorRepo = vendorRepo;
             _paymentService = paymentService;
+            _backgroundJobClient = backgroundJobClient;
+        }
+
+        private static DateTimeOffset ResolveHangfireRunAt(DateTime targetUtc)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var normalizedTargetUtc = targetUtc.Kind == DateTimeKind.Utc
+                ? targetUtc
+                : DateTime.SpecifyKind(targetUtc, DateTimeKind.Utc);
+
+            var target = new DateTimeOffset(normalizedTargetUtc);
+            return target > now ? target : now.AddSeconds(5);
+        }
+
+        private void ScheduleCampaignStatusJobs(int campaignId, DateTime startDate, DateTime endDate)
+        {
+            _backgroundJobClient.Schedule<ICampaignStatusJob>(
+                job => job.ActivateCampaignAsync(campaignId),
+                ResolveHangfireRunAt(startDate));
+
+            _backgroundJobClient.Schedule<ICampaignStatusJob>(
+                job => job.DeactivateCampaignAsync(campaignId),
+                ResolveHangfireRunAt(endDate));
         }
 
         public async Task<CampaignResponseDto> CreateVendorCampaignAsync(int userId, CreateVendorCampaignDto dto)
@@ -69,6 +94,8 @@ namespace Service
                     IsActive = campaign.IsActive
                 });
             }
+
+            ScheduleCampaignStatusJobs(campaign.CampaignId, campaign.StartDate, campaign.EndDate);
 
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
@@ -562,10 +589,12 @@ namespace Service
             };
             await _campaignRepo.CreateAsync(campaign);
 
+            ScheduleCampaignStatusJobs(campaign.CampaignId, campaign.StartDate, campaign.EndDate);
+
             // Schedule quest expiration to fire exactly at EndDate
-            BackgroundJob.Schedule<IQuestExpirationJob>(
+            _backgroundJobClient.Schedule<IQuestExpirationJob>(
                 job => job.ExpireCampaignQuestsAsync(campaign.CampaignId),
-                campaign.EndDate);
+                ResolveHangfireRunAt(campaign.EndDate));
 
             return await GetCampaignByIdAsync(campaign.CampaignId);
         }
@@ -809,6 +838,10 @@ namespace Service
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
             if (campaign == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
 
+            var oldStartDate = campaign.StartDate;
+            var oldEndDate = campaign.EndDate;
+            var oldIsActive = campaign.IsActive;
+
             if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null)
             {
                 if (role != "Admin")
@@ -853,15 +886,24 @@ namespace Service
             if (dto.IsActive != null) campaign.IsActive = dto.IsActive.Value;
             campaign.UpdatedAt = DateTime.UtcNow;
 
+            var statusFieldsChanged = oldStartDate != campaign.StartDate
+                                   || oldEndDate != campaign.EndDate
+                                   || oldIsActive != campaign.IsActive;
+
             await _campaignRepo.UpdateAsync(campaign);
+
+            if (statusFieldsChanged)
+            {
+                ScheduleCampaignStatusJobs(campaign.CampaignId, campaign.StartDate, campaign.EndDate);
+            }
 
             // If EndDate changed on a system campaign, schedule a new expiration job.
             // The previously scheduled job will self-abort (EndDate > UtcNow guard).
             if (endDateChanged && campaign.CreatedByVendorId == null)
             {
-                BackgroundJob.Schedule<IQuestExpirationJob>(
+                _backgroundJobClient.Schedule<IQuestExpirationJob>(
                     job => job.ExpireCampaignQuestsAsync(campaign.CampaignId),
-                    campaign.EndDate);
+                    ResolveHangfireRunAt(campaign.EndDate));
             }
 
             return await GetCampaignByIdAsync(campaign.CampaignId);
