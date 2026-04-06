@@ -21,6 +21,8 @@ namespace BO.DTO.Branch
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public bool IsVerified { get; set; }
+        public bool IsSubscribed { get; set; }
+
         public double AvgRating { get; set; }
         public int TotalReviewCount { get; set; }
         public bool IsActive { get; set; }

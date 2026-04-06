@@ -247,6 +247,7 @@ namespace StreetFood.Controllers
                 CreatedAt = full.CreatedAt,
                 UpdatedAt = full.UpdatedAt,
                 IsVerified = full.IsVerified,
+                IsSubscribed = full.IsSubscribed,
                 AvgRating = full.AvgRating,
                 IsActive = full.IsActive,
 
