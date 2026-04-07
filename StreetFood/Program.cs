@@ -86,6 +86,7 @@ namespace StreetFood
             builder.Services.AddScoped<UserDietaryPreferenceDAO>();
             builder.Services.AddScoped<VendorDietaryPreferenceDAO>();
             builder.Services.AddScoped<VendorDAO>();
+            builder.Services.AddScoped<VendorDashboardDAO>();
             builder.Services.AddScoped<BranchDAO>();
             builder.Services.AddScoped<FeedbackTagDAO>();
             builder.Services.AddScoped<FeedbackDAO>();
@@ -145,6 +146,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<IUserDietaryPreferenceService, UserDietaryPreferenceService>();
             builder.Services.AddScoped<IVendorDietaryPreferenceService, VendorDietaryPreferenceService>();
             builder.Services.AddScoped<IVendorService, VendorService>();
+            builder.Services.AddScoped<IVendorDashboardService, VendorDashboardService>();
             builder.Services.AddScoped<ITierService, TierService>();
             builder.Services.AddScoped<IBranchService, BranchService>();
             builder.Services.AddScoped<IFeedbackService, FeedbackService>();

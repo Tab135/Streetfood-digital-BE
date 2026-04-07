@@ -1,0 +1,151 @@
+using BO.DTO.Dashboard;
+using BO.Entities;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace DAL
+{
+    public class VendorDashboardDAO
+    {
+        private readonly StreetFoodDbContext _context;
+
+        public VendorDashboardDAO(StreetFoodDbContext context)
+        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+
+        public async Task<int?> GetVendorIdByUserIdAsync(int userId)
+        {
+            var vendor = await _context.Vendors.FirstOrDefaultAsync(v => v.UserId == userId);
+            return vendor?.VendorId;
+        }
+
+        public async Task<RevenueDashboardDto> GetRevenueDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
+        {
+            var branchIds = await _context.Branches
+                .Where(b => b.VendorId == vendorId)
+                .Select(b => b.BranchId)
+                .ToListAsync();
+
+            if (!branchIds.Any())
+            {
+                return new RevenueDashboardDto();
+            }
+
+            // Using UTC dates just in case, adjusting boundaries:
+            // Ensure from is start of day, and to is end of day if needed but user provides boundaries.
+            var completedOrdersQuery = await _context.Orders
+                .Where(o => branchIds.Contains(o.BranchId) 
+                            && o.Status == OrderStatus.Complete 
+                            && o.CreatedAt >= fromDate 
+                            && o.CreatedAt <= toDate)
+                .ToListAsync();
+
+            decimal totalRevenue = completedOrdersQuery.Sum(o => o.FinalAmount);
+            int totalOrders = completedOrdersQuery.Count;
+
+            var dailyRevenues = completedOrdersQuery
+                .GroupBy(o => o.CreatedAt.Date)
+                .Select(g => new DailyRevenueDto
+                {
+                    Date = g.Key,
+                    Revenue = g.Sum(o => o.FinalAmount),
+                    OrderCount = g.Count()
+                })
+                .OrderBy(d => d.Date)
+                .ToList();
+
+            return new RevenueDashboardDto
+            {
+                TotalRevenue = totalRevenue,
+                TotalOrders = totalOrders,
+                DailyRevenues = dailyRevenues
+            };
+        }
+
+        public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId)
+        {
+            var branchIds = await _context.Branches
+                .Where(b => b.VendorId == vendorId)
+                .Select(b => b.BranchId)
+                .ToListAsync();
+
+            if (!branchIds.Any())
+            {
+                return new VoucherDashboardDto();
+            }
+
+            var voucherUsages = await _context.Orders
+                .Where(o => branchIds.Contains(o.BranchId) 
+                            && o.Status == OrderStatus.Complete 
+                            && o.AppliedVoucherId != null
+                            && o.AppliedVoucher!.Campaign != null 
+                            && o.AppliedVoucher.Campaign.CreatedByVendorId == vendorId)
+                .Include(o => o.AppliedVoucher)
+                .GroupBy(o => new { o.AppliedVoucher!.Type, o.AppliedVoucher.Name })
+                .Select(g => new VoucherUsageDto
+                {
+                    VoucherType = g.Key.Type,
+                    VoucherName = g.Key.Name,
+                    UsageCount = g.Count()
+                })
+                .ToListAsync();
+
+            return new VoucherDashboardDto
+            {
+                VoucherUsages = voucherUsages
+            };
+        }
+
+        public async Task<DishDashboardDto> GetDishDashboardAsync(int vendorId)
+        {
+            var allDishes = await _context.Dishes
+                .Where(d => d.VendorId == vendorId)
+                .ToListAsync();
+
+            var branchIds = await _context.Branches
+                .Where(b => b.VendorId == vendorId)
+                .Select(b => b.BranchId)
+                .ToListAsync();
+
+            if (!allDishes.Any())
+            {
+                return new DishDashboardDto();
+            }
+            
+            var quantityDict = new System.Collections.Generic.Dictionary<int, int>();
+
+            if (branchIds.Any())
+            {
+                var topDishesQuery = await _context.OrderDishes
+                    .Where(od => branchIds.Contains(od.BranchId) && od.Order.Status == OrderStatus.Complete)
+                    .GroupBy(od => od.DishId)
+                    .Select(g => new
+                    {
+                        DishId = g.Key,
+                        TotalQuantityOrdered = g.Sum(od => od.Quantity)
+                    })
+                    .ToListAsync();
+                    
+                quantityDict = topDishesQuery.ToDictionary(q => q.DishId, q => q.TotalQuantityOrdered);
+            }
+
+            var topDishes = allDishes.Select(d => new TopDishDto
+                {
+                    DishId = d.DishId,
+                    DishName = d.Name,
+                    TotalQuantityOrdered = quantityDict.ContainsKey(d.DishId) ? quantityDict[d.DishId] : 0
+                })
+                .OrderByDescending(d => d.TotalQuantityOrdered)
+                .ThenBy(d => d.DishName)
+                .ToList();
+
+            return new DishDashboardDto
+            {
+                TopDishes = topDishes
+            };
+        }
+    }
+}
