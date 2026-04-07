@@ -318,7 +318,19 @@ public class CartService : ICartService
             }).ToList()
         };
 
-        var (order, createdNewOrder) = await _orderService.CreateOrUpdatePendingOrderForCartAsync(createOrderRequest, userId);
+        var (order, createdNewOrder, previousAppliedVoucherId) = await _orderService.CreateOrUpdatePendingOrderForCartAsync(createOrderRequest, userId);
+
+        if (!createdNewOrder)
+        {
+            await ReconcileVoucherUsageAfterCheckoutAsync(
+                userId,
+                request.VoucherId,
+                previousAppliedVoucherId,
+                false,
+                redeemedUserVoucher,
+                redeemedVendorVoucher);
+        }
+
         var payment = await _paymentService.CreateOrderPaymentLink(userId, order.OrderId);
 
         if (!payment.Success)
@@ -333,28 +345,13 @@ public class CartService : ICartService
 
         if (createdNewOrder)
         {
-            if (redeemedUserVoucher != null)
-            {
-                redeemedUserVoucher.Quantity -= 1;
-                if (redeemedUserVoucher.Quantity <= 0)
-                {
-                    redeemedUserVoucher.Quantity = 0;
-                    redeemedUserVoucher.IsAvailable = false;
-                }
-
-                await _userVoucherRepository.UpdateAsync(redeemedUserVoucher);
-            }
-
-            if (redeemedVendorVoucher != null)
-            {
-                redeemedVendorVoucher.UsedQuantity += 1;
-                if (redeemedVendorVoucher.UsedQuantity > redeemedVendorVoucher.Quantity)
-                {
-                    throw new DomainExceptions("Voucher is out of stock");
-                }
-
-                await _voucherRepository.UpdateAsync(redeemedVendorVoucher);
-            }
+            await ReconcileVoucherUsageAfterCheckoutAsync(
+                userId,
+                request.VoucherId,
+                previousAppliedVoucherId,
+                true,
+                redeemedUserVoucher,
+                redeemedVendorVoucher);
         }
 
         // Cart is intentionally NOT cleared here.
@@ -366,6 +363,123 @@ public class CartService : ICartService
             Order = order,
             Payment = payment
         };
+    }
+
+    private async Task ReconcileVoucherUsageAfterCheckoutAsync(
+        int userId,
+        int? requestedVoucherId,
+        int? previousAppliedVoucherId,
+        bool createdNewOrder,
+        BO.Entities.UserVoucher? selectedUserVoucher,
+        BO.Entities.Voucher? selectedVendorVoucher)
+    {
+        if (createdNewOrder)
+        {
+            await ConsumeSelectedVoucherUsageAsync(selectedUserVoucher, selectedVendorVoucher);
+            return;
+        }
+
+        if (previousAppliedVoucherId == requestedVoucherId)
+        {
+            return;
+        }
+
+        if (previousAppliedVoucherId.HasValue)
+        {
+            await RestoreVoucherUsageAsync(userId, previousAppliedVoucherId.Value);
+        }
+
+        if (!requestedVoucherId.HasValue)
+        {
+            return;
+        }
+
+        if (selectedUserVoucher == null && selectedVendorVoucher == null)
+        {
+            var selectedVoucher = await _voucherRepository.GetByIdAsync(requestedVoucherId.Value)
+                ?? throw new DomainExceptions("Voucher not found");
+
+            if (IsSystemFundedVoucher(selectedVoucher))
+            {
+                selectedUserVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, selectedVoucher.VoucherId)
+                    ?? throw new DomainExceptions("You have not claimed this voucher yet");
+            }
+            else
+            {
+                selectedVendorVoucher = selectedVoucher;
+            }
+        }
+
+        await ConsumeSelectedVoucherUsageAsync(selectedUserVoucher, selectedVendorVoucher);
+    }
+
+    private async Task ConsumeSelectedVoucherUsageAsync(
+        BO.Entities.UserVoucher? selectedUserVoucher,
+        BO.Entities.Voucher? selectedVendorVoucher)
+    {
+        if (selectedUserVoucher != null)
+        {
+            selectedUserVoucher.Quantity -= 1;
+            if (selectedUserVoucher.Quantity <= 0)
+            {
+                selectedUserVoucher.Quantity = 0;
+                selectedUserVoucher.IsAvailable = false;
+            }
+
+            await _userVoucherRepository.UpdateAsync(selectedUserVoucher);
+        }
+
+        if (selectedVendorVoucher != null)
+        {
+            selectedVendorVoucher.UsedQuantity += 1;
+            if (selectedVendorVoucher.UsedQuantity > selectedVendorVoucher.Quantity)
+            {
+                throw new DomainExceptions("Voucher is out of stock");
+            }
+
+            await _voucherRepository.UpdateAsync(selectedVendorVoucher);
+        }
+    }
+
+    private async Task RestoreVoucherUsageAsync(int userId, int voucherId)
+    {
+        var voucher = await _voucherRepository.GetByIdAsync(voucherId)
+            ?? throw new DomainExceptions("Voucher not found for checkout update");
+
+        if (IsSystemFundedVoucher(voucher))
+        {
+            var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, voucher.VoucherId)
+                ?? throw new DomainExceptions("Claimed voucher not found for this user");
+
+            userVoucher.Quantity += 1;
+            userVoucher.IsAvailable = true;
+            await _userVoucherRepository.UpdateAsync(userVoucher);
+            return;
+        }
+
+        if (voucher.UsedQuantity <= 0)
+        {
+            return;
+        }
+
+        voucher.UsedQuantity -= 1;
+        await _voucherRepository.UpdateAsync(voucher);
+    }
+
+    private static bool IsSystemFundedVoucher(BO.Entities.Voucher voucher)
+    {
+        if (!voucher.CampaignId.HasValue)
+        {
+            return true;
+        }
+
+        var campaign = voucher.Campaign;
+        if (campaign == null)
+        {
+            return false;
+        }
+
+        return !campaign.CreatedByBranchId.HasValue && !campaign.CreatedByVendorId.HasValue;
     }
 
     private async Task EnsureUserExistsAsync(int userId)

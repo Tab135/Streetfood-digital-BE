@@ -102,7 +102,7 @@ public class OrderService : IOrderService
         return MapToDto(created);
     }
 
-    public async Task<(OrderResponseDto order, bool createdNew)> CreateOrUpdatePendingOrderForCartAsync(CreateOrderRequest request, int userId)
+    public async Task<(OrderResponseDto order, bool createdNew, int? previousAppliedVoucherId)> CreateOrUpdatePendingOrderForCartAsync(CreateOrderRequest request, int userId)
     {
         await EnsureUserExistsAsync(userId);
         var branch = await _branchRepository.GetByIdAsync(request.BranchId)
@@ -142,6 +142,8 @@ public class OrderService : IOrderService
 
         if (existingPendingOrder != null)
         {
+            var previousAppliedVoucherId = existingPendingOrder.AppliedVoucherId;
+
             existingPendingOrder.AppliedVoucherId = request.AppliedVoucherId;
             existingPendingOrder.Table = request.Table;
             existingPendingOrder.PaymentMethod = request.PaymentMethod;
@@ -151,7 +153,7 @@ public class OrderService : IOrderService
             existingPendingOrder.IsTakeAway = request.IsTakeAway;
 
             var updated = await _orderRepository.Update(existingPendingOrder, orderDishes);
-            return (MapToDto(updated), false);
+            return (MapToDto(updated), false, previousAppliedVoucherId);
         }
 
         var order = new Order
@@ -171,7 +173,7 @@ public class OrderService : IOrderService
         };
 
         var created = await _orderRepository.Create(order, orderDishes);
-        return (MapToDto(created), true);
+        return (MapToDto(created), true, null);
     }
 
     public async Task<OrderResponseDto?> GetOrderByIdAsync(int orderId, int userId)
