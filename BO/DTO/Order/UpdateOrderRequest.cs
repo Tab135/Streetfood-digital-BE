@@ -10,7 +10,6 @@ public class UpdateOrderRequest
     public string? PaymentMethod { get; set; }
     public decimal? DiscountAmount { get; set; }
     public bool? IsTakeAway { get; set; }
-    public DateTime? LockedAt { get; set; }
 
     public List<CreateOrderDishRequest>? Items { get; set; }
 }

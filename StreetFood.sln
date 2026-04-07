@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Repository", "Repository\Re
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Service", "Service\Service.csproj", "{53B8328F-76F1-47BE-9B09-FB303AD258D5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreetFood.Tests", "StreetFood.Tests\StreetFood.Tests.csproj", "{204CE76F-3519-4E1A-A05F-F8F587EAA344}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{53B8328F-76F1-47BE-9B09-FB303AD258D5}.Release|x64.Build.0 = Release|Any CPU
 		{53B8328F-76F1-47BE-9B09-FB303AD258D5}.Release|x86.ActiveCfg = Release|Any CPU
 		{53B8328F-76F1-47BE-9B09-FB303AD258D5}.Release|x86.Build.0 = Release|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Debug|x64.Build.0 = Debug|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Debug|x86.Build.0 = Debug|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Release|Any CPU.Build.0 = Release|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Release|x64.ActiveCfg = Release|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Release|x64.Build.0 = Release|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Release|x86.ActiveCfg = Release|Any CPU
+		{204CE76F-3519-4E1A-A05F-F8F587EAA344}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

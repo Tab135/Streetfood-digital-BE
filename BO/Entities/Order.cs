@@ -37,7 +37,6 @@ public class Order
     public int? OrderXP { get; set; }
 
     public bool IsTakeAway { get; set; }
-    public DateTime? LockedAt { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

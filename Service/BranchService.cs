@@ -242,6 +242,31 @@ namespace Service
             var (branches, totalCount) = await _branchRepository.GetAllAsync(pageNumber, pageSize);
             var requests = await _branchRepository.GetRegisterRequestsByBranchIdsAsync(branches.Select(b => b.BranchId).ToList());
             var items = branches.Select(b => MapToResponseDto(b, requests.GetValueOrDefault(b.BranchId))).ToList();
+
+            var verifierIds = items
+                .Where(i => i.VerifiedBy.HasValue)
+                .Select(i => i.VerifiedBy!.Value)
+                .Distinct()
+                .ToList();
+
+            if (verifierIds.Count > 0)
+            {
+                var verifierUsernames = new Dictionary<int, string?>();
+                foreach (var verifierId in verifierIds)
+                {
+                    var verifier = await _userRepository.GetUserById(verifierId);
+                    verifierUsernames[verifierId] = verifier?.UserName;
+                }
+
+                foreach (var item in items)
+                {
+                    if (item.VerifiedBy.HasValue && verifierUsernames.TryGetValue(item.VerifiedBy.Value, out var username))
+                    {
+                        item.VerifiedByUserName = username;
+                    }
+                }
+            }
+
             return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
@@ -467,6 +492,7 @@ namespace Service
                     LicenseUrl = r.LicenseUrl,
                     Type = r.Type,
                     Status = r.Status,
+                    VerifiedBy = r.VerifiedBy,
                     RejectReason = r.RejectReason,
                     CreatedAt = r.CreatedAt,
                     UpdatedAt = r.UpdatedAt,
@@ -508,8 +534,10 @@ namespace Service
             return new PaginatedResponse<PendingRegistrationDto>(items, totalCount, pageNumber, pageSize);
         }
 
-        public async Task<bool> VerifyBranchAsync(int branchId)
+        public async Task<bool> VerifyBranchAsync(int branchId, int verifierUserId)
         {
+            await EnsureVerifierIsAdminOrModeratorAsync(verifierUserId);
+
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
@@ -561,6 +589,7 @@ namespace Service
             if (registrationRequest != null)
             {
                 registrationRequest.Status = RegisterVendorStatusEnum.Accept;
+                registrationRequest.VerifiedBy = verifierUserId;
                 registrationRequest.UpdatedAt = DateTime.UtcNow;
                 await _branchRepository.UpdateBranchRequestAsync(registrationRequest);
             }
@@ -583,8 +612,10 @@ namespace Service
             return true;
         }
 
-        public async Task<bool> RejectBranchRegistrationAsync(int branchId, string rejectionReason)
+        public async Task<bool> RejectBranchRegistrationAsync(int branchId, string rejectionReason, int verifierUserId)
         {
+            await EnsureVerifierIsAdminOrModeratorAsync(verifierUserId);
+
             var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
             if (registrationRequest == null)
             {
@@ -592,6 +623,7 @@ namespace Service
             }
 
             registrationRequest.Status = RegisterVendorStatusEnum.Reject;
+            registrationRequest.VerifiedBy = verifierUserId;
             registrationRequest.RejectReason = rejectionReason;
             registrationRequest.UpdatedAt = DateTime.UtcNow;
             await _branchRepository.UpdateBranchRequestAsync(registrationRequest);
@@ -673,6 +705,7 @@ namespace Service
                 TierName = branch.Tier?.Name ?? "Silver", // Default to Silver if null
                 LicenseUrls = licenseUrls,
                 LicenseStatus = licenseRequest?.Status.ToString(),
+                VerifiedBy = licenseRequest?.VerifiedBy,
                 LicenseRejectReason = licenseRequest?.RejectReason
             };
         }
@@ -899,6 +932,20 @@ namespace Service
 
             var (items, totalCount) = await _branchRepository.GetSimilarBranchesByDishesAsync(branchId, pageNumber, pageSize);
             return new PaginatedResponse<SimilarBranchResponseDto>(items, totalCount, pageNumber, pageSize);
+        }
+
+        private async Task EnsureVerifierIsAdminOrModeratorAsync(int verifierUserId)
+        {
+            var verifier = await _userRepository.GetUserById(verifierUserId);
+            if (verifier == null)
+            {
+                throw new DomainExceptions("Không tìm thấy người xác minh");
+            }
+
+            if (verifier.Role != Role.Admin && verifier.Role != Role.Moderator)
+            {
+                throw new DomainExceptions("Chỉ Admin hoặc Moderator mới có quyền duyệt chi nhánh");
+            }
         }
 
         // Helper method

@@ -20,6 +20,8 @@ namespace BO.Entities
         [Required]
         public RegisterVendorStatusEnum Status { get; set; }
 
+        public int? VerifiedBy { get; set; }
+
         public string? RejectReason { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

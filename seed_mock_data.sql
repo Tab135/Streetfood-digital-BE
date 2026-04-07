@@ -433,16 +433,16 @@ INSERT INTO "Orders" (
     "OrderId", "UserId", "BranchId", "UserVoucherId", "Status",
     "Table", "PaymentMethod", "CompletionCode",
     "TotalAmount", "DiscountAmount", "FinalAmount",
-    "IsTakeAway", "LockedAt", "CreatedAt", "UpdatedAt"
+    "IsTakeAway", "CreatedAt", "UpdatedAt"
 ) VALUES
 -- Completed orders
-(1, 7,  1, 2,    'Complete', NULL,     'cash',  'DONE2501', 95000,  20000, 75000,  true,  NULL, NOW() - INTERVAL '5 days',  NOW() - INTERVAL '5 days'),
-(2, 8,  3, NULL, 'Complete', 'Bàn 3', 'cash',  'DONE2502', 140000, NULL,  140000, false, NULL, NOW() - INTERVAL '3 days',  NOW() - INTERVAL '3 days'),
-(3, 9,  4, NULL, 'Complete', NULL,     'payos', 'DONE2503', 58000,  NULL,  58000,  true,  NULL, NOW() - INTERVAL '2 days',  NOW() - INTERVAL '2 days'),
--- Paid (locked, awaiting pickup/serve)
-(4, 10, 1, NULL, 'Paid',     'Bàn 1', 'cash',  NULL,       110000, NULL,  110000, false, NOW() - INTERVAL '30 minutes', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '30 minutes'),
+(1, 7,  1, 2,    'Complete', NULL,     'cash',  'DONE2501', 95000,  20000, 75000,  true,  NOW() - INTERVAL '5 days',  NOW() - INTERVAL '5 days'),
+(2, 8,  3, NULL, 'Complete', 'Bàn 3', 'cash',  'DONE2502', 140000, NULL,  140000, false, NOW() - INTERVAL '3 days',  NOW() - INTERVAL '3 days'),
+(3, 9,  4, NULL, 'Complete', NULL,     'payos', 'DONE2503', 58000,  NULL,  58000,  true,  NOW() - INTERVAL '2 days',  NOW() - INTERVAL '2 days'),
+-- Paid (awaiting pickup/serve)
+(4, 10, 1, NULL, 'Paid',     'Bàn 1', 'cash',  NULL,       110000, NULL,  110000, false, NOW() - INTERVAL '1 hour', NOW() - INTERVAL '30 minutes'),
 -- Pending (just placed)
-(5, 7,  3, NULL, 'Pending',  NULL,     'cash',  NULL,       65000,  NULL,  65000,  true,  NULL, NOW() - INTERVAL '10 minutes', NOW() - INTERVAL '10 minutes');
+(5, 7,  3, NULL, 'Pending',  NULL,     'cash',  NULL,       65000,  NULL,  65000,  true,  NOW() - INTERVAL '10 minutes', NOW() - INTERVAL '10 minutes');
 
 -- ============================================================
 -- 20. ORDER DISHES

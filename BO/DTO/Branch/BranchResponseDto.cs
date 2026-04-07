@@ -38,6 +38,8 @@ namespace BO.DTO.Branch
         // License info
         public System.Collections.Generic.List<string> LicenseUrls { get; set; }
         public string LicenseStatus { get; set; } // Pending, Accept, Reject
+        public int? VerifiedBy { get; set; }
+        public string? VerifiedByUserName { get; set; }
         public string LicenseRejectReason { get; set; }
     }
 }

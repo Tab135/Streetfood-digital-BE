@@ -408,11 +408,6 @@ public class OrderService : IOrderService
             order.IsTakeAway = request.IsTakeAway.Value;
         }
 
-        if (request.LockedAt.HasValue)
-        {
-            order.LockedAt = request.LockedAt;
-        }
-
         if (request.DiscountAmount.HasValue)
         {
             if (request.DiscountAmount.Value < 0)
@@ -900,7 +895,6 @@ public class OrderService : IOrderService
             AppliedVoucherCode = order.AppliedVoucher?.VoucherCode,
             AppliedVoucherName = order.AppliedVoucher?.Name,
             IsTakeAway = order.IsTakeAway,
-            LockedAt = order.LockedAt,
             CreatedAt = order.CreatedAt,
             OrderXP = order.OrderXP,
             UpdatedAt = order.UpdatedAt,

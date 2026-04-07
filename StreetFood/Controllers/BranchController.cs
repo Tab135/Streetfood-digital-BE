@@ -294,10 +294,10 @@ namespace StreetFood.Controllers
         }
 
         /// <summary>
-        /// Get all branches (for admin)
+        /// Get all branches (for admin and moderator)
         /// </summary>
         [HttpGet]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<BranchResponseDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllBranches([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -498,6 +498,7 @@ namespace StreetFood.Controllers
                     BranchId = id,
                     LicenseUrls = licenseUrls,
                     Status = result.Status.ToString(),
+                    VerifiedBy = result.VerifiedBy,
                     RejectReason = result.RejectReason,
                     SubmittedAt = result.CreatedAt,
                     UpdatedAt = result.UpdatedAt
@@ -554,7 +555,13 @@ namespace StreetFood.Controllers
         {
             try
             {
-                await _branchService.VerifyBranchAsync(id);
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                await _branchService.VerifyBranchAsync(id, userId);
                 return Ok(new { message = "Branch verified successfully" });
             }
             catch (Exception ex)
@@ -572,7 +579,13 @@ namespace StreetFood.Controllers
         {
             try
             {
-                await _branchService.RejectBranchRegistrationAsync(id, rejectDto.Reason);
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                await _branchService.RejectBranchRegistrationAsync(id, rejectDto.Reason, userId);
                 return Ok(new { message = "Branch registration rejected" });
             }
             catch (Exception ex)

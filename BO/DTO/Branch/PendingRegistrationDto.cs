@@ -11,6 +11,7 @@ namespace BO.DTO.Branch
         public string? LicenseUrl { get; set; }
         public int Type { get; set; }
         public RegisterVendorStatusEnum Status { get; set; }
+        public int? VerifiedBy { get; set; }
         public string? RejectReason { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
