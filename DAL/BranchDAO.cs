@@ -37,26 +37,7 @@ namespace DAL
                 .FirstOrDefaultAsync(b => b.BranchId == branchId);
         }
 
-        // Non-paginated version for internal use
-        public async Task<List<Branch>> GetBranchesByCampaignIdAsync(int campaignId)
-        {
-            return await _context.Branches
-                .AsNoTracking()
-                .Include(b => b.Tier)
-                .Where(b => _context.BranchCampaigns
-                    .Any(bc => bc.CampaignId == campaignId && bc.BranchId == b.BranchId && bc.IsActive))
-                .ToListAsync();
-        }
 
-        public async Task<List<Branch>> GetBranchesInAnyVendorCampaignAsync()
-        {
-            return await _context.Branches
-                .AsNoTracking()
-                .Include(b => b.Tier)
-                .Where(b => _context.BranchCampaigns
-                    .Any(bc => bc.BranchId == b.BranchId && bc.IsActive && bc.Campaign.CreatedByVendorId != null && bc.Campaign.IsActive))
-                .ToListAsync();
-        }
 
         public async Task<List<Branch>> GetAllByVendorIdAsync(int vendorId)
         {
@@ -164,14 +145,6 @@ namespace DAL
             return (items, totalCount);
         }
 
-        public async Task<List<Branch>> GetByVerificationStatusAsync(bool isVerified)
-        {
-            return await _context.Branches
-                .AsNoTracking()
-                .Where(b => b.IsVerified == isVerified)
-                .Include(b => b.Vendor)
-                .ToListAsync();
-        }
 
         public async Task<(List<Branch> items, int totalCount)> GetUnverifiedBranchesAsync(int pageNumber, int pageSize)
         {
@@ -376,32 +349,6 @@ namespace DAL
             await _context.SaveChangesAsync();
         }
 
-        /// <summary>
-        /// Search vendors by keyword in vendor name or dish name (case-insensitive).
-        /// Returns branches grouped by vendor.
-        /// </summary>
-        public async Task<List<Branch>> SearchVendorsWithBranchesAndDishesAsync(string keyword)
-        {
-            if (string.IsNullOrWhiteSpace(keyword))
-            {
-                return new List<Branch>();
-            }
-
-            var branches = await _context.Branches
-                .AsNoTracking()
-                .AsSplitQuery()
-                .Where(b => b.IsActive && b.IsVerified)
-                .Include(b => b.Vendor)
-                .Include(b => b.Tier)
-                .Include(b => b.BranchDishes.Where(bd => bd.Dish.IsActive))
-                    .ThenInclude(bd => bd.Dish)
-                        .ThenInclude(d => d.Category)
-                .OrderByDescending(b => b.AvgRating)
-                .ThenBy(b => b.Name)
-                .ToListAsync();
-
-            return branches;
-        }
 
         /// <summary>
         /// Get all active branches without any filtering (used when no filters provided).

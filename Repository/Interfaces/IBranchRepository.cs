@@ -9,8 +9,6 @@ namespace Repository.Interfaces
     {
         Task<Branch> CreateAsync(Branch branch);
         Task<Branch> GetByIdAsync(int branchId);
-        Task<List<Branch>> GetBranchesByCampaignIdAsync(int campaignId);
-        Task<List<Branch>> GetBranchesInAnyVendorCampaignAsync();
         Task<List<Branch>> GetAllByVendorIdAsync(int vendorId);  // Non-paginated for internal use
         Task<(List<Branch> items, int totalCount)> GetByCreatedByIdAsync(int userId, int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetAllApprovedGhostPinsAsync(int pageNumber, int pageSize);
@@ -18,7 +16,6 @@ namespace Repository.Interfaces
         Task<List<Branch>> GetAllByManagerIdAsync(int managerUserId);
         Task<(List<Branch> items, int totalCount)> GetAllAsync(int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetActiveBranchesAsync(int pageNumber, int pageSize);
-        Task<List<Branch>> GetByVerificationStatusAsync(bool isVerified);
         Task<(List<Branch> items, int totalCount)> GetUnverifiedBranchesAsync(int pageNumber, int pageSize);
         Task UpdateAsync(Branch branch);
         Task DeleteAsync(int branchId);
@@ -44,8 +41,6 @@ namespace Repository.Interfaces
         Task AddBranchRequestAsync(BranchRequest request);
         Task UpdateBranchRequestAsync(BranchRequest request);
         
-        // Search vendors with branches and dishes
-        Task<List<Branch>> SearchVendorsWithBranchesAndDishesAsync(string keyword);
 
         // Get all active branches without any filtering
         Task<List<Branch>> GetAllActiveBranchesWithoutFilterAsync();

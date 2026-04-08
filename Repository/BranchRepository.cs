@@ -27,9 +27,6 @@ namespace Repository
             return await _branchDAO.GetByIdAsync(branchId);
         }
 
-        public Task<List<Branch>> GetBranchesByCampaignIdAsync(int campaignId) => _branchDAO.GetBranchesByCampaignIdAsync(campaignId);
-
-        public Task<List<Branch>> GetBranchesInAnyVendorCampaignAsync() => _branchDAO.GetBranchesInAnyVendorCampaignAsync();
 
         public async Task<List<Branch>> GetAllByVendorIdAsync(int vendorId)
         {
@@ -66,10 +63,6 @@ namespace Repository
             return await _branchDAO.GetActiveBranchesAsync(pageNumber, pageSize);
         }
 
-        public async Task<List<Branch>> GetByVerificationStatusAsync(bool isVerified)
-        {
-            return await _branchDAO.GetByVerificationStatusAsync(isVerified);
-        }
 
         public async Task<(List<Branch> items, int totalCount)> GetUnverifiedBranchesAsync(int pageNumber, int pageSize)
         {
@@ -181,10 +174,6 @@ namespace Repository
             await _branchDAO.UpdateBranchRequestAsync(request);
         }
 
-        public async Task<List<Branch>> SearchVendorsWithBranchesAndDishesAsync(string keyword)
-        {
-            return await _branchDAO.SearchVendorsWithBranchesAndDishesAsync(keyword);
-        }
 
         public async Task<List<Branch>> GetAllActiveBranchesWithoutFilterAsync()
         {
