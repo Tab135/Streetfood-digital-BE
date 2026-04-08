@@ -5,9 +5,6 @@ namespace BO.Entities
 {
     public class FeedbackTagAssociation
     {
-        [Key]
-        public int FeedbackTagId { get; set; }
-
         [ForeignKey("Feedback")]
         public int FeedbackId { get; set; }
 

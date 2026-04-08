@@ -34,7 +34,7 @@ namespace Repository.Interfaces
         // Tag Management
         Task<FeedbackTagAssociation> AddTag(int feedbackId, int tagId);
         Task<List<FeedbackTagAssociation>> GetTagsByFeedbackId(int feedbackId);
-        Task<bool> RemoveTag(int feedbackTagId);
+        Task<bool> RemoveTag(int feedbackId, int tagId);
         Task RemoveAllTags(int feedbackId);
 
         // Velocity Limits

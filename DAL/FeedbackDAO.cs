@@ -279,9 +279,10 @@ namespace DAL
                 .ToListAsync();
         }
 
-        public async Task<bool> RemoveTagAsync(int feedbackTagId)
+        public async Task<bool> RemoveTagAsync(int feedbackId, int tagId)
         {
-            var association = await _context.FeedbackTagAssociations.FindAsync(feedbackTagId);
+            var association = await _context.FeedbackTagAssociations
+                .FirstOrDefaultAsync(fta => fta.FeedbackId == feedbackId && fta.TagId == tagId);
             if (association == null) return false;
 
             _context.FeedbackTagAssociations.Remove(association);

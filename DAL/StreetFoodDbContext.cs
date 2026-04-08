@@ -275,7 +275,7 @@ public class StreetFoodDbContext : DbContext
 
         modelBuilder.Entity<FeedbackTagAssociation>(entity =>
         {
-            entity.HasKey(e => e.FeedbackTagId);
+            entity.HasKey(e => new { e.FeedbackId, e.TagId });
             entity.HasOne(e => e.Feedback)
                   .WithMany(f => f.FeedbackTagAssociations)
                   .HasForeignKey(e => e.FeedbackId)

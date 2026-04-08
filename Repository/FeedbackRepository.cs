@@ -122,9 +122,9 @@ namespace Repository
             return await _feedbackDAO.GetTagsByFeedbackIdAsync(feedbackId);
         }
 
-        public async Task<bool> RemoveTag(int feedbackTagId)
+        public async Task<bool> RemoveTag(int feedbackId, int tagId)
         {
-            return await _feedbackDAO.RemoveTagAsync(feedbackTagId);
+            return await _feedbackDAO.RemoveTagAsync(feedbackId, tagId);
         }
 
         public async Task RemoveAllTags(int feedbackId)
