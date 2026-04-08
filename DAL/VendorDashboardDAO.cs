@@ -34,19 +34,18 @@ namespace DAL
                 return new RevenueDashboardDto();
             }
 
-            // Using UTC dates just in case, adjusting boundaries:
-            // Ensure from is start of day, and to is end of day if needed but user provides boundaries.
-            var completedOrdersQuery = await _context.Orders
-                .Where(o => branchIds.Contains(o.BranchId) 
-                            && o.Status == OrderStatus.Complete 
-                            && o.CreatedAt >= fromDate 
-                            && o.CreatedAt <= toDate)
-                .ToListAsync();
+            // Keep this query projected/aggregated to avoid selecting unused columns.
+            var completedOrdersQuery = _context.Orders
+                .AsNoTracking()
+                .Where(o => branchIds.Contains(o.BranchId)
+                            && o.Status == OrderStatus.Complete
+                            && o.CreatedAt >= fromDate
+                            && o.CreatedAt <= toDate);
 
-            decimal totalRevenue = completedOrdersQuery.Sum(o => o.FinalAmount);
-            int totalOrders = completedOrdersQuery.Count;
+            decimal totalRevenue = await completedOrdersQuery.SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
+            int totalOrders = await completedOrdersQuery.CountAsync();
 
-            var dailyRevenues = completedOrdersQuery
+            var dailyRevenues = await completedOrdersQuery
                 .GroupBy(o => o.CreatedAt.Date)
                 .Select(g => new DailyRevenueDto
                 {
@@ -55,7 +54,7 @@ namespace DAL
                     OrderCount = g.Count()
                 })
                 .OrderBy(d => d.Date)
-                .ToList();
+                .ToListAsync();
 
             return new RevenueDashboardDto
             {
