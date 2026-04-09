@@ -74,7 +74,7 @@ public class CartService : ICartService
             throw new DomainExceptions("Dish is not available in this branch");
         }
 
-        if (branchDish.IsSoldOut || dish.IsSoldOut)
+        if (branchDish.IsSoldOut)
         {
             throw new DomainExceptions("Dish is currently sold out");
         }

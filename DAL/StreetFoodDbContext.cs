@@ -313,7 +313,6 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.Price).HasColumnType("decimal(18,2)");
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.ImageUrl).HasMaxLength(500);
-            entity.Property(e => e.IsSoldOut).HasDefaultValue(false);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 

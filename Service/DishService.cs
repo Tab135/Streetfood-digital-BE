@@ -353,7 +353,6 @@ namespace Service
                 Price = dish.Price,
                 Description = dish.Description,
                 ImageUrl = dish.ImageUrl,
-                IsSoldOut = dish.IsSoldOut,
                 IsActive = dish.IsActive,
                 CreatedAt = dish.CreatedAt,
                 UpdatedAt = dish.UpdatedAt,
