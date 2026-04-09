@@ -264,6 +264,12 @@ namespace Service
                 throw new DomainExceptions("Người dùng không sở hữu đánh giá này");
             }
 
+            // Feedback can only be updated once by the owner
+            if (feedback.UpdatedAt.HasValue)
+            {
+                throw new DomainExceptions("Mỗi đánh giá chỉ được chỉnh sửa 1 lần");
+            }
+
             // Validate and update DishId if provided
             if (updateFeedbackDto.DishId.HasValue)
             {
