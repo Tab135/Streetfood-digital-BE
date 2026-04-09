@@ -9,5 +9,6 @@ namespace Service.Interfaces
         Task<AdminUserSignupChartDto> GetUserSignupChartAsync(DateTime fromDate, DateTime toDate);
         Task<AdminMoneyChartDto> GetMoneyChartAsync(DateTime fromDate, DateTime toDate);
         Task<AdminCompensationChartDto> GetCompensationChartAsync(DateTime fromDate, DateTime toDate);
+        Task<AdminUserToVendorConversionChartDto> GetUserToVendorConversionChartAsync(DateTime fromDate, DateTime toDate);
     }
 }

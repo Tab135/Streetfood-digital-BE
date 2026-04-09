@@ -163,5 +163,33 @@ namespace DAL
                 DailyCompensations = dailyCompensations
             };
         }
+
+        public async Task<AdminUserToVendorConversionChartDto> GetUserToVendorConversionChartAsync(DateTime fromDate, DateTime toDate)
+        {
+            var startDate = fromDate.Date;
+            var endDate = toDate.Date;
+            var endExclusive = endDate.AddDays(1);
+
+            var dailyConversions = await _context.Vendors
+                .AsNoTracking()
+                .Where(v => v.CreatedAt >= startDate && v.CreatedAt < endExclusive)
+                .GroupBy(v => v.CreatedAt.Date)
+                .Select(g => new AdminUserToVendorConversionPointDto
+                {
+                    Date = g.Key,
+                    ConversionCount = g.Select(v => v.UserId).Distinct().Count()
+                })
+                .Where(x => x.ConversionCount > 0)
+                .OrderBy(x => x.Date)
+                .ToListAsync();
+
+            return new AdminUserToVendorConversionChartDto
+            {
+                FromDate = startDate,
+                ToDate = endDate,
+                TotalConversionCount = dailyConversions.Sum(x => x.ConversionCount),
+                DailyConversions = dailyConversions
+            };
+        }
     }
 }

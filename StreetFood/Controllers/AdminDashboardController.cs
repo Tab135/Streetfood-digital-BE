@@ -110,5 +110,35 @@ namespace StreetFood.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
             }
         }
+
+        [HttpGet("user-to-vendor-conversions")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<AdminUserToVendorConversionChartDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetUserToVendorConversionChart([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
+        {
+            try
+            {
+                if (fromDate == default || toDate == default)
+                {
+                    return BadRequest(new { message = "fromDate and toDate are required." });
+                }
+
+                var dashboardDto = await _adminDashboardService.GetUserToVendorConversionChartAsync(fromDate, toDate);
+
+                return Ok(new
+                {
+                    message = "Get user to vendor conversion chart successfully",
+                    data = dashboardDto
+                });
+            }
+            catch (DomainExceptions ex)
+            {
+                return BadRequest(new { message = ex.Message, errorCode = ex.ErrorCode });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+            }
+        }
     }
 }

@@ -46,4 +46,18 @@ namespace BO.DTO.Dashboard
         public DateTime Date { get; set; }
         public decimal CompensationAmount { get; set; }
     }
+
+    public class AdminUserToVendorConversionChartDto
+    {
+        public DateTime FromDate { get; set; }
+        public DateTime ToDate { get; set; }
+        public int TotalConversionCount { get; set; }
+        public List<AdminUserToVendorConversionPointDto> DailyConversions { get; set; } = new List<AdminUserToVendorConversionPointDto>();
+    }
+
+    public class AdminUserToVendorConversionPointDto
+    {
+        public DateTime Date { get; set; }
+        public int ConversionCount { get; set; }
+    }
 }

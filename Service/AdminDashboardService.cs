@@ -34,6 +34,12 @@ namespace Service
             return await _adminDashboardRepository.GetCompensationChartAsync(fromDate, toDate);
         }
 
+        public async Task<AdminUserToVendorConversionChartDto> GetUserToVendorConversionChartAsync(DateTime fromDate, DateTime toDate)
+        {
+            ValidateDateRange(fromDate, toDate);
+            return await _adminDashboardRepository.GetUserToVendorConversionChartAsync(fromDate, toDate);
+        }
+
         private static void ValidateDateRange(DateTime fromDate, DateTime toDate)
         {
             if (fromDate == default || toDate == default)

@@ -29,5 +29,10 @@ namespace Repository
         {
             return await _adminDashboardDAO.GetCompensationChartAsync(fromDate, toDate);
         }
+
+        public async Task<AdminUserToVendorConversionChartDto> GetUserToVendorConversionChartAsync(DateTime fromDate, DateTime toDate)
+        {
+            return await _adminDashboardDAO.GetUserToVendorConversionChartAsync(fromDate, toDate);
+        }
     }
 }
