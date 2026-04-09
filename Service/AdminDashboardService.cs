@@ -44,12 +44,12 @@ namespace Service
         {
             if (fromDate == default || toDate == default)
             {
-                throw new DomainExceptions("fromDate and toDate are required.", "INVALID_DATE_RANGE");
+                throw new DomainExceptions("Vui lòng truyền fromDate và toDate.", "INVALID_DATE_RANGE");
             }
 
             if (fromDate.Date > toDate.Date)
             {
-                throw new DomainExceptions("fromDate must be less than or equal to toDate.", "INVALID_DATE_RANGE");
+                throw new DomainExceptions("fromDate phải nhỏ hơn hoặc bằng toDate.", "INVALID_DATE_RANGE");
             }
         }
 

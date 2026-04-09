@@ -30,14 +30,14 @@ namespace StreetFood.Controllers
             {
                 if (fromDate == default || toDate == default)
                 {
-                    return BadRequest(new { message = "fromDate and toDate are required." });
+                    return BadRequest(new { message = "Vui lòng truyền fromDate và toDate." });
                 }
 
                 var dashboardDto = await _adminDashboardService.GetUserSignupChartAsync(fromDate, toDate);
 
                 return Ok(new
                 {
-                    message = "Get user signup chart successfully",
+                    message = "Lấy thống kê đăng ký người dùng thành công",
                     data = dashboardDto
                 });
             }
@@ -60,14 +60,14 @@ namespace StreetFood.Controllers
             {
                 if (fromDate == default || toDate == default)
                 {
-                    return BadRequest(new { message = "fromDate and toDate are required." });
+                    return BadRequest(new { message = "Vui lòng truyền fromDate và toDate." });
                 }
 
                 var dashboardDto = await _adminDashboardService.GetMoneyChartAsync(fromDate, toDate);
 
                 return Ok(new
                 {
-                    message = "Get money chart successfully",
+                    message = "Lấy thống kê doanh thu thành công",
                     data = dashboardDto
                 });
             }
@@ -90,14 +90,14 @@ namespace StreetFood.Controllers
             {
                 if (fromDate == default || toDate == default)
                 {
-                    return BadRequest(new { message = "fromDate and toDate are required." });
+                    return BadRequest(new { message = "Vui lòng truyền fromDate và toDate." });
                 }
 
                 var dashboardDto = await _adminDashboardService.GetCompensationChartAsync(fromDate, toDate);
 
                 return Ok(new
                 {
-                    message = "Get compensation chart successfully",
+                    message = "Lấy thống kê số tiền cần bồi hoàn thành công",
                     data = dashboardDto
                 });
             }
@@ -120,14 +120,14 @@ namespace StreetFood.Controllers
             {
                 if (fromDate == default || toDate == default)
                 {
-                    return BadRequest(new { message = "fromDate and toDate are required." });
+                    return BadRequest(new { message = "Vui lòng truyền fromDate và toDate." });
                 }
 
                 var dashboardDto = await _adminDashboardService.GetUserToVendorConversionChartAsync(fromDate, toDate);
 
                 return Ok(new
                 {
-                    message = "Get user to vendor conversion chart successfully",
+                    message = "Lấy thống kê số người dùng chuyển thành vendor thành công",
                     data = dashboardDto
                 });
             }
