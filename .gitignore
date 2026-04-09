@@ -56,3 +56,4 @@ nunit-*.xml
 /StreetFood/uploads/licenses
 /StreetFood/uploads/feedbacks
 /payos-demo-dotnet-core-main
+StreetFood/appsettings.json

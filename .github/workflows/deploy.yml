@@ -106,11 +106,20 @@ jobs:
             fi
             echo "✓ Found Streetfood-digital-BE.zip ($(du -h Streetfood-digital-BE.zip | cut -f1))"
             
-            echo '------ 3. Backing Up User-Uploaded Content ------'
+            echo '------ 3. Backing Up Critical Data ------'
             UPLOADS_PATH="$DOTNET_PATH/Streetfood-digital-BE/StreetFood/uploads"
             UPLOADS_BACKUP="$DOTNET_PATH/uploads_backup"
             WWWROOT_PATH="$DOTNET_PATH/Streetfood-digital-BE/StreetFood/wwwroot"
             WWWROOT_BACKUP="$DOTNET_PATH/wwwroot_backup"
+            APPSETTINGS_DIR="$DOTNET_PATH/Streetfood-digital-BE/StreetFood"
+            APPSETTINGS_BACKUP_DIR="$DOTNET_PATH/appsettings_backup"
+            
+            # Backup appsettings
+            echo "Backing up appsettings files..."
+            rm -rf "$APPSETTINGS_BACKUP_DIR"
+            mkdir -p "$APPSETTINGS_BACKUP_DIR"
+            cp "$APPSETTINGS_DIR"/appsettings*.json "$APPSETTINGS_BACKUP_DIR/" 2>/dev/null || true
+            echo "✓ Backed up appsettings files"
             
             # Backup uploads folder
             if [ -d "$UPLOADS_PATH" ]; then
@@ -149,7 +158,15 @@ jobs:
             rm Streetfood-digital-BE.zip
             echo "✓ Extracted successfully"
             
-            echo '------ 6. Restoring User-Uploaded Content ------'
+            echo '------ 6. Restoring Critical Data ------'
+            # Restore appsettings
+            if [ -d "$APPSETTINGS_BACKUP_DIR" ]; then
+              echo "Restoring appsettings files..."
+              cp "$APPSETTINGS_BACKUP_DIR"/* "$PROJECT_PATH/" 2>/dev/null || true
+              echo "✓ Restored appsettings files"
+              rm -rf "$APPSETTINGS_BACKUP_DIR"
+            fi
+            
             # Restore uploads folder
             if [ -d "$UPLOADS_BACKUP" ]; then
               echo "Restoring uploads folder..."
