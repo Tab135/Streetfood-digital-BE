@@ -32,11 +32,11 @@ namespace StreetFood.Controllers
             if (hasKeyword)
             {
                 filter.Keyword = filter.Keyword!.Trim();
-                if (filter.Keyword.Length < 2)
+                if (filter.Keyword.Length < 1)
                 {
                     return BadRequest(new
                     {
-                        keyword = new[] { "Search keyword must be at least 2 characters" }
+                        keyword = new[] { "Search keyword must be at least 1 character" }
                     });
                 }
             }
