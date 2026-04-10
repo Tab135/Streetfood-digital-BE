@@ -136,6 +136,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<ITasteRepository, TasteRepository>();
             builder.Services.AddScoped<IDishRepository, DishRepository>();
             builder.Services.AddScoped<IVoucherRepository, VoucherRepository>();
+            builder.Services.AddScoped<IVendorDashboardRepository, VendorDashboardRepository>();
             builder.Services.AddScoped<IUserVoucherRepository, UserVoucherRepository>();
 
             // Register Services

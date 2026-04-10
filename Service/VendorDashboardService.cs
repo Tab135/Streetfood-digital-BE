@@ -1,6 +1,7 @@
 using BO.DTO.Dashboard;
 using BO.Exceptions;
 using DAL;
+using Repository.Interfaces;
 using Service.Interfaces;
 using System;
 using System.Threading.Tasks;
@@ -9,44 +10,44 @@ namespace Service
 {
     public class VendorDashboardService : IVendorDashboardService
     {
-        private readonly VendorDashboardDAO _vendorDashboardDao;
+        private readonly IVendorDashboardRepository _vendorDashboardRepo;
 
-        public VendorDashboardService(VendorDashboardDAO vendorDashboardDao)
+        public VendorDashboardService(IVendorDashboardRepository vendorDashboardRepo)
         {
-            _vendorDashboardDao = vendorDashboardDao ?? throw new ArgumentNullException(nameof(vendorDashboardDao));
+            _vendorDashboardRepo = vendorDashboardRepo ?? throw new ArgumentNullException(nameof(vendorDashboardRepo));
         }
 
         public async Task<RevenueDashboardDto> GetRevenueDashboardAsync(int userId, DateTime fromDate, DateTime toDate)
         {
-            var vendorId = await _vendorDashboardDao.GetVendorIdByUserIdAsync(userId);
+            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
             if (vendorId == null)
             {
                 throw new DomainExceptions("Vendor not found for this user.", "VENDOR_NOT_FOUND");
             }
 
-            return await _vendorDashboardDao.GetRevenueDashboardAsync(vendorId.Value, fromDate, toDate);
+            return await _vendorDashboardRepo.GetRevenueDashboardAsync(vendorId.Value, fromDate, toDate);
         }
 
         public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int userId)
         {
-            var vendorId = await _vendorDashboardDao.GetVendorIdByUserIdAsync(userId);
+            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
             if (vendorId == null)
             {
                 throw new DomainExceptions("Vendor not found for this user.", "VENDOR_NOT_FOUND");
             }
 
-            return await _vendorDashboardDao.GetVoucherDashboardAsync(vendorId.Value);
+            return await _vendorDashboardRepo.GetVoucherDashboardAsync(vendorId.Value);
         }
 
         public async Task<DishDashboardDto> GetDishDashboardAsync(int userId)
         {
-            var vendorId = await _vendorDashboardDao.GetVendorIdByUserIdAsync(userId);
+            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
             if (vendorId == null)
             {
                 throw new DomainExceptions("Vendor not found for this user.", "VENDOR_NOT_FOUND");
             }
 
-            return await _vendorDashboardDao.GetDishDashboardAsync(vendorId.Value);
+            return await _vendorDashboardRepo.GetDishDashboardAsync(vendorId.Value);
         }
     }
 }

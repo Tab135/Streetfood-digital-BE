@@ -1,4 +1,5 @@
 using BO.Common;
+using BO.DTO.Tier;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 using System.Threading.Tasks;
@@ -17,18 +18,18 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet]
-        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ApiResponse<List<TierResponseDto>>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllTiers()
         {
             var result = await _tierService.GetAllTiersAsync();
             return Ok(new { message = "Lấy danh sách Tier thành công", data = result });
         }
 
-        [HttpGet]
-        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetByIdAsync(int tierId)
+        [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ApiResponse<TierResponseDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetByIdAsync(int id)
         {
-            var result = await _tierService.GetByIdAsync(tierId);
+            var result = await _tierService.GetByIdAsync(id);
             return Ok(new { message = "Lấy Tier thành công", data = result });
         }
     }
