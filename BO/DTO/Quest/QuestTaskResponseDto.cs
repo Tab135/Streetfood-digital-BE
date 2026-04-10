@@ -5,6 +5,7 @@ namespace BO.DTO.Quest
     public class QuestTaskResponseDto
     {
         public int QuestTaskId { get; set; }
+        public int QuestId { get; set; }
         public QuestTaskType Type { get; set; }
         public int TargetValue { get; set; }
         public string? Description { get; set; }

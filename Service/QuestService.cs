@@ -164,6 +164,7 @@ namespace Service
             return new QuestTaskResponseDto
             {
                 QuestTaskId = task.QuestTaskId,
+                QuestId = task.QuestId,
                 Type = task.Type,
                 TargetValue = task.TargetValue,
                 Description = task.Description,
