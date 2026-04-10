@@ -7,5 +7,6 @@ namespace Service.Interfaces
     public interface ITierService
     {
         Task<List<TierResponseDto>> GetAllTiersAsync();
+        Task<TierResponseDto> GetByIdAsync(int tierId);
     }
 }

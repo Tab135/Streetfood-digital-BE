@@ -41,7 +41,7 @@ namespace Service
 
         // ─── ISettingService ──────────────────────────────────────────────────
 
-        public string? GetValue(string name)
+        private string? GetValue(string name)
         {
             return _cache.TryGetValue(name, out var setting) ? setting.Value : null;
         }
@@ -52,14 +52,6 @@ namespace Service
             return int.TryParse(raw, out var result) ? result : defaultValue;
         }
 
-        public decimal GetDecimal(string name, decimal defaultValue = 0m)
-        {
-            var raw = GetValue(name);
-            return decimal.TryParse(raw, System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out var result)
-                ? result
-                : defaultValue;
-        }
 
         public async Task UpdateAsync(string name, string newValue)
         {

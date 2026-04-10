@@ -25,10 +25,6 @@ namespace DAL
                 .FirstOrDefaultAsync(s => s.Name == name);
         }
 
-        public async Task<Setting?> GetByIdAsync(int id)
-        {
-            return await _context.Settings.FindAsync(id);
-        }
 
         public async Task UpdateAsync(Setting setting)
         {

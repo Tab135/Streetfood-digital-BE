@@ -19,7 +19,6 @@ namespace Repository
 
         public Task<Setting?> GetByNameAsync(string name) => _dao.GetByNameAsync(name);
 
-        public Task<Setting?> GetByIdAsync(int id) => _dao.GetByIdAsync(id);
 
         public Task UpdateAsync(Setting setting) => _dao.UpdateAsync(setting);
     }

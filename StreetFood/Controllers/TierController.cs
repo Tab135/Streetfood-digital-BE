@@ -23,5 +23,13 @@ namespace StreetFood.Controllers
             var result = await _tierService.GetAllTiersAsync();
             return Ok(new { message = "Lấy danh sách Tier thành công", data = result });
         }
+
+        [HttpGet]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetByIdAsync(int tierId)
+        {
+            var result = await _tierService.GetByIdAsync(tierId);
+            return Ok(new { message = "Lấy Tier thành công", data = result });
+        }
     }
 }

@@ -1,7 +1,8 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BO.DTO.Tier;
+using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
 
@@ -25,6 +26,21 @@ namespace Service
                 Name = t.Name,
                 Weight = t.Weight
             }).ToList();
+        }
+
+        public async Task<TierResponseDto> GetByIdAsync(int tierid)
+        {
+            var tiers = await _tierRepository.GetByIdAsync(tierid);
+            if (tiers == null)
+            {
+                throw new DomainExceptions("TierId không tồn tại");
+            }
+            return new TierResponseDto
+            {
+                TierId = tiers.TierId,
+                Name = tiers.Name,
+                Weight = tiers.Weight
+            };
         }
     }
 }

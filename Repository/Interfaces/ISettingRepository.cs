@@ -8,7 +8,6 @@ namespace Repository.Interfaces
     {
         Task<List<Setting>> GetAllAsync();
         Task<Setting?> GetByNameAsync(string name);
-        Task<Setting?> GetByIdAsync(int id);
         Task UpdateAsync(Setting setting);
     }
 }
