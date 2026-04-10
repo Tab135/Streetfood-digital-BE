@@ -103,6 +103,11 @@ namespace DAL
                 (!excludeQuestId.HasValue || q.QuestId != excludeQuestId.Value));
         }
 
+        public async Task<QuestTask?> GetTaskByIdAsync(int questTaskId)
+        {
+            return await _context.QuestTasks.FirstOrDefaultAsync(t => t.QuestTaskId == questTaskId);
+        }
+
         public async Task UpdateTaskAsync(QuestTask task)
         {
             _context.QuestTasks.Update(task);

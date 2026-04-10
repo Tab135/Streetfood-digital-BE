@@ -84,6 +84,15 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Quest retrieved successfully", data = result });
         }
 
+        [HttpGet("task/{questTaskId}")]
+        public async Task<IActionResult> GetQuestTaskById(int questTaskId)
+        {
+            var result = await _questService.GetQuestTaskByIdAsync(questTaskId);
+            if (result == null)
+                return NotFound(new { message = "Quest task not found" });
+            return Ok(new { message = "Quest task retrieved successfully", data = result });
+        }
+
         [HttpGet("public")]
         public async Task<IActionResult> GetPublicQuests([FromQuery] QuestQueryDto query)
         {

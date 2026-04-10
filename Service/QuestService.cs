@@ -157,6 +157,21 @@ namespace Service
             return quest == null ? null : MapToResponseDto(quest);
         }
 
+        public async Task<QuestTaskResponseDto?> GetQuestTaskByIdAsync(int questTaskId)
+        {
+            var task = await _questRepository.GetTaskByIdAsync(questTaskId);
+            if (task == null) return null;
+            return new QuestTaskResponseDto
+            {
+                QuestTaskId = task.QuestTaskId,
+                Type = task.Type,
+                TargetValue = task.TargetValue,
+                Description = task.Description,
+                RewardType = task.RewardType,
+                RewardValue = task.RewardValue
+            };
+        }
+
         public async Task<PaginatedResponse<QuestResponseDto>> GetQuestsAsync(QuestQueryDto query)
         {
             var (items, totalCount) = await _questRepository.GetQuestsAsync(

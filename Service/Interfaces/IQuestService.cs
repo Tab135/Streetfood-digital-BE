@@ -10,6 +10,7 @@ namespace Service.Interfaces
         Task<QuestResponseDto> UpdateQuestAsync(int questId, UpdateQuestDto dto);
         Task<bool> DeleteQuestAsync(int questId);
         Task<QuestResponseDto?> GetQuestByIdAsync(int questId);
+        Task<QuestTaskResponseDto?> GetQuestTaskByIdAsync(int questTaskId);
         Task<PaginatedResponse<QuestResponseDto>> GetQuestsAsync(QuestQueryDto query);
         Task<PaginatedResponse<QuestResponseDto>> GetPublicQuestsAsync(QuestQueryDto query);
         Task<UserQuestProgressDto> EnrollInQuestAsync(int userId, int questId);

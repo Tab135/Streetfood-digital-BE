@@ -59,7 +59,7 @@ namespace Service
 
                 if (userQuestTask.IsCompleted)
                 {
-                    // Notify task completion
+                    // Notify task completion (for notification list)
                     var taskLabel = userQuestTask.QuestTask.Description ?? userQuestTask.QuestTask.Type.ToString();
                     await _notificationService.NotifyAsync(
                         userId,
