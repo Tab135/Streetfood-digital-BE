@@ -112,6 +112,17 @@ namespace Service
             return true;
         }
 
+        private async Task<bool> ComputeIsUpdateableForCampaignAsync(Campaign campaign)
+        {
+            if (!IsSystemCampaign(campaign))
+            {
+                return true;
+            }
+
+            var joinedBranchCount = await _branchCampaignRepo.CountByCampaignIdAsync(campaign.CampaignId);
+            return joinedBranchCount == 0;
+        }
+
         public async Task<CampaignResponseDto> CreateVendorCampaignAsync(int userId, CreateVendorCampaignDto dto)
         {
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
@@ -743,6 +754,8 @@ namespace Service
             var mappedItems = new List<CampaignResponseDto>();
             foreach(var item in items)
             {
+                var isUpdateable = await ComputeIsUpdateableForCampaignAsync(item);
+
                 mappedItems.Add(new CampaignResponseDto
                 {
                     CampaignId = item.CampaignId,
@@ -757,6 +770,7 @@ namespace Service
                     EndDate = item.EndDate,
                     IsActive = item.IsActive,
                     IsRegisterable = ComputeIsRegisterableForCampaign(item),
+                    IsUpdateable = isUpdateable,
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -798,6 +812,8 @@ namespace Service
             var mappedItems = new List<CampaignResponseDto>();
             foreach(var item in items)
             {
+                var isUpdateable = await ComputeIsUpdateableForCampaignAsync(item);
+
                 mappedItems.Add(new CampaignResponseDto
                 {
                     CampaignId = item.CampaignId,
@@ -812,6 +828,7 @@ namespace Service
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
                     IsRegisterable = ComputeIsRegisterableForCampaign(item),
+                    IsUpdateable = isUpdateable,
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -833,6 +850,8 @@ namespace Service
             var mappedItems = new List<CampaignResponseDto>();
             foreach(var item in items)
             {
+                var isUpdateable = await ComputeIsUpdateableForCampaignAsync(item);
+
                 mappedItems.Add(new CampaignResponseDto
                 {
                     CampaignId = item.CampaignId,
@@ -847,6 +866,7 @@ namespace Service
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
                     IsRegisterable = ComputeIsRegisterableForCampaign(item),
+                    IsUpdateable = isUpdateable,
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -868,6 +888,8 @@ namespace Service
             var mappedItems = new List<CampaignResponseDto>();
             foreach(var item in items)
             {
+                var isUpdateable = await ComputeIsUpdateableForCampaignAsync(item);
+
                 mappedItems.Add(new CampaignResponseDto
                 {
                     CampaignId = item.CampaignId,
@@ -882,6 +904,7 @@ namespace Service
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
                     IsRegisterable = ComputeIsRegisterableForCampaign(item),
+                    IsUpdateable = isUpdateable,
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -900,6 +923,9 @@ namespace Service
         {
             var item = await _campaignRepo.GetByIdAsync(id);
             if (item == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
+
+            var isUpdateable = await ComputeIsUpdateableForCampaignAsync(item);
+
             return new CampaignResponseDto
             {
                 CampaignId = item.CampaignId,
@@ -914,6 +940,7 @@ namespace Service
                 EndDate = item.EndDate,
                 IsActive = item.IsActive,
                 IsRegisterable = ComputeIsRegisterableForCampaign(item),
+                IsUpdateable = isUpdateable,
                 CreatedAt = item.CreatedAt,
                 UpdatedAt = item.UpdatedAt,
                 ImageUrl = item.ImageUrl

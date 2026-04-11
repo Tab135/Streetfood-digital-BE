@@ -22,6 +22,7 @@ namespace BO.DTO.Campaigns
         public DateTime EndDate { get; set; }
         public bool IsActive { get; set; }
         public bool IsRegisterable { get; set; }
+        public bool IsUpdateable { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public string? ImageUrl { get; set; }
