@@ -596,6 +596,8 @@ namespace Service
 
         public async Task<CampaignResponseDto> CreateSystemCampaignAsync(CreateCampaignDto dto)
         {
+            bool isCampaignActive = dto.StartDate <= DateTime.UtcNow;
+
             var campaign = new Campaign
             {
                 Name = dto.Name,
@@ -605,7 +607,7 @@ namespace Service
                 RegistrationEndDate = dto.RegistrationEndDate,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
-                IsActive = dto.IsActive,
+                IsActive = isCampaignActive,
                 CreatedByBranchId = null
             };
             await _campaignRepo.CreateAsync(campaign);
