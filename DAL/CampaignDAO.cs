@@ -285,7 +285,9 @@ namespace DAL
                         StartDate = bc.Campaign.StartDate,
                         EndDate = bc.Campaign.EndDate,
                         IsActive = bc.Campaign.IsActive,
-                        IsRegisterable = bc.Campaign.RegistrationStartDate.HasValue
+                        IsRegisterable = bc.Campaign.CreatedByBranchId == null
+                            && bc.Campaign.CreatedByVendorId == null
+                            && bc.Campaign.RegistrationStartDate.HasValue
                             && now >= bc.Campaign.RegistrationStartDate.Value
                             && (!bc.Campaign.RegistrationEndDate.HasValue || now <= bc.Campaign.RegistrationEndDate.Value),
                         IsWorking = bc.Campaign.IsActive

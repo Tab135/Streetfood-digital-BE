@@ -125,7 +125,9 @@ namespace Service
                 .ToListAsync();
 
             var campaignIdsToOpenRegistration = await _db.Campaigns
-                .Where(c => !c.IsRegisterable
+                .Where(c => c.CreatedByBranchId == null
+                         && c.CreatedByVendorId == null
+                         && !c.IsRegisterable
                          && c.RegistrationStartDate != null
                          && c.RegistrationStartDate <= now
                          && (c.RegistrationEndDate == null || c.RegistrationEndDate >= now))
@@ -133,7 +135,9 @@ namespace Service
                 .ToListAsync();
 
             var campaignIdsToCloseRegistration = await _db.Campaigns
-                .Where(c => c.IsRegisterable
+                .Where(c => c.CreatedByBranchId == null
+                         && c.CreatedByVendorId == null
+                         && c.IsRegisterable
                          && (c.RegistrationStartDate == null
                              || c.RegistrationStartDate > now
                              || (c.RegistrationEndDate != null && c.RegistrationEndDate < now)))

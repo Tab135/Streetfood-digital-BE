@@ -58,9 +58,36 @@ namespace Service
                 ResolveHangfireRunAt(endDate));
         }
 
+        private void ScheduleCampaignRegistrationReconcileJobs(DateTime? registrationStartDate, DateTime? registrationEndDate)
+        {
+            if (registrationStartDate.HasValue)
+            {
+                _backgroundJobClient.Schedule<ICampaignStatusJob>(
+                    job => job.ReconcileCampaignStatusesAsync(),
+                    ResolveHangfireRunAt(registrationStartDate.Value));
+            }
+
+            if (registrationEndDate.HasValue)
+            {
+                _backgroundJobClient.Schedule<ICampaignStatusJob>(
+                    job => job.ReconcileCampaignStatusesAsync(),
+                    ResolveHangfireRunAt(registrationEndDate.Value));
+            }
+        }
+
         private static bool IsSystemCampaign(Campaign campaign)
         {
             return campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null;
+        }
+
+        private static bool ComputeIsRegisterableForCampaign(Campaign campaign)
+        {
+            if (!IsSystemCampaign(campaign))
+            {
+                return false;
+            }
+
+            return ComputeIsRegisterable(campaign.RegistrationStartDate, campaign.RegistrationEndDate);
         }
 
         private static bool ComputeIsRegisterable(DateTime? registrationStartDate, DateTime? registrationEndDate)
@@ -378,7 +405,7 @@ namespace Service
                 StartDate = campaign.StartDate,
                 EndDate = campaign.EndDate,
                 IsActive = campaign.IsActive,
-                IsRegisterable = ComputeIsRegisterable(campaign.RegistrationStartDate, campaign.RegistrationEndDate),
+                IsRegisterable = ComputeIsRegisterableForCampaign(campaign),
                 ImageUrl = campaign.ImageUrl,
                 JoinableBranch = eligibleBranchIds
             };
@@ -644,6 +671,7 @@ namespace Service
             await _campaignRepo.CreateAsync(campaign);
 
             ScheduleCampaignStatusJobs(campaign.CampaignId, campaign.StartDate, campaign.EndDate);
+            ScheduleCampaignRegistrationReconcileJobs(campaign.RegistrationStartDate, campaign.RegistrationEndDate);
 
             // Schedule quest expiration to fire exactly at EndDate
             _backgroundJobClient.Schedule<IQuestExpirationJob>(
@@ -728,7 +756,7 @@ namespace Service
                     StartDate = item.StartDate,
                     EndDate = item.EndDate,
                     IsActive = item.IsActive,
-                    IsRegisterable = ComputeIsRegisterable(item.RegistrationStartDate, item.RegistrationEndDate),
+                    IsRegisterable = ComputeIsRegisterableForCampaign(item),
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -783,7 +811,7 @@ namespace Service
                     StartDate = item.StartDate,
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
-                    IsRegisterable = ComputeIsRegisterable(item.RegistrationStartDate, item.RegistrationEndDate),
+                    IsRegisterable = ComputeIsRegisterableForCampaign(item),
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -818,7 +846,7 @@ namespace Service
                     StartDate = item.StartDate,
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
-                    IsRegisterable = ComputeIsRegisterable(item.RegistrationStartDate, item.RegistrationEndDate),
+                    IsRegisterable = ComputeIsRegisterableForCampaign(item),
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -853,7 +881,7 @@ namespace Service
                     StartDate = item.StartDate,
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
-                    IsRegisterable = ComputeIsRegisterable(item.RegistrationStartDate, item.RegistrationEndDate),
+                    IsRegisterable = ComputeIsRegisterableForCampaign(item),
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -885,7 +913,7 @@ namespace Service
                 StartDate = item.StartDate,
                 EndDate = item.EndDate,
                 IsActive = item.IsActive,
-                IsRegisterable = ComputeIsRegisterable(item.RegistrationStartDate, item.RegistrationEndDate),
+                IsRegisterable = ComputeIsRegisterableForCampaign(item),
                 CreatedAt = item.CreatedAt,
                 UpdatedAt = item.UpdatedAt,
                 ImageUrl = item.ImageUrl
@@ -896,12 +924,15 @@ namespace Service
         {
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
             if (campaign == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
+            var isSystemCampaign = IsSystemCampaign(campaign);
 
             var oldStartDate = campaign.StartDate;
             var oldEndDate = campaign.EndDate;
             var oldIsActive = campaign.IsActive;
+            var oldRegistrationStartDate = campaign.RegistrationStartDate;
+            var oldRegistrationEndDate = campaign.RegistrationEndDate;
 
-            if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null)
+            if (isSystemCampaign)
             {
                 if (role != "Admin")
                 {
@@ -944,23 +975,43 @@ namespace Service
             campaign.Name = dto.Name;
             campaign.Description = dto.Description;
             campaign.TargetSegment = dto.TargetSegment;
-            campaign.RegistrationStartDate = dto.RegistrationStartDate;
-            campaign.RegistrationEndDate = dto.RegistrationEndDate;
+
+            if (isSystemCampaign)
+            {
+                campaign.RegistrationStartDate = dto.RegistrationStartDate;
+                campaign.RegistrationEndDate = dto.RegistrationEndDate;
+                campaign.IsRegisterable = ComputeIsRegisterable(campaign.RegistrationStartDate, campaign.RegistrationEndDate);
+            }
+            else
+            {
+                campaign.RegistrationStartDate = null;
+                campaign.RegistrationEndDate = null;
+                campaign.IsRegisterable = false;
+            }
+
             campaign.StartDate = dto.StartDate;
             campaign.EndDate = dto.EndDate;
             if (dto.IsActive != null) campaign.IsActive = dto.IsActive.Value;
-            campaign.IsRegisterable = ComputeIsRegisterable(campaign.RegistrationStartDate, campaign.RegistrationEndDate);
             campaign.UpdatedAt = DateTime.UtcNow;
 
             var statusFieldsChanged = oldStartDate != campaign.StartDate
                                    || oldEndDate != campaign.EndDate
                                    || oldIsActive != campaign.IsActive;
 
+            var registrationWindowChanged = isSystemCampaign
+                                         && (oldRegistrationStartDate != campaign.RegistrationStartDate
+                                         || oldRegistrationEndDate != campaign.RegistrationEndDate);
+
             await _campaignRepo.UpdateAsync(campaign);
 
             if (statusFieldsChanged)
             {
                 ScheduleCampaignStatusJobs(campaign.CampaignId, campaign.StartDate, campaign.EndDate);
+            }
+
+            if (registrationWindowChanged)
+            {
+                ScheduleCampaignRegistrationReconcileJobs(campaign.RegistrationStartDate, campaign.RegistrationEndDate);
             }
 
             // If EndDate changed on a system campaign, schedule a new expiration job.
