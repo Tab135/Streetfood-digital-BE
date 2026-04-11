@@ -90,12 +90,9 @@ namespace DAL
 
         public async Task<(List<Campaign> Items, int TotalCount)> GetJoinableSystemCampaignsAsync(int page, int pageSize)
         {
-            var now = DateTime.UtcNow;
             var query = _context.Campaigns
                 .Where(c => c.CreatedByBranchId == null && c.CreatedByVendorId == null) // system campaigns
-                .Where(c => c.IsActive)
-                .Where(c => c.RegistrationStartDate != null && c.RegistrationEndDate != null 
-                            && now >= c.RegistrationStartDate && now <= c.RegistrationEndDate);
+                .Where(c => c.IsRegisterable);
 
             int totalCount = await query.CountAsync();
             var items = await query.OrderByDescending(c => c.CreatedAt)
