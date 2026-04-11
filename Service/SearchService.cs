@@ -102,6 +102,7 @@ namespace Service
                         TotalReviewCount = x.Branch.TotalReviewCount,
                         FinalScore = x.FinalScore,
                         DistanceKm = x.DistanceKm,
+                        IsSubscribed = x.Branch.IsSubscribed,
                         IsVerified = x.Branch.IsVerified,
                         IsActive = x.Branch.IsActive,
                         Dishes = x.Branch.BranchDishes
