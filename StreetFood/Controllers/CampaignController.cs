@@ -155,31 +155,16 @@ namespace StreetFood.Controllers
             [FromQuery] double? lat = null,
             [FromQuery] double? lng = null)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
+            var result = await _campaignService.GetSystemCampaignBranchesAsync(campaignId, pageNumber, pageSize, lat, lng);
+            return Ok(new { message = "Lấy danh sách chi nhánh tham gia chiến dịch thành công", data = result });
+        }
 
-            bool hasKeyword = !string.IsNullOrWhiteSpace(filter.Keyword);
-
-            if (hasKeyword)
-            {
-                filter.Keyword = filter.Keyword!.Trim();
-                if (filter.Keyword.Length < 1)
-                {
-                    return BadRequest(new
-                    {
-                        keyword = new[] { "Search keyword must be at least 1 character" }
-                    });
-                }
-            }
-
-            // Keep backward compatibility for clients using lat/lng query keys.
-            var resolvedLat = filter.Lat ?? lat;
-            var resolvedLng = filter.Long ?? lng;
-
-            var result = await _campaignService.GetCampaignBranchesAsync(campaignId, pageNumber, pageSize, resolvedLat, resolvedLng);
-            return Ok(new { message = "Lấy danh sách chi nhánh tham gia chiến dịch hệ thống thành công", data = result });
+        [HttpGet("vendor/{campaignId}/branches")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetVendorCampaignBranchesByCampaignId(int campaignId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] double? lat = null, [FromQuery] double? lng = null)
+        {
+            var result = await _campaignService.GetVendorCampaignBranchesByCampaignIdAsync(campaignId, pageNumber, pageSize, lat, lng);
+            return Ok(new { message = "Lấy danh sách chi nhánh tham gia chiến dịch thành công", data = result });
         }
 
         [HttpPost("vendor/{campaignId}/branches/add")]

@@ -442,6 +442,10 @@ namespace StreetFood.Controllers
                 {
                     return Unauthorized(new { message = "Invalid user token" });
                 }
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
 
                 var updatedUser = await _userService.UpdateUserProfile(userId, updateDto);
 

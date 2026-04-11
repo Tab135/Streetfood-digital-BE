@@ -471,4 +471,21 @@ public class AuthControllerTests
 
         userSvc.Verify(s => s.GetUserById(10), Times.Once);
     }
+
+    [Fact]
+    public async Task UpdateProfile_InvalidModelState_ReturnsBadRequest()
+    {
+        // Arrange
+        var (controller, userSvc, _) = BuildController(BuildAuthenticatedUser(5));
+        
+        userSvc.Setup(s => s.UpdateUserProfile(It.IsAny<int>(), It.IsAny<UpdateUserProfileDto>()))
+               .ReturnsAsync(MakeSampleUser(5));
+
+        controller.ModelState.AddModelError("Username", "Username is required");
+        var updateDto = new UpdateUserProfileDto();
+
+        var result = await controller.UpdateProfile(updateDto);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
 }
