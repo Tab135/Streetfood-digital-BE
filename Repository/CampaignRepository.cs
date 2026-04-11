@@ -21,6 +21,7 @@ namespace Repository
         public Task<List<Campaign>> GetAllSystemActiveAsync() => _dao.GetAllSystemActiveAsync();
         public Task<List<Campaign>> GetByBranchIdAsync(int branchId) => _dao.GetByBranchIdAsync(branchId);
         public Task UpdateAsync(Campaign campaign) => _dao.UpdateAsync(campaign);
+        public Task DeleteAsync(int campaignId) => _dao.DeleteAsync(campaignId);
         public Task<(List<Campaign> Items, int TotalCount)> GetCampaignsAsync(bool? isSystem, int? vendorId, int page, int pageSize) => _dao.GetCampaignsAsync(isSystem, vendorId, page, pageSize);
         public Task<(List<Campaign> Items, int TotalCount)> GetJoinableSystemCampaignsAsync(int page, int pageSize) => _dao.GetJoinableSystemCampaignsAsync(page, pageSize);
         public Task<(List<Campaign> Items, int TotalCount)> GetPublicCampaignsAsync(bool? isSystem, int page, int pageSize) => _dao.GetPublicCampaignsAsync(isSystem, page, pageSize);

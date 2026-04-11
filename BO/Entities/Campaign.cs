@@ -42,6 +42,11 @@ namespace BO.Entities
         /// </summary>
         public bool IsActive { get; set; } = true;
 
+        /// <summary>
+        /// Indicates whether campaign registration is currently open.
+        /// </summary>
+        public bool IsRegisterable { get; set; } = false;
+
         public virtual ICollection<BranchCampaign> BranchCampaigns { get; set; } = new List<BranchCampaign>();
         public string? ImageUrl { get; set; }
     }

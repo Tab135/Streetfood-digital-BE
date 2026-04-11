@@ -203,6 +203,17 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Cập nhật chiến dịch thành công", data = result });
         }
 
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteCampaign(int id)
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var userRole = User.FindFirst(ClaimTypes.Role)!.Value;
+
+            await _campaignService.DeleteCampaignAsync(userId, userRole, id);
+            return Ok(new { message = "Xóa chiến dịch thành công" });
+        }
+
         // NEW: Get system campaign detail with eligible branches
         [HttpGet("system/{campaignId}")]
         [Authorize(Roles = "Vendor")]

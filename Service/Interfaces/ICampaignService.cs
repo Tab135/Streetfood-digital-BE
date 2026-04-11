@@ -21,6 +21,7 @@ namespace Service.Interfaces
         Task<PaginatedResponse<CampaignResponseDto>> GetPublicCampaignsAsync(CampaignQueryDto query);
         Task<CampaignResponseDto> GetCampaignByIdAsync(int id);
         Task<CampaignResponseDto> UpdateCampaignAsync(int userId, string role, int campaignId, UpdateCampaignDto dto);
+        Task DeleteCampaignAsync(int userId, string role, int campaignId);
 
         // Images
         Task UpdateCampaignImageUrlAsync(int campaignId, string? imageUrl, int userId, string role);

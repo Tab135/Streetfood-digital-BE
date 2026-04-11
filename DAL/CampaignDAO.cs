@@ -49,6 +49,18 @@ namespace DAL
             await _context.SaveChangesAsync();
         }
 
+        public async Task DeleteAsync(int campaignId)
+        {
+            var campaign = await _context.Campaigns.FindAsync(campaignId);
+            if (campaign == null)
+            {
+                return;
+            }
+
+            _context.Campaigns.Remove(campaign);
+            await _context.SaveChangesAsync();
+        }
+
                 public async Task<(List<Campaign> Items, int TotalCount)> GetCampaignsAsync(bool? isSystem, int? vendorId, int page, int pageSize)
         {
             var query = _context.Campaigns.Include(c => c.CreatedByBranch).AsQueryable();
@@ -273,6 +285,9 @@ namespace DAL
                         StartDate = bc.Campaign.StartDate,
                         EndDate = bc.Campaign.EndDate,
                         IsActive = bc.Campaign.IsActive,
+                        IsRegisterable = bc.Campaign.RegistrationStartDate.HasValue
+                            && now >= bc.Campaign.RegistrationStartDate.Value
+                            && (!bc.Campaign.RegistrationEndDate.HasValue || now <= bc.Campaign.RegistrationEndDate.Value),
                         IsWorking = bc.Campaign.IsActive
                             && bc.Campaign.StartDate <= now
                             && bc.Campaign.EndDate >= now,

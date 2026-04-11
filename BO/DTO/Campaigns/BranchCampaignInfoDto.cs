@@ -12,6 +12,7 @@ namespace BO.DTO.Campaigns
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public bool IsActive { get; set; }
+        public bool IsRegisterable { get; set; }
         public bool IsWorking { get; set; }
         public List<CampaignVoucherInfoDto> Vouchers { get; set; } = new();
     }

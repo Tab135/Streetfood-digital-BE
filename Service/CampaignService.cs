@@ -58,6 +58,33 @@ namespace Service
                 ResolveHangfireRunAt(endDate));
         }
 
+        private static bool IsSystemCampaign(Campaign campaign)
+        {
+            return campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null;
+        }
+
+        private static bool ComputeIsRegisterable(DateTime? registrationStartDate, DateTime? registrationEndDate)
+        {
+            var now = DateTime.UtcNow;
+
+            if (!registrationStartDate.HasValue)
+            {
+                return false;
+            }
+
+            if (now < registrationStartDate.Value)
+            {
+                return false;
+            }
+
+            if (registrationEndDate.HasValue && now > registrationEndDate.Value)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         public async Task<CampaignResponseDto> CreateVendorCampaignAsync(int userId, CreateVendorCampaignDto dto)
         {
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
@@ -83,6 +110,7 @@ namespace Service
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 IsActive = isCampaignActive,
+                IsRegisterable = false,
                 CreatedByVendorId = vendor.VendorId,
                 CreatedByBranchId = createdByBranchId
             };
@@ -350,6 +378,7 @@ namespace Service
                 StartDate = campaign.StartDate,
                 EndDate = campaign.EndDate,
                 IsActive = campaign.IsActive,
+                IsRegisterable = ComputeIsRegisterable(campaign.RegistrationStartDate, campaign.RegistrationEndDate),
                 ImageUrl = campaign.ImageUrl,
                 JoinableBranch = eligibleBranchIds
             };
@@ -597,6 +626,7 @@ namespace Service
         public async Task<CampaignResponseDto> CreateSystemCampaignAsync(CreateCampaignDto dto)
         {
             bool isCampaignActive = dto.StartDate <= DateTime.UtcNow;
+            bool isCampaignRegisterable = ComputeIsRegisterable(dto.RegistrationStartDate, dto.RegistrationEndDate);
 
             var campaign = new Campaign
             {
@@ -608,6 +638,7 @@ namespace Service
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 IsActive = isCampaignActive,
+                IsRegisterable = isCampaignRegisterable,
                 CreatedByBranchId = null
             };
             await _campaignRepo.CreateAsync(campaign);
@@ -697,6 +728,7 @@ namespace Service
                     StartDate = item.StartDate,
                     EndDate = item.EndDate,
                     IsActive = item.IsActive,
+                    IsRegisterable = ComputeIsRegisterable(item.RegistrationStartDate, item.RegistrationEndDate),
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -751,6 +783,7 @@ namespace Service
                     StartDate = item.StartDate,
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
+                    IsRegisterable = ComputeIsRegisterable(item.RegistrationStartDate, item.RegistrationEndDate),
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -785,6 +818,7 @@ namespace Service
                     StartDate = item.StartDate,
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
+                    IsRegisterable = ComputeIsRegisterable(item.RegistrationStartDate, item.RegistrationEndDate),
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -819,6 +853,7 @@ namespace Service
                     StartDate = item.StartDate,
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
+                    IsRegisterable = ComputeIsRegisterable(item.RegistrationStartDate, item.RegistrationEndDate),
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl
@@ -850,6 +885,7 @@ namespace Service
                 StartDate = item.StartDate,
                 EndDate = item.EndDate,
                 IsActive = item.IsActive,
+                IsRegisterable = ComputeIsRegisterable(item.RegistrationStartDate, item.RegistrationEndDate),
                 CreatedAt = item.CreatedAt,
                 UpdatedAt = item.UpdatedAt,
                 ImageUrl = item.ImageUrl
@@ -870,6 +906,12 @@ namespace Service
                 if (role != "Admin")
                 {
                     throw new DomainExceptions("Chỉ Admin mới có thể cập nhật chiến dịch hệ thống.");
+                }
+
+                var joinedBranchCount = await _branchCampaignRepo.CountByCampaignIdAsync(campaign.CampaignId);
+                if (joinedBranchCount > 0)
+                {
+                    throw new DomainExceptions("Chiến dịch hệ thống đã có chi nhánh tham gia, không thể cập nhật.");
                 }
             }
             else
@@ -907,6 +949,7 @@ namespace Service
             campaign.StartDate = dto.StartDate;
             campaign.EndDate = dto.EndDate;
             if (dto.IsActive != null) campaign.IsActive = dto.IsActive.Value;
+            campaign.IsRegisterable = ComputeIsRegisterable(campaign.RegistrationStartDate, campaign.RegistrationEndDate);
             campaign.UpdatedAt = DateTime.UtcNow;
 
             var statusFieldsChanged = oldStartDate != campaign.StartDate
@@ -930,6 +973,58 @@ namespace Service
             }
 
             return await GetCampaignByIdAsync(campaign.CampaignId);
+        }
+
+        public async Task DeleteCampaignAsync(int userId, string role, int campaignId)
+        {
+            var campaign = await _campaignRepo.GetByIdAsync(campaignId);
+            if (campaign == null)
+            {
+                throw new DomainExceptions("Không tìm thấy chiến dịch.");
+            }
+
+            if (IsSystemCampaign(campaign))
+            {
+                if (role != "Admin")
+                {
+                    throw new DomainExceptions("Chỉ Admin mới có thể xóa chiến dịch hệ thống.");
+                }
+
+                var joinedBranchCount = await _branchCampaignRepo.CountByCampaignIdAsync(campaign.CampaignId);
+                if (joinedBranchCount > 0)
+                {
+                    throw new DomainExceptions("Chiến dịch hệ thống đã có chi nhánh tham gia, không thể xóa.");
+                }
+            }
+            else
+            {
+                var vendor = await _vendorRepo.GetByUserIdAsync(userId);
+                if (vendor == null)
+                {
+                    throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
+                }
+
+                bool isOwner = false;
+                if (campaign.CreatedByVendorId == vendor.VendorId)
+                {
+                    isOwner = true;
+                }
+                else if (campaign.CreatedByBranchId != null)
+                {
+                    var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
+                    if (branch != null && branch.VendorId == vendor.VendorId)
+                    {
+                        isOwner = true;
+                    }
+                }
+
+                if (!isOwner)
+                {
+                    throw new DomainExceptions("Bạn không có quyền xóa chiến dịch này.");
+                }
+            }
+
+            await _campaignRepo.DeleteAsync(campaignId);
         }
 
         // --- Campaign Image Methods ---

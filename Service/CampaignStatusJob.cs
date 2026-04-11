@@ -124,7 +124,26 @@ namespace Service
                 .Select(c => c.CampaignId)
                 .ToListAsync();
 
-            if (campaignIdsToActivate.Count == 0 && expiredCampaignIds.Count == 0)
+            var campaignIdsToOpenRegistration = await _db.Campaigns
+                .Where(c => !c.IsRegisterable
+                         && c.RegistrationStartDate != null
+                         && c.RegistrationStartDate <= now
+                         && (c.RegistrationEndDate == null || c.RegistrationEndDate >= now))
+                .Select(c => c.CampaignId)
+                .ToListAsync();
+
+            var campaignIdsToCloseRegistration = await _db.Campaigns
+                .Where(c => c.IsRegisterable
+                         && (c.RegistrationStartDate == null
+                             || c.RegistrationStartDate > now
+                             || (c.RegistrationEndDate != null && c.RegistrationEndDate < now)))
+                .Select(c => c.CampaignId)
+                .ToListAsync();
+
+            if (campaignIdsToActivate.Count == 0
+                && expiredCampaignIds.Count == 0
+                && campaignIdsToOpenRegistration.Count == 0
+                && campaignIdsToCloseRegistration.Count == 0)
             {
                 _logger.LogDebug("CampaignStatusJob: no campaign status changes found at {Now}.", now);
                 return;
@@ -165,12 +184,30 @@ namespace Service
                     .ExecuteUpdateAsync(s => s.SetProperty(bc => bc.IsActive, false));
             }
 
+            var openedRegistrations = 0;
+            if (campaignIdsToOpenRegistration.Count > 0)
+            {
+                openedRegistrations = await _db.Campaigns
+                    .Where(c => campaignIdsToOpenRegistration.Contains(c.CampaignId))
+                    .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsRegisterable, true));
+            }
+
+            var closedRegistrations = 0;
+            if (campaignIdsToCloseRegistration.Count > 0)
+            {
+                closedRegistrations = await _db.Campaigns
+                    .Where(c => campaignIdsToCloseRegistration.Contains(c.CampaignId))
+                    .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsRegisterable, false));
+            }
+
             _logger.LogInformation(
-                "CampaignStatusJob: activated {ActivatedCampaignCount} campaign(s), activated {ActivatedBranchCampaignCount} branch-campaign row(s), deactivated {DeactivatedCampaignCount} campaign(s), and deactivated {DeactivatedBranchCampaignCount} branch-campaign row(s) at {Now}.",
+                "CampaignStatusJob: activated {ActivatedCampaignCount} campaign(s), activated {ActivatedBranchCampaignCount} branch-campaign row(s), deactivated {DeactivatedCampaignCount} campaign(s), deactivated {DeactivatedBranchCampaignCount} branch-campaign row(s), opened registration for {OpenedRegistrationCount} campaign(s), and closed registration for {ClosedRegistrationCount} campaign(s) at {Now}.",
                 activatedCampaigns,
                 activatedBranchCampaigns,
                 deactivatedCampaigns,
                 deactivatedBranchCampaigns,
+                openedRegistrations,
+                closedRegistrations,
                 now);
         }
     }

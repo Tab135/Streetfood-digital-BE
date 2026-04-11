@@ -12,6 +12,7 @@ namespace Repository.Interfaces
         Task<List<Campaign>> GetAllSystemActiveAsync();
         Task<List<Campaign>> GetByBranchIdAsync(int branchId);
         Task UpdateAsync(Campaign campaign);
+        Task DeleteAsync(int campaignId);
         Task<(List<Campaign> Items, int TotalCount)> GetCampaignsAsync(bool? isSystem, int? vendorId, int page, int pageSize);
         Task<(List<Campaign> Items, int TotalCount)> GetJoinableSystemCampaignsAsync(int page, int pageSize);
         Task<(List<Campaign> Items, int TotalCount)> GetPublicCampaignsAsync(bool? isSystem, int page, int pageSize);
