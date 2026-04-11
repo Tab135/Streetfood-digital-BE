@@ -152,13 +152,13 @@ namespace DAL
             return MapAndPaginateBranchesWithCampaigns(branches, branchCampaigns, vouchers, pageNumber, pageSize, userLat, userLng, maxDistance);
         }
 
-        public async Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetCampaignBranchesPaginatedAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng)
+        public async Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetCampaignBranchesPaginatedAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng, bool includeInactiveBranches = false)
         {
             var branches = await _context.Branches
                 .AsNoTracking()
                 .Include(b => b.Tier)
                 .Where(b => _context.BranchCampaigns
-                    .Any(bc => bc.CampaignId == campaignId && bc.BranchId == b.BranchId && bc.IsActive))
+                    .Any(bc => bc.CampaignId == campaignId && bc.BranchId == b.BranchId && (includeInactiveBranches || bc.IsActive)))
                 .ToListAsync();
 
             return MapAndPaginateBranches(branches, pageNumber, pageSize, userLat, userLng, null);

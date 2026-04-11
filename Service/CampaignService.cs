@@ -67,6 +67,12 @@ namespace Service
             var targetBranchIds = await ResolveTargetBranchIdsForVendorCampaignAsync(vendor.VendorId, dto.BranchIds);
             int? createdByBranchId = targetBranchIds.Count == 1 ? targetBranchIds[0] : null;
 
+            bool isCampaignActive = dto.IsActive;
+            if (dto.StartDate > DateTime.UtcNow)
+            {
+                isCampaignActive = false;
+            }
+
             var campaign = new Campaign
             {
                 Name = dto.Name,
@@ -76,7 +82,7 @@ namespace Service
                 RegistrationEndDate = null,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
-                IsActive = dto.IsActive,
+                IsActive = isCampaignActive,
                 CreatedByVendorId = vendor.VendorId,
                 CreatedByBranchId = createdByBranchId
             };
@@ -91,7 +97,7 @@ namespace Service
                 {
                     BranchId = branchId,
                     CampaignId = campaign.CampaignId,
-                    IsActive = campaign.IsActive
+                    IsActive = true
                 });
             }
 
@@ -106,15 +112,27 @@ namespace Service
             return new BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
-        public async Task<BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>> GetCampaignBranchesAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng)
+        public async Task<BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>> GetSystemCampaignBranchesAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng)
         {
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
-            if (campaign == null)
+            if (campaign == null || (campaign.CreatedByVendorId != null || campaign.CreatedByBranchId != null))
             {
-                throw new DomainExceptions("Chiến dịch không tồn tại.");
+                throw new DomainExceptions("Chiến dịch hệ thống không tồn tại hoặc đây không phải chiến dịch hệ thống.");
             }
 
             var (items, totalCount) = await _campaignRepo.GetCampaignBranchesPaginatedAsync(campaignId, pageNumber, pageSize, userLat, userLng);
+            return new BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>(items, totalCount, pageNumber, pageSize);
+        }
+
+        public async Task<BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>> GetVendorCampaignBranchesByCampaignIdAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng)
+        {
+            var campaign = await _campaignRepo.GetByIdAsync(campaignId);
+            if (campaign == null || campaign.CreatedByVendorId == null)
+            {
+                throw new DomainExceptions("Chiến dịch vendor không tồn tại hoặc đây là chiến dịch hệ thống.");
+            }
+
+            var (items, totalCount) = await _campaignRepo.GetCampaignBranchesPaginatedAsync(campaignId, pageNumber, pageSize, userLat, userLng, includeInactiveBranches: true);
             return new BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
@@ -200,11 +218,13 @@ namespace Service
             var ids = await _branchCampaignRepo.GetBranchIdsByCampaignAndVendorAsync(campaign.CampaignId, vendorId);
             int? nextBranchId = ids.Count == 1 ? ids[0] : null;
 
-            if (campaign.CreatedByBranchId == nextBranchId && campaign.IsActive)
+            bool shouldBeActive = campaign.StartDate <= DateTime.UtcNow;
+
+            if (campaign.CreatedByBranchId == nextBranchId && campaign.IsActive == shouldBeActive)
                 return;
 
             campaign.CreatedByBranchId = nextBranchId;
-            campaign.IsActive = true;
+            campaign.IsActive = shouldBeActive;
             campaign.UpdatedAt = DateTime.UtcNow;
             await _campaignRepo.UpdateAsync(campaign);
         }
@@ -229,6 +249,7 @@ namespace Service
             else
             {
                 nextBranchId = ids.Count == 1 ? ids[0] : null;
+                nextActive = campaign.StartDate <= DateTime.UtcNow;
             }
 
             if (campaign.CreatedByBranchId == nextBranchId && campaign.IsActive == nextActive)
