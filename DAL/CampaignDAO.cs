@@ -61,7 +61,52 @@ namespace DAL
             await _context.SaveChangesAsync();
         }
 
-                public async Task<(List<Campaign> Items, int TotalCount)> GetCampaignsAsync(bool? isSystem, int? vendorId, int page, int pageSize)
+        public async Task<List<int>> GetCampaignIdsToActivateAsync(DateTime now)
+        {
+            return await _context.Campaigns
+                .Where(c => !c.IsActive
+                            && c.StartDate <= now
+                            && c.EndDate >= now
+                            && _context.BranchCampaigns.Any(bc => bc.CampaignId == c.CampaignId))
+                .Select(c => c.CampaignId)
+                .ToListAsync();
+        }
+
+        public async Task<List<int>> GetExpiredCampaignIdsAsync(DateTime now)
+        {
+            return await _context.Campaigns
+                .Where(c => c.IsActive && c.EndDate < now)
+                .Select(c => c.CampaignId)
+                .ToListAsync();
+        }
+
+        public async Task<List<int>> GetCampaignIdsToOpenRegistrationAsync(DateTime now)
+        {
+            return await _context.Campaigns
+                .Where(c => c.CreatedByBranchId == null
+                            && c.CreatedByVendorId == null
+                            && !c.IsRegisterable
+                            && c.RegistrationStartDate != null
+                            && c.RegistrationStartDate <= now
+                            && (c.RegistrationEndDate == null || c.RegistrationEndDate >= now))
+                .Select(c => c.CampaignId)
+                .ToListAsync();
+        }
+
+        public async Task<List<int>> GetCampaignIdsToCloseRegistrationAsync(DateTime now)
+        {
+            return await _context.Campaigns
+                .Where(c => c.CreatedByBranchId == null
+                            && c.CreatedByVendorId == null
+                            && c.IsRegisterable
+                            && (c.RegistrationStartDate == null
+                                || c.RegistrationStartDate > now
+                                || (c.RegistrationEndDate != null && c.RegistrationEndDate < now)))
+                .Select(c => c.CampaignId)
+                .ToListAsync();
+        }
+
+        public async Task<(List<Campaign> Items, int TotalCount)> GetCampaignsAsync(bool? isSystem, int? vendorId, int page, int pageSize)
         {
             var query = _context.Campaigns.Include(c => c.CreatedByBranch).AsQueryable();
 

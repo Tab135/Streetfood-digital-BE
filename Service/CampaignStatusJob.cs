@@ -1,10 +1,7 @@
-using DAL;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Service
@@ -18,18 +15,15 @@ namespace Service
     {
         private readonly ICampaignRepository _campaignRepo;
         private readonly IBranchCampaignRepository _branchCampaignRepo;
-        private readonly StreetFoodDbContext _db;
         private readonly ILogger<CampaignStatusJob> _logger;
 
         public CampaignStatusJob(
             ICampaignRepository campaignRepo,
             IBranchCampaignRepository branchCampaignRepo,
-            StreetFoodDbContext db,
             ILogger<CampaignStatusJob> logger)
         {
             _campaignRepo = campaignRepo;
             _branchCampaignRepo = branchCampaignRepo;
-            _db = db;
             _logger = logger;
         }
 
@@ -117,42 +111,10 @@ namespace Service
         {
             var now = DateTime.UtcNow;
 
-            var campaignIdsToActivate = await _db.Campaigns
-                .Where(c => !c.IsActive && c.StartDate <= now && c.EndDate >= now
-                            && _db.BranchCampaigns.Any(bc => bc.CampaignId == c.CampaignId))
-                .Select(c => c.CampaignId)
-                .ToListAsync();
-
-            var nonSystemCampaignIdsToActivate = await _db.Campaigns
-                .Where(c => campaignIdsToActivate.Contains(c.CampaignId)
-                         && (c.CreatedByBranchId != null || c.CreatedByVendorId != null))
-                .Select(c => c.CampaignId)
-                .ToListAsync();
-
-            var expiredCampaignIds = await _db.Campaigns
-                .Where(c => c.IsActive && c.EndDate < now)
-                .Select(c => c.CampaignId)
-                .ToListAsync();
-
-            var campaignIdsToOpenRegistration = await _db.Campaigns
-                .Where(c => c.CreatedByBranchId == null
-                         && c.CreatedByVendorId == null
-                         && !c.IsRegisterable
-                         && c.RegistrationStartDate != null
-                         && c.RegistrationStartDate <= now
-                         && (c.RegistrationEndDate == null || c.RegistrationEndDate >= now))
-                .Select(c => c.CampaignId)
-                .ToListAsync();
-
-            var campaignIdsToCloseRegistration = await _db.Campaigns
-                .Where(c => c.CreatedByBranchId == null
-                         && c.CreatedByVendorId == null
-                         && c.IsRegisterable
-                         && (c.RegistrationStartDate == null
-                             || c.RegistrationStartDate > now
-                             || (c.RegistrationEndDate != null && c.RegistrationEndDate < now)))
-                .Select(c => c.CampaignId)
-                .ToListAsync();
+            var campaignIdsToActivate = await _campaignRepo.GetCampaignIdsToActivateAsync(now);
+            var expiredCampaignIds = await _campaignRepo.GetExpiredCampaignIdsAsync(now);
+            var campaignIdsToOpenRegistration = await _campaignRepo.GetCampaignIdsToOpenRegistrationAsync(now);
+            var campaignIdsToCloseRegistration = await _campaignRepo.GetCampaignIdsToCloseRegistrationAsync(now);
 
             if (campaignIdsToActivate.Count == 0
                 && expiredCampaignIds.Count == 0
@@ -164,65 +126,64 @@ namespace Service
             }
 
             var activatedCampaigns = 0;
-            var activatedBranchCampaigns = 0;
-
-            if (campaignIdsToActivate.Count > 0)
+            foreach (var campaignId in campaignIdsToActivate)
             {
-                activatedCampaigns = await _db.Campaigns
-                    .Where(c => campaignIdsToActivate.Contains(c.CampaignId))
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(c => c.IsActive, true)
-                        .SetProperty(c => c.UpdatedAt, now));
-
-                if (nonSystemCampaignIdsToActivate.Count > 0)
-                {
-                    activatedBranchCampaigns = await _db.BranchCampaigns
-                        .Where(bc => !bc.IsActive && nonSystemCampaignIdsToActivate.Contains(bc.CampaignId))
-                        .ExecuteUpdateAsync(s => s.SetProperty(bc => bc.IsActive, true));
-                }
+                await ActivateCampaignAsync(campaignId);
+                activatedCampaigns++;
             }
 
             var deactivatedCampaigns = 0;
-            var deactivatedBranchCampaigns = 0;
-
-            if (expiredCampaignIds.Count > 0)
+            foreach (var campaignId in expiredCampaignIds)
             {
-                deactivatedCampaigns = await _db.Campaigns
-                    .Where(c => expiredCampaignIds.Contains(c.CampaignId))
-                    .ExecuteUpdateAsync(s => s
-                        .SetProperty(c => c.IsActive, false)
-                        .SetProperty(c => c.UpdatedAt, now));
-
-                deactivatedBranchCampaigns = await _db.BranchCampaigns
-                    .Where(bc => bc.IsActive && expiredCampaignIds.Contains(bc.CampaignId))
-                    .ExecuteUpdateAsync(s => s.SetProperty(bc => bc.IsActive, false));
+                await DeactivateCampaignAsync(campaignId);
+                deactivatedCampaigns++;
             }
 
             var openedRegistrations = 0;
-            if (campaignIdsToOpenRegistration.Count > 0)
+            foreach (var campaignId in campaignIdsToOpenRegistration)
             {
-                openedRegistrations = await _db.Campaigns
-                    .Where(c => campaignIdsToOpenRegistration.Contains(c.CampaignId))
-                    .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsRegisterable, true));
+                await UpdateRegistrationStatusAsync(campaignId, true, now);
+                openedRegistrations++;
             }
 
             var closedRegistrations = 0;
-            if (campaignIdsToCloseRegistration.Count > 0)
+            foreach (var campaignId in campaignIdsToCloseRegistration)
             {
-                closedRegistrations = await _db.Campaigns
-                    .Where(c => campaignIdsToCloseRegistration.Contains(c.CampaignId))
-                    .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsRegisterable, false));
+                await UpdateRegistrationStatusAsync(campaignId, false, now);
+                closedRegistrations++;
             }
 
             _logger.LogInformation(
-                "CampaignStatusJob: activated {ActivatedCampaignCount} campaign(s), activated {ActivatedBranchCampaignCount} branch-campaign row(s), deactivated {DeactivatedCampaignCount} campaign(s), deactivated {DeactivatedBranchCampaignCount} branch-campaign row(s), opened registration for {OpenedRegistrationCount} campaign(s), and closed registration for {ClosedRegistrationCount} campaign(s) at {Now}.",
+                "CampaignStatusJob: activated {ActivatedCampaignCount} campaign(s), deactivated {DeactivatedCampaignCount} campaign(s), opened registration for {OpenedRegistrationCount} campaign(s), and closed registration for {ClosedRegistrationCount} campaign(s) at {Now}.",
                 activatedCampaigns,
-                activatedBranchCampaigns,
                 deactivatedCampaigns,
-                deactivatedBranchCampaigns,
                 openedRegistrations,
                 closedRegistrations,
                 now);
+        }
+
+        private async Task UpdateRegistrationStatusAsync(int campaignId, bool isRegisterable, DateTime now)
+        {
+            var campaign = await _campaignRepo.GetByIdAsync(campaignId);
+            if (campaign == null)
+            {
+                _logger.LogWarning("CampaignStatusJob: campaign {CampaignId} not found for registration update.", campaignId);
+                return;
+            }
+
+            if (campaign.CreatedByBranchId != null || campaign.CreatedByVendorId != null)
+            {
+                return;
+            }
+
+            if (campaign.IsRegisterable == isRegisterable)
+            {
+                return;
+            }
+
+            campaign.IsRegisterable = isRegisterable;
+            campaign.UpdatedAt = now;
+            await _campaignRepo.UpdateAsync(campaign);
         }
     }
 }
