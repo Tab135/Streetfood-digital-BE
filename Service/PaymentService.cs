@@ -453,6 +453,9 @@ namespace Service.PaymentsService
                 string paymentLinkId;
                 string checkoutUrl;
                 string qrCode;
+                string? bin = null;
+                string? accountNumber = null;
+                string? accountName = null;
                 if (_isDebugMode)
                 {
                     paymentLinkId = $"DEBUG-ORDER-{orderCode}";
@@ -465,6 +468,9 @@ namespace Service.PaymentsService
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
                     qrCode = paymentLinkResponse.QrCode;
+                    bin = paymentLinkResponse.Bin;
+                    accountNumber = paymentLinkResponse.AccountNumber;
+                    accountName = paymentLinkResponse.AccountName;
                 }
 
                 await _paymentRepo.UpdatePaymentWithPayOSDetails(
@@ -480,7 +486,10 @@ namespace Service.PaymentsService
                     PaymentUrl = checkoutUrl,
                     QrCode = qrCode,
                     OrderCode = orderCode,
-                    PaymentLinkId = paymentLinkId
+                    PaymentLinkId = paymentLinkId,
+                    Bin = bin,
+                    AccountNumber = accountNumber,
+                    AccountName = accountName,
                 };
             }
             catch (Exception ex)
