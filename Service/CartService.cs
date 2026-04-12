@@ -309,6 +309,7 @@ public class CartService : ICartService
             AppliedVoucherId = request.VoucherId,
             Table = request.Table,
             PaymentMethod = request.PaymentMethod,
+            Note = request.Note,
             DiscountAmount = discountAmount,
             IsTakeAway = request.IsTakeAway,
             Items = cart.Items.Select(i => new CreateOrderDishRequest

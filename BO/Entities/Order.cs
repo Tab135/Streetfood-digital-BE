@@ -27,6 +27,9 @@ public class Order
     [StringLength(255)]
     public string? PaymentMethod { get; set; }
 
+    [StringLength(1000)]
+    public string? Note { get; set; }
+
     [StringLength(20)]
     public string? CompletionCode { get; set; }
 

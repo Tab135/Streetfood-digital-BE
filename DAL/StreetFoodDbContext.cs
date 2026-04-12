@@ -368,6 +368,7 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.Status).HasConversion<string>().HasMaxLength(255).IsRequired();
             entity.Property(e => e.Table).HasMaxLength(255);
             entity.Property(e => e.PaymentMethod).HasMaxLength(255);
+            entity.Property(e => e.Note).HasMaxLength(1000);
             entity.Property(e => e.CompletionCode).HasMaxLength(20);
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
             entity.Property(e => e.DiscountAmount).HasColumnType("decimal(18,2)");

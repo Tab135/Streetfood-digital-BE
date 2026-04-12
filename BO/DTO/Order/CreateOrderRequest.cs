@@ -15,6 +15,9 @@ public class CreateOrderRequest
     [MaxLength(255)]
     public string? PaymentMethod { get; set; }
 
+    [MaxLength(1000)]
+    public string? Note { get; set; }
+
     [Range(0, double.MaxValue, ErrorMessage = "Discount amount must be non-negative")]
     public decimal? DiscountAmount { get; set; }
 

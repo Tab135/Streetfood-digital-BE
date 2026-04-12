@@ -12,5 +12,8 @@ public class CheckoutCartRequest
     [MaxLength(255)]
     public string? PaymentMethod { get; set; }
 
+    [MaxLength(1000)]
+    public string? Note { get; set; }
+
     public bool IsTakeAway { get; set; }
 }

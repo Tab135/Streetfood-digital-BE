@@ -90,6 +90,7 @@ public class OrderService : IOrderService
             Status = OrderStatus.Pending,
             Table = request.Table,
             PaymentMethod = request.PaymentMethod,
+            Note = request.Note,
             TotalAmount = totalAmount,
             DiscountAmount = request.DiscountAmount,
             FinalAmount = finalAmount,
@@ -147,6 +148,7 @@ public class OrderService : IOrderService
             existingPendingOrder.AppliedVoucherId = request.AppliedVoucherId;
             existingPendingOrder.Table = request.Table;
             existingPendingOrder.PaymentMethod = request.PaymentMethod;
+            existingPendingOrder.Note = request.Note;
             existingPendingOrder.TotalAmount = totalAmount;
             existingPendingOrder.DiscountAmount = request.DiscountAmount;
             existingPendingOrder.FinalAmount = finalAmount;
@@ -164,6 +166,7 @@ public class OrderService : IOrderService
             Status = OrderStatus.Pending,
             Table = request.Table,
             PaymentMethod = request.PaymentMethod,
+            Note = request.Note,
             TotalAmount = totalAmount,
             DiscountAmount = request.DiscountAmount,
             FinalAmount = finalAmount,
@@ -401,6 +404,11 @@ public class OrderService : IOrderService
         if (request.PaymentMethod != null)
         {
             order.PaymentMethod = request.PaymentMethod;
+        }
+
+        if (request.Note != null)
+        {
+            order.Note = request.Note;
         }
 
         if (request.IsTakeAway.HasValue)
@@ -888,6 +896,7 @@ public class OrderService : IOrderService
             Status = order.Status,
             Table = order.Table,
             PaymentMethod = order.PaymentMethod,
+            Note = order.Note,
             TotalAmount = order.TotalAmount,
             DiscountAmount = order.DiscountAmount,
             FinalAmount = order.FinalAmount,

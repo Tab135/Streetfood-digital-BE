@@ -20,6 +20,7 @@ public class OrderResponseDto
     public OrderStatus Status { get; set; }
     public string? Table { get; set; }
     public string? PaymentMethod { get; set; }
+    public string? Note { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal? DiscountAmount { get; set; }
     public decimal FinalAmount { get; set; }

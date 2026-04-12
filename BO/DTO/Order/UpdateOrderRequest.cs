@@ -8,6 +8,7 @@ public class UpdateOrderRequest
 
     public string? Table { get; set; }
     public string? PaymentMethod { get; set; }
+    public string? Note { get; set; }
     public decimal? DiscountAmount { get; set; }
     public bool? IsTakeAway { get; set; }
 
