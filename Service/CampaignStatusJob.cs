@@ -55,6 +55,15 @@ namespace Service
                 return;
             }
 
+            var branchCount = await _branchCampaignRepo.CountByCampaignIdAsync(campaignId);
+            if (branchCount == 0)
+            {
+                _logger.LogInformation(
+                    "CampaignStatusJob: skip activation for campaign {CampaignId} because no branches have joined yet.",
+                    campaignId);
+                return;
+            }
+
             if (!campaign.IsActive)
             {
                 campaign.IsActive = true;
@@ -109,7 +118,8 @@ namespace Service
             var now = DateTime.UtcNow;
 
             var campaignIdsToActivate = await _db.Campaigns
-                .Where(c => !c.IsActive && c.StartDate <= now && c.EndDate >= now)
+                .Where(c => !c.IsActive && c.StartDate <= now && c.EndDate >= now
+                            && _db.BranchCampaigns.Any(bc => bc.CampaignId == c.CampaignId))
                 .Select(c => c.CampaignId)
                 .ToListAsync();
 
