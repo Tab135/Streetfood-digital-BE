@@ -36,11 +36,6 @@ public class FeedbackVoteService : IFeedbackVoteService
         if (feedback.UserId == userId)
             throw new DomainExceptions("Bạn không thể vote cho đánh giá của chính mình");
 
-        // Must have visited branch (has existing feedback on the same branch)
-        var hasVisited = await _feedbackRepository.HasUserFeedbackOnBranch(feedback.BranchId, userId);
-        if (!hasVisited)
-            throw new DomainExceptions("Bạn cần đã đánh giá chi nhánh này để có thể vote");
-
         // Check for existing vote
         var existingVote = await _voteRepository.GetByFeedbackAndUser(feedbackId, userId);
 
