@@ -11,6 +11,7 @@ namespace BO.DTO.Campaigns
         public string? TargetSegment { get; set; }
         public DateTime? RegistrationStartDate { get; set; }
         public DateTime? RegistrationEndDate { get; set; }
+        public int? RequiredTierId { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public bool IsActive { get; set; }

@@ -30,6 +30,8 @@ namespace BO.Entities
         public DateTime? RegistrationStartDate { get; set; }
         public DateTime? RegistrationEndDate { get; set; }
 
+        public int? RequiredTierId { get; set; }
+
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
 

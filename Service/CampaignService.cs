@@ -395,7 +395,13 @@ namespace Service
             var eligibleBranchIds = new List<int>();
             foreach (var branch in branches)
             {
-                if (!(branch.Tier != null && branch.Tier.Weight >= 1 && branch.IsSubscribed))
+                if (!branch.IsSubscribed)
+                    continue;
+
+                if (branch.TierId == 1) // Warning
+                    continue;
+
+                if (campaign.RequiredTierId.HasValue && branch.TierId < campaign.RequiredTierId.Value)
                     continue;
 
                 var branchCampaign = await _branchCampaignRepo.GetByBranchAndCampaignAsync(branch.BranchId, campaignId);
@@ -413,6 +419,7 @@ namespace Service
                 TargetSegment = campaign.TargetSegment,
                 RegistrationStartDate = campaign.RegistrationStartDate,
                 RegistrationEndDate = campaign.RegistrationEndDate,
+                RequiredTierId = campaign.RequiredTierId,
                 StartDate = campaign.StartDate,
                 EndDate = campaign.EndDate,
                 IsActive = campaign.IsActive,
@@ -440,7 +447,15 @@ namespace Service
             foreach (var branch in branches)
             {
                 // Fail condition: branch doesn't meet tier/subscription requirements -> skip entirely
-                if (!(branch.Tier != null && branch.Tier.Weight >= 1 && branch.IsSubscribed))
+                // Warning vendor/branch (TierId = 1) is not allowed if RequiredTier dictates a higher rank (and Warning is generally implicitly disallowed if greater tier is needed).
+                if (!branch.IsSubscribed)
+                    continue;
+
+                if (campaign.RequiredTierId.HasValue && branch.TierId < campaign.RequiredTierId.Value)
+                    continue;
+
+                // Also generally forbid Warning (TierId = 1) from participating in System Campaigns if that is the business rule.
+                if (branch.TierId == 1) // Warning
                     continue;
 
                 var branchCampaign = await _branchCampaignRepo.GetByBranchAndCampaignAsync(branch.BranchId, campaignId);
@@ -554,12 +569,32 @@ namespace Service
                     continue;
                 }
 
-                if (!(branch.Tier != null && branch.Tier.Weight >= 1 && branch.IsSubscribed))
+                if (!branch.IsSubscribed)
                 {
                     result.Branches.Add(new VendorJoinSystemCampaignBranchDto
                     {
                         BranchId = branchId,
-                        Status = "NOT_ELIGIBLE"
+                        Status = "NOT_SUBSCRIBED"
+                    });
+                    continue;
+                }
+
+                if (branch.TierId == 1) // Warning
+                {
+                    result.Branches.Add(new VendorJoinSystemCampaignBranchDto
+                    {
+                        BranchId = branchId,
+                        Status = "WARNING_TIER"
+                    });
+                    continue;
+                }
+
+                if (campaign.RequiredTierId.HasValue && branch.TierId < campaign.RequiredTierId.Value)
+                {
+                    result.Branches.Add(new VendorJoinSystemCampaignBranchDto
+                    {
+                        BranchId = branchId,
+                        Status = "TIER_TOO_LOW"
                     });
                     continue;
                 }
@@ -673,6 +708,7 @@ namespace Service
                 TargetSegment = dto.TargetSegment,
                 RegistrationStartDate = dto.RegistrationStartDate,
                 RegistrationEndDate = dto.RegistrationEndDate,
+                RequiredTierId = dto.RequiredTierId,
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 IsActive = isCampaignActive,
@@ -766,6 +802,7 @@ namespace Service
                     TargetSegment = item.TargetSegment,
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
+                    RequiredTierId = item.RequiredTierId,
                     StartDate = item.StartDate,
                     EndDate = item.EndDate,
                     IsActive = item.IsActive,
@@ -824,6 +861,7 @@ namespace Service
                     TargetSegment = item.TargetSegment,
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
+                    RequiredTierId = item.RequiredTierId,
                     StartDate = item.StartDate,
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
@@ -862,6 +900,7 @@ namespace Service
                     TargetSegment = item.TargetSegment,
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
+                    RequiredTierId = item.RequiredTierId,
                     StartDate = item.StartDate,
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
@@ -900,6 +939,7 @@ namespace Service
                     TargetSegment = item.TargetSegment,
                     RegistrationStartDate = item.RegistrationStartDate,
                     RegistrationEndDate = item.RegistrationEndDate,
+                    RequiredTierId = item.RequiredTierId,
                     StartDate = item.StartDate,
                     EndDate = item.EndDate, 
                     IsActive = item.IsActive,
@@ -936,6 +976,7 @@ namespace Service
                 TargetSegment = item.TargetSegment,
                 RegistrationStartDate = item.RegistrationStartDate,
                 RegistrationEndDate = item.RegistrationEndDate,
+                RequiredTierId = item.RequiredTierId,
                 StartDate = item.StartDate,
                 EndDate = item.EndDate,
                 IsActive = item.IsActive,

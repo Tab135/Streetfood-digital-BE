@@ -27,6 +27,7 @@ namespace Service
         private readonly IEmailSender _email_sender;
         private readonly IConfiguration _configuration;
         private readonly IFacebookService _facebookService;
+        private readonly ISettingRepository _settingRepository;
 
         // Constants
         private const int OtpExpiryMinutes = 3;
@@ -40,7 +41,8 @@ namespace Service
             IOtpVerifyRepository otpVerifyRepository,
             IEmailSender emailSender,
             IConfiguration configuration,
-            IFacebookService facebookService)
+            IFacebookService facebookService,
+            ISettingRepository settingRepository)
         {
             _userRepository = userRepository;
             _jwt_service = jwtService;
@@ -48,6 +50,7 @@ namespace Service
             _email_sender = emailSender;
             _configuration = configuration;
             _facebookService = facebookService;
+            _settingRepository = settingRepository;
         }
         public async Task<User> GetUserById(int userId)
         {
@@ -697,9 +700,18 @@ namespace Service
 
             user.XP += xpAmount;
 
-            if (user.XP >= 10000)
+            var goldXpSetting = await _settingRepository.GetByNameAsync("GoldMinXP");
+            var diamondXpSetting = await _settingRepository.GetByNameAsync("DiamondMinXP");
+            
+            var goldXpStr = goldXpSetting?.Value ?? "3000";
+            var diamondXpStr = diamondXpSetting?.Value ?? "10000";
+            
+            int goldXp = int.TryParse(goldXpStr, out int g) ? g : 3000;
+            int diamondXp = int.TryParse(diamondXpStr, out int d) ? d : 10000;
+
+            if (user.XP >= diamondXp)
                 user.TierId = 4; // Diamond
-            else if (user.XP >= 3000)
+            else if (user.XP >= goldXp)
                 user.TierId = 3; // Gold
             else
                 user.TierId = 2; // Silver

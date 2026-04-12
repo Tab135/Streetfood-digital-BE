@@ -14,5 +14,7 @@ namespace BO.DTO.Campaigns
         public DateTime? RegistrationEndDate { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+
+        public int? RequiredTierId { get; set; }
     }
 }

@@ -18,6 +18,9 @@ namespace BO.DTO.Campaigns
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public DateTime? RegistrationEndDate { get; set; }
         
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public int? RequiredTierId { get; set; }
+        
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public bool IsActive { get; set; }
