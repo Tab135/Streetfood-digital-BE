@@ -45,7 +45,6 @@ namespace StreetFood.Tests.Badge
             {
                 BadgeId = id,
                 BadgeName = "Test Badge",
-                PointToGet = 100,
                 IconUrl = "http://example.com/icon.png",
                 Description = "A test badge"
             };
@@ -141,21 +140,5 @@ namespace StreetFood.Tests.Badge
             Assert.Equal("Badge not found", msg);
         }
 
-        [Fact]
-        public async Task CheckAndAwardBadges_ReturnsOk()
-        {
-            // Arrange
-            _badgeServiceMock.Setup(s => s.CheckAndAwardBadges(1)).Returns(Task.CompletedTask);
-
-            // Act
-            var result = await _controller.CheckAndAwardBadges();
-
-            // Assert
-            var okResult = Assert.IsType<OkObjectResult>(result);
-            var value = okResult.Value;
-            var msg = value?.GetType().GetProperty("message")?.GetValue(value) as string;
-            Assert.Equal("Badges checked and awarded successfully", msg);
-            _badgeServiceMock.Verify(s => s.CheckAndAwardBadges(1), Times.Once);
-        }
     }
 }

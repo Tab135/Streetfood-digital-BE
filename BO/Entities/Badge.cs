@@ -11,8 +11,6 @@ public class Badge
     [StringLength(100)]
     public string BadgeName { get; set; } = string.Empty;
 
-    public int PointToGet { get; set; }
-
     [StringLength(500)]
     public string IconUrl { get; set; } = string.Empty;
 

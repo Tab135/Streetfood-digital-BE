@@ -12,6 +12,5 @@ namespace Repository.Interfaces
         Task<Badge> Update(Badge badge);
         Task<bool> Delete(int badgeId);
         Task<bool> Exists(int badgeId);
-        Task<List<Badge>> GetBadgesByPointThreshold(int points);
     }
 }

@@ -179,25 +179,6 @@ namespace StreetFood.Controllers
             }
         }
 
-        [HttpPost("user/check")]
-        [Authorize]
-        public async Task<IActionResult> CheckAndAwardBadges()
-        {
-            try
-            {
-                // Check if the requesting user is authorized
-                var currentUserId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
-                var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-
-                await _badgeService.CheckAndAwardBadges(currentUserId);
-                return Ok(new { message = "Badges checked and awarded successfully" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
-
         [HttpPost("user/{userId}/award/{badgeId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> AwardBadgeToUser(int userId, int badgeId)

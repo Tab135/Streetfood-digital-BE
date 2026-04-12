@@ -32,13 +32,12 @@ namespace StreetFood.Tests.Badge
             );
         }
 
-        private BO.Entities.Badge MakeSampleBadge(int id = 1, string name = "Beginner", int points = 100)
+        private BO.Entities.Badge MakeSampleBadge(int id = 1, string name = "Beginner")
         {
             return new BO.Entities.Badge
             {
                 BadgeId = id,
                 BadgeName = name,
-                PointToGet = points,
                 IconUrl = "http://example.com/icon.png",
                 Description = "A badge"
             };
@@ -58,7 +57,7 @@ namespace StreetFood.Tests.Badge
         public async Task CreateBadge_ReturnsMappedDto()
         {
             // Arrange
-            var createDto = new CreateBadgeDto { BadgeName = "Pro", PointToGet = 500, Description = "Pro badge" };
+            var createDto = new CreateBadgeDto { BadgeName = "Pro", Description = "Pro badge" };
             var iconUrl = "http://example.com/pro.png";
 
             _badgeRepoMock.Setup(r => r.Create(It.IsAny<BO.Entities.Badge>()))
@@ -71,7 +70,6 @@ namespace StreetFood.Tests.Badge
             Assert.NotNull(result);
             Assert.Equal(10, result.BadgeId);
             Assert.Equal("Pro", result.BadgeName);
-            Assert.Equal(500, result.PointToGet);
             Assert.Equal(iconUrl, result.IconUrl);
         }
 
@@ -80,7 +78,7 @@ namespace StreetFood.Tests.Badge
         {
             // Arrange
             var existingBadge = MakeSampleBadge(1);
-            var updateDto = new UpdateBadgeDto { BadgeName = "New Name", PointToGet = 200, Description = "New Desc" };
+            var updateDto = new UpdateBadgeDto { BadgeName = "New Name", Description = "New Desc" };
             
             _badgeRepoMock.Setup(r => r.GetById(1)).ReturnsAsync(existingBadge);
             _badgeRepoMock.Setup(r => r.Update(It.IsAny<BO.Entities.Badge>()))
@@ -91,7 +89,6 @@ namespace StreetFood.Tests.Badge
 
             // Assert
             Assert.Equal("New Name", result.BadgeName);
-            Assert.Equal(200, result.PointToGet);
             Assert.Equal("http://newicon.png", result.IconUrl);
             Assert.Equal("New Desc", result.Description);
         }
@@ -132,28 +129,6 @@ namespace StreetFood.Tests.Badge
             // Act & Assert
             var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _badgeService.DeleteBadge(99));
             Assert.Contains("Không tìm thấy huy hiệu", ex.Message);
-        }
-
-        [Fact]
-        public async Task CheckAndAwardBadges_UserEligibleForNewBadge_AwardsBadge()
-        {
-            // Arrange
-            var user = MakeSampleUser(1, points: 200);
-            _userRepoMock.Setup(r => r.GetUserById(1)).ReturnsAsync(user);
-
-            var eligibleBadges = new List<BO.Entities.Badge> { MakeSampleBadge(10, points: 100), MakeSampleBadge(11, points: 200) };
-            _badgeRepoMock.Setup(r => r.GetBadgesByPointThreshold(200)).ReturnsAsync(eligibleBadges);
-
-            // User already has badge 10
-            _userBadgeRepoMock.Setup(r => r.GetBadgeIdsByUserId(1)).ReturnsAsync(new List<int> { 10 });
-
-            // Act
-            await _badgeService.CheckAndAwardBadges(1);
-
-            // Assert
-            // It should only award badge 11 because badge 10 is already earned
-            _userBadgeRepoMock.Verify(r => r.Create(It.Is<UserBadge>(ub => ub.UserId == 1 && ub.BadgeId == 11)), Times.Once);
-            _userBadgeRepoMock.Verify(r => r.Create(It.Is<UserBadge>(ub => ub.BadgeId == 10)), Times.Never);
         }
 
         [Fact]

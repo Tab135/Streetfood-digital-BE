@@ -27,7 +27,6 @@ namespace Service
             var badge = new Badge
             {
                 BadgeName = createBadgeDto.BadgeName,
-                PointToGet = createBadgeDto.PointToGet,
                 IconUrl = iconUrl,
                 Description = createBadgeDto.Description
             };
@@ -45,9 +44,6 @@ namespace Service
 
             if (!string.IsNullOrEmpty(updateBadgeDto.BadgeName))
                 badge.BadgeName = updateBadgeDto.BadgeName;
-
-            if (updateBadgeDto.PointToGet.HasValue)
-                badge.PointToGet = updateBadgeDto.PointToGet.Value;
 
             if (!string.IsNullOrWhiteSpace(iconUrl))
                 badge.IconUrl = iconUrl;
@@ -93,35 +89,6 @@ namespace Service
         {
             var (items, totalCount) = await _userBadgeRepository.GetAllUsersWithBadges(pageNumber, pageSize);
             return new PaginatedResponse<UserWithBadgesDto>(items, totalCount, pageNumber, pageSize);
-        }
-
-        public async Task CheckAndAwardBadges(int userId)
-        {
-            var user = await _userRepository.GetUserById(userId);
-            if (user == null)
-                throw new DomainExceptions($"Không tìm thấy người dùng với ID {userId}");
-
-            // Get all badges that the user qualifies for based on points
-            var eligibleBadges = await _badgeRepository.GetBadgesByPointThreshold(user.Point);
-            
-            // Get badges the user already has
-            var earnedBadgeIds = await _userBadgeRepository.GetBadgeIdsByUserId(userId);
-
-            // Award new badges
-            foreach (var badge in eligibleBadges)
-            {
-                if (!earnedBadgeIds.Contains(badge.BadgeId))
-                {
-                    var userBadge = new UserBadge
-                    {
-                        UserId = userId,
-                        BadgeId = badge.BadgeId,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await _userBadgeRepository.Create(userBadge);
-                }
-            }
         }
 
         public async Task<UserBadgeDto> AwardBadgeToUser(int userId, int badgeId)
@@ -176,7 +143,6 @@ namespace Service
             {
                 BadgeId = badge.BadgeId,
                 BadgeName = badge.BadgeName,
-                PointToGet = badge.PointToGet,
                 IconUrl = badge.IconUrl,
                 Description = badge.Description
             };

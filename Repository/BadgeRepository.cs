@@ -45,10 +45,5 @@ namespace Repository
         {
             return await _badgeDAO.Exists(badgeId);
         }
-
-        public async Task<List<Badge>> GetBadgesByPointThreshold(int points)
-        {
-            return await _badgeDAO.GetBadgesByPointThreshold(points);
-        }
     }
 }

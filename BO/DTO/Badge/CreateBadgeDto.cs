@@ -8,10 +8,6 @@ public class CreateBadgeDto
     [StringLength(100)]
     public string BadgeName { get; set; } = string.Empty;
 
-    [Required]
-    [Range(1, int.MaxValue, ErrorMessage = "Point must be greater than 0")]
-    public int PointToGet { get; set; }
-
     [StringLength(255)]
     public string? Description { get; set; }
 }

@@ -85,7 +85,6 @@ namespace DAL
                             {
                                 BadgeId = badge.BadgeId,
                                 BadgeName = badge.BadgeName,
-                                PointToGet = badge.PointToGet,
                                 IconUrl = badge.IconUrl,
                                 Description = badge.Description,
                                 IsEarned = true,
@@ -111,7 +110,6 @@ namespace DAL
                     {
                         BadgeId = badge.BadgeId,
                         BadgeName = badge.BadgeName,
-                        PointToGet = badge.PointToGet,
                         IconUrl = badge.IconUrl,
                         Description = badge.Description,
                         IsEarned = true,

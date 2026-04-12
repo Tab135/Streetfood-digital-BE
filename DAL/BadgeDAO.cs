@@ -29,7 +29,7 @@ namespace DAL
 
         public async Task<List<Badge>> GetAll()
         {
-            return await _context.Badges.OrderBy(b => b.PointToGet).ToListAsync();
+            return await _context.Badges.OrderBy(b => b.BadgeId).ToListAsync();
         }
 
         public async Task<Badge> Update(Badge badge)
@@ -53,14 +53,6 @@ namespace DAL
         public async Task<bool> Exists(int badgeId)
         {
             return await _context.Badges.AnyAsync(b => b.BadgeId == badgeId);
-        }
-
-        public async Task<List<Badge>> GetBadgesByPointThreshold(int points)
-        {
-            return await _context.Badges
-                .Where(b => b.PointToGet <= points)
-                .OrderBy(b => b.PointToGet)
-                .ToListAsync();
         }
     }
 }

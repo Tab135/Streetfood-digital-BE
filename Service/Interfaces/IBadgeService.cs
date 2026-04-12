@@ -21,7 +21,6 @@ namespace Service.Interfaces
         // User badge operations
         Task<List<BadgeWithUserInfoDto>> GetUserBadgesWithInfo(int userId);
         Task<PaginatedResponse<UserWithBadgesDto>> GetAllUsersWithBadges(int pageNumber, int pageSize);
-        Task CheckAndAwardBadges(int userId);
         Task<UserBadgeDto> AwardBadgeToUser(int userId, int badgeId);
         Task<bool> RemoveBadgeFromUser(int userId, int badgeId);
         Task<int> GetUserBadgeCount(int userId);
