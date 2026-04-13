@@ -20,6 +20,7 @@ namespace Service
         private readonly IQuestProgressService _questProgressService;
         private readonly ISettingService _settingService;
         private readonly IUserService _userService;
+        private readonly INotificationService _notificationService;
 
         public BranchService(
             IBranchRepository branchRepository,
@@ -27,7 +28,8 @@ namespace Service
             IUserRepository userRepository,
             IQuestProgressService questProgressService,
             ISettingService settingService,
-            IUserService userService)
+            IUserService userService,
+            INotificationService notificationService)
         {
             _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
             _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
@@ -35,6 +37,7 @@ namespace Service
             _questProgressService = questProgressService ?? throw new ArgumentNullException(nameof(questProgressService));
             _settingService = settingService ?? throw new ArgumentNullException(nameof(settingService));
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
+            _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
         }
 
         public async Task<Branch> CreateBranchAsync(CreateBranchDto createBranchDto, int vendorId, int userId)
@@ -609,6 +612,24 @@ namespace Service
                 }
             }
 
+            var approvedRecipientId = await ResolveBranchNotificationRecipientUserIdAsync(branch);
+            if (approvedRecipientId.HasValue)
+            {
+                await _notificationService.NotifyAsync(
+                    approvedRecipientId.Value,
+                    NotificationType.BranchVerificationStatus,
+                    "Chi nhánh đã được duyệt",
+                    $"Chi nhánh '{branch.Name}' của bạn đã được xác minh thành công.",
+                    branch.BranchId,
+                    new
+                    {
+                        type = "branch_verification_approved",
+                        branchId = branch.BranchId,
+                        branchName = branch.Name,
+                        status = "ACCEPTED"
+                    });
+            }
+
             return true;
         }
 
@@ -627,6 +648,33 @@ namespace Service
             registrationRequest.RejectReason = rejectionReason;
             registrationRequest.UpdatedAt = DateTime.UtcNow;
             await _branchRepository.UpdateBranchRequestAsync(registrationRequest);
+
+            var branch = registrationRequest.Branch ?? await _branchRepository.GetByIdAsync(branchId);
+            if (branch != null)
+            {
+                var rejectedRecipientId = await ResolveBranchNotificationRecipientUserIdAsync(branch);
+                if (rejectedRecipientId.HasValue)
+                {
+                    var reason = string.IsNullOrWhiteSpace(rejectionReason)
+                        ? "Không có lý do cụ thể"
+                        : rejectionReason;
+
+                    await _notificationService.NotifyAsync(
+                        rejectedRecipientId.Value,
+                        NotificationType.BranchVerificationStatus,
+                        "Yêu cầu chi nhánh bị từ chối",
+                        $"Yêu cầu xác minh chi nhánh '{branch.Name}' đã bị từ chối. Lý do: {reason}",
+                        branch.BranchId,
+                        new
+                        {
+                            type = "branch_verification_rejected",
+                            branchId = branch.BranchId,
+                            branchName = branch.Name,
+                            status = "REJECTED",
+                            reason
+                        });
+                }
+            }
 
             return true;
         }
@@ -946,6 +994,30 @@ namespace Service
             {
                 throw new DomainExceptions("Chỉ Admin hoặc Moderator mới có quyền duyệt chi nhánh");
             }
+        }
+
+        private async Task<int?> ResolveBranchNotificationRecipientUserIdAsync(Branch branch)
+        {
+            if (branch.ManagerId.HasValue)
+            {
+                return branch.ManagerId.Value;
+            }
+
+            if (branch.VendorId.HasValue)
+            {
+                var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value);
+                if (vendor != null)
+                {
+                    return vendor.UserId;
+                }
+            }
+
+            if (branch.CreatedById.HasValue)
+            {
+                return branch.CreatedById.Value;
+            }
+
+            return null;
         }
 
         // Helper method
