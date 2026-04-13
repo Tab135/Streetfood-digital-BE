@@ -371,7 +371,37 @@ public class OrderService : IOrderService
         var order = await _orderRepository.GetById(orderId)
             ?? throw new DomainExceptions("Order not found");
 
-        EnsureOrderOwnership(order, userId);
+        var branch = await _branchRepository.GetByIdAsync(order.BranchId)
+            ?? throw new DomainExceptions("Branch not found");
+
+        if (!branch.ManagerId.HasValue || branch.ManagerId.Value != userId)
+        {
+            throw new DomainExceptions("You do not manage this branch", "ERR_FORBIDDEN");
+        }
+
+        if (order.Status == OrderStatus.Complete)
+        {
+            var hasRestrictedFields = request.Status.HasValue
+                || request.PaymentMethod != null
+                || request.Note != null
+                || request.DiscountAmount.HasValue
+                || request.IsTakeAway.HasValue
+                || request.Items != null;
+
+            if (hasRestrictedFields)
+            {
+                throw new DomainExceptions("Only table can be updated after the order is completed");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Table))
+            {
+                throw new DomainExceptions("Table is required when updating a completed order");
+            }
+
+            order.Table = request.Table.Trim();
+            var completedOrder = await _orderRepository.Update(order);
+            return MapToDto(completedOrder);
+        }
 
         if (order.Status != OrderStatus.Pending)
         {
