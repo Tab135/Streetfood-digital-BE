@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260413104534_MultiCart")]
+    partial class MultiCart
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1266,9 +1269,6 @@ namespace DAL.Migrations
                     b.Property<bool>("IsStandalone")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("RequiresEnrollment")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -1304,6 +1304,14 @@ namespace DAL.Migrations
                     b.Property<int>("QuestId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("RewardType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("RewardValue")
+                        .HasColumnType("integer");
+
                     b.Property<int>("TargetValue")
                         .HasColumnType("integer");
 
@@ -1317,35 +1325,6 @@ namespace DAL.Migrations
                     b.HasIndex("QuestId");
 
                     b.ToTable("QuestTasks");
-                });
-
-            modelBuilder.Entity("BO.Entities.QuestTaskReward", b =>
-                {
-                    b.Property<int>("QuestTaskRewardId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("QuestTaskRewardId"));
-
-                    b.Property<int>("Quantity")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
-
-                    b.Property<int>("QuestTaskId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("RewardType")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("RewardValue")
-                        .HasColumnType("integer");
-
-                    b.HasKey("QuestTaskRewardId");
-
-                    b.HasIndex("QuestTaskId");
-
-                    b.ToTable("QuestTaskRewards");
                 });
 
             modelBuilder.Entity("BO.Entities.Setting", b =>
@@ -2411,17 +2390,6 @@ namespace DAL.Migrations
                     b.Navigation("Quest");
                 });
 
-            modelBuilder.Entity("BO.Entities.QuestTaskReward", b =>
-                {
-                    b.HasOne("BO.Entities.QuestTask", "QuestTask")
-                        .WithMany("QuestTaskRewards")
-                        .HasForeignKey("QuestTaskId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("QuestTask");
-                });
-
             modelBuilder.Entity("BO.Entities.User", b =>
                 {
                     b.HasOne("BO.Entities.Tier", "Tier")
@@ -2666,8 +2634,6 @@ namespace DAL.Migrations
 
             modelBuilder.Entity("BO.Entities.QuestTask", b =>
                 {
-                    b.Navigation("QuestTaskRewards");
-
                     b.Navigation("UserQuestTasks");
                 });
 

@@ -1,4 +1,5 @@
 using BO.Enums;
+using System.Collections.Generic;
 
 namespace BO.DTO.Quest
 {
@@ -9,7 +10,6 @@ namespace BO.DTO.Quest
         public QuestTaskType Type { get; set; }
         public int TargetValue { get; set; }
         public string? Description { get; set; }
-        public QuestRewardType RewardType { get; set; }
-        public int RewardValue { get; set; }
+        public List<QuestTaskRewardDto> Rewards { get; set; } = new();
     }
 }

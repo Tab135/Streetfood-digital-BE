@@ -3,6 +3,7 @@ using BO.Enums;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Service
@@ -16,6 +17,9 @@ namespace Service
         private readonly IVoucherRepository _voucherRepository;
         private readonly IQuestRepository _questRepository;
         private readonly INotificationService _notificationService;
+
+        // Warning (1) and Silver (2) have no tier-up quest
+        private static readonly int[] NoRewardTierIds = { 1, 2 };
 
         public QuestProgressService(
             IUserQuestRepository userQuestRepository,
@@ -59,7 +63,6 @@ namespace Service
 
                 if (userQuestTask.IsCompleted)
                 {
-                    // Notify task completion (for notification list)
                     var taskLabel = userQuestTask.QuestTask.Description ?? userQuestTask.QuestTask.Type.ToString();
                     await _notificationService.NotifyAsync(
                         userId,
@@ -73,68 +76,136 @@ namespace Service
             }
         }
 
+        public async Task HandleTierUpAsync(int userId, int newTierId)
+        {
+            // No tier-up quest for Warning (1) or Silver (2)
+            if (NoRewardTierIds.Contains(newTierId))
+                return;
+
+            var quest = await _questRepository.GetActiveTierUpQuestForTierAsync(newTierId);
+            if (quest == null)
+                return;
+
+            // Idempotency: don't re-grant if already completed
+            var existing = await _userQuestRepository.GetByUserAndQuestAnyStatusAsync(userId, quest.QuestId);
+            if (existing != null && existing.Status == "COMPLETED")
+                return;
+
+            var questTask = quest.QuestTasks.FirstOrDefault(t =>
+                t.Type == QuestTaskType.TIER_UP && t.TargetValue == newTierId);
+            if (questTask == null)
+                return;
+
+            // Create completed UserQuest and UserQuestTask atomically
+            var userQuest = new UserQuest
+            {
+                UserId = userId,
+                QuestId = quest.QuestId,
+                Status = "COMPLETED",
+                StartedAt = DateTime.UtcNow,
+                CompletedAt = DateTime.UtcNow
+            };
+            var created = await _userQuestRepository.CreateAsync(userQuest);
+
+            var userQuestTask = new UserQuestTask
+            {
+                UserQuestId = created.UserQuestId,
+                QuestTaskId = questTask.QuestTaskId,
+                CurrentValue = 1,
+                IsCompleted = true,
+                CompletedAt = DateTime.UtcNow,
+                RewardClaimed = false
+            };
+            await _userQuestRepository.AddUserQuestTasksAsync(new System.Collections.Generic.List<UserQuestTask> { userQuestTask });
+
+            // Load back with navigation so rewards are available
+            var loaded = await _userQuestRepository.GetByIdAsync(created.UserQuestId);
+            var loadedTask = loaded?.UserQuestTasks.FirstOrDefault();
+            if (loadedTask != null)
+            {
+                await DistributeTaskRewardAsync(userId, loadedTask);
+                loadedTask.RewardClaimed = true;
+                await _userQuestRepository.UpdateUserQuestTaskAsync(loadedTask);
+            }
+
+            // Push notification with questTaskId for FE reward deep-link
+            await _notificationService.NotifyAsync(
+                userId,
+                NotificationType.QuestCompleted,
+                "Lên cấp độ!",
+                $"Chúc mừng! Bạn đã đạt cấp độ mới và nhận được phần thưởng.",
+                loadedTask?.QuestTaskId ?? questTask.QuestTaskId);
+        }
+
         private async Task DistributeTaskRewardAsync(int userId, UserQuestTask userQuestTask)
         {
-            var rewardType = userQuestTask.QuestTask.RewardType;
-            var rewardValue = userQuestTask.QuestTask.RewardValue;
+            // Guard: don't re-distribute if already claimed
+            if (userQuestTask.RewardClaimed)
+                return;
 
-            switch (rewardType)
+            var rewards = userQuestTask.QuestTask?.QuestTaskRewards;
+            if (rewards == null || !rewards.Any())
+                return;
+
+            foreach (var reward in rewards)
             {
-                case QuestRewardType.BADGE:
-                    var alreadyHasBadge = await _userBadgeRepository.Exists(userId, rewardValue);
-                    if (!alreadyHasBadge)
-                    {
-                        var userBadge = new UserBadge
+                switch (reward.RewardType)
+                {
+                    case QuestRewardType.BADGE:
+                        var alreadyHasBadge = await _userBadgeRepository.Exists(userId, reward.RewardValue);
+                        if (!alreadyHasBadge)
                         {
-                            UserId = userId,
-                            BadgeId = rewardValue,
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        await _userBadgeRepository.Create(userBadge);
-                    }
-                    break;
-
-                case QuestRewardType.POINTS:
-                    var user = await _userRepository.GetUserById(userId);
-                    if (user != null)
-                    {
-                        user.Point += rewardValue;
-                        await _userRepository.UpdateAsync(user);
-                    }
-                    break;
-
-                case QuestRewardType.VOUCHER:
-                    var voucher = await _voucherRepository.GetByIdAsync(rewardValue);
-                    if (voucher != null && voucher.UsedQuantity < voucher.Quantity)
-                    {
-                        voucher.UsedQuantity += 1;
-                        await _voucherRepository.UpdateAsync(voucher);
-
-                        var existingUserVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, rewardValue);
-                        if (existingUserVoucher != null)
-                        {
-                            existingUserVoucher.Quantity += 1;
-                            await _userVoucherRepository.UpdateAsync(existingUserVoucher);
-                        }
-                        else
-                        {
-                            var userVoucher = new UserVoucher
+                            await _userBadgeRepository.Create(new UserBadge
                             {
                                 UserId = userId,
-                                VoucherId = rewardValue,
-                                Quantity = 1,
-                                IsAvailable = true
-                            };
-                            await _userVoucherRepository.CreateAsync(userVoucher);
+                                BadgeId = reward.RewardValue,
+                                CreatedAt = DateTime.UtcNow
+                            });
                         }
+                        break;
 
-                        if (voucher.UsedQuantity >= voucher.Quantity)
+                    case QuestRewardType.POINTS:
+                        var user = await _userRepository.GetUserById(userId);
+                        if (user != null)
                         {
-                            userQuestTask.QuestTask.IsActive = false;
-                            await _questRepository.UpdateTaskAsync(userQuestTask.QuestTask);
+                            user.Point += reward.RewardValue * reward.Quantity;
+                            await _userRepository.UpdateAsync(user);
                         }
-                    }
-                    break;
+                        break;
+
+                    case QuestRewardType.VOUCHER:
+                        var voucher = await _voucherRepository.GetByIdAsync(reward.RewardValue);
+                        if (voucher != null && voucher.UsedQuantity < voucher.Quantity)
+                        {
+                            int grantQty = Math.Min(reward.Quantity, voucher.Quantity - voucher.UsedQuantity);
+                            voucher.UsedQuantity += grantQty;
+                            await _voucherRepository.UpdateAsync(voucher);
+
+                            var existingUserVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, reward.RewardValue);
+                            if (existingUserVoucher != null)
+                            {
+                                existingUserVoucher.Quantity += grantQty;
+                                await _userVoucherRepository.UpdateAsync(existingUserVoucher);
+                            }
+                            else
+                            {
+                                await _userVoucherRepository.CreateAsync(new UserVoucher
+                                {
+                                    UserId = userId,
+                                    VoucherId = reward.RewardValue,
+                                    Quantity = grantQty,
+                                    IsAvailable = true
+                                });
+                            }
+
+                            if (voucher.UsedQuantity >= voucher.Quantity)
+                            {
+                                userQuestTask.QuestTask.IsActive = false;
+                                await _questRepository.UpdateTaskAsync(userQuestTask.QuestTask);
+                            }
+                        }
+                        break;
+                }
             }
         }
 

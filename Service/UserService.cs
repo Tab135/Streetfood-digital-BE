@@ -28,6 +28,7 @@ namespace Service
         private readonly IConfiguration _configuration;
         private readonly IFacebookService _facebookService;
         private readonly ISettingRepository _settingRepository;
+        private readonly IQuestProgressService _questProgressService;
 
         // Constants
         private const int OtpExpiryMinutes = 3;
@@ -42,7 +43,8 @@ namespace Service
             IEmailSender emailSender,
             IConfiguration configuration,
             IFacebookService facebookService,
-            ISettingRepository settingRepository)
+            ISettingRepository settingRepository,
+            IQuestProgressService questProgressService)
         {
             _userRepository = userRepository;
             _jwt_service = jwtService;
@@ -51,6 +53,7 @@ namespace Service
             _configuration = configuration;
             _facebookService = facebookService;
             _settingRepository = settingRepository;
+            _questProgressService = questProgressService;
         }
         public async Task<User> GetUserById(int userId)
         {
@@ -787,25 +790,33 @@ namespace Service
             var user = await _userRepository.GetUserById(userId);
             if (user == null) return false;
 
+            var oldTierId = user.TierId ?? 2;
+
             user.XP += xpAmount;
 
             var goldXpSetting = await _settingRepository.GetByNameAsync("GoldMinXP");
             var diamondXpSetting = await _settingRepository.GetByNameAsync("DiamondMinXP");
-            
+
             var goldXpStr = goldXpSetting?.Value ?? "3000";
             var diamondXpStr = diamondXpSetting?.Value ?? "10000";
-            
+
             int goldXp = int.TryParse(goldXpStr, out int g) ? g : 3000;
             int diamondXp = int.TryParse(diamondXpStr, out int d) ? d : 10000;
 
+            int newTierId;
             if (user.XP >= diamondXp)
-                user.TierId = 4; // Diamond
+                newTierId = 4; // Diamond
             else if (user.XP >= goldXp)
-                user.TierId = 3; // Gold
+                newTierId = 3; // Gold
             else
-                user.TierId = 2; // Silver
+                newTierId = 2; // Silver
 
+            user.TierId = newTierId;
             await _userRepository.UpdateAsync(user);
+
+            if (newTierId > oldTierId)
+                await _questProgressService.HandleTierUpAsync(userId, newTierId);
+
             return true;
         }
     }

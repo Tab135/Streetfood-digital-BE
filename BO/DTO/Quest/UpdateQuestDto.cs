@@ -14,6 +14,7 @@ namespace BO.DTO.Quest
         public string? ImageUrl { get; set; }
         public bool? IsActive { get; set; }
         public bool? IsStandalone { get; set; }
+        public bool? RequiresEnrollment { get; set; }
         public int? CampaignId { get; set; }
 
         public List<CreateQuestTaskDto>? Tasks { get; set; }

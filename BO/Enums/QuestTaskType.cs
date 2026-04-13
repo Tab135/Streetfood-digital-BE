@@ -5,6 +5,7 @@ namespace BO.Enums
         REVIEW = 1,
         ORDER_AMOUNT = 2,
         SHARE = 3,
-        CREATE_GHOST_PIN = 4
+        CREATE_GHOST_PIN = 4,
+        TIER_UP = 5
     }
 }
