@@ -103,9 +103,31 @@ namespace DAL
                 (!excludeQuestId.HasValue || q.QuestId != excludeQuestId.Value));
         }
 
+        public async Task<bool> HasActiveTierUpQuestForTierAsync(int tierId, int? excludeQuestId = null)
+        {
+            return await _context.Quests.AnyAsync(q =>
+                q.IsActive &&
+                !q.RequiresEnrollment &&
+                q.QuestTasks.Any(t => t.Type == BO.Enums.QuestTaskType.TIER_UP && t.TargetValue == tierId) &&
+                (!excludeQuestId.HasValue || q.QuestId != excludeQuestId.Value));
+        }
+
+        public async Task<Quest?> GetActiveTierUpQuestForTierAsync(int tierId)
+        {
+            return await _context.Quests
+                .Include(q => q.QuestTasks)
+                    .ThenInclude(t => t.QuestTaskRewards)
+                .FirstOrDefaultAsync(q =>
+                    q.IsActive &&
+                    !q.RequiresEnrollment &&
+                    q.QuestTasks.Any(t => t.Type == BO.Enums.QuestTaskType.TIER_UP && t.TargetValue == tierId));
+        }
+
         public async Task<QuestTask?> GetTaskByIdAsync(int questTaskId)
         {
-            return await _context.QuestTasks.FirstOrDefaultAsync(t => t.QuestTaskId == questTaskId);
+            return await _context.QuestTasks
+                .Include(t => t.QuestTaskRewards)
+                .FirstOrDefaultAsync(t => t.QuestTaskId == questTaskId);
         }
 
         public async Task UpdateTaskAsync(QuestTask task)

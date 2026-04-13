@@ -1,4 +1,5 @@
 using BO.Enums;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace BO.DTO.Quest
@@ -16,10 +17,7 @@ namespace BO.DTO.Quest
         public string? Description { get; set; }
 
         [Required]
-        public QuestRewardType RewardType { get; set; }
-
-        [Required]
-        [Range(1, int.MaxValue, ErrorMessage = "RewardValue must be greater than 0")]
-        public int RewardValue { get; set; }
+        [MinLength(1, ErrorMessage = "At least one reward is required per task")]
+        public List<CreateQuestTaskRewardDto> Rewards { get; set; } = new();
     }
 }

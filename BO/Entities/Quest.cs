@@ -21,11 +21,9 @@ namespace BO.Entities
 
         public bool IsActive { get; set; } = true;
 
-        /// <summary>
-        /// True = standalone quest (no campaign, one active at a time per user).
-        /// False = campaign quest (must belong to a campaign).
-        /// </summary>
         public bool IsStandalone { get; set; } = true;
+
+        public bool RequiresEnrollment { get; set; } = true;
 
         public int? CampaignId { get; set; }
         [ForeignKey("CampaignId")]

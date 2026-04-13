@@ -70,6 +70,7 @@ public class StreetFoodDbContext : DbContext
     // Quests
     public DbSet<Quest> Quests { get; set; }
     public DbSet<QuestTask> QuestTasks { get; set; }
+    public DbSet<QuestTaskReward> QuestTaskRewards { get; set; }
     public DbSet<UserQuest> UserQuests { get; set; }
     public DbSet<UserQuestTask> UserQuestTasks { get; set; }
 
@@ -731,11 +732,22 @@ public class StreetFoodDbContext : DbContext
             entity.HasKey(e => e.QuestTaskId);
             entity.Property(e => e.Type).IsRequired().HasMaxLength(50).HasConversion<string>();
             entity.Property(e => e.Description).HasMaxLength(500);
-            entity.Property(e => e.RewardType).IsRequired().HasMaxLength(50).HasConversion<string>();
 
             entity.HasOne(e => e.Quest)
                   .WithMany(q => q.QuestTasks)
                   .HasForeignKey(e => e.QuestId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<QuestTaskReward>(entity =>
+        {
+            entity.HasKey(e => e.QuestTaskRewardId);
+            entity.Property(e => e.RewardType).IsRequired().HasConversion<int>();
+            entity.Property(e => e.Quantity).HasDefaultValue(1);
+
+            entity.HasOne(e => e.QuestTask)
+                  .WithMany(qt => qt.QuestTaskRewards)
+                  .HasForeignKey(e => e.QuestTaskId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
