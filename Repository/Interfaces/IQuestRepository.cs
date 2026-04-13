@@ -14,6 +14,8 @@ namespace Repository.Interfaces
         Task<bool> DeleteAsync(int questId);
         Task<bool> HasEnrolledUsersAsync(int questId);
         Task<bool> ExistsByCampaignIdAsync(int campaignId, int? excludeQuestId = null);
+        Task<bool> HasActiveTierUpQuestForTierAsync(int tierId, int? excludeQuestId = null);
+        Task<Quest?> GetActiveTierUpQuestForTierAsync(int tierId);
         Task<QuestTask?> GetTaskByIdAsync(int questTaskId);
         Task UpdateTaskAsync(QuestTask task);
     Task RemoveTasksAsync(List<QuestTask> tasks);

@@ -24,12 +24,9 @@ namespace BO.Entities
         [MaxLength(500)]
         public string? Description { get; set; }
 
-        [Required]
-        public QuestRewardType RewardType { get; set; }
-
-        public int RewardValue { get; set; }
-
         public bool IsActive { get; set; } = true;
+
+        public virtual ICollection<QuestTaskReward> QuestTaskRewards { get; set; } = new List<QuestTaskReward>();
 
         [JsonIgnore]
         public virtual ICollection<UserQuestTask> UserQuestTasks { get; set; } = new List<UserQuestTask>();

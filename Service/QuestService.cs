@@ -39,6 +39,32 @@ namespace Service
             if (dto.Tasks == null || dto.Tasks.Count == 0)
                 throw new DomainExceptions("Cần có ít nhất một nhiệm vụ");
 
+            // TIER_UP quest validations
+            bool hasTierUpTask = dto.Tasks.Any(t => t.Type == QuestTaskType.TIER_UP);
+            if (hasTierUpTask)
+            {
+                if (dto.RequiresEnrollment)
+                    throw new DomainExceptions("Nhiệm vụ TIER_UP chỉ được phép trên quest không yêu cầu đăng ký (RequiresEnrollment = false).");
+
+                if (dto.Tasks.Count > 1)
+                    throw new DomainExceptions("Quest TIER_UP phải có đúng một nhiệm vụ.");
+
+                // Validate no duplicate active TIER_UP quest for same tier
+                int targetTierId = dto.Tasks[0].TargetValue;
+                if (await _questRepository.HasActiveTierUpQuestForTierAsync(targetTierId))
+                    throw new DomainExceptions($"Đã tồn tại quest TIER_UP đang hoạt động cho cấp độ này.");
+            }
+
+            // Validate each task has at least one reward
+            foreach (var taskDto in dto.Tasks)
+            {
+                if (taskDto.Rewards == null || taskDto.Rewards.Count == 0)
+                    throw new DomainExceptions("Mỗi nhiệm vụ phải có ít nhất một phần thưởng.");
+
+                foreach (var reward in taskDto.Rewards)
+                    await ValidateTaskRewardAsync(reward.RewardType, reward.RewardValue);
+            }
+
             ValidateStandaloneCampaignConsistency(dto.IsStandalone, dto.CampaignId);
 
             if (dto.CampaignId.HasValue)
@@ -53,11 +79,6 @@ namespace Service
                     throw new DomainExceptions("Chiến dịch này đã có quest. Mỗi chiến dịch chỉ có thể có một quest.");
             }
 
-            foreach (var taskDto in dto.Tasks)
-            {
-                await ValidateTaskRewardAsync(taskDto.RewardType, taskDto.RewardValue);
-            }
-
             var quest = new Quest
             {
                 Title = dto.Title,
@@ -65,14 +86,19 @@ namespace Service
                 ImageUrl = dto.ImageUrl,
                 IsActive = dto.IsActive,
                 IsStandalone = dto.IsStandalone,
+                RequiresEnrollment = dto.RequiresEnrollment,
                 CampaignId = dto.CampaignId,
                 QuestTasks = dto.Tasks.Select(t => new QuestTask
                 {
                     Type = t.Type,
                     TargetValue = t.TargetValue,
                     Description = t.Description,
-                    RewardType = t.RewardType,
-                    RewardValue = t.RewardValue
+                    QuestTaskRewards = t.Rewards.Select(r => new QuestTaskReward
+                    {
+                        RewardType = r.RewardType,
+                        RewardValue = r.RewardValue,
+                        Quantity = r.Quantity
+                    }).ToList()
                 }).ToList()
             };
 
@@ -102,6 +128,8 @@ namespace Service
                 quest.IsActive = dto.IsActive.Value;
             if (dto.IsStandalone.HasValue)
                 quest.IsStandalone = dto.IsStandalone.Value;
+            if (dto.RequiresEnrollment.HasValue)
+                quest.RequiresEnrollment = dto.RequiresEnrollment.Value;
 
             if (dto.CampaignId.HasValue)
             {
@@ -121,7 +149,11 @@ namespace Service
             {
                 foreach (var taskDto in dto.Tasks)
                 {
-                    await ValidateTaskRewardAsync(taskDto.RewardType, taskDto.RewardValue);
+                    if (taskDto.Rewards == null || taskDto.Rewards.Count == 0)
+                        throw new DomainExceptions("Mỗi nhiệm vụ phải có ít nhất một phần thưởng.");
+
+                    foreach (var reward in taskDto.Rewards)
+                        await ValidateTaskRewardAsync(reward.RewardType, reward.RewardValue);
                 }
 
                 await _questRepository.RemoveTasksAsync(quest.QuestTasks.ToList());
@@ -131,8 +163,12 @@ namespace Service
                     Type = t.Type,
                     TargetValue = t.TargetValue,
                     Description = t.Description,
-                    RewardType = t.RewardType,
-                    RewardValue = t.RewardValue
+                    QuestTaskRewards = t.Rewards.Select(r => new QuestTaskReward
+                    {
+                        RewardType = r.RewardType,
+                        RewardValue = r.RewardValue,
+                        Quantity = r.Quantity
+                    }).ToList()
                 }).ToList();
                 await _questRepository.AddTasksAsync(newTasks);
                 quest.QuestTasks = newTasks;
@@ -168,8 +204,13 @@ namespace Service
                 Type = task.Type,
                 TargetValue = task.TargetValue,
                 Description = task.Description,
-                RewardType = task.RewardType,
-                RewardValue = task.RewardValue
+                Rewards = task.QuestTaskRewards.Select(r => new QuestTaskRewardDto
+                {
+                    QuestTaskRewardId = r.QuestTaskRewardId,
+                    RewardType = r.RewardType,
+                    RewardValue = r.RewardValue,
+                    Quantity = r.Quantity
+                }).ToList()
             };
         }
 
@@ -203,6 +244,9 @@ namespace Service
 
             if (!quest.IsActive)
                 throw new DomainExceptions("Quest hiện không khả dụng");
+
+            if (!quest.RequiresEnrollment)
+                throw new DomainExceptions("Quest này không cho phép đăng ký thủ công.");
 
             // Check if the user has any previous record for this quest
             var existing = await _userQuestRepository.GetByUserAndQuestAnyStatusAsync(userId, questId);
@@ -346,6 +390,7 @@ namespace Service
                 ImageUrl = quest.ImageUrl,
                 IsActive = quest.IsActive,
                 IsStandalone = quest.IsStandalone,
+                RequiresEnrollment = quest.RequiresEnrollment,
                 CampaignId = quest.CampaignId,
                 CreatedAt = quest.CreatedAt,
                 UpdatedAt = quest.UpdatedAt,
@@ -356,8 +401,13 @@ namespace Service
                     Type = t.Type,
                     TargetValue = t.TargetValue,
                     Description = t.Description,
-                    RewardType = t.RewardType,
-                    RewardValue = t.RewardValue
+                    Rewards = t.QuestTaskRewards.Select(r => new QuestTaskRewardDto
+                    {
+                        QuestTaskRewardId = r.QuestTaskRewardId,
+                        RewardType = r.RewardType,
+                        RewardValue = r.RewardValue,
+                        Quantity = r.Quantity
+                    }).ToList()
                 }).ToList()
             };
         }
@@ -371,8 +421,13 @@ namespace Service
                 Type = uqt.QuestTask.Type,
                 TargetValue = uqt.QuestTask.TargetValue,
                 Description = uqt.QuestTask.Description,
-                RewardType = uqt.QuestTask.RewardType,
-                RewardValue = uqt.QuestTask.RewardValue,
+                Rewards = uqt.QuestTask.QuestTaskRewards.Select(r => new QuestTaskRewardDto
+                {
+                    QuestTaskRewardId = r.QuestTaskRewardId,
+                    RewardType = r.RewardType,
+                    RewardValue = r.RewardValue,
+                    Quantity = r.Quantity
+                }).ToList(),
                 CurrentValue = uqt.CurrentValue,
                 IsCompleted = uqt.IsCompleted,
                 CompletedAt = uqt.CompletedAt,
