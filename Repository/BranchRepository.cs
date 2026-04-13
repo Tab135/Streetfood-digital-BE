@@ -221,6 +221,11 @@ namespace Repository
         {
             await _branchDAO.RecalculateBranchMetricsAsync(branchId);
         }
+
+        public async Task ResetAllTiersAsync(System.Threading.CancellationToken ct)
+        {
+            await _branchDAO.ResetAllTiersAsync(ct);
+        }
     }
 }
 
