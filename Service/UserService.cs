@@ -156,6 +156,27 @@ namespace Service
 
             return "Đăng ký thành công. Vui lòng đăng nhập bằng thông tin của bạn.";
         }
+        // Helper method to assign runtime next XP limit when returning the User entity directly
+        private async Task PopulatedUserNotMappedFieldsAsync(User user)
+        {
+            if (user == null) return;
+
+            if (user.TierId == 2)
+            {
+                var goldXpSetting = await _settingRepository.GetByNameAsync("GoldMinXP");
+                user.NextTierXP = (goldXpSetting != null && int.TryParse(goldXpSetting.Value, out int gXp)) ? gXp : 3000;
+            }
+            else if (user.TierId == 3)
+            {
+                var diamondXpSetting = await _settingRepository.GetByNameAsync("DiamondMinXP");
+                user.NextTierXP = (diamondXpSetting != null && int.TryParse(diamondXpSetting.Value, out int dXp)) ? dXp : 10000;
+            }
+            else
+            {
+                user.NextTierXP = null; // Diamond max
+            }
+        }
+
         public async Task<LoginResponse> GoogleLoginAsync(GoogleAuthDto googleAuthDto)
         {
             try
@@ -214,8 +235,7 @@ namespace Service
                     throw new DomainExceptions("Tài khoản của bạn đã bị khóa.");
                 }
 
-                var token = _jwt_service.GenerateToken(user);
-
+                var token = _jwt_service.GenerateToken(user);                await PopulatedUserNotMappedFieldsAsync(user);
                 return new LoginResponse
                 {
                     Token = token,
@@ -358,6 +378,7 @@ namespace Service
             }
 
             var token = _jwt_service.GenerateToken(user);
+            await PopulatedUserNotMappedFieldsAsync(user);
 
             await MarkOtpAsUsedAsync(validOtp.Id, normalizedPhoneNumber, otp);
 
@@ -428,8 +449,20 @@ namespace Service
             var (users, totalCount) = await _userRepository.GetUsersAsync(role, pageNumber, pageSize);
             var mappedUsers = new List<UserProfileDto>();
 
+            // Fetch dynamic admin XP thresholds once for the entire list
+            int goldMinXp = 3000;
+            int diamondMinXp = 10000;
+            var goldXpSetting = await _settingRepository.GetByNameAsync("GoldMinXP");
+            if (goldXpSetting != null && int.TryParse(goldXpSetting.Value, out int gXp)) goldMinXp = gXp;
+            var diamondXpSetting = await _settingRepository.GetByNameAsync("DiamondMinXP");
+            if (diamondXpSetting != null && int.TryParse(diamondXpSetting.Value, out int dXp)) diamondMinXp = dXp;
+
             foreach (var u in users)
             {
+                int? nextTierXp = null;
+                if (u.TierId == 2) nextTierXp = goldMinXp;
+                else if (u.TierId == 3) nextTierXp = diamondMinXp;
+
                 mappedUsers.Add(new UserProfileDto
                 {
                     Id = u.Id,
@@ -441,7 +474,11 @@ namespace Service
                     AvatarUrl = u.AvatarUrl,
                     Status = u.Status,
                     Role = u.Role.ToString(),
-                    Point = u.Point
+                    Point = u.Point,
+                    XP = u.XP,
+                    TierId = u.TierId,
+                    TierName = u.Tier?.Name ?? GetTierNameHardcoded(u.TierId),
+                    NextTierXP = nextTierXp
                 });
             }
 
@@ -452,8 +489,21 @@ namespace Service
         {
             var (users, totalCount) = await _userRepository.SearchUsersAsync(keyword, pageNumber, pageSize);
             var mappedUsers = new List<UserProfileDto>();
+
+            // Fetch dynamic admin XP thresholds once for the entire list
+            int goldMinXp = 3000;
+            int diamondMinXp = 10000;
+            var goldXpSetting = await _settingRepository.GetByNameAsync("GoldMinXP");
+            if (goldXpSetting != null && int.TryParse(goldXpSetting.Value, out int gXp)) goldMinXp = gXp;
+            var diamondXpSetting = await _settingRepository.GetByNameAsync("DiamondMinXP");
+            if (diamondXpSetting != null && int.TryParse(diamondXpSetting.Value, out int dXp)) diamondMinXp = dXp;
+
             foreach (var u in users)
             {
+                int? nextTierXp = null;
+                if (u.TierId == 2) nextTierXp = goldMinXp;
+                else if (u.TierId == 3) nextTierXp = diamondMinXp;
+
                 mappedUsers.Add(new UserProfileDto
                 {
                     Id = u.Id,
@@ -465,7 +515,11 @@ namespace Service
                     AvatarUrl = u.AvatarUrl,
                     Status = u.Status,
                     Role = u.Role.ToString(),
-                    Point = u.Point
+                    Point = u.Point,
+                    XP = u.XP,
+                    TierId = u.TierId,
+                    TierName = u.Tier?.Name ?? GetTierNameHardcoded(u.TierId),
+                    NextTierXP = nextTierXp
                 });
             }
             return new BO.Common.PaginatedResponse<UserProfileDto>(mappedUsers, totalCount, pageNumber, pageSize);
@@ -479,6 +533,24 @@ namespace Service
                 throw new DomainExceptions("Không tìm thấy người dùng", "ERR_USER_NOT_FOUND");
             }
 
+            int? nextTierXp = null;
+            if (u.TierId == 2) // Silver
+            {
+                var goldXpSetting = await _settingRepository.GetByNameAsync("GoldMinXP");
+                if (goldXpSetting != null && int.TryParse(goldXpSetting.Value, out int gXp))
+                    nextTierXp = gXp;
+                else
+                    nextTierXp = 3000; // fallback
+            }
+            else if (u.TierId == 3) // Gold
+            {
+                var diamondXpSetting = await _settingRepository.GetByNameAsync("DiamondMinXP");
+                if (diamondXpSetting != null && int.TryParse(diamondXpSetting.Value, out int dXp))
+                    nextTierXp = dXp;
+                else
+                    nextTierXp = 10000; // fallback
+            }
+
             return new UserProfileDto
             {
                 Id = u.Id,
@@ -490,7 +562,23 @@ namespace Service
                 AvatarUrl = u.AvatarUrl,
                 Status = u.Status,
                 Role = u.Role.ToString(),
-                Point = u.Point
+                Point = u.Point,
+                XP = u.XP,
+                TierId = u.TierId,
+                TierName = u.Tier?.Name ?? GetTierNameHardcoded(u.TierId),
+                NextTierXP = nextTierXp
+            };
+        }
+
+        private string GetTierNameHardcoded(int? tierId)
+        {
+            return tierId switch
+            {
+                1 => "Warning",
+                2 => "Silver",
+                3 => "Gold",
+                4 => "Diamond",
+                _ => "Unknown"
             };
         }
 
@@ -543,6 +631,7 @@ namespace Service
                 }
 
                 var token = _jwt_service.GenerateToken(user);
+                await PopulatedUserNotMappedFieldsAsync(user);
                 return new LoginResponse { Token = token, User = user };
             }
             catch (Exception)

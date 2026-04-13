@@ -27,6 +27,9 @@ public class User
     [System.Text.Json.Serialization.JsonIgnore]
     public virtual Tier? Tier { get; set; }
 
+    [NotMapped]
+    public int? NextTierXP { get; set; }
+
     public bool EmailVerified { get; set; } = false;
 
     [StringLength(20)]

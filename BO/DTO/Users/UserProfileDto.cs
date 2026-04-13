@@ -12,5 +12,11 @@ namespace BO.DTO.Users
         public string? Status { get; set; }
         public string Role { get; set; }
         public int Point { get; set; }
+        
+        // Progression Info
+        public int XP { get; set; }
+        public int? TierId { get; set; }
+        public string? TierName { get; set; }
+        public int? NextTierXP { get; set; }
     }
 }

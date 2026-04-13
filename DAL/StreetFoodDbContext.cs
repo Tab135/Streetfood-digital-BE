@@ -791,7 +791,9 @@ public class StreetFoodDbContext : DbContext
                 new Setting { Id = 3, Name = "CampaignJoinFee", Value = "20000" },
                 new Setting { Id = 4, Name = "orderXP", Value = "50" },
                 new Setting { Id = 5, Name = "feedbackXP", Value = "20" },
-                new Setting { Id = 6, Name = "ghostpinXP", Value = "100" }
+                new Setting { Id = 6, Name = "ghostpinXP", Value = "100" },
+                new Setting { Id = 7, Name = "GoldMinXP", Value = "3000" },
+                new Setting { Id = 8, Name = "DiamondMinXP", Value = "10000" }
             );
         });
     }

@@ -175,7 +175,9 @@ namespace DAL
 
         public async Task<User> GetUserById(int userId)
         {
-            return await _context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+            return await _context.Users
+                .Include(u => u.Tier)
+                .FirstOrDefaultAsync(x => x.Id == userId);
         }
 
         // Added: update only password
