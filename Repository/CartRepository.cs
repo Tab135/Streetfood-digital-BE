@@ -15,9 +15,15 @@ public class CartRepository : ICartRepository
 
     public Task<Cart?> GetByUserIdAsync(int userId) => _cartDao.GetByUserIdAsync(userId);
 
+    public Task<List<Cart>> GetByUserIdAllAsync(int userId) => _cartDao.GetByUserIdAllAsync(userId);
+
+    public Task<Cart?> GetByUserAndBranchAsync(int userId, int branchId) => _cartDao.GetByUserAndBranchAsync(userId, branchId);
+
     public Task<Cart> CreateAsync(Cart cart) => _cartDao.CreateAsync(cart);
 
     public Task UpdateAsync(Cart cart) => _cartDao.UpdateAsync(cart);
+
+    public Task DeleteAsync(int cartId) => _cartDao.DeleteAsync(cartId);
 
     public Task<CartItem?> GetItemByDishIdAsync(int cartId, int dishId) => _cartDao.GetItemByDishIdAsync(cartId, dishId);
 
