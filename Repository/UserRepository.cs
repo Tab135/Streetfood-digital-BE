@@ -81,5 +81,10 @@ namespace Repository
         {
             return await _userDAO.SearchUsersAsync(keyword, pageNumber, pageSize);
         }
+
+        public async Task ResetAllCustomerTiersAsync(int goldXP, int diamondXP, System.Threading.CancellationToken ct)
+        {
+            await _userDAO.ResetAllCustomerTiersAsync(goldXP, diamondXP, ct);
+        }
     }
 }

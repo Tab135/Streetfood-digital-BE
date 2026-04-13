@@ -244,5 +244,29 @@ namespace DAL
 
             return (users, totalCount);
         }
+
+        public async Task ResetAllCustomerTiersAsync(int goldXP, int diamondXP, System.Threading.CancellationToken ct)
+        {
+            var customers = await _context.Users.Where(u => (int)u.Role == 0).ToListAsync(ct); // Role.User = 0
+            foreach(var c in customers)
+            {
+                if (c.TierId == 4) // Diamond
+                {
+                    c.TierId = 3;
+                    c.XP = goldXP; // Set current XP to the base of Gold
+                }
+                else if (c.TierId == 3) // Gold
+                {
+                    c.TierId = 2;
+                    c.XP = 0;
+                }
+                else // Silver and others
+                {
+                    c.TierId = 2;
+                    c.XP = 0;
+                }
+            }
+            await _context.SaveChangesAsync(ct);
+        }
     }
 }

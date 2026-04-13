@@ -699,6 +699,30 @@ namespace DAL
 
             return (items, totalCount);
         }
+
+        public async Task ResetAllTiersAsync(System.Threading.CancellationToken ct)
+        {
+            var branches = await _context.Branches.ToListAsync(ct);
+            foreach(var b in branches)
+            {
+                if (b.TierId == 4) // Diamond -> Gold
+                {
+                    b.TierId = 3;
+                }
+                else if (b.TierId == 3) // Gold -> Silver
+                {
+                    b.TierId = 2;
+                }
+                else if (b.TierId == 2) // Silver -> retains Silver
+                {
+                    b.TierId = 2;
+                }
+                // Bắt đầu tính lại đếm 20 feedback tiếp theo
+                b.BatchReviewCount = 0;
+                b.BatchRatingSum = 0;
+            }
+            await _context.SaveChangesAsync(ct);
+        }
     }
 }
 
