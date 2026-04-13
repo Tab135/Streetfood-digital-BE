@@ -371,7 +371,13 @@ public class OrderService : IOrderService
         var order = await _orderRepository.GetById(orderId)
             ?? throw new DomainExceptions("Order not found");
 
-        EnsureOrderOwnership(order, userId);
+        var branch = await _branchRepository.GetByIdAsync(order.BranchId)
+            ?? throw new DomainExceptions("Branch not found");
+
+        if (!branch.ManagerId.HasValue || branch.ManagerId.Value != userId)
+        {
+            throw new DomainExceptions("You do not manage this branch", "ERR_FORBIDDEN");
+        }
 
         if (order.Status != OrderStatus.Pending)
         {
