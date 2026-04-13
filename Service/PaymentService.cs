@@ -750,12 +750,14 @@ namespace Service.PaymentsService
                         {
                             await MoveOrderToVendorConfirmationAsync(payment.OrderId.Value);
 
-                            var cart = await _cartRepo.GetByUserIdAsync(payment.UserId);
-                            if (cart != null)
+                            var paidOrder = await _orderRepository.GetById(payment.OrderId.Value);
+                            if (paidOrder != null)
                             {
-                                await _cartRepo.ClearItemsAsync(cart.CartId);
-                                cart.BranchId = null;
-                                await _cartRepo.UpdateAsync(cart);
+                                var cart = await _cartRepo.GetByUserAndBranchAsync(payment.UserId, paidOrder.BranchId);
+                                if (cart != null)
+                                {
+                                    await _cartRepo.DeleteAsync(cart.CartId);
+                                }
                             }
 
                             await _notificationPusher.PushPaymentStatusAsync(

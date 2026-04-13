@@ -18,7 +18,29 @@ public class CartDAO
             .Include(c => c.Branch)
             .Include(c => c.Items)
                 .ThenInclude(i => i.Dish)
-            .FirstOrDefaultAsync(c => c.UserId == userId);
+            .Where(c => c.UserId == userId)
+            .OrderByDescending(c => c.UpdatedAt)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<List<Cart>> GetByUserIdAllAsync(int userId)
+    {
+        return await _context.Carts
+            .Include(c => c.Branch)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.Dish)
+            .Where(c => c.UserId == userId)
+            .OrderByDescending(c => c.UpdatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<Cart?> GetByUserAndBranchAsync(int userId, int branchId)
+    {
+        return await _context.Carts
+            .Include(c => c.Branch)
+            .Include(c => c.Items)
+                .ThenInclude(i => i.Dish)
+            .FirstOrDefaultAsync(c => c.UserId == userId && c.BranchId == branchId);
     }
 
     public async Task<Cart> CreateAsync(Cart cart)
@@ -32,6 +54,18 @@ public class CartDAO
     {
         cart.UpdatedAt = DateTime.UtcNow;
         _context.Carts.Update(cart);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(int cartId)
+    {
+        var cart = await _context.Carts.FindAsync(cartId);
+        if (cart == null)
+        {
+            return;
+        }
+
+        _context.Carts.Remove(cart);
         await _context.SaveChangesAsync();
     }
 

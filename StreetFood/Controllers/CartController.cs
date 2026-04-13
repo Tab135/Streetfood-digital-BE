@@ -20,18 +20,35 @@ public class CartController : ControllerBase
     }
 
     [HttpGet("my")]
-    [ProducesResponseType(typeof(ApiResponse<CartResponseDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetMyCart()
+    [ProducesResponseType(typeof(ApiResponse<List<CartResponseDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyCarts()
     {
         if (!TryGetCurrentUserId(out var userId))
         {
             return Unauthorized(new { message = "User not authenticated" });
         }
 
-        var cart = await _cartService.GetMyCartAsync(userId);
+        var carts = await _cartService.GetMyCartsAsync(userId);
         return Ok(new
         {
-            message = "Get cart successfully",
+            message = "Get carts successfully",
+            data = carts
+        });
+    }
+
+    [HttpGet("my/branches/{branchId}")]
+    [ProducesResponseType(typeof(ApiResponse<CartResponseDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMyCartByBranch(int branchId)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Unauthorized(new { message = "User not authenticated" });
+        }
+
+        var cart = await _cartService.GetMyCartByBranchAsync(userId, branchId);
+        return Ok(new
+        {
+            message = "Get branch cart successfully",
             data = cart
         });
     }
@@ -60,7 +77,7 @@ public class CartController : ControllerBase
 
     [HttpPut("items/{dishId}")]
     [ProducesResponseType(typeof(ApiResponse<CartResponseDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> UpdateItemQuantity(int dishId, [FromBody] UpdateCartItemRequest request)
+    public async Task<IActionResult> UpdateItemQuantity(int dishId, [FromQuery] int branchId, [FromBody] UpdateCartItemRequest request)
     {
         if (!ModelState.IsValid)
         {
@@ -72,7 +89,7 @@ public class CartController : ControllerBase
             return Unauthorized(new { message = "User not authenticated" });
         }
 
-        var cart = await _cartService.UpdateItemQuantityAsync(userId, dishId, request);
+        var cart = await _cartService.UpdateItemQuantityAsync(userId, branchId, dishId, request);
         return Ok(new
         {
             message = "Cart item updated successfully",
@@ -82,14 +99,14 @@ public class CartController : ControllerBase
 
     [HttpDelete("items/{dishId}")]
     [ProducesResponseType(typeof(ApiResponse<CartResponseDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> RemoveItem(int dishId)
+    public async Task<IActionResult> RemoveItem(int dishId, [FromQuery] int branchId)
     {
         if (!TryGetCurrentUserId(out var userId))
         {
             return Unauthorized(new { message = "User not authenticated" });
         }
 
-        var cart = await _cartService.RemoveItemAsync(userId, dishId);
+        var cart = await _cartService.RemoveItemAsync(userId, branchId, dishId);
         return Ok(new
         {
             message = "Cart item removed successfully",
@@ -99,14 +116,14 @@ public class CartController : ControllerBase
 
     [HttpDelete("clear")]
     [ProducesResponseType(typeof(ApiResponse<CartResponseDto>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> ClearCart()
+    public async Task<IActionResult> ClearCart([FromQuery] int branchId)
     {
         if (!TryGetCurrentUserId(out var userId))
         {
             return Unauthorized(new { message = "User not authenticated" });
         }
 
-        var cart = await _cartService.ClearCartAsync(userId);
+        var cart = await _cartService.ClearCartAsync(userId, branchId);
         return Ok(new
         {
             message = "Cart cleared successfully",

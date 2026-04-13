@@ -42,12 +42,23 @@ public class CartService : ICartService
         _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
     }
 
-    public async Task<CartResponseDto> GetMyCartAsync(int userId)
+    public async Task<List<CartResponseDto>> GetMyCartsAsync(int userId)
     {
         await EnsureUserExistsAsync(userId);
 
-        var cart = await _cartRepository.GetByUserIdAsync(userId);
-        return cart == null ? CreateEmptyCartDto(userId) : MapToDto(cart);
+        var carts = await _cartRepository.GetByUserIdAllAsync(userId);
+        return carts
+            .Where(c => c.Items.Count > 0)
+            .Select(MapToDto)
+            .ToList();
+    }
+
+    public async Task<CartResponseDto> GetMyCartByBranchAsync(int userId, int branchId)
+    {
+        await EnsureUserExistsAsync(userId);
+
+        var cart = await _cartRepository.GetByUserAndBranchAsync(userId, branchId);
+        return cart == null ? CreateEmptyCartDto(userId, branchId) : MapToDto(cart);
     }
 
     public async Task<CartResponseDto> AddItemAsync(int userId, AddCartItemRequest request)
@@ -79,7 +90,7 @@ public class CartService : ICartService
             throw new DomainExceptions("Dish is currently sold out");
         }
 
-        var cart = await _cartRepository.GetByUserIdAsync(userId);
+        var cart = await _cartRepository.GetByUserAndBranchAsync(userId, request.BranchId);
         if (cart == null)
         {
             cart = await _cartRepository.CreateAsync(new BO.Entities.Cart
@@ -89,23 +100,6 @@ public class CartService : ICartService
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             });
-        }
-
-        if (cart.BranchId.HasValue && cart.BranchId.Value != request.BranchId)
-        {
-            if (cart.Items.Count > 0)
-            {
-                throw new DomainExceptions("Cart currently contains dishes from another branch. Please clear your cart first.");
-            }
-
-            cart.BranchId = request.BranchId;
-            await _cartRepository.UpdateAsync(cart);
-        }
-
-        if (!cart.BranchId.HasValue)
-        {
-            cart.BranchId = request.BranchId;
-            await _cartRepository.UpdateAsync(cart);
         }
 
         var existingItem = await _cartRepository.GetItemByDishIdAsync(cart.CartId, request.DishId);
@@ -128,10 +122,13 @@ public class CartService : ICartService
             });
         }
 
-        return MapToDto((await _cartRepository.GetByUserIdAsync(userId))!);
+        cart.UpdatedAt = DateTime.UtcNow;
+        await _cartRepository.UpdateAsync(cart);
+
+        return MapToDto((await _cartRepository.GetByUserAndBranchAsync(userId, request.BranchId))!);
     }
 
-    public async Task<CartResponseDto> UpdateItemQuantityAsync(int userId, int dishId, UpdateCartItemRequest request)
+    public async Task<CartResponseDto> UpdateItemQuantityAsync(int userId, int branchId, int dishId, UpdateCartItemRequest request)
     {
         await EnsureUserExistsAsync(userId);
 
@@ -140,13 +137,10 @@ public class CartService : ICartService
             throw new DomainExceptions("Quantity must be at least 1");
         }
 
-        var cart = await _cartRepository.GetByUserIdAsync(userId)
+        var cart = await _cartRepository.GetByUserAndBranchAsync(userId, branchId)
             ?? throw new DomainExceptions("Cart not found");
 
-        if (cart.BranchId.HasValue)
-        {
-            await EnsureBranchAllowsOrderingAsync(cart.BranchId.Value);
-        }
+        await EnsureBranchAllowsOrderingAsync(branchId);
 
         var item = await _cartRepository.GetItemByDishIdAsync(cart.CartId, dishId)
             ?? throw new DomainExceptions("Item not found in cart");
@@ -159,14 +153,17 @@ public class CartService : ICartService
         item.UnitPrice = dish.Price;
         await _cartRepository.UpdateItemAsync(item);
 
-        return MapToDto((await _cartRepository.GetByUserIdAsync(userId))!);
+        cart.UpdatedAt = DateTime.UtcNow;
+        await _cartRepository.UpdateAsync(cart);
+
+        return MapToDto((await _cartRepository.GetByUserAndBranchAsync(userId, branchId))!);
     }
 
-    public async Task<CartResponseDto> RemoveItemAsync(int userId, int dishId)
+    public async Task<CartResponseDto> RemoveItemAsync(int userId, int branchId, int dishId)
     {
         await EnsureUserExistsAsync(userId);
 
-        var cart = await _cartRepository.GetByUserIdAsync(userId)
+        var cart = await _cartRepository.GetByUserAndBranchAsync(userId, branchId)
             ?? throw new DomainExceptions("Cart not found");
 
         var item = await _cartRepository.GetItemByDishIdAsync(cart.CartId, dishId)
@@ -174,52 +171,51 @@ public class CartService : ICartService
 
         await _cartRepository.RemoveItemAsync(item);
 
-        var refreshed = await _cartRepository.GetByUserIdAsync(userId);
+        var refreshed = await _cartRepository.GetByUserAndBranchAsync(userId, branchId);
         if (refreshed == null || refreshed.Items.Count == 0)
         {
             if (refreshed != null)
             {
-                refreshed.BranchId = null;
-                await _cartRepository.UpdateAsync(refreshed);
-                refreshed = await _cartRepository.GetByUserIdAsync(userId);
+                await _cartRepository.DeleteAsync(refreshed.CartId);
             }
 
-            return refreshed == null ? CreateEmptyCartDto(userId) : MapToDto(refreshed);
+            return CreateEmptyCartDto(userId, branchId);
         }
+
+        refreshed.UpdatedAt = DateTime.UtcNow;
+        await _cartRepository.UpdateAsync(refreshed);
 
         return MapToDto(refreshed);
     }
 
-    public async Task<CartResponseDto> ClearCartAsync(int userId)
+    public async Task<CartResponseDto> ClearCartAsync(int userId, int branchId)
     {
         await EnsureUserExistsAsync(userId);
 
-        var cart = await _cartRepository.GetByUserIdAsync(userId);
+        var cart = await _cartRepository.GetByUserAndBranchAsync(userId, branchId);
         if (cart == null)
         {
-            return CreateEmptyCartDto(userId);
+            return CreateEmptyCartDto(userId, branchId);
         }
 
-        await _cartRepository.ClearItemsAsync(cart.CartId);
-        cart.BranchId = null;
-        await _cartRepository.UpdateAsync(cart);
+        await _cartRepository.DeleteAsync(cart.CartId);
 
-        return MapToDto((await _cartRepository.GetByUserIdAsync(userId))!);
+        return CreateEmptyCartDto(userId, branchId);
     }
 
     public async Task<CheckoutCartResponseDto> CheckoutAsync(int userId, CheckoutCartRequest request)
     {
         await EnsureUserExistsAsync(userId);
 
-        var cart = await _cartRepository.GetByUserIdAsync(userId)
-            ?? throw new DomainExceptions("Cart not found");
-
-        if (!cart.BranchId.HasValue)
+        if (request.BranchId <= 0)
         {
-            throw new DomainExceptions("Cart branch is not set");
+            throw new DomainExceptions("BranchId is required for checkout");
         }
 
-        await EnsureBranchAllowsOrderingAsync(cart.BranchId.Value);
+        var cart = await _cartRepository.GetByUserAndBranchAsync(userId, request.BranchId)
+            ?? throw new DomainExceptions("Cart not found");
+
+        await EnsureBranchAllowsOrderingAsync(request.BranchId);
 
         if (cart.Items.Count == 0)
         {
@@ -257,14 +253,14 @@ public class CartService : ICartService
 
                 if (campaign.CreatedByBranchId.HasValue)
                 {
-                    if (cart.BranchId.Value != campaign.CreatedByBranchId.Value)
+                    if (request.BranchId != campaign.CreatedByBranchId.Value)
                     {
                         throw new DomainExceptions("This voucher is only applicable to a specific branch.");
                     }
                 }
                 else
                 {
-                    var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(cart.BranchId.Value, campaign.CampaignId);
+                    var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(request.BranchId, campaign.CampaignId);
                     if (joinInfo == null || joinInfo.IsActive != true)
                     {
                         if (campaign.CreatedByVendorId.HasValue)
@@ -305,7 +301,7 @@ public class CartService : ICartService
 
         var createOrderRequest = new CreateOrderRequest
         {
-            BranchId = cart.BranchId.Value,
+            BranchId = request.BranchId,
             AppliedVoucherId = request.VoucherId,
             Table = request.Table,
             PaymentMethod = request.PaymentMethod,
@@ -355,9 +351,7 @@ public class CartService : ICartService
                 redeemedVendorVoucher);
         }
 
-        // Cart is intentionally NOT cleared here.
-        // It will be cleared in PaymentService.ConfirmPaymentFromRedirect once payment is PAID,
-        // so the user can re-checkout if they abandon the payment.
+        await _cartRepository.DeleteAsync(cart.CartId);
 
         return new CheckoutCartResponseDto
         {
@@ -503,11 +497,12 @@ public class CartService : ICartService
         }
     }
 
-    private static CartResponseDto CreateEmptyCartDto(int userId)
+    private static CartResponseDto CreateEmptyCartDto(int userId, int? branchId = null)
     {
         return new CartResponseDto
         {
             UserId = userId,
+            BranchId = branchId,
             TotalAmount = 0m,
             Items = new List<CartItemResponseDto>()
         };

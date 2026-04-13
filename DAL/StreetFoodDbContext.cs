@@ -451,7 +451,8 @@ public class StreetFoodDbContext : DbContext
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
                 entity.Property(e => e.UpdatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-                entity.HasIndex(e => e.UserId).IsUnique();
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => new { e.UserId, e.BranchId }).IsUnique();
 
                 entity.HasOne(e => e.User)
                     .WithMany()
