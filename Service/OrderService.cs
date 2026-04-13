@@ -344,18 +344,18 @@ public class OrderService : IOrderService
     public async Task<OrderPickupCodeResponseDto> GetOrderPickupCodeAsync(int orderId, int userId)
     {
         var order = await _orderRepository.GetById(orderId)
-            ?? throw new DomainExceptions("Order not found");
+            ?? throw new DomainExceptions("Đơn hàng không tồn tại");
 
         EnsureOrderOwnership(order, userId);
 
         if (order.Status != OrderStatus.Paid)
         {
-            throw new DomainExceptions("Pickup code is available only when order is ready for pickup");
+            throw new DomainExceptions("Mã lấy hàng chỉ có sẵn khi đơn hàng đã sẵn sàng để lấy");
         }
 
         if (string.IsNullOrWhiteSpace(order.CompletionCode))
         {
-            throw new DomainExceptions("Pickup code is not generated yet");
+            throw new DomainExceptions("Mã lấy hàng chưa được tạo");
         }
 
         return new OrderPickupCodeResponseDto
@@ -369,31 +369,55 @@ public class OrderService : IOrderService
     public async Task<OrderResponseDto> UpdateOrderAsync(int orderId, UpdateOrderRequest request, int userId)
     {
         var order = await _orderRepository.GetById(orderId)
-            ?? throw new DomainExceptions("Order not found");
+            ?? throw new DomainExceptions("Đơn hàng không tồn tại");
 
         var branch = await _branchRepository.GetByIdAsync(order.BranchId)
-            ?? throw new DomainExceptions("Branch not found");
+            ?? throw new DomainExceptions("Chi nhánh không tồn tại");
 
         if (!branch.ManagerId.HasValue || branch.ManagerId.Value != userId)
         {
-            throw new DomainExceptions("You do not manage this branch", "ERR_FORBIDDEN");
+            throw new DomainExceptions("Bạn không quản lý chi nhánh này", "ERR_FORBIDDEN");
+        }
+
+        if (order.Status == OrderStatus.Complete)
+        {
+            var hasRestrictedFields = request.Status.HasValue
+                || request.PaymentMethod != null
+                || request.Note != null
+                || request.DiscountAmount.HasValue
+                || request.IsTakeAway.HasValue
+                || request.Items != null;
+
+            if (hasRestrictedFields)
+            {
+                throw new DomainExceptions("Chỉ có số bàn có thể được cập nhật sau khi đơn hàng hoàn thành");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Table))
+            {
+                throw new DomainExceptions("Số bàn là bắt buộc khi cập nhật đơn hàng đã hoàn thành");
+            }
+
+            order.Table = request.Table.Trim();
+            var completedOrder = await _orderRepository.Update(order);
+            return MapToDto(completedOrder);
         }
 
         if (order.Status != OrderStatus.Pending)
         {
-            throw new DomainExceptions("Order cannot be updated after payment is completed");
+            throw new DomainExceptions("Đơn hàng không thể được cập nhật sau khi thanh toán đã hoàn tất");
         }
 
         if (request.Status.HasValue)
         {
             if (request.Status.Value != OrderStatus.Cancelled)
             {
-                throw new DomainExceptions("Only cancellation is allowed from user update");
+                throw new DomainExceptions("Chỉ cho phép hủy đơn hàng từ cập nhật của người dùng");
             }
 
             if (order.Status != OrderStatus.Pending)
             {
-                throw new DomainExceptions("Only pending orders can be cancelled by user");
+                throw new DomainExceptions("Chỉ có đơn hàng đang chờ có thể được hủy bởi người dùng");
             }
 
             await RestoreVoucherUsageForCancellationAsync(order);
@@ -426,7 +450,7 @@ public class OrderService : IOrderService
         {
             if (request.DiscountAmount.Value < 0)
             {
-                throw new DomainExceptions("Discount amount must be non-negative");
+                throw new DomainExceptions("Số tiền giảm giá phải là số dương");
             }
 
             order.DiscountAmount = request.DiscountAmount;
@@ -444,7 +468,7 @@ public class OrderService : IOrderService
         order.FinalAmount = order.TotalAmount - discount;
         if (order.FinalAmount < 0)
         {
-            throw new DomainExceptions("Final amount cannot be negative");
+            throw new DomainExceptions("Số tiền cuối cùng không thể là số âm");
         }
 
         var updated = await _orderRepository.Update(order, orderDishes);
@@ -454,30 +478,30 @@ public class OrderService : IOrderService
     public async Task<OrderResponseDto> VendorDecideOrderAsync(int orderId, int vendorUserId, bool approve)
     {
         var order = await _orderRepository.GetById(orderId)
-            ?? throw new DomainExceptions("Order not found");
+            ?? throw new DomainExceptions("Đơn hàng không tồn tại");
 
         var branch = await _branchRepository.GetByIdAsync(order.BranchId)
-            ?? throw new DomainExceptions("Branch not found");
+            ?? throw new DomainExceptions("Chi nhánh không tồn tại");
 
         if (!branch.VendorId.HasValue || branch.VendorId.Value <= 0)
         {
-            throw new DomainExceptions("Vendor not assigned to branch");
+            throw new DomainExceptions("Chủ quán không được gán cho chi nhánh này", "ERR_NOT_FOUND");
         }
 
         var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value)
-            ?? throw new DomainExceptions("Vendor not found");
+            ?? throw new DomainExceptions("Chủ quán không tồn tại", "ERR_NOT_FOUND");
 
         var isBranchManager = branch.ManagerId.HasValue && branch.ManagerId.Value == vendorUserId;
         var isVendorOwner = vendor.UserId == vendorUserId;
 
         if (!isVendorOwner && !isBranchManager)
         {
-            throw new DomainExceptions("You do not own this branch", "ERR_FORBIDDEN");
+            throw new DomainExceptions("Bạn không sở hữu chi nhánh này", "ERR_FORBIDDEN");
         }
 
         if (order.Status != OrderStatus.AwaitingVendorConfirmation)
         {
-            throw new DomainExceptions("Order is not waiting for vendor confirmation");
+            throw new DomainExceptions("Đơn hàng không đang chờ xác nhận của chủ quán");
         }
 
         if (approve)
@@ -490,7 +514,7 @@ public class OrderService : IOrderService
             order.Status = OrderStatus.Cancelled;
             order.CompletionCode = null;
             var user = await _userRepository.GetUserById(order.UserId)
-                ?? throw new DomainExceptions("User not found when refunding");
+                ?? throw new DomainExceptions("Người dùng không tồn tại khi hoàn tiền", "ERR_NOT_FOUND");
             
             user.MoneyBalance += order.FinalAmount;
             await _userRepository.UpdateAsync(user);
@@ -525,46 +549,46 @@ public class OrderService : IOrderService
     public async Task<OrderResponseDto> VendorCompleteOrderAsync(int orderId, int vendorUserId, string verificationCode)
     {
         var order = await _orderRepository.GetById(orderId)
-            ?? throw new DomainExceptions("Order not found", "ERR_NOT_FOUND");
+            ?? throw new DomainExceptions("Đơn hàng không tồn tại", "ERR_NOT_FOUND");
 
         var branch = await _branchRepository.GetByIdAsync(order.BranchId)
-            ?? throw new DomainExceptions("Branch not found", "ERR_NOT_FOUND");
+            ?? throw new DomainExceptions("Chi nhánh không tồn tại", "ERR_NOT_FOUND");
 
         if (!branch.VendorId.HasValue || branch.VendorId.Value <= 0)
         {
-            throw new DomainExceptions("Vendor not assigned to branch", "ERR_NOT_FOUND");
+            throw new DomainExceptions("Chủ quán không được gán cho chi nhánh này", "ERR_NOT_FOUND");
         }
 
         var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value)
-            ?? throw new DomainExceptions("Vendor not found", "ERR_NOT_FOUND");
+            ?? throw new DomainExceptions("Chủ quán không tồn tại", "ERR_NOT_FOUND");
 
         var isBranchManager = branch.ManagerId.HasValue && branch.ManagerId.Value == vendorUserId;
         var isVendorOwner = vendor.UserId == vendorUserId;
 
         if (!isVendorOwner && !isBranchManager)
         {
-            throw new DomainExceptions("You do not own this branch", "ERR_FORBIDDEN");
+            throw new DomainExceptions("Bạn không sở hữu chi nhánh này", "ERR_FORBIDDEN");
         }
 
         if (order.Status != OrderStatus.Paid)
         {
-            throw new DomainExceptions("Order must be paid before it can be completed");
+            throw new DomainExceptions("Đơn hàng phải được thanh toán trước khi có thể hoàn thành", "ERR_BAD_REQUEST");
         }
 
         if (string.IsNullOrWhiteSpace(verificationCode))
         {
-            throw new DomainExceptions("Verification code is required");
+            throw new DomainExceptions("Mã xác minh là bắt buộc", "ERR_BAD_REQUEST");
         }
 
         if (string.IsNullOrWhiteSpace(order.CompletionCode))
         {
-            throw new DomainExceptions("Order verification code is missing");
+            throw new DomainExceptions("Mã xác minh đơn hàng bị thiếu", "ERR_BAD_REQUEST");
         }
 
         var normalizedCode = verificationCode.Trim();
         if (!string.Equals(order.CompletionCode, normalizedCode, StringComparison.OrdinalIgnoreCase))
         {
-            throw new DomainExceptions("Invalid verification code");
+            throw new DomainExceptions("Mã xác minh không hợp lệ", "ERR_BAD_REQUEST");
         }
 
         order.Status = OrderStatus.Complete;
@@ -609,13 +633,13 @@ public class OrderService : IOrderService
     public async Task<bool> DeleteOrderAsync(int orderId, int userId)
     {
         var order = await _orderRepository.GetById(orderId)
-            ?? throw new DomainExceptions("Order not found");
+            ?? throw new DomainExceptions("Đơn hàng không tồn tại", "ERR_NOT_FOUND");
 
         EnsureOrderOwnership(order, userId);
 
         if (order.Status != OrderStatus.Pending)
         {
-            throw new DomainExceptions("Order cannot be deleted after payment is completed");
+            throw new DomainExceptions("Đơn hàng không thể bị xóa sau khi thanh toán đã hoàn tất", "ERR_BAD_REQUEST");
         }
 
         await _orderRepository.Delete(orderId);
@@ -626,7 +650,7 @@ public class OrderService : IOrderService
     {
         if (inactivityTimeout <= TimeSpan.Zero)
         {
-            throw new DomainExceptions("Inactivity timeout must be greater than zero");
+            throw new DomainExceptions("Thời gian chờ không hợp lệ", "ERR_BAD_REQUEST");
         }
 
         var staleBeforeUtc = DateTime.UtcNow.Subtract(inactivityTimeout);
@@ -661,7 +685,7 @@ public class OrderService : IOrderService
     {
         if (items == null || items.Count == 0)
         {
-            throw new DomainExceptions("At least one dish is required");
+            throw new DomainExceptions("Ít nhất một món ăn là bắt buộc", "ERR_BAD_REQUEST");
         }
 
         var normalizedItems = items
@@ -680,22 +704,22 @@ public class OrderService : IOrderService
         {
             if (item.Quantity <= 0)
             {
-                throw new DomainExceptions("Quantity must be at least 1");
+                throw new DomainExceptions("Số lượng phải ít nhất là 1", "ERR_BAD_REQUEST");
             }
 
             var branchDish = await _dishRepository.GetBranchDishAsync(branchId, item.DishId);
             if (branchDish == null)
             {
-                throw new DomainExceptions($"Dish {item.DishId} is not available in this branch");
+                throw new DomainExceptions($"Món ăn {item.DishId} không có trong chi nhánh này", "ERR_BAD_REQUEST");
             }
 
             if (branchDish.IsSoldOut)
             {
-                throw new DomainExceptions($"Dish {item.DishId} is currently sold out");
+                throw new DomainExceptions($"Món ăn {item.DishId} hiện tại đã hết", "ERR_BAD_REQUEST");
             }
 
             var dish = await _dishRepository.GetByIdAsync(item.DishId)
-                ?? throw new DomainExceptions($"Dish {item.DishId} not found");
+                ?? throw new DomainExceptions($"Món ăn {item.DishId} không tồn tại", "ERR_NOT_FOUND");
 
             totalAmount += dish.Price * item.Quantity;
 
@@ -715,7 +739,7 @@ public class OrderService : IOrderService
     {
         if (order.UserId != userId)
         {
-            throw new DomainExceptions("You do not own this order", "ERR_FORBIDDEN");
+            throw new DomainExceptions("Bạn không sở hữu đơn hàng này", "ERR_FORBIDDEN");
         }
     }
 
@@ -743,12 +767,12 @@ public class OrderService : IOrderService
         }
 
         var voucher = await _voucherRepository.GetByIdAsync(order.AppliedVoucherId.Value)
-            ?? throw new DomainExceptions("Voucher not found for cancellation");
+            ?? throw new DomainExceptions("Phiếu giảm giá không tồn tại khi hoàn tiền", "ERR_NOT_FOUND");
 
         if (IsSystemFundedVoucher(voucher))
         {
             var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(order.UserId, voucher.VoucherId)
-                ?? throw new DomainExceptions("Claimed voucher not found for this user");
+                ?? throw new DomainExceptions("Phiếu giảm giá đã claimed không tìm thấy cho người dùng này");
 
             userVoucher.Quantity += 1;
             userVoucher.IsAvailable = true;
@@ -773,11 +797,11 @@ public class OrderService : IOrderService
         }
 
         var voucher = await _voucherRepository.GetByIdAsync(appliedVoucherId.Value)
-            ?? throw new DomainExceptions("Voucher not found");
+            ?? throw new DomainExceptions("Phiếu giảm giá không tồn tại", "ERR_NOT_FOUND");
 
         if (!voucher.IsActive)
         {
-            throw new DomainExceptions("Voucher is inactive");
+            throw new DomainExceptions("Phiếu giảm giá không hoạt động", "ERR_BAD_REQUEST");
         }
 
         var now = DateTime.UtcNow;
@@ -788,14 +812,14 @@ public class OrderService : IOrderService
             var campaign = voucher.Campaign;
             if (campaign == null)
             {
-                throw new DomainExceptions("Campaign voucher is invalid");
+                throw new DomainExceptions("Chiến dịch của phiếu giảm giá không tồn tại", "ERR_NOT_FOUND");
             }
 
             if (campaign.CreatedByBranchId.HasValue)
             {
                 if (branch.BranchId != campaign.CreatedByBranchId.Value)
                 {
-                    throw new DomainExceptions("This voucher is only applicable to a specific branch.");
+                    throw new DomainExceptions("Phiếu giảm giá này chỉ áp dụng cho một chi nhánh khác", "ERR_BAD_REQUEST");
                 }
             }
             else
@@ -805,10 +829,10 @@ public class OrderService : IOrderService
                 {
                     if (campaign.CreatedByVendorId.HasValue)
                     {
-                        throw new DomainExceptions("This branch is not included in this vendor campaign.");
+                        throw new DomainExceptions("Chi nhánh này chưa tham gia chiến dịch của chủ quán, không thể sử dụng phiếu giảm giá này", "ERR_BAD_REQUEST");
                     }
 
-                    throw new DomainExceptions("This branch has not completed campaign joining payment yet.");
+                    throw new DomainExceptions("Chi nhánh này chưa hoàn thành thanh toán tham gia chiến dịch", "ERR_BAD_REQUEST");
                 }
             }
         }
@@ -816,11 +840,11 @@ public class OrderService : IOrderService
         if (IsSystemFundedVoucher(voucher))
         {
             var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, voucher.VoucherId)
-                ?? throw new DomainExceptions("You have not claimed this voucher yet");
+                ?? throw new DomainExceptions("Bạn chưa nhận phiếu giảm giá này", "ERR_NOT_FOUND");
 
             if (!userVoucher.IsAvailable || userVoucher.Quantity <= 0)
             {
-                throw new DomainExceptions("Voucher is already used or not available");
+                throw new DomainExceptions("Phiếu giảm giá đã được sử dụng hoặc không khả dụng", "ERR_BAD_REQUEST");
             }
 
             return;
@@ -828,7 +852,7 @@ public class OrderService : IOrderService
 
         if (voucher.UsedQuantity >= voucher.Quantity)
         {
-            throw new DomainExceptions("Voucher is out of stock");
+            throw new DomainExceptions("Phiếu giảm giá đã hết hàng", "ERR_BAD_REQUEST");
         }
     }
 
@@ -837,7 +861,7 @@ public class OrderService : IOrderService
         var user = await _userRepository.GetUserById(userId);
         if (user == null)
         {
-            throw new DomainExceptions("User not found");
+            throw new DomainExceptions("người dùng không tồn tại", "ERR_NOT_FOUND");
         }
     }
 
