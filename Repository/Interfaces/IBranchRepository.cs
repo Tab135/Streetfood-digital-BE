@@ -62,6 +62,7 @@ namespace Repository.Interfaces
         Task UpdateBranchMetricsOnFeedbackUpdatedAsync(int branchId, int oldRating, int newRating);
         Task UpdateBranchMetricsOnFeedbackDeletedAsync(int branchId, int rating);
         Task RecalculateBranchMetricsAsync(int branchId);
+        Task ResetAllTiersAsync(System.Threading.CancellationToken ct);
     }
 }
 

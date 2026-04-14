@@ -27,13 +27,17 @@ namespace DAL
         {
             return await _context.Quests
                 .Include(q => q.QuestTasks)
+                    .ThenInclude(t => t.QuestTaskRewards)
                 .FirstOrDefaultAsync(q => q.QuestId == questId);
         }
 
         public async Task<(List<Quest> Items, int TotalCount)> GetQuestsAsync(
             bool? isActive, int? campaignId, int page, int pageSize)
         {
-            var query = _context.Quests.Include(q => q.QuestTasks).AsQueryable();
+            var query = _context.Quests
+                .Include(q => q.QuestTasks)
+                    .ThenInclude(t => t.QuestTaskRewards)
+                .AsQueryable();
 
             if (isActive.HasValue)
                 query = query.Where(q => q.IsActive == isActive.Value);
@@ -55,6 +59,7 @@ namespace DAL
         {
             var query = _context.Quests
                 .Include(q => q.QuestTasks)
+                    .ThenInclude(t => t.QuestTaskRewards)
                 .Where(q => q.IsActive);
 
             if (isTierUp == true)
