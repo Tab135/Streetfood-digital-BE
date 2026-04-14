@@ -41,11 +41,10 @@ namespace Service
 
             // TIER_UP quest validations
             bool hasTierUpTask = dto.Tasks.Any(t => t.Type == QuestTaskType.TIER_UP);
+            bool requiresEnrollment = !hasTierUpTask;
+
             if (hasTierUpTask)
             {
-                if (dto.RequiresEnrollment)
-                    throw new DomainExceptions("Nhiệm vụ TIER_UP chỉ được phép trên quest không yêu cầu đăng ký (RequiresEnrollment = false).");
-
                 if (dto.Tasks.Count > 1)
                     throw new DomainExceptions("Quest TIER_UP phải có đúng một nhiệm vụ.");
 
@@ -86,7 +85,7 @@ namespace Service
                 ImageUrl = dto.ImageUrl,
                 IsActive = dto.IsActive,
                 IsStandalone = dto.IsStandalone,
-                RequiresEnrollment = dto.RequiresEnrollment,
+                RequiresEnrollment = requiresEnrollment,
                 CampaignId = dto.CampaignId,
                 QuestTasks = dto.Tasks.Select(t => new QuestTask
                 {
@@ -128,8 +127,6 @@ namespace Service
                 quest.IsActive = dto.IsActive.Value;
             if (dto.IsStandalone.HasValue)
                 quest.IsStandalone = dto.IsStandalone.Value;
-            if (dto.RequiresEnrollment.HasValue)
-                quest.RequiresEnrollment = dto.RequiresEnrollment.Value;
 
             if (dto.CampaignId.HasValue)
             {
@@ -173,6 +170,9 @@ namespace Service
                 await _questRepository.AddTasksAsync(newTasks);
                 quest.QuestTasks = newTasks;
             }
+
+            // Always re-derive RequiresEnrollment from the effective task list
+            quest.RequiresEnrollment = !quest.QuestTasks.Any(t => t.Type == QuestTaskType.TIER_UP);
 
             await _questRepository.UpdateAsync(quest);
             return MapToResponseDto(quest);
@@ -225,7 +225,7 @@ namespace Service
 
         public async Task<PaginatedResponse<QuestResponseDto>> GetPublicQuestsAsync(QuestQueryDto query)
         {
-            var (items, totalCount) = await _questRepository.GetPublicQuestsAsync(query.CampaignId, query.PageNumber, query.PageSize);
+            var (items, totalCount) = await _questRepository.GetPublicQuestsAsync(query.CampaignId, query.IsStandalone, query.IsTierUp, query.PageNumber, query.PageSize);
             var dtos = items.Select(MapToResponseDto).ToList();
             return new PaginatedResponse<QuestResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
         }
@@ -334,10 +334,11 @@ namespace Service
             return MapToProgressDto(loaded!);
         }
 
-        public async Task<List<UserQuestProgressDto>> GetMyQuestsAsync(int userId, string? status)
+        public async Task<PaginatedResponse<UserQuestProgressDto>> GetMyQuestsAsync(int userId, string? status, bool? isTierUp = null, int pageNumber = 1, int pageSize = 10)
         {
-            var userQuests = await _userQuestRepository.GetByUserIdAsync(userId, status);
-            return userQuests.Select(MapToProgressDto).ToList();
+            var (items, totalCount) = await _userQuestRepository.GetByUserIdAsync(userId, status, isTierUp, pageNumber, pageSize);
+            var dtos = items.Select(MapToProgressDto).ToList();
+            return new PaginatedResponse<UserQuestProgressDto>(dtos, totalCount, pageNumber, pageSize);
         }
 
         public async Task<QuestResponseDto> UpdateQuestImageAsync(int questId, string imageUrl)

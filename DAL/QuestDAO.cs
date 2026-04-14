@@ -51,15 +51,22 @@ namespace DAL
             return (items, totalCount);
         }
 
-        public async Task<(List<Quest> Items, int TotalCount)> GetPublicQuestsAsync(int? campaignId, int page, int pageSize)
+        public async Task<(List<Quest> Items, int TotalCount)> GetPublicQuestsAsync(int? campaignId, bool? isStandalone, bool? isTierUp, int page, int pageSize)
         {
-            var now = DateTime.UtcNow;
             var query = _context.Quests
                 .Include(q => q.QuestTasks)
                 .Where(q => q.IsActive);
 
+            if (isTierUp == true)
+                query = query.Where(q => q.QuestTasks.Any(t => t.Type == BO.Enums.QuestTaskType.TIER_UP));
+            else
+                query = query.Where(q => !q.QuestTasks.Any(t => t.Type == BO.Enums.QuestTaskType.TIER_UP));
+
             if (campaignId.HasValue)
                 query = query.Where(q => q.CampaignId == campaignId.Value);
+
+            if (isStandalone.HasValue)
+                query = query.Where(q => q.IsStandalone == isStandalone.Value);
 
             int totalCount = await query.CountAsync();
             var items = await query

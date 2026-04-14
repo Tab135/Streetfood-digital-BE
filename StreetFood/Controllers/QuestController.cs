@@ -145,10 +145,10 @@ namespace StreetFood.Controllers
 
         [HttpGet("my")]
         [Authorize]
-        public async Task<IActionResult> GetMyQuests([FromQuery] string? status)
+        public async Task<IActionResult> GetMyQuests([FromQuery] string? status, [FromQuery] bool? isTierUp, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-            var result = await _questService.GetMyQuestsAsync(userId, status);
+            var result = await _questService.GetMyQuestsAsync(userId, status, isTierUp, pageNumber, pageSize);
             return Ok(new { message = "User quests retrieved successfully", data = result });
         }
 

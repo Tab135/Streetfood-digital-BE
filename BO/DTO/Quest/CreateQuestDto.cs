@@ -20,8 +20,6 @@ namespace BO.DTO.Quest
         [Required]
         public bool IsStandalone { get; set; } = true;
 
-        public bool RequiresEnrollment { get; set; } = true;
-
         public int? CampaignId { get; set; }
 
         [Required]

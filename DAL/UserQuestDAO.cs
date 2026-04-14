@@ -42,7 +42,7 @@ namespace DAL
                 .FirstOrDefaultAsync(uq => uq.UserQuestId == userQuestId);
         }
 
-        public async Task<List<UserQuest>> GetByUserIdAsync(int userId, string? status)
+        public async Task<(List<UserQuest> Items, int TotalCount)> GetByUserIdAsync(int userId, string? status, bool? isTierUp = null, int page = 1, int pageSize = 10)
         {
             var query = _context.UserQuests
                 .Include(uq => uq.UserQuestTasks)
@@ -54,7 +54,19 @@ namespace DAL
             if (!string.IsNullOrEmpty(status))
                 query = query.Where(uq => uq.Status == status);
 
-            return await query.OrderByDescending(uq => uq.StartedAt).ToListAsync();
+            if (isTierUp == true)
+                query = query.Where(uq => uq.Quest.QuestTasks.Any(t => t.Type == QuestTaskType.TIER_UP));
+            else if (isTierUp == false)
+                query = query.Where(uq => !uq.Quest.QuestTasks.Any(t => t.Type == QuestTaskType.TIER_UP));
+
+            int totalCount = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(uq => uq.StartedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
         }
 
         public async Task<List<UserQuestTask>> GetInProgressTasksByTypeAsync(int userId, QuestTaskType taskType)
