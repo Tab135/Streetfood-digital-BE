@@ -58,6 +58,11 @@ namespace Repository
             return await _feedbackDAO.HasUserFeedbackOnBranchAsync(branchId, userId);
         }
 
+        public async Task<bool> HasUserFeedbackOnBranchWithoutOrderAsync(int branchId, int userId)
+        {
+            return await _feedbackDAO.HasUserFeedbackOnBranchWithoutOrderAsync(branchId, userId);
+        }
+
         public async Task<bool> HasFeedbackForOrder(int userId, int orderId)
         {
             return await _feedbackDAO.HasFeedbackForOrderAsync(userId, orderId);
@@ -138,9 +143,19 @@ namespace Repository
             return await _feedbackDAO.GetDailyFeedbackCountAsync(userId, date);
         }
 
+        public async Task<int> GetDailyFeedbackCountWithoutOrderAsync(int userId, DateTime date)
+        {
+            return await _feedbackDAO.GetDailyFeedbackCountWithoutOrderAsync(userId, date);
+        }
+
         public async Task<List<int>> GetReviewedBranchIdsTodayAsync(int userId, DateTime date)
         {
             return await _feedbackDAO.GetReviewedBranchIdsTodayAsync(userId, date);
+        }
+
+        public async Task<List<int>> GetReviewedBranchIdsTodayWithoutOrderAsync(int userId, DateTime date)
+        {
+            return await _feedbackDAO.GetReviewedBranchIdsTodayWithoutOrderAsync(userId, date);
         }
 
         public async Task<bool> HasReviewedBranchTodayAsync(int userId, int branchId, DateTime date)

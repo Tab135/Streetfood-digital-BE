@@ -15,6 +15,7 @@ namespace Repository.Interfaces
         Task<bool> Delete(int feedbackId);
         Task<bool> Exists(int feedbackId);
         Task<bool> HasUserFeedbackOnBranch(int branchId, int userId);
+        Task<bool> HasUserFeedbackOnBranchWithoutOrderAsync(int branchId, int userId);
         Task<bool> HasFeedbackForOrder(int userId, int orderId);
 
         // Rating and Statistics
@@ -39,7 +40,9 @@ namespace Repository.Interfaces
 
         // Velocity Limits
         Task<int> GetDailyFeedbackCountAsync(int userId, DateTime date);
+        Task<int> GetDailyFeedbackCountWithoutOrderAsync(int userId, DateTime date);
         Task<List<int>> GetReviewedBranchIdsTodayAsync(int userId, DateTime date);
+        Task<List<int>> GetReviewedBranchIdsTodayWithoutOrderAsync(int userId, DateTime date);
         Task<bool> HasReviewedBranchTodayAsync(int userId, int branchId, DateTime date);
     }
 }

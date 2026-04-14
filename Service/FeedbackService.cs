@@ -14,6 +14,9 @@ namespace Service
 {
     public class FeedbackService : IFeedbackService
     {
+        private const string FeedbackDailyLimitSettingName = "feedbackDailyLimit";
+        private const double MaxDistanceWithoutOrderKm = 0.3;
+
         private readonly IFeedbackRepository _feedbackRepository;
         private readonly IUserRepository _userRepository;
         private readonly IBranchRepository _branchRepository;
@@ -54,6 +57,9 @@ namespace Service
 
         public async Task<FeedbackResponseDto> CreateFeedback(CreateFeedbackDto createFeedbackDto, int userId)
         {
+            var today = DateTime.UtcNow.Date;
+            var dailyLimitWithoutOrder = _settingService.GetInt(FeedbackDailyLimitSettingName, 3);
+
             // Verify user exists
             var user = await _userRepository.GetUserById(userId);
             if (user == null)
@@ -95,30 +101,44 @@ namespace Service
                     throw new DomainExceptions("Đơn hàng không thuộc về người dùng này");
                 if (order.BranchId != createFeedbackDto.BranchId)
                     throw new DomainExceptions("Đơn hàng không thuộc chi nhánh này");
-                if (order.Status != OrderStatus.Paid)
-                    throw new DomainExceptions("Đơn hàng phải được thanh toán trước khi đánh giá");
+                if (order.Status != OrderStatus.Complete)
+                    throw new DomainExceptions("Đơn hàng phải hoàn thành trước khi đánh giá");
 
                 // One review per order
                 var hasFeedback = await _feedbackRepository.HasFeedbackForOrder(userId, createFeedbackDto.OrderId.Value);
                 if (hasFeedback)
                     throw new DomainExceptions("Bạn đã đánh giá đơn hàng này rồi");
             }
-
-            // Velocity Limits - Check daily total limit (3 reviews per day)
-            var today = DateTime.UtcNow.Date;
-            const int dailyLimit = 3;
-
-            var todayCount = await _feedbackRepository.GetDailyFeedbackCountAsync(userId, today);
-            if (todayCount >= dailyLimit)
+            else
             {
-                throw new DomainExceptions("Bạn đã đạt giới hạn số lượng đánh giá cho phép trong ngày hôm nay.");
-            }
+                if (!createFeedbackDto.UserLat.HasValue || !createFeedbackDto.UserLong.HasValue)
+                {
+                    throw new DomainExceptions("Thiếu vị trí hiện tại. Vui lòng bật GPS để đánh giá khi không có đơn hàng.");
+                }
 
-            // Velocity Limits - Check one review per branch per day
-            var hasReviewedBranchToday = await _feedbackRepository.HasReviewedBranchTodayAsync(userId, createFeedbackDto.BranchId, today);
-            if (hasReviewedBranchToday)
-            {
-                throw new DomainExceptions("Bạn đã đánh giá chi nhánh này hôm nay rồi.");
+                var distanceKm = HaversineDistance(
+                    createFeedbackDto.UserLat.Value,
+                    createFeedbackDto.UserLong.Value,
+                    branch.Lat,
+                    branch.Long);
+
+                if (distanceKm > MaxDistanceWithoutOrderKm)
+                {
+                    var distanceMeters = (int)Math.Round(distanceKm * 1000);
+                    throw new DomainExceptions($"Bạn đang cách quán khoảng {distanceMeters}m. Đánh giá không đơn hàng chỉ hợp lệ trong phạm vi 300m.");
+                }
+
+                var hasNonOrderFeedbackForBranch = await _feedbackRepository.HasUserFeedbackOnBranchWithoutOrderAsync(createFeedbackDto.BranchId, userId);
+                if (hasNonOrderFeedbackForBranch)
+                {
+                    throw new DomainExceptions("Mỗi quán chỉ được đánh giá 1 lần khi không có đơn hàng.");
+                }
+
+                var reviewedBranchIdsToday = await _feedbackRepository.GetReviewedBranchIdsTodayWithoutOrderAsync(userId, today);
+                if (reviewedBranchIdsToday.Count >= dailyLimitWithoutOrder)
+                {
+                    throw new DomainExceptions($"Bạn đã đạt giới hạn {dailyLimitWithoutOrder} quán khác nhau trong ngày hôm nay cho đánh giá không đơn hàng.");
+                }
             }
 
             // Validate rating
@@ -558,20 +578,73 @@ namespace Service
             };
         }
 
-        public async Task<VelocityCheckDto> CheckVelocityAsync(int userId)
+        public async Task<VelocityCheckDto> CheckVelocityAsync(int userId, int? branchId = null, double? userLat = null, double? userLong = null)
         {
             var today = DateTime.UtcNow.Date;
-            const int dailyLimit = 3;
+            var dailyLimit = _settingService.GetInt(FeedbackDailyLimitSettingName, 3);
 
-            var todayCount = await _feedbackRepository.GetDailyFeedbackCountAsync(userId, today);
-            var reviewedBranchIds = await _feedbackRepository.GetReviewedBranchIdsTodayAsync(userId, today);
+            var todayCount = await _feedbackRepository.GetDailyFeedbackCountWithoutOrderAsync(userId, today);
+            var reviewedBranchIds = await _feedbackRepository.GetReviewedBranchIdsTodayWithoutOrderAsync(userId, today);
+
+            double? distanceMeters = null;
+            double? maxDistanceMeters = null;
+            bool? isWithinDistance = null;
+            bool? canReviewWithoutOrder = null;
+
+            var hasBranchInput = branchId.HasValue || userLat.HasValue || userLong.HasValue;
+            if (hasBranchInput)
+            {
+                if (!branchId.HasValue || !userLat.HasValue || !userLong.HasValue)
+                {
+                    throw new DomainExceptions("Vui lòng cung cấp đầy đủ branchId, userLat và userLong để kiểm tra khoảng cách");
+                }
+
+                var branch = await _branchRepository.GetByIdAsync(branchId.Value);
+                if (branch == null)
+                {
+                    throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId.Value}");
+                }
+
+                var distanceKm = HaversineDistance(userLat.Value, userLong.Value, branch.Lat, branch.Long);
+                distanceMeters = Math.Round(distanceKm * 1000, 2);
+                maxDistanceMeters = Math.Round(MaxDistanceWithoutOrderKm * 1000, 2);
+                isWithinDistance = distanceKm <= MaxDistanceWithoutOrderKm;
+
+                var hasNonOrderFeedbackForBranch = await _feedbackRepository.HasUserFeedbackOnBranchWithoutOrderAsync(branchId.Value, userId);
+                canReviewWithoutOrder = isWithinDistance.Value && todayCount < dailyLimit && !hasNonOrderFeedbackForBranch;
+            }
 
             return new VelocityCheckDto
             {
                 RemainingTotalToday = Math.Max(0, dailyLimit - todayCount),
                 DailyLimit = dailyLimit,
-                ReviewedBranchIds = reviewedBranchIds
+                ReviewedBranchIds = reviewedBranchIds,
+                BranchId = branchId,
+                DistanceMeters = distanceMeters,
+                MaxDistanceMeters = maxDistanceMeters,
+                IsWithinDistance = isWithinDistance,
+                CanReviewWithoutOrder = canReviewWithoutOrder
             };
+        }
+
+        private static double HaversineDistance(double lat1, double long1, double lat2, double long2)
+        {
+            const double earthRadiusKm = 6371;
+
+            double dLat = DegreesToRadians(lat2 - lat1);
+            double dLong = DegreesToRadians(long2 - long1);
+
+            double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                       Math.Cos(DegreesToRadians(lat1)) * Math.Cos(DegreesToRadians(lat2)) *
+                       Math.Sin(dLong / 2) * Math.Sin(dLong / 2);
+
+            double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return earthRadiusKm * c;
+        }
+
+        private static double DegreesToRadians(double degrees)
+        {
+            return degrees * (Math.PI / 180);
         }
     }
 }

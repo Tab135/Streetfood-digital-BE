@@ -27,6 +27,6 @@ namespace Service.Interfaces
         Task<List<FeedbackImageDto>> GetFeedbackImages(int feedbackId);
 
         // Velocity Limits
-        Task<VelocityCheckDto> CheckVelocityAsync(int userId);
+        Task<VelocityCheckDto> CheckVelocityAsync(int userId, int? branchId = null, double? userLat = null, double? userLong = null);
     }
 }
