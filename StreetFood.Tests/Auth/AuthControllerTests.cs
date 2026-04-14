@@ -183,14 +183,14 @@ public class AuthControllerTests
     // ─── POST /api/auth/phone-login ───────────────────────────────────────────
 
     [Fact]
-    public async Task PhoneLogin_ValidPhoneNumber_Returns200WithOtp()
+    public async Task PhoneLogin_ValidPhoneNumber_Returns200WithoutOtp()
     {
         // Arrange
         var (controller, userSvc, _) = BuildController();
         var dto = new PhoneLoginDto { PhoneNumber = "0900000001" };
 
         userSvc.Setup(s => s.SendPhoneLoginOtpAsync("0900000001"))
-               .ReturnsAsync("123456");
+               .ReturnsAsync(("OTP sent successfully", (string?)null));
 
         // Act
         var result = await controller.PhoneLogin(dto);
@@ -200,11 +200,34 @@ public class AuthControllerTests
         Assert.Equal(200, ok.StatusCode);
 
         var body = ok.Value!;
-        var otp = body.GetType().GetProperty("otp")?.GetValue(body) as string;
+        var message = body.GetType().GetProperty("message")?.GetValue(body) as string;
         var phone = body.GetType().GetProperty("phoneNumber")?.GetValue(body) as string;
+        var otp = body.GetType().GetProperty("otp")?.GetValue(body) as string;
+
+        Assert.Equal("OTP sent successfully", message);
+        Assert.Equal("0900000001", phone);
+        Assert.Null(otp);
+    }
+
+    [Fact]
+    public async Task PhoneLogin_WhenOtpReturned_IncludesOtpInResponse()
+    {
+        // Arrange
+        var (controller, userSvc, _) = BuildController();
+        var dto = new PhoneLoginDto { PhoneNumber = "0900000001" };
+
+        userSvc.Setup(s => s.SendPhoneLoginOtpAsync("0900000001"))
+               .ReturnsAsync(("OTP sent successfully", "123456"));
+
+        // Act
+        var result = await controller.PhoneLogin(dto);
+
+        // Assert
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var body = ok.Value!;
+        var otp = body.GetType().GetProperty("otp")?.GetValue(body) as string;
 
         Assert.Equal("123456", otp);
-        Assert.Equal("0900000001", phone);
     }
 
     [Fact]
@@ -440,7 +463,7 @@ public class AuthControllerTests
     {
         var (controller, userSvc, _) = BuildController();
         var dto = new PhoneLoginDto { PhoneNumber = "0900000001" };
-        userSvc.Setup(s => s.SendPhoneLoginOtpAsync("0900000001")).ReturnsAsync("111111");
+        userSvc.Setup(s => s.SendPhoneLoginOtpAsync("0900000001")).ReturnsAsync(("OTP sent successfully", (string?)null));
 
         await controller.PhoneLogin(dto);
 

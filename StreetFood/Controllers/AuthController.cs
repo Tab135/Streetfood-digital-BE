@@ -200,11 +200,11 @@ namespace StreetFood.Controllers
                     return BadRequest(ModelState);
                 }
 
-                var otp = await _userService.SendPhoneLoginOtpAsync(request.PhoneNumber);
+                var (message, otp) = await _userService.SendPhoneLoginOtpAsync(request.PhoneNumber);
 
                 return Ok(new
                 {
-                    message = "OTP generated",
+                    message = message,
                     phoneNumber = request.PhoneNumber,
                     otp = otp
                 });

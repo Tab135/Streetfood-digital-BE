@@ -19,7 +19,7 @@ namespace Service.Interfaces
         Task<string> VerifyOtpAsync(string email, string otp);
         Task<string> ResetPasswordAsync(ResetPasswordRequest request);
         Task<string> ResendForgetPasswordOtpAsync(string email);
-        Task<string> SendPhoneLoginOtpAsync(string phoneNumber);
+        Task<(string message, string? otp)> SendPhoneLoginOtpAsync(string phoneNumber);
         Task<LoginResponse> VerifyPhoneOtpAsync(string phoneNumber, string otp);
         Task<User> UpdateUserProfile(int userId, UpdateUserProfileDto updateDto);
         Task<string> ChangePassword(string userId, string oldPassword, string newPassword, string confirmNewPassword);

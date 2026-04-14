@@ -143,6 +143,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<IUserService, UserService>();
             builder.Services.AddScoped<IJwtService, JWTService>();
             builder.Services.AddScoped<IEmailSender, EmailSender>();
+            builder.Services.AddScoped<ISmsSender, SmsSender>();
             builder.Services.AddScoped<IFacebookService, FacebookService>();
             builder.Services.AddScoped<IBadgeService, BadgeService>();
             builder.Services.AddScoped<IDietaryPreferenceService, DietaryPreferenceService>();

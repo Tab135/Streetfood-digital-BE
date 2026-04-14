@@ -14,6 +14,7 @@ using Service.JWT;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -25,10 +26,12 @@ namespace Service
         private readonly IJwtService _jwt_service;
         private readonly IOtpVerifyRepository _otpRepository;
         private readonly IEmailSender _email_sender;
+        private readonly ISmsSender _sms_sender;
         private readonly IConfiguration _configuration;
         private readonly IFacebookService _facebookService;
         private readonly ISettingRepository _settingRepository;
         private readonly IQuestProgressService _questProgressService;
+        private readonly bool _smsDebugMode;
 
         // Constants
         private const int OtpExpiryMinutes = 3;
@@ -41,6 +44,7 @@ namespace Service
             IJwtService jwtService,
             IOtpVerifyRepository otpVerifyRepository,
             IEmailSender emailSender,
+            ISmsSender smsSender,
             IConfiguration configuration,
             IFacebookService facebookService,
             ISettingRepository settingRepository,
@@ -50,10 +54,12 @@ namespace Service
             _jwt_service = jwtService;
             _otpRepository = otpVerifyRepository;
             _email_sender = emailSender;
+            _sms_sender = smsSender;
             _configuration = configuration;
             _facebookService = facebookService;
             _settingRepository = settingRepository;
             _questProgressService = questProgressService;
+            _smsDebugMode = bool.TryParse(_configuration["Brevo:DebugMode"], out var smsDebugMode) && smsDebugMode;
         }
         public async Task<User> GetUserById(int userId)
         {
@@ -326,7 +332,7 @@ namespace Service
         }
 
         // Send OTP for phone-based login 
-        public async Task<string> SendPhoneLoginOtpAsync(string phoneNumber)
+        public async Task<(string message, string? otp)> SendPhoneLoginOtpAsync(string phoneNumber)
         {
             if (string.IsNullOrWhiteSpace(phoneNumber))
                 throw new DomainExceptions("Số điện thoại là bắt buộc");
@@ -338,9 +344,22 @@ namespace Service
             var forcedOtp = TemporaryPhoneOtpOverrides.GetForcedOtp(normalizedPhoneNumber);
             var otpCode = await GenerateAndStoreOtpAsync(normalizedPhoneNumber, forcedOtp);
 
-            // TODO: Integrate SMS provider to deliver OTP to the phone number.
-            return otpCode;
+            if (forcedOtp != null)
+            {
+                return ($"OTP đã được tạo cho số {normalizedPhoneNumber}.", _smsDebugMode ? otpCode : null);
+            }
+
+            if (_smsDebugMode)
+            {
+                return ($"OTP đã được tạo cho số {normalizedPhoneNumber} ở chế độ debug.", otpCode);
+            }
+
+            var smsPhoneNumber = NormalizePhoneForSms(normalizedPhoneNumber);
+            await _sms_sender.SendOtpSmsAsync(smsPhoneNumber, otpCode, OtpExpiryMinutes);
+
+            return ($"OTP đã được gửi đến {normalizedPhoneNumber}. Vui lòng kiểm tra tin nhắn.", null);
         }
+
         public async Task<LoginResponse> VerifyPhoneOtpAsync(string phoneNumber, string otp)
         {
             if (string.IsNullOrWhiteSpace(phoneNumber) || string.IsNullOrWhiteSpace(otp))
@@ -725,6 +744,42 @@ namespace Service
         private string NormalizePhoneIdentity(string phoneNumber)
         {
             return phoneNumber.Trim();
+        }
+
+        private string NormalizePhoneForSms(string phoneNumber)
+        {
+            var trimmed = phoneNumber.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed))
+                throw new DomainExceptions("Số điện thoại không hợp lệ");
+
+            var hasPlusPrefix = trimmed.StartsWith("+", StringComparison.Ordinal);
+            var digitsBuilder = new StringBuilder();
+
+            foreach (var ch in trimmed)
+            {
+                if (char.IsDigit(ch))
+                {
+                    digitsBuilder.Append(ch);
+                }
+            }
+
+            var digits = digitsBuilder.ToString();
+            if (digits.Length == 0)
+                throw new DomainExceptions("Số điện thoại không hợp lệ");
+
+            if (hasPlusPrefix)
+                return "+" + digits;
+
+            if (digits.StartsWith("00", StringComparison.Ordinal))
+                return "+" + digits.Substring(2);
+
+            if (digits.StartsWith("0", StringComparison.Ordinal))
+                return "+84" + digits.Substring(1);
+
+            if (digits.StartsWith("84", StringComparison.Ordinal))
+                return "+" + digits;
+
+            return "+" + digits;
         }
 
         private string GenerateOtpEmailTemplate(string username, string otpCode, string action)
