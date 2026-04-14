@@ -806,7 +806,8 @@ public class StreetFoodDbContext : DbContext
                 new Setting { Id = 5, Name = "feedbackXP", Value = "20" },
                 new Setting { Id = 6, Name = "ghostpinXP", Value = "100" },
                 new Setting { Id = 7, Name = "GoldMinXP", Value = "3000" },
-                new Setting { Id = 8, Name = "DiamondMinXP", Value = "10000" }
+                new Setting { Id = 8, Name = "DiamondMinXP", Value = "10000" },
+                new Setting { Id = 9, Name = "feedbackDailyLimit", Value = "3" }
             );
         });
     }

@@ -224,6 +224,12 @@ namespace DAL
                 .AnyAsync(f => f.BranchId == branchId && f.UserId == userId);
         }
 
+        public async Task<bool> HasUserFeedbackOnBranchWithoutOrderAsync(int branchId, int userId)
+        {
+            return await _context.Feedbacks
+                .AnyAsync(f => f.BranchId == branchId && f.UserId == userId && f.OrderId == null);
+        }
+
         // Check if user already left feedback for an order
         public async Task<bool> HasFeedbackForOrderAsync(int userId, int orderId)
         {
@@ -331,10 +337,26 @@ namespace DAL
                 .CountAsync();
         }
 
+        public async Task<int> GetDailyFeedbackCountWithoutOrderAsync(int userId, DateTime date)
+        {
+            return await _context.Feedbacks
+                .Where(f => f.UserId == userId && f.OrderId == null && f.CreatedAt.Date == date.Date)
+                .CountAsync();
+        }
+
         public async Task<List<int>> GetReviewedBranchIdsTodayAsync(int userId, DateTime date)
         {
             return await _context.Feedbacks
                 .Where(f => f.UserId == userId && f.CreatedAt.Date == date.Date)
+                .Select(f => f.BranchId)
+                .Distinct()
+                .ToListAsync();
+        }
+
+        public async Task<List<int>> GetReviewedBranchIdsTodayWithoutOrderAsync(int userId, DateTime date)
+        {
+            return await _context.Feedbacks
+                .Where(f => f.UserId == userId && f.OrderId == null && f.CreatedAt.Date == date.Date)
                 .Select(f => f.BranchId)
                 .Distinct()
                 .ToListAsync();

@@ -206,7 +206,10 @@ namespace StreetFood.Controllers
         [HttpGet("velocity/check")]
         [Authorize(Roles = "User,Vendor")]
         [ProducesResponseType(typeof(ApiResponse<VelocityCheckDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> CheckVelocity()
+        public async Task<IActionResult> CheckVelocity(
+            [FromQuery] int? branchId = null,
+            [FromQuery] double? userLat = null,
+            [FromQuery] double? userLong = null)
         {
             try
             {
@@ -216,7 +219,7 @@ namespace StreetFood.Controllers
                     return Unauthorized(new { message = "User not authenticated" });
                 }
 
-                var velocityCheck = await _feedbackService.CheckVelocityAsync(userId);
+                var velocityCheck = await _feedbackService.CheckVelocityAsync(userId, branchId, userLat, userLong);
                 return Ok(new
                 {
                     message = "Velocity check retrieved successfully",
