@@ -98,7 +98,7 @@ namespace Service
                 throw new DomainExceptions($"Không tìm thấy cửa hàng với ID {vendorId}");
             }
 
-            return MapToResponseDto(vendor);
+            return await MapToResponseDtoAsync(vendor);
         }
 
         public async Task<VendorResponseDto> GetVendorByUserIdAsync(int userId)
@@ -109,20 +109,32 @@ namespace Service
                 throw new DomainExceptions($"Không tìm thấy cửa hàng của người dùng với ID {userId}");
             }
 
-            return MapToResponseDto(vendor);
+            return await MapToResponseDtoAsync(vendor);
         }
 
         public async Task<PaginatedResponse<VendorResponseDto>> GetAllVendorsAsync(int pageNumber, int pageSize)
         {
             var (vendors, totalCount) = await _vendorRepository.GetAllAsync(pageNumber, pageSize);
-            var items = vendors.Select(MapToResponseDto).ToList();
+            var items = new List<VendorResponseDto>();
+
+            foreach (var vendor in vendors)
+            {
+                items.Add(await MapToResponseDtoAsync(vendor));
+            }
+
             return new PaginatedResponse<VendorResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task<PaginatedResponse<VendorResponseDto>> GetActiveVendorsAsync(int pageNumber, int pageSize)
         {
             var (vendors, totalCount) = await _vendorRepository.GetActiveVendorsAsync(pageNumber, pageSize);
-            var items = vendors.Select(MapToResponseDto).ToList();
+            var items = new List<VendorResponseDto>();
+
+            foreach (var vendor in vendors)
+            {
+                items.Add(await MapToResponseDtoAsync(vendor));
+            }
+
             return new PaginatedResponse<VendorResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
@@ -206,9 +218,40 @@ namespace Service
             return true;
         }
 
-        private VendorResponseDto MapToResponseDto(Vendor vendor)
+        private async Task<VendorResponseDto> MapToResponseDtoAsync(Vendor vendor)
         {
-            var branches = _branchRepository.GetAllByVendorIdAsync(vendor.VendorId).Result;
+            var branches = await _branchRepository.GetAllByVendorIdAsync(vendor.VendorId);
+            var branchRequests = branches.Count > 0
+                ? await _branchRepository.GetRegisterRequestsByBranchIdsAsync(branches.Select(b => b.BranchId).ToList())
+                : new Dictionary<int, BranchRequest>();
+
+            var branchResponses = branches
+                .Select(b => MapBranchToResponseDto(b, branchRequests.GetValueOrDefault(b.BranchId)))
+                .ToList();
+
+            var verifierIds = branchResponses
+                .Where(i => i.VerifiedBy.HasValue)
+                .Select(i => i.VerifiedBy!.Value)
+                .Distinct()
+                .ToList();
+
+            if (verifierIds.Count > 0)
+            {
+                var verifierUsernames = new Dictionary<int, string?>();
+                foreach (var verifierId in verifierIds)
+                {
+                    var verifier = await _userRepository.GetUserById(verifierId);
+                    verifierUsernames[verifierId] = verifier?.UserName;
+                }
+
+                foreach (var branchResponse in branchResponses)
+                {
+                    if (branchResponse.VerifiedBy.HasValue && verifierUsernames.TryGetValue(branchResponse.VerifiedBy.Value, out var username))
+                    {
+                        branchResponse.VerifiedByUserName = username;
+                    }
+                }
+            }
             
             return new VendorResponseDto
             {
@@ -226,56 +269,66 @@ namespace Service
                         Name = vdp.DietaryPreference.Name,
                         Description = vdp.DietaryPreference.Description
                     }).ToList(),
-                Branches = branches.Select(b =>
+                Branches = branchResponses
+            };
+        }
+
+        private static BO.DTO.Branch.BranchResponseDto MapBranchToResponseDto(Branch branch, BranchRequest? licenseRequest)
+        {
+            var licenseUrls = new List<string>();
+            if (!string.IsNullOrEmpty(licenseRequest?.LicenseUrl))
+            {
+                if (licenseRequest.LicenseUrl.TrimStart().StartsWith("["))
                 {
-                    var licenseRequest = _branchRepository.GetBranchRequestAsync(b.BranchId).Result;
-                    var licenseUrls = new System.Collections.Generic.List<string>();
-                    if (!string.IsNullOrEmpty(licenseRequest?.LicenseUrl))
+                    try
                     {
-                        if (licenseRequest.LicenseUrl.TrimStart().StartsWith("["))
-                        {
-                            try { licenseUrls = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<string>>(licenseRequest.LicenseUrl); }
-                            catch { licenseUrls.Add(licenseRequest.LicenseUrl); }
-                        }
-                        else
-                        {
-                            licenseUrls.Add(licenseRequest.LicenseUrl);
-                        }
+                        licenseUrls = System.Text.Json.JsonSerializer.Deserialize<List<string>>(licenseRequest.LicenseUrl) ?? new List<string>();
                     }
-                    return new BO.DTO.Branch.BranchResponseDto
+                    catch
                     {
-                        BranchId = b.BranchId,
-                        VendorId = b.VendorId ?? 0,
-                        ManagerId = b.ManagerId,
-                        Name = b.Name,
-                        PhoneNumber = b.PhoneNumber,
-                        Email = b.Email,
-                        AddressDetail = b.AddressDetail,
-                        Ward = b.Ward,
-                        City = b.City,
-                        Lat = b.Lat,
-                        Long = b.Long,
-                        CreatedAt = b.CreatedAt,
-                        UpdatedAt = b.UpdatedAt,
-                        IsVerified = b.IsVerified,
-                        AvgRating = b.AvgRating,
-                        TotalReviewCount = b.TotalReviewCount,
-                        TotalRatingSum = b.TotalRatingSum,
-                        BatchReviewCount = b.BatchReviewCount,
-                        BatchRatingSum = b.BatchRatingSum,
-                        IsActive = b.IsActive,
-                        IsSubscribed = b.IsSubscribed,
-                        SubscriptionExpiresAt = b.SubscriptionExpiresAt,
-                        DaysRemaining = b.SubscriptionExpiresAt.HasValue
-                            ? (int)Math.Ceiling((b.SubscriptionExpiresAt.Value - DateTime.UtcNow).TotalDays)
-                            : null,
-                        TierId = b.TierId,
-                        TierName = b.Tier?.Name ?? "Silver",
-                        LicenseUrls = licenseUrls,
-                        LicenseStatus = licenseRequest?.Status.ToString(),
-                        LicenseRejectReason = licenseRequest?.RejectReason
-                    };
-                }).ToList()
+                        licenseUrls.Add(licenseRequest.LicenseUrl);
+                    }
+                }
+                else
+                {
+                    licenseUrls.Add(licenseRequest.LicenseUrl);
+                }
+            }
+
+            return new BO.DTO.Branch.BranchResponseDto
+            {
+                BranchId = branch.BranchId,
+                VendorId = branch.VendorId ?? 0,
+                ManagerId = branch.ManagerId,
+                Name = branch.Name,
+                PhoneNumber = branch.PhoneNumber,
+                Email = branch.Email,
+                AddressDetail = branch.AddressDetail,
+                Ward = branch.Ward,
+                City = branch.City,
+                Lat = branch.Lat,
+                Long = branch.Long,
+                CreatedAt = branch.CreatedAt,
+                UpdatedAt = branch.UpdatedAt,
+                IsVerified = branch.IsVerified,
+                AvgRating = branch.AvgRating,
+                TotalReviewCount = branch.TotalReviewCount,
+                TotalRatingSum = branch.TotalRatingSum,
+                BatchReviewCount = branch.BatchReviewCount,
+                BatchRatingSum = branch.BatchRatingSum,
+                IsActive = branch.IsActive,
+                IsSubscribed = branch.IsSubscribed,
+                SubscriptionExpiresAt = branch.SubscriptionExpiresAt,
+                DaysRemaining = branch.SubscriptionExpiresAt.HasValue
+                    ? (int)Math.Ceiling((branch.SubscriptionExpiresAt.Value - DateTime.UtcNow).TotalDays)
+                    : null,
+                TierId = branch.TierId,
+                TierName = branch.Tier?.Name ?? "Silver",
+                LicenseUrls = licenseUrls,
+                LicenseStatus = licenseRequest?.Status.ToString(),
+                VerifiedBy = licenseRequest?.VerifiedBy,
+                VerifiedByUserName = null,
+                LicenseRejectReason = licenseRequest?.RejectReason
             };
         }
     }
