@@ -235,6 +235,7 @@ namespace StreetFood.Controllers
             {
                 BranchId = full.BranchId,
                 VendorId = full.VendorId,
+                VendorName = full.VendorName,
                 ManagerId = full.ManagerId,
                 Name = full.Name,
                 PhoneNumber = full.PhoneNumber,

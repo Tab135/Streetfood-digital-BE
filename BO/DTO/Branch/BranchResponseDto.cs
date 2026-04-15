@@ -6,6 +6,7 @@ namespace BO.DTO.Branch
     {
         public int BranchId { get; set; }
         public int VendorId { get; set; }
+        public string VendorName { get; set; } = string.Empty;
         public int? ManagerId { get; set; }
         public string Name { get; set; }
         public string PhoneNumber { get; set; }

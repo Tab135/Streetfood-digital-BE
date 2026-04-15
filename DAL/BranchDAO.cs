@@ -63,6 +63,7 @@ namespace DAL
             var items = await query
                 .AsSplitQuery()
                 .Include(b => b.Tier)
+                .Include(b => b.Vendor)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -85,6 +86,7 @@ namespace DAL
             var items = await query
                 .AsSplitQuery()
                 .Include(b => b.Tier)
+                .Include(b => b.Vendor)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -102,6 +104,7 @@ namespace DAL
                 .AsSplitQuery()
                 .Where(b => b.ManagerId == managerUserId)
                 .Include(b => b.Tier)
+                .Include(b => b.Vendor)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -140,6 +143,7 @@ namespace DAL
             var items = await query
                 .AsSplitQuery()
                 .Include(b => b.Tier)
+                .Include(b => b.Vendor)
                 .ToListAsync();
 
             return (items, totalCount);

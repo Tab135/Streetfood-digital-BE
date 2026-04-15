@@ -723,6 +723,7 @@ namespace Service
             {
                 BranchId = branch.BranchId,
                 VendorId = branch.VendorId ?? 0,
+                VendorName = branch.Vendor?.Name ?? string.Empty,
                 ManagerId = branch.ManagerId,
                 Name = branch.Name,
                 PhoneNumber = branch.PhoneNumber,
