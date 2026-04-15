@@ -17,7 +17,6 @@ namespace Repository.Interfaces
         Task<User> FindOrCreateUserFromGoogleAsync(GoogleJsonWebSignature.Payload payload);
         Task<User> FindOrCreateUserFromFacebookAsync(FacebookUserInfo info);
         Task<User> GetUserById(int userId);
-        Task UpdatePasswordAsync(int userId, string hashedPassword);
         Task<(System.Collections.Generic.List<User> Users, int TotalCount)> GetUsersAsync(Role? role, int pageNumber, int pageSize);
         Task<(System.Collections.Generic.List<User> Users, int TotalCount)> SearchUsersAsync(string keyword, int pageNumber, int pageSize);
         Task<System.Collections.Generic.List<int>> ResetAllCustomerTiersAsync(int goldXP, int diamondXP, System.Threading.CancellationToken ct);

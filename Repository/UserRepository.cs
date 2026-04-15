@@ -67,11 +67,6 @@ namespace Repository
             return await _userDAO.GetUserById(userId);
         }
 
-        public async Task UpdatePasswordAsync(int userId, string hashedPassword)
-        {
-            await _userDAO.UpdatePasswordAsync(userId, hashedPassword);
-        }
-
         public async Task<(System.Collections.Generic.List<User> Users, int TotalCount)> GetUsersAsync(Role? role, int pageNumber, int pageSize)
         {
             return await _userDAO.GetUsersAsync(role, pageNumber, pageSize);

@@ -108,5 +108,91 @@ namespace StreetFood.Controllers
                 return BadRequest(new { Message = ex.Message });
             }
         }
+
+        [HttpGet("profile")]
+        [Authorize]
+        public async Task<IActionResult> GetProfile() 
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                {
+                    return Unauthorized(new { message = "Invalid user identity" });
+                }
+                var user = await _userService.GetUserById(userId);
+
+                return Ok(new
+                {
+                    userId = user.Id,
+                    username = user.UserName,
+                    email = user.Email,
+                    role = user.Role,
+                    phoneNumber = user.PhoneNumber,
+                    avatarUrl = user.AvatarUrl,
+                    point = user.Point, 
+                    createdAt = user.CreatedAt,
+                    firstName = user.FirstName,
+                    lastName = user.LastName,
+                    userInfoSetup = user.UserInfoSetup,
+                    dietarySetup = user.DietarySetup,
+                    moneyBalance = user.MoneyBalance,
+                    tierId = user.TierId,
+                    xp = user.XP
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("profile")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateUserProfileDto updateDto)
+        {
+            try
+            {
+                // Get userId from JWT token claims
+                var userIdClaim = User.FindFirst("userId")?.Value
+                                  ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                {
+                    return Unauthorized(new { message = "Invalid user token" });
+                }
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var updatedUser = await _userService.UpdateUserProfile(userId, updateDto);
+
+                // Return user with same format as GET /profile
+                return Ok(new
+                {
+                    userId = updatedUser.Id,
+                    username = updatedUser.UserName,
+                    email = updatedUser.Email,
+                    role = updatedUser.Role,
+                    phoneNumber = updatedUser.PhoneNumber,
+                    avatarUrl = updatedUser.AvatarUrl,
+                    point = updatedUser.Point,
+                    createdAt = updatedUser.CreatedAt,
+                    firstName = updatedUser.FirstName,
+                    lastName = updatedUser.LastName,
+                    userInfoSetup = updatedUser.UserInfoSetup,
+                    dietarySetup = updatedUser.DietarySetup,
+                    moneyBalance = updatedUser.MoneyBalance,
+                    tierId = updatedUser.TierId,
+                    xp = updatedUser.XP
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

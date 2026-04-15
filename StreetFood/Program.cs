@@ -145,6 +145,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<IEmailSender, EmailSender>();
             builder.Services.AddScoped<ISmsSender, SmsSender>();
             builder.Services.AddScoped<IFacebookService, FacebookService>();
+            builder.Services.AddScoped<IGoogleService, GoogleService>();
             builder.Services.AddScoped<IBadgeService, BadgeService>();
             builder.Services.AddScoped<IDietaryPreferenceService, DietaryPreferenceService>();
             builder.Services.AddScoped<IUserDietaryPreferenceService, UserDietaryPreferenceService>();

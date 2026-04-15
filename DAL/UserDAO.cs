@@ -180,16 +180,6 @@ namespace DAL
                 .FirstOrDefaultAsync(x => x.Id == userId);
         }
 
-        // Added: update only password
-        public async Task UpdatePasswordAsync(int userId, string hashedPassword)
-        {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-            if (user == null) throw new Exception("User not found");
-            user.Password = hashedPassword;
-            _context.Users.Update(user);
-            await _context.SaveChangesAsync();
-        }
-
         public async Task<(System.Collections.Generic.List<User> Users, int TotalCount)> GetUsersAsync(Role? role, int pageNumber, int pageSize)
         {
             if (pageNumber <= 0)
