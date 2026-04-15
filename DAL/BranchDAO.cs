@@ -177,6 +177,13 @@ namespace DAL
                 branch.Vendor = null;
             }
 
+            if (branch.Tier != null)
+            {
+                // Tier is a lookup entity and may already be tracked by the DbContext
+                _context.Entry(branch.Tier).State = EntityState.Detached;
+                branch.Tier = null;
+            }
+
             _context.Branches.Update(branch);
             await _context.SaveChangesAsync();
         }
