@@ -431,9 +431,11 @@ public class StreetFoodDbContext : DbContext
 
           modelBuilder.Entity<OrderDish>(entity =>
           {
-            entity.HasKey(e => new { e.OrderId, e.DishId });
+            entity.HasKey(e => e.Id);
             entity.Property(e => e.Quantity).IsRequired();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // We added Price, DishName, ImageUrl which EF maps by default
 
             entity.HasOne(e => e.Order)
                 .WithMany(o => o.OrderDishes)
@@ -443,7 +445,7 @@ public class StreetFoodDbContext : DbContext
             entity.HasOne(e => e.BranchDish)
                 .WithMany(bd => bd.OrderDishes)
                 .HasForeignKey(e => new { e.BranchId, e.DishId })
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.SetNull); // When BranchDish is deleted, nullify this
           });
 
               modelBuilder.Entity<Cart>(entity =>

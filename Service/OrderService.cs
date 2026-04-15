@@ -727,6 +727,9 @@ public class OrderService : IOrderService
             {
                 DishId = item.DishId,
                 BranchId = branchId,
+                DishName = dish.Name,
+                Price = dish.Price,
+                ImageUrl = dish.ImageUrl,
                 Quantity = item.Quantity,
                 CreatedAt = DateTime.UtcNow
             });
@@ -940,9 +943,10 @@ public class OrderService : IOrderService
             Items = order.OrderDishes.Select(od => new OrderDishResponseDto
             {
                 DishId = od.DishId,
-                DishName = od.BranchDish?.Dish?.Name ?? string.Empty,
-                Price = od.BranchDish?.Dish?.Price ?? 0m,
-                Quantity = od.Quantity
+                DishName = !string.IsNullOrEmpty(od.DishName) ? od.DishName : (od.BranchDish?.Dish?.Name ?? string.Empty),
+                Price = od.Price > 0 ? od.Price : (od.BranchDish?.Dish?.Price ?? 0m),
+                Quantity = od.Quantity,
+                ImageUrl = od.ImageUrl ?? od.BranchDish?.Dish?.ImageUrl
             }).ToList()
         };
     }

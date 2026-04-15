@@ -119,23 +119,62 @@ namespace DAL
             if (branchIds.Any())
             {
                 var topDishesQuery = await _context.OrderDishes
-                    .Where(od => branchIds.Contains(od.BranchId) && od.Order.Status == OrderStatus.Complete)
-                    .GroupBy(od => od.DishId)
+                    .Where(od => od.BranchId.HasValue && branchIds.Contains(od.BranchId.Value) && od.Order.Status == OrderStatus.Complete)
+                    .GroupBy(od => new { od.DishId, od.DishName })
                     .Select(g => new
                     {
-                        DishId = g.Key,
+                        DishId = g.Key.DishId,
+                        DishName = g.Key.DishName,
                         TotalQuantityOrdered = g.Sum(od => od.Quantity)
                     })
                     .ToListAsync();
                     
-                quantityDict = topDishesQuery.ToDictionary(q => q.DishId, q => q.TotalQuantityOrdered);
+                var activeOrKnownDishes = topDishesQuery
+                    .Where(q => q.DishId.HasValue)
+                    .ToDictionary(
+                        q => q.DishId!.Value, 
+                        q => new { q.DishName, q.TotalQuantityOrdered }
+                    );
+
+                // Add active/inactive dishes that belong to vendor but haven't been ordered
+                var topDishes = new List<TopDishDto>();
+                foreach (var d in allDishes)
+                {
+                    topDishes.Add(new TopDishDto
+                    {
+                        DishId = d.DishId,
+                        DishName = d.Name,
+                        TotalQuantityOrdered = activeOrKnownDishes.ContainsKey(d.DishId) ? activeOrKnownDishes[d.DishId].TotalQuantityOrdered : 0
+                    });
+                }
+                
+                // Add historical dishes that were completely deleted from Dishes table but still exist in OrderDishes
+                foreach (var historical in topDishesQuery.Where(q => !q.DishId.HasValue || !allDishes.Any(d => d.DishId == q.DishId.Value)))
+                {
+                    topDishes.Add(new TopDishDto
+                    {
+                        DishId = historical.DishId, // it could be null or point to a non-existent dish
+                        DishName = !string.IsNullOrEmpty(historical.DishName) ? historical.DishName : "Món ăn đã xoá",
+                        TotalQuantityOrdered = historical.TotalQuantityOrdered
+                    });
+                }
+
+                return new DishDashboardDto
+                {
+                    TopDishes = topDishes
+                        .OrderByDescending(d => d.TotalQuantityOrdered)
+                        .ThenBy(d => d.DishName)
+                        .Take(10) // Usually dashboards show top 10
+                        .ToList()
+                };
             }
 
-            var topDishes = allDishes.Select(d => new TopDishDto
+            // Fallback if no branches
+            var fallbackTopDishes = allDishes.Select(d => new TopDishDto
                 {
                     DishId = d.DishId,
                     DishName = d.Name,
-                    TotalQuantityOrdered = quantityDict.ContainsKey(d.DishId) ? quantityDict[d.DishId] : 0
+                    TotalQuantityOrdered = 0
                 })
                 .OrderByDescending(d => d.TotalQuantityOrdered)
                 .ThenBy(d => d.DishName)
@@ -143,7 +182,7 @@ namespace DAL
 
             return new DishDashboardDto
             {
-                TopDishes = topDishes
+                TopDishes = fallbackTopDishes
             };
         }
     }
