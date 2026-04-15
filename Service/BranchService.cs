@@ -124,6 +124,8 @@ namespace Service
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
+            await _branchRepository.AddBranchRequestAsync(branchRequest);
+
             if (ghostpinXP > 0)
             {
                 await _userService.AddXPAsync(userId, ghostpinXP);
