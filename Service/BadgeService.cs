@@ -24,6 +24,26 @@ namespace Service
         // Admin operations
         public async Task<BadgeDto> CreateBadge(CreateBadgeDto createBadgeDto, string iconUrl)
         {
+            if (createBadgeDto == null)
+                throw new DomainExceptions("Dữ liệu không hợp lệ");
+
+            if (string.IsNullOrWhiteSpace(createBadgeDto.BadgeName))
+                throw new DomainExceptions("Tên không để trống");
+
+            if (createBadgeDto.BadgeName.Length > 255)
+                throw new DomainExceptions("Tên quá dài");
+
+            if (string.IsNullOrWhiteSpace(iconUrl))
+                throw new DomainExceptions("Icon không để trống");
+
+            if (createBadgeDto.Description != null && createBadgeDto.Description.Length > 1000)
+                throw new DomainExceptions("Mô tả quá dài");
+
+            // Duplicate check
+            var allBadges = await _badgeRepository.GetAll();
+            if (allBadges.Any(b => b.BadgeName.Equals(createBadgeDto.BadgeName, StringComparison.OrdinalIgnoreCase)))
+                throw new DomainExceptions("Tên huy hiệu đã tồn tại");
+
             var badge = new Badge
             {
                 BadgeName = createBadgeDto.BadgeName,
@@ -38,12 +58,23 @@ namespace Service
 
         public async Task<BadgeDto> UpdateBadge(int badgeId, UpdateBadgeDto updateBadgeDto, string? iconUrl)
         {
+            if (updateBadgeDto == null)
+                throw new DomainExceptions("Dữ liệu không hợp lệ");
+
             var badge = await _badgeRepository.GetById(badgeId);
             if (badge == null)
                 throw new DomainExceptions($"Không tìm thấy huy hiệu với ID {badgeId}");
 
-            if (!string.IsNullOrEmpty(updateBadgeDto.BadgeName))
+            if (updateBadgeDto.BadgeName != null)
+            {
+                if (string.IsNullOrWhiteSpace(updateBadgeDto.BadgeName))
+                    throw new DomainExceptions("Tên không để trống");
+                
+                if (updateBadgeDto.BadgeName.Length > 255)
+                    throw new DomainExceptions("Tên quá dài");
+
                 badge.BadgeName = updateBadgeDto.BadgeName;
+            }
 
             if (!string.IsNullOrWhiteSpace(iconUrl))
                 badge.IconUrl = iconUrl;
