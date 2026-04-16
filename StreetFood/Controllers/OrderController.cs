@@ -172,10 +172,7 @@ public class OrderController : ControllerBase
            return Unauthorized(new { message = "User not authenticated" });
        }
 
-       var updated = await _orderService.UpdateOrderAsync(
-           id,
-           new UpdateOrderRequest { Status = BO.Entities.OrderStatus.Cancelled },
-           userId);
+       var updated = await _orderService.CancelOrderAsync(id, userId);
 
        return Ok(new
        {

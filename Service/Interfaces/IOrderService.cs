@@ -15,6 +15,7 @@ public interface IOrderService
     Task<PaginatedResponse<OrderResponseDto>> GetVendorOrdersByBranchAsync(int vendorUserId, int branchId, int pageNumber, int pageSize, OrderStatus? status = null);
     Task<PaginatedResponse<OrderResponseDto>> GetManagerOrdersAsync(int managerUserId, int pageNumber, int pageSize, OrderStatus? status = null);
     Task<OrderPickupCodeResponseDto> GetOrderPickupCodeAsync(int orderId, int userId);
+    Task<OrderResponseDto> CancelOrderAsync(int orderId, int userId);
     Task<OrderResponseDto> UpdateOrderAsync(int orderId, UpdateOrderRequest request, int userId);
     Task<OrderResponseDto> VendorDecideOrderAsync(int orderId, int vendorUserId, bool approve);
     Task<OrderResponseDto> VendorCompleteOrderAsync(int orderId, int vendorUserId, string verificationCode);

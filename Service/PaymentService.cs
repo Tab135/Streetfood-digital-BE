@@ -715,6 +715,44 @@ namespace Service.PaymentsService
             }
         }
 
+        public async Task CancelOrderPaymentAsync(int orderId)
+        {
+            var latestPayment = await _paymentRepo.GetLatestPaymentByOrderId(orderId);
+            if (latestPayment == null)
+            {
+                return;
+            }
+
+            if (string.Equals(latestPayment.Status, "PAID", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new DomainExceptions("Đơn hàng đã được thanh toán nên không thể hủy", "ERR_BAD_REQUEST");
+            }
+
+            if (!string.Equals(latestPayment.Status, "PENDING", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (!_isDebugMode)
+            {
+                try
+                {
+                    await _payOS.PaymentRequests.CancelAsync(
+                        latestPayment.OrderCode,
+                        "Order cancelled by user",
+                        null);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Could not cancel PayOS payment link for OrderCode={OrderCode}; proceeding to cancel local payment record",
+                        latestPayment.OrderCode);
+                }
+            }
+
+            await _paymentRepo.UpdatePaymentStatus(latestPayment.OrderCode, "CANCELLED");
+        }
+
         public async Task<PaymentStatusResponse> ConfirmPaymentFromRedirect(long orderCode, string status, string? transactionId)
         {
             try
