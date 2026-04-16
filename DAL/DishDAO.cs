@@ -88,7 +88,8 @@ namespace DAL
             int? categoryId,
             string? keyword,
             int pageNumber,
-            int pageSize)
+            int pageSize,
+            bool includeInactive = false)
         {
             var query = _context.Dishes
                 .Where(d => d.BranchDishes.Any(bd => bd.BranchId == branchId))
@@ -98,6 +99,9 @@ namespace DAL
                 .Include(d => d.DishTastes)
                     .ThenInclude(dt => dt.Taste)
                 .AsQueryable();
+
+            if (!includeInactive)
+                query = query.Where(d => d.IsActive);
 
             if (categoryId.HasValue)
                 query = query.Where(d => d.CategoryId == categoryId.Value);

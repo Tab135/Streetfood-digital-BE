@@ -56,9 +56,9 @@ namespace Repository
             await _dishDAO.RemoveDishTastesAsync(dishId);
         }
 
-        public async Task<(List<Dish> items, int totalCount)> GetDishesByBranchAsync(int branchId, int? categoryId, string? keyword, int pageNumber, int pageSize)
+        public async Task<(List<Dish> items, int totalCount)> GetDishesByBranchAsync(int branchId, int? categoryId, string? keyword, int pageNumber, int pageSize, bool includeInactive = false)
         {
-            return await _dishDAO.GetDishesByBranchAsync(branchId, categoryId, keyword, pageNumber, pageSize);
+            return await _dishDAO.GetDishesByBranchAsync(branchId, categoryId, keyword, pageNumber, pageSize, includeInactive);
         }
 
         public async Task AddBranchDishAsync(BranchDish branchDish)

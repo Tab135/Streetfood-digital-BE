@@ -351,8 +351,6 @@ public class CartService : ICartService
                 redeemedVendorVoucher);
         }
 
-        await _cartRepository.DeleteAsync(cart.CartId);
-
         return new CheckoutCartResponseDto
         {
             Order = order,
