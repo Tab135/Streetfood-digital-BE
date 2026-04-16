@@ -1,4 +1,4 @@
-﻿using BO.Entities;
+using BO.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -179,7 +179,10 @@ namespace DAL
             long orderCode,
             string status,
             string? paymentLinkId,
-            string? checkoutUrl)
+            string? checkoutUrl,
+            string? bin = null,
+            string? accountNumber = null,
+            string? accountName = null)
         {
             var payment = await _context.Payments
                 .FirstOrDefaultAsync(p => p.OrderCode == orderCode);
@@ -189,6 +192,9 @@ namespace DAL
                 payment.Status = status;
                 payment.PaymentLinkId = paymentLinkId;
                 payment.CheckoutUrl = checkoutUrl;
+                if (bin != null) payment.Bin = bin;
+                if (accountNumber != null) payment.AccountNumber = accountNumber;
+                if (accountName != null) payment.AccountName = accountName;
                 await _context.SaveChangesAsync();
             }
         }

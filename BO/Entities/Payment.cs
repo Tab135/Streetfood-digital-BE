@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -51,6 +51,15 @@ namespace BO.Entities
 
         [StringLength(500)]
         public string? CheckoutUrl { get; set; }
+
+        [StringLength(50)]
+        public string? Bin { get; set; }
+
+        [StringLength(100)]
+        public string? AccountNumber { get; set; }
+
+        [StringLength(200)]
+        public string? AccountName { get; set; }
 
         // Navigation the user 
         public User? User { get; set; }
