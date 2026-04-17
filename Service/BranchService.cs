@@ -133,6 +133,14 @@ namespace Service
 
             var responseDto = await MapToResponseDtoAsync(createdBranch);
 
+            var createdByUser = await _userRepository.GetUserById(userId);
+            if (createdByUser != null)
+            {
+                responseDto.UserShareName = BuildUserShareName(createdByUser);
+                responseDto.UserShareEmail = string.IsNullOrWhiteSpace(createdByUser.Email) ? null : createdByUser.Email;
+                responseDto.UserSharePhone = string.IsNullOrWhiteSpace(createdByUser.PhoneNumber) ? null : createdByUser.PhoneNumber;
+            }
+
             // Set these fields to null to match the exact JSON output requirement
             responseDto.LicenseUrls = null;
             responseDto.LicenseStatus = null;
@@ -747,6 +755,9 @@ namespace Service
                 BatchRatingSum = branch.BatchRatingSum,
                 GhostpinXP = branch.GhostpinXP,
                 CreatedById = branch.CreatedById,
+                UserShareName = branch.VendorId == null ? BuildUserShareName(branch.CreatedBy) : null,
+                UserShareEmail = branch.VendorId == null ? branch.CreatedBy?.Email : null,
+                UserSharePhone = branch.VendorId == null ? branch.CreatedBy?.PhoneNumber : null,
                 LastTierResetAt = branch.LastTierResetAt,
                 IsActive = branch.IsActive,
                 IsSubscribed = branch.IsSubscribed,
@@ -761,6 +772,32 @@ namespace Service
                 VerifiedBy = licenseRequest?.VerifiedBy,
                 LicenseRejectReason = licenseRequest?.RejectReason
             };
+        }
+
+        private static string? BuildUserShareName(User? user)
+        {
+            if (user == null)
+            {
+                return null;
+            }
+
+            var fullName = $"{user.FirstName} {user.LastName}".Trim();
+            if (!string.IsNullOrWhiteSpace(fullName))
+            {
+                return fullName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(user.UserName))
+            {
+                return user.UserName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(user.Email))
+            {
+                return user.Email;
+            }
+
+            return $"User {user.Id}";
         }
 
         //private BO.DTO.Branch.BranchPublicDto MapToPublicDto(Branch branch)

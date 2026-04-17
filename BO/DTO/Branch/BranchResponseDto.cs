@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Serialization;
 
 namespace BO.DTO.Branch
 {
@@ -31,6 +32,12 @@ namespace BO.DTO.Branch
         public int? DaysRemaining { get; set; }
 
         public int? CreatedById { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? UserShareName { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? UserShareEmail { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? UserSharePhone { get; set; }
         public DateTime? LastTierResetAt { get; set; }
         public int? GhostpinXP { get; set; }
         public int TierId { get; set; }

@@ -64,6 +64,7 @@ namespace DAL
                 .AsSplitQuery()
                 .Include(b => b.Tier)
                 .Include(b => b.Vendor)
+                .Include(b => b.CreatedBy)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
