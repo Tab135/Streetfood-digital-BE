@@ -78,7 +78,7 @@ namespace Service
 
             existing.IsActive = !existing.IsActive;
             await _repo.UpdateAsync(existing);
-            return true;
+            return existing.IsActive;
         }
 
     
