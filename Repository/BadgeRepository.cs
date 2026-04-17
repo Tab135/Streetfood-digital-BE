@@ -36,19 +36,14 @@ namespace Repository
             return await _badgeDAO.Update(badge);
         }
 
-        public async Task<bool> Delete(int badgeId)
-        {
-            return await _badgeDAO.Delete(badgeId);
-        }
-
-        public async Task<bool> Exists(int badgeId)
-        {
-            return await _badgeDAO.Exists(badgeId);
-        }
-
         public async Task<bool> IsInUseAsync(int badgeId)
         {
             return await _badgeDAO.IsInUseAsync(badgeId);
+        }
+
+        public async Task<Badge> UpdateIsActiveAsync(int badgeId, bool isActive)
+        {
+            return await _badgeDAO.UpdateIsActiveAsync(badgeId, isActive);
         }
     }
 }

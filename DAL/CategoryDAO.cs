@@ -38,15 +38,6 @@ namespace DAL
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteAsync(int categoryId)
-        {
-            var category = await _context.Categories.FindAsync(categoryId);
-            if (category != null)
-            {
-                _context.Categories.Remove(category);
-                await _context.SaveChangesAsync();
-            }
-        }
 
         public async Task<bool> ExistsByIdAsync(int categoryId)
         {
@@ -56,6 +47,15 @@ namespace DAL
         public async Task<bool> IsInUseAsync(int id)
         {
             return await _context.Dishes.AnyAsync(x => x.CategoryId == id);
+        }
+
+        public async Task<Category> UpdateIsActiveAsync(int categoryId, bool isActive)
+        {
+           var rowsAffected =  await _context.Categories
+                .Where(c => c.CategoryId == categoryId)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.IsActive, isActive));
+            
+            return rowsAffected > 0;
         }
     }
 }

@@ -39,21 +39,7 @@ namespace DAL
             return badge;
         }
 
-        public async Task<bool> Delete(int badgeId)
-        {
-            var badge = await GetById(badgeId);
-            if (badge == null)
-                return false;
 
-            _context.Badges.Remove(badge);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> Exists(int badgeId)
-        {
-            return await _context.Badges.AnyAsync(b => b.BadgeId == badgeId);
-        }
         public async Task<bool> IsInUseAsync(int badgeId)
         {
             var usedByUser = await _context.UserBadges.AnyAsync(ub => ub.BadgeId == badgeId);
@@ -61,5 +47,15 @@ namespace DAL
 
             var usedInQuest = await _context.QuestTaskRewards.AnyAsync(qr => qr.RewardType == BO.Enums.QuestRewardType.BADGE && qr.RewardValue == badgeId);
             return usedInQuest;
-        }    }
+        }
+
+        public async Task<Badge> UpdateIsActiveAsync(int badgeId, bool isActive)
+        {
+           var rowsAffected = await _context.Badges
+                .Where(b => b.BadgeId == badgeId)
+                .ExecuteUpdateAsync(s => s.SetProperty(b => b.IsActive, isActive));
+            
+            return rowsAffected > 0;
+        }
+    }
 }

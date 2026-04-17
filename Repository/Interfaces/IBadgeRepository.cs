@@ -10,8 +10,7 @@ namespace Repository.Interfaces
         Task<Badge?> GetById(int badgeId);
         Task<List<Badge>> GetAll();
         Task<Badge> Update(Badge badge);
-        Task<bool> Delete(int badgeId);
-        Task<bool> Exists(int badgeId);
         Task<bool> IsInUseAsync(int badgeId);
+        Task<Badge> UpdateIsActiveAsync(int badgeId, bool isActive);
     }
 }
