@@ -1,5 +1,6 @@
 using BO.Common;
 using BO.DTO.Quest;
+using BO.DTO.Users;
 using BO.Entities;
 using BO.Enums;
 using BO.Exceptions;
@@ -102,7 +103,7 @@ namespace Service
             };
 
             var created = await _questRepository.CreateAsync(quest);
-            return MapToResponseDto(created);
+            return await MapToResponseDtoAsync(created);
         }
 
         public async Task<QuestResponseDto> UpdateQuestAsync(int questId, UpdateQuestDto dto)
@@ -143,7 +144,7 @@ namespace Service
             }
 
             await _questRepository.UpdateAsync(quest);
-            return MapToResponseDto(quest);
+            return await MapToResponseDtoAsync(quest);
         }
 
         public async Task<QuestResponseDto> ReplaceQuestTasksAsync(int questId, List<CreateQuestTaskDto> tasks)
@@ -187,7 +188,7 @@ namespace Service
             quest.RequiresEnrollment = !quest.QuestTasks.Any(t => t.Type == QuestTaskType.TIER_UP);
 
             await _questRepository.UpdateAsync(quest);
-            return MapToResponseDto(quest);
+            return await MapToResponseDtoAsync(quest);
         }
 
         public async Task<bool> DeleteQuestAsync(int questId)
@@ -202,7 +203,7 @@ namespace Service
         public async Task<QuestResponseDto?> GetQuestByIdAsync(int questId)
         {
             var quest = await _questRepository.GetByIdAsync(questId);
-            return quest == null ? null : MapToResponseDto(quest);
+            return quest == null ? null : await MapToResponseDtoAsync(quest);
         }
 
         public async Task<QuestTaskResponseDto?> GetQuestTaskByIdAsync(int questTaskId)
@@ -231,15 +232,29 @@ namespace Service
             var (items, totalCount) = await _questRepository.GetQuestsAsync(
                 query.IsActive, query.CampaignId, query.PageNumber, query.PageSize);
 
-            var dtos = items.Select(MapToResponseDto).ToList();
+            var dtos = await MapToResponseDtosAsync(items);
             return new PaginatedResponse<QuestResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
         }
 
         public async Task<PaginatedResponse<QuestResponseDto>> GetPublicQuestsAsync(QuestQueryDto query)
         {
             var (items, totalCount) = await _questRepository.GetPublicQuestsAsync(query.CampaignId, query.IsStandalone, query.IsTierUp, query.PageNumber, query.PageSize);
-            var dtos = items.Select(MapToResponseDto).ToList();
+            var dtos = await MapToResponseDtosAsync(items);
             return new PaginatedResponse<QuestResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
+        }
+
+        public async Task<PaginatedResponse<UserQuestResponseDto>> GetUserQuestsAsync(UserQuestQueryDto query)
+        {
+            var (items, totalCount) = await _userQuestRepository.GetUserQuestsAsync(query);
+            var dtos = items.Select(MapToUserQuestResponseDto).ToList();
+            return new PaginatedResponse<UserQuestResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
+        }
+
+        public async Task<PaginatedResponse<UserQuestTaskResponseDto>> GetUserQuestTasksByQuestAsync(int questId, UserQuestTaskQueryDto query)
+        {
+            var (items, totalCount) = await _userQuestRepository.GetUserQuestTasksByQuestAsync(questId, query);
+            var dtos = items.Select(MapToUserQuestTaskResponseDto).ToList();
+            return new PaginatedResponse<UserQuestTaskResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
         }
 
         public async Task<List<UserQuestProgressDto>> GetCampaignQuestProgressAsync(int userId, int campaignId)
@@ -360,7 +375,7 @@ namespace Service
 
             quest.ImageUrl = imageUrl;
             await _questRepository.UpdateAsync(quest);
-            return MapToResponseDto(quest);
+            return await MapToResponseDtoAsync(quest);
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────
@@ -395,7 +410,29 @@ namespace Service
             }
         }
 
-        private static QuestResponseDto MapToResponseDto(Quest quest)
+        private async Task<QuestResponseDto> MapToResponseDtoAsync(Quest quest)
+        {
+            var counts = await _questRepository.GetUserQuestCountsByQuestIdsAsync(new List<int> { quest.QuestId });
+            counts.TryGetValue(quest.QuestId, out var userQuestCount);
+            return MapToResponseDto(quest, userQuestCount);
+        }
+
+        private async Task<List<QuestResponseDto>> MapToResponseDtosAsync(IEnumerable<Quest> quests)
+        {
+            var questList = quests.ToList();
+            var questIds = questList.Select(quest => quest.QuestId).ToList();
+            var counts = await _questRepository.GetUserQuestCountsByQuestIdsAsync(questIds);
+
+            return questList
+                .Select(quest =>
+                {
+                    counts.TryGetValue(quest.QuestId, out var userQuestCount);
+                    return MapToResponseDto(quest, userQuestCount);
+                })
+                .ToList();
+        }
+
+        private static QuestResponseDto MapToResponseDto(Quest quest, int userQuestCount = 0)
         {
             return new QuestResponseDto
             {
@@ -410,6 +447,7 @@ namespace Service
                 CreatedAt = quest.CreatedAt,
                 UpdatedAt = quest.UpdatedAt,
                 TaskCount = quest.QuestTasks.Count,
+                UserQuestCount = userQuestCount,
                 Tasks = quest.QuestTasks.Select(t => new QuestTaskResponseDto
                 {
                     QuestTaskId = t.QuestTaskId,
@@ -427,6 +465,90 @@ namespace Service
             };
         }
 
+
+        private static UserProfileDto MapToUserProfileDto(User user)
+        {
+            return new UserProfileDto
+            {
+                Id = user.Id,
+                UserName = user.UserName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                AvatarUrl = user.AvatarUrl,
+                Status = user.Status,
+                Role = user.Role.ToString(),
+                Point = user.Point,
+                XP = user.XP,
+                TierId = user.TierId,
+                TierName = user.Tier?.Name ?? GetTierNameHardcoded(user.TierId),
+                NextTierXP = null
+            };
+        }
+
+        private static UserQuestResponseDto MapToUserQuestResponseDto(UserQuest uq)
+        {
+            var completedTasks = uq.UserQuestTasks.Count(uqt => uqt.IsCompleted);
+
+            return new UserQuestResponseDto
+            {
+                UserQuestId = uq.UserQuestId,
+                UserId = uq.UserId,
+                User = MapToUserProfileDto(uq.User),
+                QuestId = uq.QuestId,
+                QuestTitle = uq.Quest.Title,
+                QuestImageUrl = uq.Quest.ImageUrl,
+                CampaignId = uq.Quest.CampaignId,
+                IsStandalone = uq.Quest.IsStandalone,
+                Status = uq.Status,
+                StartedAt = uq.StartedAt,
+                CompletedAt = uq.CompletedAt,
+                TotalTasks = uq.UserQuestTasks.Count,
+                CompletedTasks = completedTasks
+            };
+        }
+
+        private static UserQuestTaskResponseDto MapToUserQuestTaskResponseDto(UserQuestTask uqt)
+        {
+            return new UserQuestTaskResponseDto
+            {
+                UserQuestTaskId = uqt.UserQuestTaskId,
+                UserQuestId = uqt.UserQuestId,
+                UserId = uqt.UserQuest.UserId,
+                User = MapToUserProfileDto(uqt.UserQuest.User),
+                QuestId = uqt.UserQuest.QuestId,
+                QuestTitle = uqt.UserQuest.Quest.Title,
+                QuestTaskId = uqt.QuestTaskId,
+                Type = uqt.QuestTask.Type,
+                TargetValue = uqt.QuestTask.TargetValue,
+                Description = uqt.QuestTask.Description,
+                Rewards = uqt.QuestTask.QuestTaskRewards.Select(r => new QuestTaskRewardDto
+                {
+                    QuestTaskRewardId = r.QuestTaskRewardId,
+                    RewardType = r.RewardType,
+                    RewardValue = r.RewardValue,
+                    Quantity = r.Quantity
+                }).ToList(),
+                Status = uqt.UserQuest.Status,
+                CurrentValue = uqt.CurrentValue,
+                IsCompleted = uqt.IsCompleted,
+                CompletedAt = uqt.CompletedAt,
+                RewardClaimed = uqt.RewardClaimed
+            };
+        }
+
+        private static string GetTierNameHardcoded(int? tierId)
+        {
+            return tierId switch
+            {
+                1 => "Warning",
+                2 => "Silver",
+                3 => "Gold",
+                4 => "Diamond",
+                _ => "Unknown"
+            };
+        }
         private static UserQuestProgressDto MapToProgressDto(UserQuest uq)
         {
             var tasks = uq.UserQuestTasks.Select(uqt => new UserQuestTaskProgressDto

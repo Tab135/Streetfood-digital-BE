@@ -16,6 +16,7 @@ namespace BO.DTO.Quest
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public int TaskCount { get; set; }
+        public int UserQuestCount { get; set; }
         public List<QuestTaskResponseDto> Tasks { get; set; } = new();
     }
 }

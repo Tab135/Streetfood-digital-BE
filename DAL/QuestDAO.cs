@@ -83,6 +83,18 @@ namespace DAL
             return (items, totalCount);
         }
 
+        public async Task<Dictionary<int, int>> GetUserQuestCountsByQuestIdsAsync(List<int> questIds)
+        {
+            if (questIds == null || questIds.Count == 0)
+                return new Dictionary<int, int>();
+
+            return await _context.UserQuests
+                .Where(uq => questIds.Contains(uq.QuestId))
+                .GroupBy(uq => uq.QuestId)
+                .Select(group => new { QuestId = group.Key, Count = group.Count() })
+                .ToDictionaryAsync(item => item.QuestId, item => item.Count);
+        }
+
 
         public async Task UpdateAsync(Quest quest)
         {
