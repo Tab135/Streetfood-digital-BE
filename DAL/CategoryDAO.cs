@@ -52,5 +52,10 @@ namespace DAL
         {
             return await _context.Categories.AnyAsync(c => c.CategoryId == categoryId);
         }
+
+        public async Task<bool> IsInUseAsync(int id)
+        {
+            return await _context.Dishes.AnyAsync(x => x.CategoryId == id);
+        }
     }
 }

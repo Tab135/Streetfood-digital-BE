@@ -12,5 +12,6 @@ namespace Repository.Interfaces
         Task<FeedbackTag> Update(FeedbackTag tag);
         Task<bool> Delete(int tagId);
         Task<bool> Exists(int tagId);
+        Task<bool> IsInUseAsync(int id);
     }
 }

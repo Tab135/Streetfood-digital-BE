@@ -54,5 +54,12 @@ namespace DAL
         {
             return await _context.Badges.AnyAsync(b => b.BadgeId == badgeId);
         }
-    }
+        public async Task<bool> IsInUseAsync(int badgeId)
+        {
+            var usedByUser = await _context.UserBadges.AnyAsync(ub => ub.BadgeId == badgeId);
+            if (usedByUser) return true;
+
+            var usedInQuest = await _context.QuestTaskRewards.AnyAsync(qr => qr.RewardType == BO.Enums.QuestRewardType.BADGE && qr.RewardValue == badgeId);
+            return usedInQuest;
+        }    }
 }

@@ -59,5 +59,17 @@ namespace DAL
         {
             return await _context.DietaryPreferences.AnyAsync(x => x.DietaryPreferenceId == id);
         }
+
+        public async Task<bool> IsInUseAsync(int id)
+        {
+            var usedByUser = await _context.UserDietaryPreferences.AnyAsync(x => x.DietaryPreferenceId == id);
+            if (usedByUser) return true;
+
+            var usedByDish = await _context.DishDietaryPreferences.AnyAsync(x => x.DietaryPreferenceId == id);
+            if (usedByDish) return true;
+
+            var usedByVendor = await _context.VendorDietaryPreferences.AnyAsync(x => x.DietaryPreferenceId == id);
+            return usedByVendor;
+        }
     }
 }

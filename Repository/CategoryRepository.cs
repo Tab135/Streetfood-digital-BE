@@ -45,5 +45,10 @@ namespace Repository
         {
             return await _categoryDAO.ExistsByIdAsync(categoryId);
         }
+
+        public async Task<bool> IsInUseAsync(int id)
+        {
+            return await _categoryDAO.IsInUseAsync(id);
+        }
     }
 }

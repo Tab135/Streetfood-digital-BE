@@ -59,5 +59,8 @@ namespace DAL
                 .Where(t => tasteIds.Contains(t.TasteId))
                 .ToListAsync();
         }
-    }
+        public async Task<bool> IsInUseAsync(int id)
+        {
+            return await _context.DishTastes.AnyAsync(x => x.TasteId == id);
+        }    }
 }

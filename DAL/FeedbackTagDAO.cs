@@ -51,5 +51,8 @@ namespace DAL
         {
             return await _context.FeedbackTags.AnyAsync(x => x.TagId == id);
         }
-    }
+        public async Task<bool> IsInUseAsync(int id)
+        {
+            return await _context.FeedbackTagAssociations.AnyAsync(x => x.FeedbackTagId == id);
+        }    }
 }

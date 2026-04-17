@@ -45,5 +45,10 @@ namespace Repository
         {
             return await _dao.Exists(tagId);
         }
+
+        public async Task<bool> IsInUseAsync(int id)
+        {
+            return await _dao.IsInUseAsync(id);
+        }
     }
 }

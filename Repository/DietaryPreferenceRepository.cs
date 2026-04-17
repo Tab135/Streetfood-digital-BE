@@ -48,5 +48,8 @@ namespace Repository
         {
             return await _dao.GetByIdsAsync(ids);
         }
-    }
+        public async Task<bool> IsInUseAsync(int id)
+        {
+            return await _dao.IsInUseAsync(id);
+        }    }
 }

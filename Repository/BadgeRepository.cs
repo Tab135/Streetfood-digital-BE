@@ -45,5 +45,10 @@ namespace Repository
         {
             return await _badgeDAO.Exists(badgeId);
         }
+
+        public async Task<bool> IsInUseAsync(int badgeId)
+        {
+            return await _badgeDAO.IsInUseAsync(badgeId);
+        }
     }
 }

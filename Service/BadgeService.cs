@@ -62,6 +62,13 @@ namespace Service
             if (entity == null)
                 throw new DomainExceptions($"Không tìm thấy huy hiệu với ID {badgeId}");
 
+            if (entity.IsActive)
+            {
+                var isInUse = await _badgeRepository.IsInUseAsync(badgeId);
+                if (isInUse)
+                    throw new DomainExceptions($"Không thể vô hiệu hóa huy hiệu này vì đang được sử dụng bởi người dùng hoặc nhiệm vụ");
+            }
+
             entity.IsActive = !entity.IsActive;
             await _badgeRepository.Update(entity);
             return true;

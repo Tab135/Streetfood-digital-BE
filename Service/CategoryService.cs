@@ -76,9 +76,12 @@ namespace Service
             if (existing == null)
                 throw new DomainExceptions($"Category with id {id} not found");
 
-            existing.IsActive = !existing.IsActive;
-            await _repo.UpdateAsync(existing);
-            return existing.IsActive;
+            if (existing.IsActive)
+            {
+                var isInUse = await _repo.IsInUseAsync(id);
+                if (isInUse)
+                    throw new DomainExceptions($"Không thể vô hiệu hóa danh mục này vì đang được sử dụng");
+            }
         }
 
     

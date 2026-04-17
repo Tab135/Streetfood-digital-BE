@@ -32,10 +32,14 @@ namespace Service
         public async Task<bool> DeleteFeedbackTag(int id)
         {
             var entity = await _repo.GetById(id);
-            if (entity == null) throw new System.Exception($"Feedback tag with id {id} not found");
-            
-            entity.IsActive = !entity.IsActive;
-            await _repo.Update(entity);
+            if (entity == null) throw new BO.Exceptions.DomainExceptions($"Feedback tag with id {id} not found");
+
+            if (entity.IsActive)
+            {
+                var isInUse = await _repo.IsInUseAsync(id);
+                if (isInUse)
+                    throw new BO.Exceptions.DomainExceptions($"Không thể vô hiệu hóa thẻ đánh giá này vì đang được sử dụng");
+            }
             return true;
         }
 

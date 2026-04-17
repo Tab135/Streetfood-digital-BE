@@ -12,5 +12,6 @@ namespace Repository.Interfaces
         Task UpdateAsync(Category category);
         Task DeleteAsync(int categoryId);
         Task<bool> ExistsByIdAsync(int categoryId);
+        Task<bool> IsInUseAsync(int id);
     }
 }

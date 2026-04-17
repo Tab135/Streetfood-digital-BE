@@ -32,10 +32,14 @@ namespace Service
         public async Task<bool> DeleteDietaryPreference(int id)
         {
             var entity = await _repo.GetById(id);
-            if (entity == null) throw new System.Exception($"Dietary preference with id {id} not found");
-            
-            entity.IsActive = !entity.IsActive;
-            await _repo.Update(entity);
+            if (entity == null) throw new BO.Exceptions.DomainExceptions($"Dietary preference with id {id} not found");
+
+            if (entity.IsActive)
+            {
+                var isInUse = await _repo.IsInUseAsync(id);
+                if (isInUse)
+                    throw new BO.Exceptions.DomainExceptions($"Không thể vô hiệu hóa sở thích ăn uống này vì đang được sử dụng");
+            }
             return true;
         }
 

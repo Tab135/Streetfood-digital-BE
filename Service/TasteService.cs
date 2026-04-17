@@ -72,9 +72,12 @@ namespace Service
             if (existing == null)
                 throw new DomainExceptions($"Taste with id {id} not found");
 
-            existing.IsActive = !existing.IsActive;
-            await _repo.UpdateAsync(existing);
-            return true;
+            if (existing.IsActive)
+            {
+                var isInUse = await _repo.IsInUseAsync(id);
+                if (isInUse)
+                    throw new DomainExceptions($"Không thể vô hiệu hóa vị này vì đang được sử dụng");
+            }
         }
 
         private static TasteDto MapToDto(Taste t)

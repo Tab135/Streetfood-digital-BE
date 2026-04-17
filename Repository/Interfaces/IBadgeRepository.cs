@@ -12,5 +12,6 @@ namespace Repository.Interfaces
         Task<Badge> Update(Badge badge);
         Task<bool> Delete(int badgeId);
         Task<bool> Exists(int badgeId);
+        Task<bool> IsInUseAsync(int badgeId);
     }
 }

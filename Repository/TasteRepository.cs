@@ -50,5 +50,8 @@ namespace Repository
         {
             return await _tasteDAO.GetByIdsAsync(tasteIds);
         }
-    }
-}
+
+        public async Task<bool> IsInUseAsync(int id)
+        {
+            return await _tasteDAO.IsInUseAsync(id);
+        }
