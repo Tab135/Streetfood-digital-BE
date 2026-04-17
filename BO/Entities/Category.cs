@@ -18,6 +18,8 @@ namespace BO.Entities
         [StringLength(500)]
         public string? ImageUrl { get; set; }
 
+        public bool IsActive { get; set; } = true;
+
         // Navigation
         public virtual ICollection<Dish> Dishes { get; set; } = new List<Dish>();
     }

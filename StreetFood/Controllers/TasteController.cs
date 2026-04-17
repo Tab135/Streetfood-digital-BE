@@ -76,7 +76,7 @@ namespace StreetFood.Controllers
             return Ok(updated);
         }
 
-        [HttpDelete("{id}")]
+        [HttpPatch("{id}")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> Delete(int id)
