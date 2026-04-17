@@ -8,6 +8,12 @@ namespace BO.DTO.Branch
         public int BranchId { get; set; }
         public int VendorId { get; set; }
         public string VendorName { get; set; } = string.Empty;
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? VendorUserName { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? VendorUserEmail { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? VendorUserPhone { get; set; }
         public int? ManagerId { get; set; }
         public string Name { get; set; }
         public string PhoneNumber { get; set; }

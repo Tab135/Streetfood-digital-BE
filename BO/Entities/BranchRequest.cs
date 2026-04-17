@@ -12,6 +12,9 @@ namespace BO.Entities
         [ForeignKey("Branch")]
         public int BranchId { get; set; }
 
+        [ForeignKey("RequestedBy")]
+        public int? RequestedByUserId { get; set; }
+
         public string? LicenseUrl { get; set; }
 
         [Required]
@@ -30,6 +33,7 @@ namespace BO.Entities
 
         // Navigation property
         public virtual Branch Branch { get; set; }
+        public virtual User? RequestedBy { get; set; }
     }
 }
 

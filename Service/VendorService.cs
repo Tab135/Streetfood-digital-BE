@@ -78,6 +78,7 @@ namespace Service
             var defaultRegisterRequest = new BranchRequest
             {
                 BranchId = createdBranch.BranchId,
+                RequestedByUserId = userId,
                 Type = 1,
                 LicenseUrl = null,
                 Status = RegisterVendorStatusEnum.Pending,

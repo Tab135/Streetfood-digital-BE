@@ -449,6 +449,7 @@ namespace StreetFood.Controllers
                 return Ok(new { message = "License submitted successfully. Pending verification.", data = new
                 {
                     BranchId = id,
+                    RequestedByUserId = result.RequestedByUserId,
                     LicenseUrls = licenseUrls,
                     Status = result.Status.ToString()
                 }});
@@ -497,6 +498,7 @@ namespace StreetFood.Controllers
                 return Ok(new { message = "License status retrieved successfully", data = new
                 {
                     BranchId = id,
+                    RequestedByUserId = result.RequestedByUserId,
                     LicenseUrls = licenseUrls,
                     Status = result.Status.ToString(),
                     VerifiedBy = result.VerifiedBy,

@@ -30,6 +30,9 @@ namespace DAL
                 .AsNoTracking()
                 .AsSplitQuery()
                 .Include(b => b.Vendor)
+                    .ThenInclude(v => v.VendorOwner)
+                .Include(b => b.Manager)
+                .Include(b => b.CreatedBy)
                 .Include(b => b.Tier)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
@@ -49,6 +52,10 @@ namespace DAL
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
+                .Include(b => b.Manager)
+                .Include(b => b.CreatedBy)
+                .Include(b => b.Vendor)
+                    .ThenInclude(v => v.VendorOwner)
                 .ToListAsync();
         }
 
@@ -88,6 +95,8 @@ namespace DAL
                 .AsSplitQuery()
                 .Include(b => b.Tier)
                 .Include(b => b.Vendor)
+                    .ThenInclude(v => v.VendorOwner)
+                .Include(b => b.Manager)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -106,6 +115,9 @@ namespace DAL
                 .Where(b => b.ManagerId == managerUserId)
                 .Include(b => b.Tier)
                 .Include(b => b.Vendor)
+                    .ThenInclude(v => v.VendorOwner)
+                .Include(b => b.Manager)
+                .Include(b => b.CreatedBy)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -123,6 +135,9 @@ namespace DAL
                 .AsSplitQuery()
                 .Include(b => b.Tier)
                 .Include(b => b.Vendor)
+                    .ThenInclude(v => v.VendorOwner)
+                .Include(b => b.Manager)
+                .Include(b => b.CreatedBy)
                 .Include(b => b.WorkSchedules)
                 .Include(b => b.DayOffs)
                 .Include(b => b.BranchImages)
@@ -145,6 +160,8 @@ namespace DAL
                 .AsSplitQuery()
                 .Include(b => b.Tier)
                 .Include(b => b.Vendor)
+                    .ThenInclude(v => v.VendorOwner)
+                .Include(b => b.Manager)
                 .ToListAsync();
 
             return (items, totalCount);
@@ -161,6 +178,8 @@ namespace DAL
             
             var items = await query
                 .Include(b => b.Vendor)
+                    .ThenInclude(v => v.VendorOwner)
+                .Include(b => b.Manager)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -339,10 +358,16 @@ namespace DAL
             var totalCount = await query.CountAsync();
 
             var items = await query
+                .Include(r => r.RequestedBy)
                 .Include(r => r.Branch)
                     .ThenInclude(b => b.BranchImages)
                 .Include(r => r.Branch)
                     .ThenInclude(b => b.CreatedBy)
+                .Include(r => r.Branch)
+                    .ThenInclude(b => b.Manager)
+                .Include(r => r.Branch)
+                    .ThenInclude(b => b.Vendor)
+                        .ThenInclude(v => v.VendorOwner)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();

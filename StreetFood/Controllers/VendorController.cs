@@ -71,6 +71,7 @@ namespace StreetFood.Controllers
                 return Ok(new
                 {
                     message = claimResult.Message,
+                    requestedByUserId = userId,
                     paymentLink = paymentLink.PaymentUrl,
                     qrCode = paymentLink.QrCode,
                     licenseUrls = licenseUrls

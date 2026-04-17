@@ -238,6 +238,10 @@ public class StreetFoodDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(e => e.BranchId)
                   .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.RequestedBy)
+                .WithMany()
+                .HasForeignKey(e => e.RequestedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Feedback entities

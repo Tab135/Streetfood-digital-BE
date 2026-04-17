@@ -78,6 +78,7 @@ namespace Service
             var branchRequest = new BranchRequest
             {
                 BranchId = createdBranch.BranchId,
+                RequestedByUserId = userId,
                 Type = 1,
                 LicenseUrl = null,
                 Status = RegisterVendorStatusEnum.Pending,
@@ -118,6 +119,7 @@ namespace Service
             var branchRequest = new BranchRequest
             {
                 BranchId = createdBranch.BranchId,
+                RequestedByUserId = userId,
                 Type = 0,
                 LicenseUrl = null,
                 Status = RegisterVendorStatusEnum.Pending,
@@ -160,9 +162,7 @@ namespace Service
             if (branch.VendorId != null)
                 throw new DomainExceptions("Chi nhánh này đã được nhận hoặc thuộc sở hữu của một cửa hàng.");
 
-            // Do NOT assign VendorId yet. Just set the ManagerId so we know WHO is claiming.
-            // VendorId will be created/assigned upon Moderator approval in VerifyBranchAsync.
-            branch.ManagerId = userId;
+            // Claim is only recorded on BranchRequest. Manager/Vendor assignment happens after moderator approval.
             branch.IsVerified = false; // Needs moderator approval
             branch.IsActive = false;
             branch.UpdatedAt = DateTime.UtcNow;
@@ -175,6 +175,7 @@ namespace Service
             var registrationRequest = new BranchRequest
             {
                 BranchId = branchId,
+                RequestedByUserId = userId,
                 Type = 2, // Claim branch
                 LicenseUrl = licenseUrlJson,
                 Status = RegisterVendorStatusEnum.Pending,
@@ -457,6 +458,7 @@ namespace Service
             if (existingRequest != null && existingRequest.Status == RegisterVendorStatusEnum.Pending)
             {
                 existingRequest.LicenseUrl = licenseUrlJson;
+                existingRequest.RequestedByUserId ??= userId;
                 existingRequest.UpdatedAt = DateTime.UtcNow;
 
                 await _branchRepository.UpdateBranchRequestAsync(existingRequest);
@@ -468,6 +470,7 @@ namespace Service
                 var registrationRequest = new BranchRequest
                 {
                     BranchId = branchId,
+                    RequestedByUserId = userId,
                     Type = 1, // License verification
                     LicenseUrl = licenseUrlJson,
                     Status = RegisterVendorStatusEnum.Pending,
@@ -500,54 +503,65 @@ namespace Service
         {
             var (pendingRequests, totalCount) = await _branchRepository.GetAllBranchRequestsAsync(pageNumber, pageSize, type);
             var items = pendingRequests
-                .Select(r => new PendingRegistrationDto
+                .Select(r =>
                 {
-                    BranchRequestId = r.BranchRequestId,
-                    BranchId = r.BranchId,
-                    LicenseUrl = r.LicenseUrl,
-                    Type = r.Type,
-                    Status = r.Status,
-                    VerifiedBy = r.VerifiedBy,
-                    RejectReason = r.RejectReason,
-                    CreatedAt = r.CreatedAt,
-                    UpdatedAt = r.UpdatedAt,
-                    IsCreatedByOwner = r.Branch?.VendorId != null,
-                    Branch = r.Branch == null ? null : new PendingRegistrationDto.PendingBranchInfo
+                    var claimUser = r.Type == 2
+                        ? (r.RequestedBy ?? r.Branch?.Manager ?? r.Branch?.Vendor?.VendorOwner)
+                        : null;
+
+                    return new PendingRegistrationDto
                     {
-                        UserShareName = r.Type == 0 && r.Branch.VendorId == null ? BuildUserShareName(r.Branch.CreatedBy) : null,
-                        UserShareEmail = r.Type == 0 && r.Branch.VendorId == null ? r.Branch.CreatedBy?.Email : null,
-                        UserSharePhone = r.Type == 0 && r.Branch.VendorId == null ? r.Branch.CreatedBy?.PhoneNumber : null,
-                        BranchId = r.Branch.BranchId,
-                        VendorId = r.Branch.VendorId ?? 0,
-                        ManagerId = r.Branch.ManagerId,
-                        CreatedById = r.Branch.CreatedById,
-                        Name = r.Branch.Name,
-                        PhoneNumber = r.Branch.PhoneNumber,
-                        Email = r.Branch.Email,
-                        AddressDetail = r.Branch.AddressDetail,
-                        Ward = r.Branch.Ward,
-                        City = r.Branch.City,
-                        Lat = r.Branch.Lat,
-                        Long = r.Branch.Long,
-                        CreatedAt = r.Branch.CreatedAt,
-                        UpdatedAt = r.Branch.UpdatedAt,
-                        IsVerified = r.Branch.IsVerified,
-                        AvgRating = r.Branch.AvgRating,
-                        TotalReviewCount = r.Branch.TotalReviewCount,
-                        TotalRatingSum = r.Branch.TotalRatingSum,
-                        BatchReviewCount = r.Branch.BatchReviewCount,
-                        BatchRatingSum = r.Branch.BatchRatingSum,
-                        IsActive = r.Branch.IsActive,
-                        IsSubscribed = r.Branch.IsSubscribed,
-                        SubscriptionExpiresAt = r.Branch.SubscriptionExpiresAt,
-                        TierId = r.Branch.TierId,
-                        TierName = r.Branch.Tier?.Name ?? "Silver",
-                        BranchImages = r.Branch.BranchImages?.Select(i => new BranchImageResponseDto
+                        BranchRequestId = r.BranchRequestId,
+                        BranchId = r.BranchId,
+                        LicenseUrl = r.LicenseUrl,
+                        Type = r.Type,
+                        Status = r.Status,
+                        VerifiedBy = r.VerifiedBy,
+                        RejectReason = r.RejectReason,
+                        CreatedAt = r.CreatedAt,
+                        UpdatedAt = r.UpdatedAt,
+                        IsCreatedByOwner = r.Branch?.VendorId != null,
+                        Branch = r.Branch == null ? null : new PendingRegistrationDto.PendingBranchInfo
                         {
-                            BranchImageId = i.BranchImageId,
-                            ImageUrl = i.ImageUrl
-                        }).ToList()
-                    }
+                            UserShareName = r.Type == 0 && r.Branch.VendorId == null ? BuildUserShareName(r.Branch.CreatedBy) : null,
+                            UserShareEmail = r.Type == 0 && r.Branch.VendorId == null ? r.Branch.CreatedBy?.Email : null,
+                            UserSharePhone = r.Type == 0 && r.Branch.VendorId == null ? r.Branch.CreatedBy?.PhoneNumber : null,
+                            BranchId = r.Branch.BranchId,
+                            VendorId = r.Branch.VendorId ?? 0,
+                            ManagerId = r.Branch.ManagerId,
+                            CreatedById = r.Branch.CreatedById,
+                            RequestedByUserId = r.RequestedByUserId ?? r.Branch.ManagerId,
+                            VendorUserName = BuildUserShareName(claimUser),
+                            VendorUserEmail = string.IsNullOrWhiteSpace(claimUser?.Email) ? null : claimUser.Email,
+                            VendorUserPhone = string.IsNullOrWhiteSpace(claimUser?.PhoneNumber) ? null : claimUser.PhoneNumber,
+                            Name = r.Branch.Name,
+                            PhoneNumber = r.Branch.PhoneNumber,
+                            Email = r.Branch.Email,
+                            AddressDetail = r.Branch.AddressDetail,
+                            Ward = r.Branch.Ward,
+                            City = r.Branch.City,
+                            Lat = r.Branch.Lat,
+                            Long = r.Branch.Long,
+                            CreatedAt = r.Branch.CreatedAt,
+                            UpdatedAt = r.Branch.UpdatedAt,
+                            IsVerified = r.Branch.IsVerified,
+                            AvgRating = r.Branch.AvgRating,
+                            TotalReviewCount = r.Branch.TotalReviewCount,
+                            TotalRatingSum = r.Branch.TotalRatingSum,
+                            BatchReviewCount = r.Branch.BatchReviewCount,
+                            BatchRatingSum = r.Branch.BatchRatingSum,
+                            IsActive = r.Branch.IsActive,
+                            IsSubscribed = r.Branch.IsSubscribed,
+                            SubscriptionExpiresAt = r.Branch.SubscriptionExpiresAt,
+                            TierId = r.Branch.TierId,
+                            TierName = r.Branch.Tier?.Name ?? "Silver",
+                            BranchImages = r.Branch.BranchImages?.Select(i => new BranchImageResponseDto
+                            {
+                                BranchImageId = i.BranchImageId,
+                                ImageUrl = i.ImageUrl
+                            }).ToList()
+                        }
+                    };
                 }).ToList();
             return new PaginatedResponse<PendingRegistrationDto>(items, totalCount, pageNumber, pageSize);
         }
@@ -556,17 +570,36 @@ namespace Service
         {
             await EnsureVerifierIsAdminOrModeratorAsync(verifierUserId);
 
+            var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
+            if (registrationRequest == null)
+            {
+                throw new DomainExceptions($"Không tìm thấy yêu cầu đăng ký cho chi nhánh với ID {branchId}");
+            }
+
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
                 throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId}");
             }
 
+            var claimantUserId = registrationRequest.RequestedByUserId ?? branch.ManagerId;
+
             // Handle ghost pin / vendor creation claim mechanism upon verification
-            if (branch.ManagerId.HasValue && branch.VendorId == null)
+            if (registrationRequest.Type == 2 && branch.VendorId == null)
             {
-                int userId = branch.ManagerId.Value;
+                if (!claimantUserId.HasValue)
+                {
+                    throw new DomainExceptions("Không tìm thấy thông tin người nhận chi nhánh trong yêu cầu.");
+                }
+
+                int userId = claimantUserId.Value;
                 var claimingUser = await _userRepository.GetUserById(userId);
+                if (claimingUser == null)
+                {
+                    throw new DomainExceptions("Không tìm thấy người dùng nhận chi nhánh.");
+                }
+
+                branch.ManagerId = userId;
                 
                 var existingVendor = await _vendorRepository.GetByUserIdAsync(userId);
                 if (existingVendor != null)
@@ -603,14 +636,10 @@ namespace Service
             await _branchRepository.UpdateAsync(branch);
 
             // Update registration request status
-            var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
-            if (registrationRequest != null)
-            {
-                registrationRequest.Status = RegisterVendorStatusEnum.Accept;
-                registrationRequest.VerifiedBy = verifierUserId;
-                registrationRequest.UpdatedAt = DateTime.UtcNow;
-                await _branchRepository.UpdateBranchRequestAsync(registrationRequest);
-            }
+            registrationRequest.Status = RegisterVendorStatusEnum.Accept;
+            registrationRequest.VerifiedBy = verifierUserId;
+            registrationRequest.UpdatedAt = DateTime.UtcNow;
+            await _branchRepository.UpdateBranchRequestAsync(registrationRequest);
 
             // Standard promote vendor owner behavior (legacy fallback)
             if (branch.VendorId.HasValue)
@@ -627,7 +656,11 @@ namespace Service
                 }
             }
 
-            var approvedRecipientId = await ResolveBranchNotificationRecipientUserIdAsync(branch);
+            var approvedRecipientId = registrationRequest.Type == 2 ? claimantUserId : await ResolveBranchNotificationRecipientUserIdAsync(branch);
+            if (!approvedRecipientId.HasValue)
+            {
+                approvedRecipientId = await ResolveBranchNotificationRecipientUserIdAsync(branch);
+            }
             if (approvedRecipientId.HasValue)
             {
                 await _notificationService.NotifyAsync(
@@ -667,7 +700,12 @@ namespace Service
             var branch = registrationRequest.Branch ?? await _branchRepository.GetByIdAsync(branchId);
             if (branch != null)
             {
-                var rejectedRecipientId = await ResolveBranchNotificationRecipientUserIdAsync(branch);
+                var claimUserId = registrationRequest.RequestedByUserId ?? branch.ManagerId;
+                var rejectedRecipientId = registrationRequest.Type == 2 ? claimUserId : await ResolveBranchNotificationRecipientUserIdAsync(branch);
+                if (!rejectedRecipientId.HasValue)
+                {
+                    rejectedRecipientId = await ResolveBranchNotificationRecipientUserIdAsync(branch);
+                }
                 if (rejectedRecipientId.HasValue)
                 {
                     var reason = string.IsNullOrWhiteSpace(rejectionReason)
@@ -734,11 +772,16 @@ namespace Service
 
         private BranchResponseDto BuildResponseDto(Branch branch, BranchRequest licenseRequest, List<string> licenseUrls)
         {
+            var vendorUser = branch.Vendor?.VendorOwner ?? branch.Manager;
+
             return new BranchResponseDto
             {
                 BranchId = branch.BranchId,
                 VendorId = branch.VendorId ?? 0,
                 VendorName = branch.Vendor?.Name ?? string.Empty,
+                VendorUserName = BuildUserShareName(vendorUser),
+                VendorUserEmail = string.IsNullOrWhiteSpace(vendorUser?.Email) ? null : vendorUser.Email,
+                VendorUserPhone = string.IsNullOrWhiteSpace(vendorUser?.PhoneNumber) ? null : vendorUser.PhoneNumber,
                 ManagerId = branch.ManagerId,
                 Name = branch.Name,
                 PhoneNumber = branch.PhoneNumber,
