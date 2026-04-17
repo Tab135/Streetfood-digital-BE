@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BO.Entities;
+using System.Text.Json.Serialization;
 
 namespace BO.DTO.Branch
 {
@@ -24,6 +25,12 @@ namespace BO.DTO.Branch
             public int VendorId { get; set; }
             public int? ManagerId { get; set; }
             public int? CreatedById { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public string? UserShareName { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public string? UserShareEmail { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public string? UserSharePhone { get; set; }
             public string Name { get; set; }
             public string PhoneNumber { get; set; }
             public string Email { get; set; }

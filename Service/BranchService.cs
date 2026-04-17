@@ -514,6 +514,9 @@ namespace Service
                     IsCreatedByOwner = r.Branch?.VendorId != null,
                     Branch = r.Branch == null ? null : new PendingRegistrationDto.PendingBranchInfo
                     {
+                        UserShareName = r.Type == 0 && r.Branch.VendorId == null ? BuildUserShareName(r.Branch.CreatedBy) : null,
+                        UserShareEmail = r.Type == 0 && r.Branch.VendorId == null ? r.Branch.CreatedBy?.Email : null,
+                        UserSharePhone = r.Type == 0 && r.Branch.VendorId == null ? r.Branch.CreatedBy?.PhoneNumber : null,
                         BranchId = r.Branch.BranchId,
                         VendorId = r.Branch.VendorId ?? 0,
                         ManagerId = r.Branch.ManagerId,
