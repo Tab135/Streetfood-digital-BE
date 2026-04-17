@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 using StreetFood.Services;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -53,6 +54,14 @@ namespace StreetFood.Controllers
         {
             var result = await _questService.UpdateQuestAsync(id, dto);
             return Ok(new { message = "Quest updated successfully", data = result });
+        }
+
+        [HttpPut("{id}/tasks")]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<IActionResult> ReplaceQuestTasks(int id, [FromBody] List<CreateQuestTaskDto> tasks)
+        {
+            var result = await _questService.ReplaceQuestTasksAsync(id, tasks);
+            return Ok(new { message = "Quest tasks updated successfully", data = result });
         }
 
         [HttpDelete("{id}")]

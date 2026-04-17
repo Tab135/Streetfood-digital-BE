@@ -142,36 +142,48 @@ namespace Service
                 quest.CampaignId = dto.CampaignId.Value;
             }
 
-            if (dto.Tasks != null)
+            await _questRepository.UpdateAsync(quest);
+            return MapToResponseDto(quest);
+        }
+
+        public async Task<QuestResponseDto> ReplaceQuestTasksAsync(int questId, List<CreateQuestTaskDto> tasks)
+        {
+            var quest = await _questRepository.GetByIdAsync(questId)
+                ?? throw new DomainExceptions($"Không tìm thấy quest với ID {questId}");
+
+            var hasUsers = await _questRepository.HasEnrolledUsersAsync(questId);
+            if (hasUsers)
+                throw new DomainExceptions("Không thể thay đổi nhiệm vụ khi đã có người dùng tham gia quest.");
+
+            if (tasks == null || tasks.Count == 0)
+                throw new DomainExceptions("Cần có ít nhất một nhiệm vụ.");
+
+            foreach (var taskDto in tasks)
             {
-                foreach (var taskDto in dto.Tasks)
-                {
-                    if (taskDto.Rewards == null || taskDto.Rewards.Count == 0)
-                        throw new DomainExceptions("Mỗi nhiệm vụ phải có ít nhất một phần thưởng.");
+                if (taskDto.Rewards == null || taskDto.Rewards.Count == 0)
+                    throw new DomainExceptions("Mỗi nhiệm vụ phải có ít nhất một phần thưởng.");
 
-                    foreach (var reward in taskDto.Rewards)
-                        await ValidateTaskRewardAsync(reward.RewardType, reward.RewardValue);
-                }
-
-                await _questRepository.RemoveTasksAsync(quest.QuestTasks.ToList());
-                var newTasks = dto.Tasks.Select(t => new QuestTask
-                {
-                    QuestId = questId,
-                    Type = t.Type,
-                    TargetValue = t.TargetValue,
-                    Description = t.Description,
-                    QuestTaskRewards = t.Rewards.Select(r => new QuestTaskReward
-                    {
-                        RewardType = r.RewardType,
-                        RewardValue = r.RewardValue,
-                        Quantity = r.Quantity
-                    }).ToList()
-                }).ToList();
-                await _questRepository.AddTasksAsync(newTasks);
-                quest.QuestTasks = newTasks;
+                foreach (var reward in taskDto.Rewards)
+                    await ValidateTaskRewardAsync(reward.RewardType, reward.RewardValue);
             }
 
-            // Always re-derive RequiresEnrollment from the effective task list
+            await _questRepository.RemoveTasksAsync([.. quest.QuestTasks]);
+            var newTasks = tasks.Select(t => new QuestTask
+            {
+                QuestId = questId,
+                Type = t.Type,
+                TargetValue = t.TargetValue,
+                Description = t.Description,
+                QuestTaskRewards = [.. t.Rewards.Select(r => new QuestTaskReward
+                {
+                    RewardType = r.RewardType,
+                    RewardValue = r.RewardValue,
+                    Quantity = r.Quantity
+                })]
+            }).ToList();
+            await _questRepository.AddTasksAsync(newTasks);
+            quest.QuestTasks = newTasks;
+
             quest.RequiresEnrollment = !quest.QuestTasks.Any(t => t.Type == QuestTaskType.TIER_UP);
 
             await _questRepository.UpdateAsync(quest);
