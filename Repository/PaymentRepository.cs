@@ -1,4 +1,4 @@
-﻿using BO.Entities;
+using BO.Entities;
 using DAL;
 using Repository.Interfaces;
 using System;
@@ -67,9 +67,12 @@ namespace Repository
             long orderCode,
             string status,
             string? paymentLinkId,
-            string? checkoutUrl)
+            string? checkoutUrl,
+            string? bin = null,
+            string? accountNumber = null,
+            string? accountName = null)
         {
-            await _paymentDAO.UpdatePaymentWithPayOSDetails(orderCode, status, paymentLinkId, checkoutUrl);
+            await _paymentDAO.UpdatePaymentWithPayOSDetails(orderCode, status, paymentLinkId, checkoutUrl, bin, accountNumber, accountName);
         }
     }
 }

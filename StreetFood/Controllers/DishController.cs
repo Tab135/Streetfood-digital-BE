@@ -68,7 +68,14 @@ namespace StreetFood.Controllers
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10)
         {
-            var result = await _dishService.GetDishesByBranchAsync(branchId, categoryId, keyword, pageNumber, pageSize);
+            int? userId = null;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int id))
+            {
+                userId = id;
+            }
+
+            var result = await _dishService.GetDishesByBranchAsync(branchId, categoryId, keyword, pageNumber, pageSize, userId);
             return Ok(result);
         }
 

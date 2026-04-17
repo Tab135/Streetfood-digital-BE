@@ -1,4 +1,4 @@
-﻿using BO.Entities;
+using BO.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +21,6 @@ namespace Repository.Interfaces
         Task<Payment?> UpdatePaymentFromWebhook(long orderCode, string status,
             string? transactionCode, DateTime? paidAt, string? paymentMethod);
         Task UpdatePaymentWithPayOSDetails(long orderCode, string status,
-            string? paymentLinkId, string? checkoutUrl);
+            string? paymentLinkId, string? checkoutUrl, string? bin = null, string? accountNumber = null, string? accountName = null);
     }
 }

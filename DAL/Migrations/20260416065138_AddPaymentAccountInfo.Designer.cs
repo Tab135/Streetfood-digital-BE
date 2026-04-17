@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260416065138_AddPaymentAccountInfo")]
+    partial class AddPaymentAccountInfo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -43,9 +46,6 @@ namespace DAL.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
 
                     b.HasKey("BadgeId");
 
@@ -441,9 +441,6 @@ namespace DAL.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -698,9 +695,6 @@ namespace DAL.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
 
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -715,35 +709,30 @@ namespace DAL.Migrations
                         {
                             DietaryPreferenceId = 1,
                             Description = "Không thịt",
-                            IsActive = true,
                             Name = "An chay"
                         },
                         new
                         {
                             DietaryPreferenceId = 2,
                             Description = "Món an có vị cay nồng, sử dụng nhiều ớt hoặc tiêu",
-                            IsActive = true,
                             Name = "Cay"
                         },
                         new
                         {
                             DietaryPreferenceId = 3,
                             Description = "Món an có vị ngọt, hoặc các món tráng miệng",
-                            IsActive = true,
                             Name = "Ngọt"
                         },
                         new
                         {
                             DietaryPreferenceId = 4,
                             Description = "Hương vị đậm đà, thích hợp ăn kèm với cơm",
-                            IsActive = true,
                             Name = "Mặn"
                         },
                         new
                         {
                             DietaryPreferenceId = 5,
                             Description = "Bao gồm các loại tôm, cua, cá, mực và các món biển khác",
-                            IsActive = true,
                             Name = "Hải sản"
                         });
                 });
@@ -949,9 +938,6 @@ namespace DAL.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("TagName")
                         .IsRequired()
@@ -1488,9 +1474,6 @@ namespace DAL.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()

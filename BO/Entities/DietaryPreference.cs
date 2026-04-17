@@ -20,6 +20,8 @@ namespace BO.Entities
 
         public string Description { get; set; }
 
+        public bool IsActive { get; set; } = true;
+
 
         public virtual ICollection<UserDietaryPreference> UserPreferences { get; set; }
         public virtual ICollection<VendorDietaryPreference> VendorDietaryPreferences { get; set; } = new List<VendorDietaryPreference>();

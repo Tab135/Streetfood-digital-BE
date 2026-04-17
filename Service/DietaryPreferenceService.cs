@@ -31,9 +31,12 @@ namespace Service
 
         public async Task<bool> DeleteDietaryPreference(int id)
         {
-            var exists = await _repo.Exists(id);
-            if (!exists) throw new System.Exception($"Dietary preference with id {id} not found");
-            return await _repo.Delete(id);
+            var entity = await _repo.GetById(id);
+            if (entity == null) throw new System.Exception($"Dietary preference with id {id} not found");
+            
+            entity.IsActive = !entity.IsActive;
+            await _repo.Update(entity);
+            return true;
         }
 
         public async Task<List<DietaryPreferenceDto>> GetAllDietaryPreferences()
@@ -66,7 +69,8 @@ namespace Service
             {
                 DietaryPreferenceId = d.DietaryPreferenceId,
                 Name = d.Name,
-                Description = d.Description
+                Description = d.Description,
+                IsActive = d.IsActive
             };
         }
     }

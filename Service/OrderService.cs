@@ -5,6 +5,7 @@ using BO.Enums;
 using BO.Exceptions;
 using Repository.Interfaces;
 using Service.Interfaces;
+using Service.PaymentsService;
 using Service.Utils;
 using System.Security.Cryptography;
 using System.Threading;
@@ -25,6 +26,7 @@ public class OrderService : IOrderService
     private readonly IQuestProgressService _questProgressService;
     private readonly ISettingService _settingService;
     private readonly IUserService _userService;
+    private readonly IPaymentService _paymentService;
     private static readonly TimeSpan PendingCheckoutAbandonmentThreshold = TimeSpan.FromMinutes(10);
 
     public OrderService(
@@ -39,7 +41,8 @@ public class OrderService : IOrderService
         INotificationService notificationService,
         IQuestProgressService questProgressService,
         ISettingService settingService,
-        IUserService userService
+        IUserService userService,
+        IPaymentService paymentService
     )
     {
         _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
@@ -54,6 +57,7 @@ public class OrderService : IOrderService
         _questProgressService = questProgressService ?? throw new ArgumentNullException(nameof(questProgressService));
         _settingService = settingService ?? throw new ArgumentNullException(nameof(settingService));
         _userService = userService ?? throw new ArgumentNullException(nameof(userService));
+        _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
     }
 
     public async Task<OrderResponseDto> CreateOrderAsync(CreateOrderRequest request, int userId)
@@ -364,6 +368,28 @@ public class OrderService : IOrderService
             VerificationCode = order.CompletionCode,
             QrContent = $"SF|ORDER:{order.OrderId}|CODE:{order.CompletionCode}"
         };
+    }
+
+    public async Task<OrderResponseDto> CancelOrderAsync(int orderId, int userId)
+    {
+        var order = await _orderRepository.GetById(orderId)
+            ?? throw new DomainExceptions("Đơn hàng không tồn tại", "ERR_NOT_FOUND");
+
+        EnsureOrderOwnership(order, userId);
+
+        if (order.Status != OrderStatus.Pending)
+        {
+            throw new DomainExceptions("Đơn hàng chỉ có thể bị hủy khi đang chờ thanh toán", "ERR_BAD_REQUEST");
+        }
+
+        await _paymentService.CancelOrderPaymentAsync(orderId);
+        await RestoreVoucherUsageForCancellationAsync(order);
+
+        order.Status = OrderStatus.Cancelled;
+        order.CompletionCode = null;
+
+        var updated = await _orderRepository.Update(order);
+        return MapToDto(updated);
     }
 
     public async Task<OrderResponseDto> UpdateOrderAsync(int orderId, UpdateOrderRequest request, int userId)

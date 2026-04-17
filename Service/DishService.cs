@@ -125,9 +125,20 @@ namespace Service
             int? categoryId,
             string? keyword,
             int pageNumber,
-            int pageSize)
+            int pageSize,
+            int? currentUserId = null)
         {
-            var (dishes, totalCount) = await _dishRepository.GetDishesByBranchAsync(branchId, categoryId, keyword, pageNumber, pageSize);
+            bool includeInactive = false;
+            if (currentUserId.HasValue)
+            {
+                var branch = await _branchRepository.GetByIdAsync(branchId);
+                if (branch != null && await IsBranchOwnerOrManagerAsync(branch, currentUserId.Value))
+                {
+                    includeInactive = true;
+                }
+            }
+
+            var (dishes, totalCount) = await _dishRepository.GetDishesByBranchAsync(branchId, categoryId, keyword, pageNumber, pageSize, includeInactive);
             var items = dishes.Select(d => MapToResponseForBranch(d, branchId)).ToList();
             return new PaginatedResponse<DishResponse>(items, totalCount, pageNumber, pageSize);
         }

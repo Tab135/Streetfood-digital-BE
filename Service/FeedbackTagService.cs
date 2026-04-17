@@ -31,9 +31,12 @@ namespace Service
 
         public async Task<bool> DeleteFeedbackTag(int id)
         {
-            var exists = await _repo.Exists(id);
-            if (!exists) throw new System.Exception($"Feedback tag with id {id} not found");
-            return await _repo.Delete(id);
+            var entity = await _repo.GetById(id);
+            if (entity == null) throw new System.Exception($"Feedback tag with id {id} not found");
+            
+            entity.IsActive = !entity.IsActive;
+            await _repo.Update(entity);
+            return true;
         }
 
         public async Task<List<FeedbackTagDto>> GetAllFeedbackTags()
@@ -76,7 +79,8 @@ namespace Service
             {
                 TagId = t.TagId,
                 TagName = t.TagName,
-                Description = t.Description
+                Description = t.Description,
+                IsActive = t.IsActive
             };
         }
     }

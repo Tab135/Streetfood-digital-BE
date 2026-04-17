@@ -16,4 +16,6 @@ public class Badge
 
     [StringLength(255)]
     public string? Description { get; set; }
+
+    public bool IsActive { get; set; } = true;
 }
