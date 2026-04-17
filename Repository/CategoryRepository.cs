@@ -36,10 +36,6 @@ namespace Repository
             await _categoryDAO.UpdateAsync(category);
         }
 
-        public async Task DeleteAsync(int categoryId)
-        {
-            await _categoryDAO.DeleteAsync(categoryId);
-        }
 
         public async Task<bool> ExistsByIdAsync(int categoryId)
         {
@@ -49,6 +45,11 @@ namespace Repository
         public async Task<bool> IsInUseAsync(int id)
         {
             return await _categoryDAO.IsInUseAsync(id);
+        }
+
+        public async Task<bool> UpdateIsActiveAsync(int categoryId, bool isActive)
+        {
+            return await _categoryDAO.UpdateIsActiveAsync(categoryId, isActive);
         }
     }
 }

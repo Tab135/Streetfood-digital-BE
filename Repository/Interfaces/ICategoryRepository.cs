@@ -10,8 +10,8 @@ namespace Repository.Interfaces
         Task<Category?> GetByIdAsync(int categoryId);
         Task<List<Category>> GetAllAsync();
         Task UpdateAsync(Category category);
-        Task DeleteAsync(int categoryId);
         Task<bool> ExistsByIdAsync(int categoryId);
         Task<bool> IsInUseAsync(int id);
+        Task<bool> UpdateIsActiveAsync(int categoryId, bool isActive);
     }
 }

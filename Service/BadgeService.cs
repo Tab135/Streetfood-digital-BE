@@ -69,8 +69,8 @@ namespace Service
                     throw new DomainExceptions($"Không thể vô hiệu hóa huy hiệu này vì đang được sử dụng bởi người dùng hoặc nhiệm vụ");
             }
 
-            entity.IsActive = !entity.IsActive;
-            await _badgeRepository.Update(entity);
+            var newStatus = !entity.IsActive;
+            var updatedBadge = await _badgeRepository.UpdateIsActiveAsync(badgeId, newStatus);
             return true;
         }
 

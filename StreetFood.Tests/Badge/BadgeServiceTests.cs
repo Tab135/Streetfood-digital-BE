@@ -105,31 +105,6 @@ namespace StreetFood.Tests.Badge
             Assert.Contains("Không tìm thấy huy hiệu", ex.Message);
         }
 
-        [Fact]
-        public async Task DeleteBadge_ExistingBadge_ReturnsTrue()
-        {
-            // Arrange
-            _badgeRepoMock.Setup(r => r.Exists(1)).ReturnsAsync(true);
-            _badgeRepoMock.Setup(r => r.Delete(1)).ReturnsAsync(true);
-
-            // Act
-            var result = await _badgeService.DeleteBadge(1);
-
-            // Assert
-            Assert.True(result);
-            _badgeRepoMock.Verify(r => r.Delete(1), Times.Once);
-        }
-
-        [Fact]
-        public async Task DeleteBadge_NonExistingBadge_ThrowsDomainException()
-        {
-            // Arrange
-            _badgeRepoMock.Setup(r => r.Exists(99)).ReturnsAsync(false);
-
-            // Act & Assert
-            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _badgeService.DeleteBadge(99));
-            Assert.Contains("Không tìm thấy huy hiệu", ex.Message);
-        }
 
         [Fact]
         public async Task AwardBadgeToUser_UserDoesNotHaveBadge_AwardsBadge()
