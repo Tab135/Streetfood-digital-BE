@@ -188,65 +188,60 @@ namespace DAL
             return (items, totalCount);
         }
 
-        public async Task<(List<UserQuestTask> Items, int TotalCount)> GetUserQuestTasksByQuestAsync(int questId, UserQuestTaskQueryDto query)
+        public async Task<(List<UserQuest> Items, int TotalCount)> GetUserQuestTasksByQuestAsync(int questId, UserQuestTaskQueryDto query)
         {
             var normalizedPage = query.PageNumber <= 0 ? 1 : query.PageNumber;
             var normalizedPageSize = query.PageSize <= 0 ? 10 : query.PageSize;
 
-            var dbQuery = _context.UserQuestTasks
-                .Include(uqt => uqt.UserQuest)
-                    .ThenInclude(uq => uq.User)
-                        .ThenInclude(u => u.Tier)
-                .Include(uqt => uqt.UserQuest)
-                    .ThenInclude(uq => uq.Quest)
-                .Include(uqt => uqt.QuestTask)
-                    .ThenInclude(qt => qt.QuestTaskRewards)
-                .Where(uqt => uqt.UserQuest.QuestId == questId)
+            var dbQuery = _context.UserQuests
+                .Include(uq => uq.User).ThenInclude(u => u.Tier)
+                .Include(uq => uq.Quest)
+                .Include(uq => uq.UserQuestTasks)
+                    .ThenInclude(t => t.QuestTask)
+                        .ThenInclude(qt => qt.QuestTaskRewards)
+                .Where(uq => uq.QuestId == questId)
                 .AsQueryable();
 
             if (query.UserId.HasValue)
-                dbQuery = dbQuery.Where(uqt => uqt.UserQuest.UserId == query.UserId.Value);
+                dbQuery = dbQuery.Where(uq => uq.UserId == query.UserId.Value);
 
             if (query.UserQuestId.HasValue)
-                dbQuery = dbQuery.Where(uqt => uqt.UserQuestId == query.UserQuestId.Value);
-
-            if (query.QuestTaskId.HasValue)
-                dbQuery = dbQuery.Where(uqt => uqt.QuestTaskId == query.QuestTaskId.Value);
+                dbQuery = dbQuery.Where(uq => uq.UserQuestId == query.UserQuestId.Value);
 
             if (!string.IsNullOrWhiteSpace(query.Status))
-                dbQuery = dbQuery.Where(uqt => uqt.UserQuest.Status == query.Status);
+                dbQuery = dbQuery.Where(uq => uq.Status == query.Status);
+
+            if (query.QuestTaskId.HasValue)
+                dbQuery = dbQuery.Where(uq => uq.UserQuestTasks.Any(t => t.QuestTaskId == query.QuestTaskId.Value));
 
             if (query.Type.HasValue)
-                dbQuery = dbQuery.Where(uqt => uqt.QuestTask.Type == query.Type.Value);
+                dbQuery = dbQuery.Where(uq => uq.UserQuestTasks.Any(t => t.QuestTask.Type == query.Type.Value));
 
             if (query.IsCompleted.HasValue)
-                dbQuery = dbQuery.Where(uqt => uqt.IsCompleted == query.IsCompleted.Value);
+                dbQuery = dbQuery.Where(uq => uq.UserQuestTasks.Any(t => t.IsCompleted == query.IsCompleted.Value));
 
             if (query.RewardClaimed.HasValue)
-                dbQuery = dbQuery.Where(uqt => uqt.RewardClaimed == query.RewardClaimed.Value);
+                dbQuery = dbQuery.Where(uq => uq.UserQuestTasks.Any(t => t.RewardClaimed == query.RewardClaimed.Value));
 
             if (query.CompletedFrom.HasValue)
-                dbQuery = dbQuery.Where(uqt => uqt.CompletedAt.HasValue && uqt.CompletedAt.Value >= query.CompletedFrom.Value);
+                dbQuery = dbQuery.Where(uq => uq.UserQuestTasks.Any(t => t.CompletedAt.HasValue && t.CompletedAt.Value >= query.CompletedFrom.Value));
 
             if (query.CompletedTo.HasValue)
-                dbQuery = dbQuery.Where(uqt => uqt.CompletedAt.HasValue && uqt.CompletedAt.Value <= query.CompletedTo.Value);
+                dbQuery = dbQuery.Where(uq => uq.UserQuestTasks.Any(t => t.CompletedAt.HasValue && t.CompletedAt.Value <= query.CompletedTo.Value));
 
             if (!string.IsNullOrWhiteSpace(query.Search))
             {
                 var keyword = query.Search.Trim().ToLower();
-                dbQuery = dbQuery.Where(uqt =>
-                    (uqt.UserQuest.User.UserName != null && uqt.UserQuest.User.UserName.ToLower().Contains(keyword)) ||
-                    (uqt.UserQuest.User.Email != null && uqt.UserQuest.User.Email.ToLower().Contains(keyword)) ||
-                    (uqt.UserQuest.User.FirstName != null && uqt.UserQuest.User.FirstName.ToLower().Contains(keyword)) ||
-                    (uqt.UserQuest.User.LastName != null && uqt.UserQuest.User.LastName.ToLower().Contains(keyword)) ||
-                    (uqt.QuestTask.Description != null && uqt.QuestTask.Description.ToLower().Contains(keyword)) ||
-                    (uqt.UserQuest.Quest.Title != null && uqt.UserQuest.Quest.Title.ToLower().Contains(keyword)));
+                dbQuery = dbQuery.Where(uq =>
+                    (uq.User.UserName != null && uq.User.UserName.ToLower().Contains(keyword)) ||
+                    (uq.User.Email != null && uq.User.Email.ToLower().Contains(keyword)) ||
+                    (uq.User.FirstName != null && uq.User.FirstName.ToLower().Contains(keyword)) ||
+                    (uq.User.LastName != null && uq.User.LastName.ToLower().Contains(keyword)));
             }
 
             var totalCount = await dbQuery.CountAsync();
             var items = await dbQuery
-                .OrderByDescending(uqt => uqt.UserQuest.StartedAt)
-                .ThenBy(uqt => uqt.UserQuestTaskId)
+                .OrderByDescending(uq => uq.StartedAt)
                 .Skip((normalizedPage - 1) * normalizedPageSize)
                 .Take(normalizedPageSize)
                 .ToListAsync();

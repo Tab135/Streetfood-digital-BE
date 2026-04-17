@@ -250,11 +250,11 @@ namespace Service
             return new PaginatedResponse<UserQuestResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
         }
 
-        public async Task<PaginatedResponse<UserQuestTaskResponseDto>> GetUserQuestTasksByQuestAsync(int questId, UserQuestTaskQueryDto query)
+        public async Task<PaginatedResponse<UserQuestTaskGroupedDto>> GetUserQuestTasksByQuestAsync(int questId, UserQuestTaskQueryDto query)
         {
             var (items, totalCount) = await _userQuestRepository.GetUserQuestTasksByQuestAsync(questId, query);
-            var dtos = items.Select(MapToUserQuestTaskResponseDto).ToList();
-            return new PaginatedResponse<UserQuestTaskResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
+            var dtos = items.Select(uq => MapToUserQuestTaskGroupedDto(uq)).ToList();
+            return new PaginatedResponse<UserQuestTaskGroupedDto>(dtos, totalCount, query.PageNumber, query.PageSize);
         }
 
         public async Task<List<UserQuestProgressDto>> GetCampaignQuestProgressAsync(int userId, int campaignId)
@@ -487,6 +487,38 @@ namespace Service
             };
         }
 
+        private static UserQuestTaskGroupedDto MapToUserQuestTaskGroupedDto(UserQuest uq)
+        {
+            return new UserQuestTaskGroupedDto
+            {
+                UserQuestId = uq.UserQuestId,
+                UserId = uq.UserId,
+                User = MapToUserProfileDto(uq.User),
+                QuestId = uq.QuestId,
+                QuestTitle = uq.Quest.Title,
+                Status = uq.Status,
+                Tasks = uq.UserQuestTasks.Select(uqt => new UserQuestTaskProgressDto
+                {
+                    UserQuestTaskId = uqt.UserQuestTaskId,
+                    QuestTaskId = uqt.QuestTaskId,
+                    Type = uqt.QuestTask.Type,
+                    TargetValue = uqt.QuestTask.TargetValue,
+                    Description = uqt.QuestTask.Description,
+                    Rewards = uqt.QuestTask.QuestTaskRewards.Select(r => new QuestTaskRewardDto
+                    {
+                        QuestTaskRewardId = r.QuestTaskRewardId,
+                        RewardType = r.RewardType,
+                        RewardValue = r.RewardValue,
+                        Quantity = r.Quantity
+                    }).ToList(),
+                    CurrentValue = uqt.CurrentValue,
+                    IsCompleted = uqt.IsCompleted,
+                    CompletedAt = uqt.CompletedAt,
+                    RewardClaimed = uqt.RewardClaimed
+                }).ToList()
+            };
+        }
+
         private static UserQuestResponseDto MapToUserQuestResponseDto(UserQuest uq)
         {
             var completedTasks = uq.UserQuestTasks.Count(uqt => uqt.IsCompleted);
@@ -506,35 +538,6 @@ namespace Service
                 CompletedAt = uq.CompletedAt,
                 TotalTasks = uq.UserQuestTasks.Count,
                 CompletedTasks = completedTasks
-            };
-        }
-
-        private static UserQuestTaskResponseDto MapToUserQuestTaskResponseDto(UserQuestTask uqt)
-        {
-            return new UserQuestTaskResponseDto
-            {
-                UserQuestTaskId = uqt.UserQuestTaskId,
-                UserQuestId = uqt.UserQuestId,
-                UserId = uqt.UserQuest.UserId,
-                User = MapToUserProfileDto(uqt.UserQuest.User),
-                QuestId = uqt.UserQuest.QuestId,
-                QuestTitle = uqt.UserQuest.Quest.Title,
-                QuestTaskId = uqt.QuestTaskId,
-                Type = uqt.QuestTask.Type,
-                TargetValue = uqt.QuestTask.TargetValue,
-                Description = uqt.QuestTask.Description,
-                Rewards = uqt.QuestTask.QuestTaskRewards.Select(r => new QuestTaskRewardDto
-                {
-                    QuestTaskRewardId = r.QuestTaskRewardId,
-                    RewardType = r.RewardType,
-                    RewardValue = r.RewardValue,
-                    Quantity = r.Quantity
-                }).ToList(),
-                Status = uqt.UserQuest.Status,
-                CurrentValue = uqt.CurrentValue,
-                IsCompleted = uqt.IsCompleted,
-                CompletedAt = uqt.CompletedAt,
-                RewardClaimed = uqt.RewardClaimed
             };
         }
 
