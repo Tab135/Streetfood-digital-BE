@@ -330,7 +330,7 @@ namespace Service
             return await MapToResponseDtoAsync(branch);
         }
 
-        public async Task DeleteBranchAsync(int branchId, int userId)
+        public async Task<bool> DeleteBranchAsync(int branchId, int userId)
         {
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
@@ -344,14 +344,16 @@ namespace Service
                 throw new DomainExceptions("Người dùng không sở hữu cửa hàng này");
             }
 
-            // Check if this is the only branch
+            branch.IsActive = !branch.IsActive;
+            branch.UpdatedAt = DateTime.UtcNow;
             var branches = await _branchRepository.GetAllByVendorIdAsync(branch.VendorId ?? 0);
-            if (branches.Count <= 1)
+            // Holy fucking phải check ko cho cái branch nó deactive hết
+            if (branches.Count(b => b.IsActive) <= 1)
             {
                 throw new DomainExceptions("Không thể xóa chi nhánh cuối cùng. Một cửa hàng phải có ít nhất một chi nhánh.");
             }
-
-            await _branchRepository.DeleteAsync(branchId);
+            await _branchRepository.UpdateAsync(branch);
+            return branch.IsActive;
         }
 
         public async Task<bool> UserOwnsBranchAsync(int branchId, int userId)

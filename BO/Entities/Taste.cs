@@ -15,6 +15,8 @@ namespace BO.Entities
         [StringLength(500)]
         public string? Description { get; set; }
 
+        public bool IsActive { get; set; } = true;
+
         // Navigation
         public virtual ICollection<DishTaste> DishTastes { get; set; } = new List<DishTaste>();
     }

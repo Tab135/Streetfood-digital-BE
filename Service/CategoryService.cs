@@ -76,8 +76,9 @@ namespace Service
             if (existing == null)
                 throw new DomainExceptions($"Category with id {id} not found");
 
-            await _repo.DeleteAsync(id);
-            return true;
+            existing.IsActive = !existing.IsActive;
+            await _repo.UpdateAsync(existing);
+            return existing.IsActive;
         }
 
     
@@ -103,7 +104,8 @@ namespace Service
                 CategoryId = c.CategoryId,
                 Name = c.Name,
                 Description = c.Description,
-                ImageUrl = c.ImageUrl
+                ImageUrl = c.ImageUrl,
+                IsActive = c.IsActive
             };
         }
     }

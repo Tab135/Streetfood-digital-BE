@@ -24,7 +24,7 @@ namespace Service.Interfaces
         Task<PaginatedResponse<BranchResponseDto>> GetActiveBranchesAsync(int pageNumber, int pageSize);
         Task<PaginatedResponse<BranchResponseDto>> GetUnverifiedBranchesAsync(int pageNumber, int pageSize);
         Task<BranchResponseDto> UpdateBranchAsync(int branchId, UpdateBranchDto updateBranchDto, int userId);
-        Task DeleteBranchAsync(int branchId, int userId);
+        Task<bool> DeleteBranchAsync(int branchId, int userId);
         Task<bool> UserOwnsBranchAsync(int branchId, int userId);
         Task<bool> AssignManagerAsync(int branchId, int managerId, int vendorUserId);
         

@@ -72,7 +72,8 @@ namespace Service
             if (existing == null)
                 throw new DomainExceptions($"Taste with id {id} not found");
 
-            await _repo.DeleteAsync(id);
+            existing.IsActive = !existing.IsActive;
+            await _repo.UpdateAsync(existing);
             return true;
         }
 
@@ -82,7 +83,8 @@ namespace Service
             {
                 TasteId = t.TasteId,
                 Name = t.Name,
-                Description = t.Description
+                Description = t.Description,
+                IsActive = t.IsActive
             };
         }
     }

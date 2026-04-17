@@ -10,7 +10,7 @@ namespace Repository.Interfaces
         Task AddDishTastesAsync(List<DishTaste> dishTastes);
         Task<Dish?> GetByIdAsync(int dishId);
         Task<(List<Dish> items, int totalCount)> GetDishesAsync(int? vendorId, int? categoryId, string? keyword, int pageNumber, int pageSize);
-        Task<(List<Dish> items, int totalCount)> GetDishesByBranchAsync(int branchId, int? categoryId, string? keyword, int pageNumber, int pageSize);
+        Task<(List<Dish> items, int totalCount)> GetDishesByBranchAsync(int branchId, int? categoryId, string? keyword, int pageNumber, int pageSize, bool includeInactive = false);
         Task UpdateAsync(Dish dish);
         Task DeleteAsync(int dishId);
         Task RemoveDishTastesAsync(int dishId);

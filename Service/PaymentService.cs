@@ -403,7 +403,10 @@ namespace Service.PaymentsService
                                 PaymentUrl = latestPayment.CheckoutUrl,
                                 QrCode = latestPayment.CheckoutUrl,
                                 OrderCode = latestPayment.OrderCode,
-                                PaymentLinkId = latestPayment.PaymentLinkId
+                                PaymentLinkId = latestPayment.PaymentLinkId,
+                                Bin = latestPayment.Bin,
+                                AccountNumber = latestPayment.AccountNumber,
+                                AccountName = latestPayment.AccountName
                             };
                         }
 
@@ -477,7 +480,10 @@ namespace Service.PaymentsService
                     orderCode: orderCode,
                     status: "PENDING",
                     paymentLinkId: paymentLinkId,
-                    checkoutUrl: checkoutUrl);
+                    checkoutUrl: checkoutUrl,
+                    bin: bin,
+                    accountNumber: accountNumber,
+                    accountName: accountName);
 
                 return new PaymentLinkResult
                 {
@@ -591,6 +597,9 @@ namespace Service.PaymentsService
                 string paymentLinkId;
                 string checkoutUrl;
                 string qrCode;
+                string? bin = null;
+                string? accountNumber = null;
+                string? accountName = null;
                 if (_isDebugMode)
                 {
                     paymentLinkId = $"DEBUG-SUB-{orderCode}";
@@ -603,6 +612,9 @@ namespace Service.PaymentsService
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
                     qrCode = paymentLinkResponse.QrCode;
+                    bin = paymentLinkResponse.Bin;
+                    accountNumber = paymentLinkResponse.AccountNumber;
+                    accountName = paymentLinkResponse.AccountName;
                 }
 
                 // 9. Persist PayOS details
@@ -610,7 +622,10 @@ namespace Service.PaymentsService
                     orderCode: orderCode,
                     status: "PENDING",
                     paymentLinkId: paymentLinkId,
-                    checkoutUrl: checkoutUrl);
+                    checkoutUrl: checkoutUrl,
+                    bin: bin,
+                    accountNumber: accountNumber,
+                    accountName: accountName);
 
                 _logger.LogInformation(
                     "Payment link created: OrderCode={OrderCode}, UserId={UserId}, BranchId={BranchId}, Amount={Amount}",
@@ -623,7 +638,10 @@ namespace Service.PaymentsService
                     QrCode = qrCode,
                     OrderCode = orderCode,
                     PaymentLinkId = paymentLinkId,
-                    Message = _isDebugMode ? "Tạo link thanh toán debug thành công" : "Tạo link thanh toán thành công"
+                    Message = _isDebugMode ? "Tạo link thanh toán debug thành công" : "Tạo link thanh toán thành công",
+                    Bin = bin,
+                    AccountNumber = accountNumber,
+                    AccountName = accountName
                 };
             }
             catch (Exception ex)
@@ -695,6 +713,44 @@ namespace Service.PaymentsService
                 _logger.LogError(ex, "Error getting payment status for OrderCode={OrderCode}", orderCode);
                 throw;
             }
+        }
+
+        public async Task CancelOrderPaymentAsync(int orderId)
+        {
+            var latestPayment = await _paymentRepo.GetLatestPaymentByOrderId(orderId);
+            if (latestPayment == null)
+            {
+                return;
+            }
+
+            if (string.Equals(latestPayment.Status, "PAID", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new DomainExceptions("Đơn hàng đã được thanh toán nên không thể hủy", "ERR_BAD_REQUEST");
+            }
+
+            if (!string.Equals(latestPayment.Status, "PENDING", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            if (!_isDebugMode)
+            {
+                try
+                {
+                    await _payOS.PaymentRequests.CancelAsync(
+                        latestPayment.OrderCode,
+                        "Order cancelled by user",
+                        null);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Could not cancel PayOS payment link for OrderCode={OrderCode}; proceeding to cancel local payment record",
+                        latestPayment.OrderCode);
+                }
+            }
+
+            await _paymentRepo.UpdatePaymentStatus(latestPayment.OrderCode, "CANCELLED");
         }
 
         public async Task<PaymentStatusResponse> ConfirmPaymentFromRedirect(long orderCode, string status, string? transactionId)

@@ -367,9 +367,11 @@ namespace Service
             switch (rewardType)
             {
                 case QuestRewardType.BADGE:
-                    var badgeExists = await _badgeRepository.Exists(rewardValue);
-                    if (!badgeExists)
+                    var badge = await _badgeRepository.GetById(rewardValue);
+                    if (badge == null)
                         throw new DomainExceptions($"Không tìm thấy huy hiệu với ID {rewardValue}");
+                    if (!badge.IsActive)
+                        throw new DomainExceptions($"Không thể sử dụng huy hiệu với ID {rewardValue} đã bị vô hiệu hóa.");
                     break;
                 case QuestRewardType.VOUCHER:
                     var voucher = await _voucherRepository.GetByIdAsync(rewardValue);

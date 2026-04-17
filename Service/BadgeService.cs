@@ -89,11 +89,13 @@ namespace Service
 
         public async Task<bool> DeleteBadge(int badgeId)
         {
-            var exists = await _badgeRepository.Exists(badgeId);
-            if (!exists)
+            var entity = await _badgeRepository.GetById(badgeId);
+            if (entity == null)
                 throw new DomainExceptions($"Không tìm thấy huy hiệu với ID {badgeId}");
 
-            return await _badgeRepository.Delete(badgeId);
+            entity.IsActive = !entity.IsActive;
+            await _badgeRepository.Update(entity);
+            return true;
         }
 
 
@@ -175,6 +177,7 @@ namespace Service
                 BadgeId = badge.BadgeId,
                 BadgeName = badge.BadgeName,
                 IconUrl = badge.IconUrl,
+                IsActive = badge.IsActive,
                 Description = badge.Description
             };
         }

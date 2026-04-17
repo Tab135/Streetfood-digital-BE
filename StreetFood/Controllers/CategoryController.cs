@@ -52,7 +52,7 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> GetById(int id)
         {
             var category = await _categoryService.GetCategoryByIdAsync(id);
-            if (category == null)
+            if (category == null || (!User.IsInRole("Admin") && !category.IsActive))
                 return NotFound(new { message = "Category not found" });
 
             return Ok(category);
@@ -63,6 +63,9 @@ namespace StreetFood.Controllers
         public async Task<IActionResult> GetAll()
         {
             var list = await _categoryService.GetAllCategoriesAsync();
+            if (!User.IsInRole("Admin"))
+                list = list.FindAll(category => category.IsActive);
+
             return Ok(list);
         }
 
@@ -91,7 +94,7 @@ namespace StreetFood.Controllers
             return Ok(updated);
         }
 
-        [HttpDelete("{id}")]
+        [HttpPatch("{id}")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> Delete(int id)
@@ -102,8 +105,8 @@ namespace StreetFood.Controllers
                 return BadRequest(new { message = "Model is not valid" });
             }
 
-            await _categoryService.DeleteCategoryAsync(id, userId);
-            return Ok( new { message = "Category deleted successfully" });
+            var isActive = await _categoryService.DeleteCategoryAsync(id, userId);
+            return Ok(new { message = isActive ? "danh mục mở thành công" : "danh mục tắt thành công" });
         }
     }
 }
