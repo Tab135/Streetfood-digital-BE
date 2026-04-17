@@ -1,5 +1,6 @@
 using BO.Common;
 using BO.DTO.Quest;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Service.Interfaces
@@ -8,6 +9,7 @@ namespace Service.Interfaces
     {
         Task<QuestResponseDto> CreateQuestAsync(CreateQuestDto dto);
         Task<QuestResponseDto> UpdateQuestAsync(int questId, UpdateQuestDto dto);
+        Task<QuestResponseDto> ReplaceQuestTasksAsync(int questId, List<CreateQuestTaskDto> tasks);
         Task<bool> DeleteQuestAsync(int questId);
         Task<QuestResponseDto?> GetQuestByIdAsync(int questId);
         Task<QuestTaskResponseDto?> GetQuestTaskByIdAsync(int questTaskId);

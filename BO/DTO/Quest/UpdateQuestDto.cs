@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace BO.DTO.Quest
@@ -15,7 +14,5 @@ namespace BO.DTO.Quest
         public bool? IsActive { get; set; }
         public bool? IsStandalone { get; set; }
         public int? CampaignId { get; set; }
-
-        public List<CreateQuestTaskDto>? Tasks { get; set; }
     }
 }
