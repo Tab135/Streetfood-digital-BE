@@ -391,7 +391,7 @@ namespace StreetFood.Controllers
             }
         }
 
-        [HttpDelete("{id}")]
+        [HttpPatch("{id}")]
         [Authorize(Roles = "User,Vendor")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> DeleteBranch(int id)
@@ -404,8 +404,8 @@ namespace StreetFood.Controllers
                     return Unauthorized(new { message = "User not authenticated" });
                 }
 
-                await _branchService.DeleteBranchAsync(id, userId);
-                return Ok(new { message = "Branch deleted successfully" });
+                var isActive = await _branchService.DeleteBranchAsync(id, userId);
+                return Ok(new { message = isActive ? "Mở chi nhánh thành công" : "Đóng chi nhánh thành công" });
             }
             catch (Exception ex)
             {
