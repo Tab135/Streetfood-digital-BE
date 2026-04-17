@@ -355,12 +355,16 @@ namespace Service
 
             branch.IsActive = !branch.IsActive;
             branch.UpdatedAt = DateTime.UtcNow;
-            var branches = await _branchRepository.GetAllByVendorIdAsync(branch.VendorId ?? 0);
-            // Holy fucking phải check ko cho cái branch nó deactive hết
-            if (branches.Count(b => b.IsActive) <= 1)
+            if (!branch.IsActive)
             {
-                throw new DomainExceptions("Không thể xóa chi nhánh cuối cùng. Một cửa hàng phải có ít nhất một chi nhánh.");
+                var branches = await _branchRepository.GetAllByVendorIdAsync(branch.VendorId ?? 0);
+                // Cannot deactivate if it's the only active branch
+                if (branches.Count(b => b.IsActive) <= 1)
+                {
+                    throw new DomainExceptions("Không thể tắt chi nhánh cuối cùng. Một cửa hàng phải có ít nhất một chi nhánh hoạt động.");
+                }
             }
+
             await _branchRepository.UpdateAsync(branch);
             return branch.IsActive;
         }

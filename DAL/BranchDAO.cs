@@ -190,19 +190,37 @@ namespace DAL
         public async Task UpdateAsync(Branch branch)
         {
             branch.UpdatedAt = DateTime.UtcNow;
+
+            // Detach related entities before Update to avoid tracking conflicts
             if (branch.Vendor != null)
             {
-                // if there is a vendor object, detach it so it can't conflict
                 _context.Entry(branch.Vendor).State = EntityState.Detached;
                 branch.Vendor = null;
             }
 
             if (branch.Tier != null)
             {
-                // Tier is a lookup entity and may already be tracked by the DbContext
                 _context.Entry(branch.Tier).State = EntityState.Detached;
                 branch.Tier = null;
             }
+            
+            if (branch.Manager != null)
+            {
+                _context.Entry(branch.Manager).State = EntityState.Detached;
+                branch.Manager = null;
+            }
+
+            if (branch.CreatedBy != null)
+            {
+                _context.Entry(branch.CreatedBy).State = EntityState.Detached;
+                branch.CreatedBy = null;
+            }
+
+            // Optional: Detach collections if they exist to prevent full graph updates
+            branch.WorkSchedules = null;
+            branch.DayOffs = null;
+            branch.BranchImages = null;
+            branch.BranchDishes = null;
 
             _context.Branches.Update(branch);
             await _context.SaveChangesAsync();
