@@ -10,6 +10,7 @@ namespace Repository.Interfaces
         Task<Quest?> GetByIdAsync(int questId);
         Task<(List<Quest> Items, int TotalCount)> GetQuestsAsync(bool? isActive, int? campaignId, int page, int pageSize);
         Task<(List<Quest> Items, int TotalCount)> GetPublicQuestsAsync(int? campaignId, bool? isStandalone, bool? isTierUp, int page, int pageSize);
+        Task<System.Collections.Generic.Dictionary<int, int>> GetUserQuestCountsByQuestIdsAsync(List<int> questIds);
         Task UpdateAsync(Quest quest);
         Task<bool> DeleteAsync(int questId);
         Task<bool> HasEnrolledUsersAsync(int questId);

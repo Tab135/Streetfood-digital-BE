@@ -109,6 +109,22 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Public quests retrieved successfully", data = result });
         }
 
+        [HttpGet("user-quests")]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<IActionResult> GetUserQuests([FromQuery] UserQuestQueryDto query)
+        {
+            var result = await _questService.GetUserQuestsAsync(query);
+            return Ok(new { message = "User quests retrieved successfully", data = result });
+        }
+
+        [HttpGet("{questId}/user-quest-tasks")]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<IActionResult> GetUserQuestTasksByQuest(int questId, [FromQuery] UserQuestTaskQueryDto query)
+        {
+            var result = await _questService.GetUserQuestTasksByQuestAsync(questId, query);
+            return Ok(new { message = "User quest tasks retrieved successfully", data = result });
+        }
+
         // ==================== User-facing ====================
 
         [HttpGet("campaign/{campaignId}/my-progress")]

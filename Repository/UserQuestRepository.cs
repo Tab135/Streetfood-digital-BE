@@ -1,5 +1,6 @@
 using BO.Entities;
 using BO.Enums;
+using BO.DTO.Quest;
 using DAL;
 using Repository.Interfaces;
 using System.Collections.Generic;
@@ -26,6 +27,8 @@ namespace Repository
         public Task<bool> AreAllTasksCompletedAsync(int userQuestId) => _dao.AreAllTasksCompletedAsync(userQuestId);
         public Task AddUserQuestTasksAsync(List<UserQuestTask> tasks) => _dao.AddUserQuestTasksAsync(tasks);
         public Task<List<UserQuest>> GetByUserAndCampaignAsync(int userId, int campaignId) => _dao.GetByUserAndCampaignAsync(userId, campaignId);
+        public Task<(List<UserQuest> Items, int TotalCount)> GetUserQuestsAsync(UserQuestQueryDto query) => _dao.GetUserQuestsAsync(query);
+        public Task<(List<UserQuestTask> Items, int TotalCount)> GetUserQuestTasksByQuestAsync(int questId, UserQuestTaskQueryDto query) => _dao.GetUserQuestTasksByQuestAsync(questId, query);
         public Task<UserQuest?> GetActiveStandaloneQuestAsync(int userId) => _dao.GetActiveStandaloneQuestAsync(userId);
         public Task<UserQuest?> GetByUserAndQuestAnyStatusAsync(int userId, int questId) => _dao.GetByUserAndQuestAnyStatusAsync(userId, questId);
         public Task<List<UserQuest>> GetByUserAndCampaignQuestsInProgressAsync(int campaignId) => _dao.GetByUserAndCampaignQuestsInProgressAsync(campaignId);
