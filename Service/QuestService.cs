@@ -243,17 +243,10 @@ namespace Service
             return new PaginatedResponse<QuestResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
         }
 
-        public async Task<PaginatedResponse<UserQuestResponseDto>> GetUserQuestsAsync(UserQuestQueryDto query)
+        public async Task<PaginatedResponse<UserQuestTaskGroupedDto>> GetUserQuestTasksByQuestAsync(UserQuestTaskQueryDto query)
         {
-            var (items, totalCount) = await _userQuestRepository.GetUserQuestsAsync(query);
-            var dtos = items.Select(MapToUserQuestResponseDto).ToList();
-            return new PaginatedResponse<UserQuestResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
-        }
-
-        public async Task<PaginatedResponse<UserQuestTaskGroupedDto>> GetUserQuestTasksByQuestAsync(int questId, UserQuestTaskQueryDto query)
-        {
-            var (items, totalCount) = await _userQuestRepository.GetUserQuestTasksByQuestAsync(questId, query);
-            var dtos = items.Select(uq => MapToUserQuestTaskGroupedDto(uq)).ToList();
+            var (items, totalCount) = await _userQuestRepository.GetUserQuestTasksByQuestAsync(query);
+            var dtos = items.Select(MapToUserQuestTaskGroupedDto).ToList();
             return new PaginatedResponse<UserQuestTaskGroupedDto>(dtos, totalCount, query.PageNumber, query.PageSize);
         }
 
@@ -516,28 +509,6 @@ namespace Service
                     CompletedAt = uqt.CompletedAt,
                     RewardClaimed = uqt.RewardClaimed
                 }).ToList()
-            };
-        }
-
-        private static UserQuestResponseDto MapToUserQuestResponseDto(UserQuest uq)
-        {
-            var completedTasks = uq.UserQuestTasks.Count(uqt => uqt.IsCompleted);
-
-            return new UserQuestResponseDto
-            {
-                UserQuestId = uq.UserQuestId,
-                UserId = uq.UserId,
-                User = MapToUserProfileDto(uq.User),
-                QuestId = uq.QuestId,
-                QuestTitle = uq.Quest.Title,
-                QuestImageUrl = uq.Quest.ImageUrl,
-                CampaignId = uq.Quest.CampaignId,
-                IsStandalone = uq.Quest.IsStandalone,
-                Status = uq.Status,
-                StartedAt = uq.StartedAt,
-                CompletedAt = uq.CompletedAt,
-                TotalTasks = uq.UserQuestTasks.Count,
-                CompletedTasks = completedTasks
             };
         }
 

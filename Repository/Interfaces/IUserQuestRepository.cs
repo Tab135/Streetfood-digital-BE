@@ -18,8 +18,7 @@ namespace Repository.Interfaces
         Task<bool> AreAllTasksCompletedAsync(int userQuestId);
         Task AddUserQuestTasksAsync(List<UserQuestTask> tasks);
         Task<List<UserQuest>> GetByUserAndCampaignAsync(int userId, int campaignId);
-        Task<(List<UserQuest> Items, int TotalCount)> GetUserQuestsAsync(UserQuestQueryDto query);
-        Task<(List<UserQuest> Items, int TotalCount)> GetUserQuestTasksByQuestAsync(int questId, UserQuestTaskQueryDto query);
+        Task<(List<UserQuest> Items, int TotalCount)> GetUserQuestTasksByQuestAsync(UserQuestTaskQueryDto query);
         /// <summary>Returns the active (IN_PROGRESS) standalone UserQuest for this user, or null.</summary>
         Task<UserQuest?> GetActiveStandaloneQuestAsync(int userId);
         /// <summary>Returns the UserQuest for (userId, questId) regardless of status, or null.</summary>

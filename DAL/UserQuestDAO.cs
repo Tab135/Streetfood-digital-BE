@@ -119,76 +119,7 @@ namespace DAL
                 .ToListAsync();
         }
 
-        public async Task<(List<UserQuest> Items, int TotalCount)> GetUserQuestsAsync(UserQuestQueryDto query)
-        {
-            var normalizedPage = query.PageNumber <= 0 ? 1 : query.PageNumber;
-            var normalizedPageSize = query.PageSize <= 0 ? 10 : query.PageSize;
-
-            var dbQuery = _context.UserQuests
-                .Include(uq => uq.User)
-                    .ThenInclude(u => u.Tier)
-                .Include(uq => uq.Quest)
-                    .ThenInclude(q => q.QuestTasks)
-                .Include(uq => uq.UserQuestTasks)
-                    .ThenInclude(uqt => uqt.QuestTask)
-                .AsQueryable();
-
-            if (query.QuestId.HasValue)
-                dbQuery = dbQuery.Where(uq => uq.QuestId == query.QuestId.Value);
-
-            if (query.UserId.HasValue)
-                dbQuery = dbQuery.Where(uq => uq.UserId == query.UserId.Value);
-
-            if (query.CampaignId.HasValue)
-                dbQuery = dbQuery.Where(uq => uq.Quest.CampaignId == query.CampaignId.Value);
-
-            if (!string.IsNullOrWhiteSpace(query.Status))
-                dbQuery = dbQuery.Where(uq => uq.Status == query.Status);
-
-            if (query.IsStandalone.HasValue)
-                dbQuery = dbQuery.Where(uq => uq.Quest.IsStandalone == query.IsStandalone.Value);
-
-            if (query.IsTierUp.HasValue)
-            {
-                dbQuery = query.IsTierUp.Value
-                    ? dbQuery.Where(uq => uq.Quest.QuestTasks.Any(t => t.Type == QuestTaskType.TIER_UP))
-                    : dbQuery.Where(uq => !uq.Quest.QuestTasks.Any(t => t.Type == QuestTaskType.TIER_UP));
-            }
-
-            if (query.StartedFrom.HasValue)
-                dbQuery = dbQuery.Where(uq => uq.StartedAt >= query.StartedFrom.Value);
-
-            if (query.StartedTo.HasValue)
-                dbQuery = dbQuery.Where(uq => uq.StartedAt <= query.StartedTo.Value);
-
-            if (query.CompletedFrom.HasValue)
-                dbQuery = dbQuery.Where(uq => uq.CompletedAt.HasValue && uq.CompletedAt.Value >= query.CompletedFrom.Value);
-
-            if (query.CompletedTo.HasValue)
-                dbQuery = dbQuery.Where(uq => uq.CompletedAt.HasValue && uq.CompletedAt.Value <= query.CompletedTo.Value);
-
-            if (!string.IsNullOrWhiteSpace(query.Search))
-            {
-                var keyword = query.Search.Trim().ToLower();
-                dbQuery = dbQuery.Where(uq =>
-                    (uq.User.UserName != null && uq.User.UserName.ToLower().Contains(keyword)) ||
-                    (uq.User.Email != null && uq.User.Email.ToLower().Contains(keyword)) ||
-                    (uq.User.FirstName != null && uq.User.FirstName.ToLower().Contains(keyword)) ||
-                    (uq.User.LastName != null && uq.User.LastName.ToLower().Contains(keyword)) ||
-                    (uq.Quest.Title != null && uq.Quest.Title.ToLower().Contains(keyword)));
-            }
-
-            var totalCount = await dbQuery.CountAsync();
-            var items = await dbQuery
-                .OrderByDescending(uq => uq.StartedAt)
-                .Skip((normalizedPage - 1) * normalizedPageSize)
-                .Take(normalizedPageSize)
-                .ToListAsync();
-
-            return (items, totalCount);
-        }
-
-        public async Task<(List<UserQuest> Items, int TotalCount)> GetUserQuestTasksByQuestAsync(int questId, UserQuestTaskQueryDto query)
+        public async Task<(List<UserQuest> Items, int TotalCount)> GetUserQuestTasksByQuestAsync(UserQuestTaskQueryDto query)
         {
             var normalizedPage = query.PageNumber <= 0 ? 1 : query.PageNumber;
             var normalizedPageSize = query.PageSize <= 0 ? 10 : query.PageSize;
@@ -199,8 +130,10 @@ namespace DAL
                 .Include(uq => uq.UserQuestTasks)
                     .ThenInclude(t => t.QuestTask)
                         .ThenInclude(qt => qt.QuestTaskRewards)
-                .Where(uq => uq.QuestId == questId)
                 .AsQueryable();
+
+            if (query.QuestId.HasValue)
+                dbQuery = dbQuery.Where(uq => uq.QuestId == query.QuestId.Value);
 
             if (query.UserId.HasValue)
                 dbQuery = dbQuery.Where(uq => uq.UserId == query.UserId.Value);

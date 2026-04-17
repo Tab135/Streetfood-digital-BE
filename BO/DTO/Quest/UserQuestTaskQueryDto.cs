@@ -7,6 +7,7 @@ namespace BO.DTO.Quest
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 10;
 
+        public int? QuestId { get; set; }
         public int? UserId { get; set; }
         public int? UserQuestId { get; set; }
         public int? QuestTaskId { get; set; }
