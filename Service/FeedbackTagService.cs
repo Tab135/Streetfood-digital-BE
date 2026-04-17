@@ -40,6 +40,9 @@ namespace Service
                 if (isInUse)
                     throw new BO.Exceptions.DomainExceptions($"Không thể vô hiệu hóa thẻ đánh giá này vì đang được sử dụng");
             }
+
+            entity.IsActive = !entity.IsActive;
+            await _repo.Update(entity);
             return true;
         }
 

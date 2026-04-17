@@ -65,9 +65,6 @@ namespace DAL
             var usedByUser = await _context.UserDietaryPreferences.AnyAsync(x => x.DietaryPreferenceId == id);
             if (usedByUser) return true;
 
-            var usedByDish = await _context.DishDietaryPreferences.AnyAsync(x => x.DietaryPreferenceId == id);
-            if (usedByDish) return true;
-
             var usedByVendor = await _context.VendorDietaryPreferences.AnyAsync(x => x.DietaryPreferenceId == id);
             return usedByVendor;
         }

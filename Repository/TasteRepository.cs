@@ -55,3 +55,5 @@ namespace Repository
         {
             return await _tasteDAO.IsInUseAsync(id);
         }
+    }
+}

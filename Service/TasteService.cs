@@ -78,6 +78,10 @@ namespace Service
                 if (isInUse)
                     throw new DomainExceptions($"Không thể vô hiệu hóa vị này vì đang được sử dụng");
             }
+
+            existing.IsActive = !existing.IsActive;
+            await _repo.UpdateAsync(existing);
+            return true;
         }
 
         private static TasteDto MapToDto(Taste t)

@@ -82,9 +82,12 @@ namespace Service
                 if (isInUse)
                     throw new DomainExceptions($"Không thể vô hiệu hóa danh mục này vì đang được sử dụng");
             }
+
+            existing.IsActive = !existing.IsActive;
+            await _repo.UpdateAsync(existing);
+            return existing.IsActive;
         }
 
-    
         private async Task ValidateVendorHasVerifiedBranchAsync(int userId)
         {
             var vendor = await _vendorRepository.GetByUserIdAsync(userId);
