@@ -36,16 +36,6 @@ namespace Repository
             await _tasteDAO.UpdateAsync(taste);
         }
 
-        public async Task DeleteAsync(int tasteId)
-        {
-            await _tasteDAO.DeleteAsync(tasteId);
-        }
-
-        public async Task<bool> ExistsByIdAsync(int tasteId)
-        {
-            return await _tasteDAO.ExistsByIdAsync(tasteId);
-        }
-
         public async Task<List<Taste>> GetByIdsAsync(List<int> tasteIds)
         {
             return await _tasteDAO.GetByIdsAsync(tasteIds);
@@ -54,6 +44,11 @@ namespace Repository
         public async Task<bool> IsInUseAsync(int id)
         {
             return await _tasteDAO.IsInUseAsync(id);
+        }
+
+        public async Task<bool> UpdateIsActiveAsync(int id, bool isActive)
+        {
+            return await _tasteDAO.UpdateIsActiveAsync(id, isActive);
         }
     }
 }

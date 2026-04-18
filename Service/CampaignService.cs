@@ -114,6 +114,11 @@ namespace Service
 
         private async Task<bool> ComputeIsUpdateableForCampaignAsync(Campaign campaign)
         {
+            if (campaign.EndDate <= DateTime.UtcNow)
+            {
+                return false;
+            }
+
             if (!IsSystemCampaign(campaign))
             {
                 return true;
@@ -992,6 +997,7 @@ namespace Service
         {
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
             if (campaign == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
+            if (campaign.EndDate <= DateTime.UtcNow) throw new DomainExceptions("Chiến dịch đã kết thúc, không thể cập nhật.");
             var isSystemCampaign = IsSystemCampaign(campaign);
 
             var oldStartDate = campaign.StartDate;
