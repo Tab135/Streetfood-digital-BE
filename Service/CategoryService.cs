@@ -84,7 +84,7 @@ namespace Service
             }
 
             var newStatus = !existing.IsActive;
-            var updatedCategory = await _repo.UpdateIsActiveAsync(id, newStatus);
+            await _repo.UpdateIsActiveAsync(id, newStatus);
             return true;
         }
 

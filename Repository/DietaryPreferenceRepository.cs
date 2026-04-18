@@ -19,16 +19,6 @@ namespace Repository
             return await _dao.Create(dietaryPreference);
         }
 
-        public async Task<bool> Delete(int id)
-        {
-            return await _dao.Delete(id);
-        }
-
-        public async Task<bool> Exists(int id)
-        {
-            return await _dao.Exists(id);
-        }
-
         public async Task<List<DietaryPreference>> GetAll()
         {
             return await _dao.GetAll();
@@ -51,5 +41,11 @@ namespace Repository
         public async Task<bool> IsInUseAsync(int id)
         {
             return await _dao.IsInUseAsync(id);
-        }    }
+        }
+
+        public async Task<bool> UpdateIsActiveAsync(int id, bool isActive)
+        {
+            return await _dao.UpdateIsActiveAsync(id, isActive);
+        }
+    }
 }
