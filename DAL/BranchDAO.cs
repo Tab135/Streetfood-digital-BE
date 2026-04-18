@@ -83,11 +83,16 @@ namespace DAL
             return (items, totalCount);
         }
 
-        public async Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
+        public async Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize, bool activeOnly = false)
         {
             var query = _context.Branches
                 .AsNoTracking()
                 .Where(b => b.VendorId == vendorId);
+
+            if (activeOnly)
+            {
+                query = query.Where(b => b.IsActive);
+            }
 
             var totalCount = await query.CountAsync();
 

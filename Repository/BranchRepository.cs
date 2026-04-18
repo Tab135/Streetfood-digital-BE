@@ -43,9 +43,9 @@ namespace Repository
             return await _branchDAO.GetAllApprovedGhostPinsAsync(pageNumber, pageSize);
         }
 
-        public async Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
+        public async Task<(List<Branch> items, int totalCount)> GetByVendorIdAsync(int vendorId, int pageNumber, int pageSize, bool activeOnly = false)
         {
-            return await _branchDAO.GetByVendorIdAsync(vendorId, pageNumber, pageSize);
+            return await _branchDAO.GetByVendorIdAsync(vendorId, pageNumber, pageSize, activeOnly);
         }
 
         public async Task<List<Branch>> GetAllByManagerIdAsync(int managerUserId)

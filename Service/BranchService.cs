@@ -243,9 +243,9 @@ namespace Service
             return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);
         }
 
-        public async Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize)
+        public async Task<PaginatedResponse<BranchResponseDto>> GetBranchesByVendorIdAsync(int vendorId, int pageNumber, int pageSize, bool activeOnly = false)
         {
-            var (branches, totalCount) = await _branchRepository.GetByVendorIdAsync(vendorId, pageNumber, pageSize);
+            var (branches, totalCount) = await _branchRepository.GetByVendorIdAsync(vendorId, pageNumber, pageSize, activeOnly);
             var requests = await _branchRepository.GetRegisterRequestsByBranchIdsAsync(branches.Select(b => b.BranchId).ToList());
             var items = branches.Select(b => MapToResponseDto(b, requests.GetValueOrDefault(b.BranchId))).ToList();
             return new PaginatedResponse<BranchResponseDto>(items, totalCount, pageNumber, pageSize);

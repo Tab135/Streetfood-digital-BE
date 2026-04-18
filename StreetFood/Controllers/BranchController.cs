@@ -258,11 +258,11 @@ namespace StreetFood.Controllers
 
         [HttpGet("vendor/{vendorId}")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetBranchesByVendorId(int vendorId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetBranchesByVendorId(int vendorId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, [FromQuery] bool onlyActive = false)
         {
             try
             {
-                var branches = await _branchService.GetBranchesByVendorIdAsync(vendorId, pageNumber, pageSize);
+                var branches = await _branchService.GetBranchesByVendorIdAsync(vendorId, pageNumber, pageSize, onlyActive);
                 
                 // Check if current user owns this vendor
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
