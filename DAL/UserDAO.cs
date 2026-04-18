@@ -114,6 +114,7 @@ namespace DAL
                     Role = Role.User,
                     CreatedAt = DateTime.UtcNow,
                     EmailVerified = true, // Google auth implies verified email
+                    PhoneNumberVerified = false,
                     FirstName = firstName,
                     LastName = lastName,
                     AvatarUrl = payload.Picture
@@ -151,6 +152,7 @@ namespace DAL
                     Role = Role.User,
                     CreatedAt = DateTime.UtcNow,
                     EmailVerified = true,
+                    PhoneNumberVerified = false,
                     FirstName = info.FirstName ?? string.Empty,
                     LastName = info.LastName ?? string.Empty,
                     AvatarUrl = info.AvatarUrl

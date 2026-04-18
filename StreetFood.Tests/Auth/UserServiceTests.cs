@@ -21,6 +21,7 @@ namespace StreetFood.Tests.Auth
         private readonly Mock<IJwtService> _jwtServiceMock;
         private readonly Mock<IOtpVerifyRepository> _otpRepoMock;
         private readonly Mock<ISmsSender> _smsSenderMock;
+        private readonly Mock<IEmailSender> _emailSenderMock;
         private readonly Mock<IConfiguration> _configMock;
         private readonly Mock<IFacebookService> _fbServiceMock;
         private readonly Mock<IGoogleService> _googleServiceMock;
@@ -34,6 +35,7 @@ namespace StreetFood.Tests.Auth
             _jwtServiceMock = new Mock<IJwtService>();
             _otpRepoMock = new Mock<IOtpVerifyRepository>();
             _smsSenderMock = new Mock<ISmsSender>();
+            _emailSenderMock = new Mock<IEmailSender>();
             _configMock = new Mock<IConfiguration>();
             _fbServiceMock = new Mock<IFacebookService>();
             _googleServiceMock = new Mock<IGoogleService>();
@@ -45,6 +47,7 @@ namespace StreetFood.Tests.Auth
                 _jwtServiceMock.Object,
                 _otpRepoMock.Object,
                 _smsSenderMock.Object,
+                _emailSenderMock.Object,
                 _configMock.Object,
                 _fbServiceMock.Object,
                 _googleServiceMock.Object,
@@ -99,7 +102,7 @@ namespace StreetFood.Tests.Auth
             // Arrange
             string phone = "0912345678";
             string otp = "123456";
-            var user = new User { Id = 1, PhoneNumber = phone, Status = "Active" };
+            var user = new User { Id = 1, PhoneNumber = phone, PhoneNumberVerified = true, Status = "Active" };
             
             _otpRepoMock.Setup(r => r.GetValidOtpWithDetailAsync(phone, otp))
                 .ReturnsAsync((new OtpVerify { Id = 10 }, null));
@@ -132,7 +135,7 @@ namespace StreetFood.Tests.Auth
         public async Task VerifyPhoneOtpAsync_BannedUser_ThrowsException()
         {
             // Arrange
-            var user = new User { Id = 1, Status = "Banned" };
+            var user = new User { Id = 1, Status = "Banned", PhoneNumberVerified = true };
             _otpRepoMock.Setup(r => r.GetValidOtpWithDetailAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync((new OtpVerify(), null));
             _userRepoMock.Setup(r => r.GetByPhoneNumberAsync(It.IsAny<string>())).ReturnsAsync(user);
@@ -159,6 +162,7 @@ namespace StreetFood.Tests.Auth
 
             // Assert
             Assert.Equal(100, result.User.Id);
+            Assert.True(result.User.PhoneNumberVerified);
             _userRepoMock.Verify(r => r.CreateAsync(It.IsAny<User>()), Times.Once);
         }
     }

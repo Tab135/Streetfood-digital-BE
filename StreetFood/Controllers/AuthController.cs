@@ -47,8 +47,10 @@ namespace StreetFood.Controllers
                         id = response.User?.Id,
                         username = response.User?.UserName,
                         email = response.User?.Email,
+                        emailVerified = response.User?.EmailVerified,
                         role = response.User?.Role,
                         phoneNumber = response.User?.PhoneNumber,
+                        phoneNumberVerified = response.User?.PhoneNumberVerified,
                         avatarUrl = response.User?.AvatarUrl,
                         point = response.User?.Point,
                         createdAt = response.User?.CreatedAt,
@@ -95,8 +97,10 @@ namespace StreetFood.Controllers
                         id = response.User?.Id,
                         username = response.User?.UserName,
                         email = response.User?.Email,
+                        emailVerified = response.User?.EmailVerified,
                         role = response.User?.Role,
                         phoneNumber = response.User?.PhoneNumber,
+                        phoneNumberVerified = response.User?.PhoneNumberVerified,
                         avatarUrl = response.User?.AvatarUrl,
                         point = response.User?.Point,
                         createdAt = response.User?.CreatedAt,
@@ -165,8 +169,10 @@ namespace StreetFood.Controllers
                         id = response.User?.Id,
                         username = response.User?.UserName,
                         email = response.User?.Email,
+                        emailVerified = response.User?.EmailVerified,
                         role = response.User?.Role,
                         phoneNumber = response.User?.PhoneNumber,
+                        phoneNumberVerified = response.User?.PhoneNumberVerified,
                         avatarUrl = response.User?.AvatarUrl,
                         point = response.User?.Point,
                         createdAt = response.User?.CreatedAt,
@@ -185,6 +191,70 @@ namespace StreetFood.Controllers
             {
                 return Unauthorized(new { message = ex.Message });
             }
+        }
+
+        [HttpPost("contact-verification")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> StartContactVerification()
+        {
+            try
+            {
+                if (!TryGetCurrentUserId(out var userId))
+                {
+                    return Unauthorized(new { message = "Invalid user token" });
+                }
+
+                var user = await _userService.GetUserById(userId);
+
+                var emailNeedsVerification = !string.IsNullOrWhiteSpace(user.Email) && !user.EmailVerified;
+                var phoneNeedsVerification = !string.IsNullOrWhiteSpace(user.PhoneNumber) && !user.PhoneNumberVerified;
+
+                if (!emailNeedsVerification && !phoneNeedsVerification)
+                {
+                    return Ok(new
+                    {
+                        message = "No pending contact verification",
+                        channels = Array.Empty<string>()
+                    });
+                }
+
+                if (emailNeedsVerification && !phoneNeedsVerification)
+                {
+                    var (message, otp) = await _userService.SendEmailVerificationOtpAsync(userId);
+                    return Ok(new { message, channels = new[] { "email" }, otp });
+                }
+
+                if (phoneNeedsVerification && !emailNeedsVerification)
+                {
+                    var (message, otp) = await _userService.SendPhoneVerificationOtpAsync(userId);
+                    return Ok(new { message, channels = new[] { "phone" }, otp });
+                }
+
+                var (emailMessage, emailOtp) = await _userService.SendEmailVerificationOtpAsync(userId);
+                var (phoneMessage, phoneOtp) = await _userService.SendPhoneVerificationOtpAsync(userId);
+
+                return Ok(new
+                {
+                    message = "Both email and phone require verification. OTP has been sent for both channels.",
+                    channels = new[] { "email", "phone" },
+                    email = new { message = emailMessage, otp = emailOtp },
+                    phone = new { message = phoneMessage, otp = phoneOtp }
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        private bool TryGetCurrentUserId(out int userId)
+        {
+            userId = 0;
+            var userIdClaim = User.FindFirst("userId")?.Value
+                              ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            return !string.IsNullOrWhiteSpace(userIdClaim) && int.TryParse(userIdClaim, out userId);
         }
     }
 }

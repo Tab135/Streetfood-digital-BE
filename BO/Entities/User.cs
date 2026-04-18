@@ -35,6 +35,8 @@ public class User
     [StringLength(20)]
     public string? PhoneNumber {  get; set; }
 
+    public bool PhoneNumberVerified { get; set; } = false;
+
     // Avatar URLs from providers can be very long; map to text to avoid truncation
     [Column(TypeName = "text")]
     public string? AvatarUrl { get; set; }

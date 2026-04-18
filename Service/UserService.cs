@@ -11,9 +11,7 @@ using Service.Interfaces;
 using Service.JWT;
 using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Service
@@ -24,12 +22,13 @@ namespace Service
         private readonly IJwtService _jwt_service;
         private readonly IOtpVerifyRepository _otpRepository;
         private readonly ISmsSender _sms_sender;
+        private readonly IEmailSender _emailSender;
         private readonly IConfiguration _configuration;
         private readonly IFacebookService _facebookService;
         private readonly IGoogleService _googleService;
         private readonly ISettingRepository _settingRepository;
         private readonly IQuestProgressService _questProgressService;
-        private readonly bool _smsDebugMode;
+        private readonly bool _otpDebugMode;
 
         // Constants
         private const int OtpExpiryMinutes = 3;
@@ -40,6 +39,7 @@ namespace Service
             IJwtService jwtService,
             IOtpVerifyRepository otpVerifyRepository,
             ISmsSender smsSender,
+            IEmailSender emailSender,
             IConfiguration configuration,
             IFacebookService facebookService,
             IGoogleService googleService,
@@ -50,12 +50,13 @@ namespace Service
             _jwt_service = jwtService;
             _otpRepository = otpVerifyRepository;
             _sms_sender = smsSender;
+            _emailSender = emailSender;
             _configuration = configuration;
             _facebookService = facebookService;
             _googleService = googleService;
             _settingRepository = settingRepository;
             _questProgressService = questProgressService;
-            _smsDebugMode = bool.TryParse(_configuration["Brevo:DebugMode"], out var smsDebugMode) && smsDebugMode;
+            _otpDebugMode = bool.TryParse(_configuration["Brevo:DebugMode"], out var otpDebugMode) && otpDebugMode;
         }
         public async Task<User> GetUserById(int userId)
         {
@@ -65,10 +66,6 @@ namespace Service
             if (user == null)
             {
                 throw new DomainExceptions("Không tìm thấy người dùng");
-            }
-            if (!user.EmailVerified)
-            {
-                throw new DomainExceptions("Người dùng chưa được xác minh");
             }
 
             return user;
@@ -106,7 +103,13 @@ namespace Service
                     throw new DomainExceptions("Tài khoản của bạn đã bị khóa.");
                 }
 
-                var token = _jwt_service.GenerateToken(user);                await PopulatedUserNotMappedFieldsAsync(user);
+                if (!string.IsNullOrWhiteSpace(user.Email) && !user.EmailVerified)
+                {
+                    throw new DomainExceptions("Email chưa được xác minh. Vui lòng xác minh email trước khi đăng nhập bằng email này.");
+                }
+
+                var token = _jwt_service.GenerateToken(user);
+                await PopulatedUserNotMappedFieldsAsync(user);
                 return new LoginResponse
                 {
                     Token = token,
@@ -125,24 +128,32 @@ namespace Service
                 throw new DomainExceptions("Số điện thoại là bắt buộc");
 
             var normalizedPhoneNumber = NormalizePhoneIdentity(phoneNumber);
-            await CheckOtpRequestLimitAsync(normalizedPhoneNumber);
+            var existingUser = await _userRepository.GetByPhoneNumberAsync(normalizedPhoneNumber);
+            if (existingUser != null)
+            {
+                if (existingUser.Status == "Banned")
+                {
+                    throw new DomainExceptions("Tài khoản của bạn đã bị khóa.");
+                }
 
-            // Generate and store OTP associated with the phone number (stored in OtpVerify.Email field)
+                if (!existingUser.PhoneNumberVerified)
+                {
+                    throw new DomainExceptions("Số điện thoại chưa được xác minh. Vui lòng xác minh số điện thoại trong hồ sơ trước khi đăng nhập bằng số này.");
+                }
+            }
+
             var forcedOtp = TemporaryPhoneOtpOverrides.GetForcedOtp(normalizedPhoneNumber);
-            var otpCode = await GenerateAndStoreOtpAsync(normalizedPhoneNumber, forcedOtp);
+            var otpCode = await SendPhoneOtpAsync(normalizedPhoneNumber, forcedOtp);
 
             if (forcedOtp != null)
             {
-                return ($"OTP đã được tạo cho số {normalizedPhoneNumber}.", _smsDebugMode ? otpCode : null);
+                return ($"OTP đã được tạo cho số {normalizedPhoneNumber}.", _otpDebugMode ? otpCode : null);
             }
 
-            if (_smsDebugMode)
+            if (_otpDebugMode)
             {
                 return ($"OTP đã được tạo cho số {normalizedPhoneNumber} ở chế độ debug.", otpCode);
             }
-
-            var smsPhoneNumber = NormalizePhoneForSms(normalizedPhoneNumber);
-            await _sms_sender.SendOtpSmsAsync(smsPhoneNumber, otpCode, OtpExpiryMinutes);
 
             return ($"OTP đã được gửi đến {normalizedPhoneNumber}. Vui lòng kiểm tra tin nhắn.", null);
         }
@@ -168,8 +179,9 @@ namespace Service
                     Password = string.Empty,
                     Role = hasRoleOverride ? overrideRole : Role.User,
                     CreatedAt = DateTime.UtcNow,
-                    EmailVerified = true,
+                    EmailVerified = false,
                     PhoneNumber = normalizedPhoneNumber,
+                    PhoneNumberVerified = true,
                     FirstName = string.Empty,
                     LastName = string.Empty
                 };
@@ -179,6 +191,10 @@ namespace Service
             else if (user.Status == "Banned")
             {
                 throw new DomainExceptions("Tài khoản của bạn đã bị khóa.");
+            }
+            else if (!user.PhoneNumberVerified)
+            {
+                throw new DomainExceptions("Số điện thoại chưa được xác minh. Vui lòng xác minh số điện thoại trong hồ sơ trước khi đăng nhập bằng số này.");
             }
             else if (hasRoleOverride && user.Role != overrideRole)
             {
@@ -193,27 +209,139 @@ namespace Service
 
             return new LoginResponse { Token = token, User = user };
         }
+
+        public async Task<(string message, string? otp)> SendEmailVerificationOtpAsync(int userId)
+        {
+            var user = await GetUserByIdAsync(userId);
+            if (string.IsNullOrWhiteSpace(user.Email))
+            {
+                throw new DomainExceptions("Tài khoản chưa có email để xác minh");
+            }
+
+            var normalizedEmail = NormalizeEmailIdentity(user.Email);
+            if (user.EmailVerified)
+            {
+                return ($"Email {normalizedEmail} đã được xác minh trước đó.", null);
+            }
+
+            var otpCode = await SendEmailOtpAsync(normalizedEmail);
+            if (_otpDebugMode)
+            {
+                return ($"OTP xác minh email đã được tạo cho {normalizedEmail} ở chế độ debug.", otpCode);
+            }
+
+            return ($"OTP xác minh email đã được gửi đến {normalizedEmail}.", null);
+        }
+
+        public async Task<(string message, string? otp)> SendPhoneVerificationOtpAsync(int userId)
+        {
+            var user = await GetUserByIdAsync(userId);
+            if (string.IsNullOrWhiteSpace(user.PhoneNumber))
+            {
+                throw new DomainExceptions("Tài khoản chưa có số điện thoại để xác minh");
+            }
+
+            var normalizedPhoneNumber = NormalizePhoneIdentity(user.PhoneNumber);
+            if (user.PhoneNumberVerified)
+            {
+                return ($"Số điện thoại {normalizedPhoneNumber} đã được xác minh trước đó.", null);
+            }
+
+            var forcedOtp = TemporaryPhoneOtpOverrides.GetForcedOtp(normalizedPhoneNumber);
+            var otpCode = await SendPhoneOtpAsync(normalizedPhoneNumber, forcedOtp);
+
+            if (forcedOtp != null)
+            {
+                return ($"OTP xác minh số điện thoại đã được tạo cho {normalizedPhoneNumber}.", _otpDebugMode ? otpCode : null);
+            }
+
+            if (_otpDebugMode)
+            {
+                return ($"OTP xác minh số điện thoại đã được tạo cho {normalizedPhoneNumber} ở chế độ debug.", otpCode);
+            }
+
+            return ($"OTP xác minh số điện thoại đã được gửi đến {normalizedPhoneNumber}.", null);
+        }
+
+        public async Task<string> VerifyPendingContactOtpAsync(int userId, string otp)
+        {
+            if (string.IsNullOrWhiteSpace(otp))
+            {
+                throw new DomainExceptions("OTP là bắt buộc");
+            }
+
+            var user = await GetUserByIdAsync(userId);
+            var emailNeedsVerification = !string.IsNullOrWhiteSpace(user.Email) && !user.EmailVerified;
+            var phoneNeedsVerification = !string.IsNullOrWhiteSpace(user.PhoneNumber) && !user.PhoneNumberVerified;
+
+            if (!emailNeedsVerification && !phoneNeedsVerification)
+            {
+                throw new DomainExceptions("Không có thông tin liên hệ nào đang chờ xác minh");
+            }
+
+            if (emailNeedsVerification)
+            {
+                var normalizedEmail = NormalizeEmailIdentity(user.Email!);
+                var (validEmailOtp, _) = await _otpRepository.GetValidOtpWithDetailAsync(normalizedEmail, otp);
+
+                if (validEmailOtp != null)
+                {
+                    user.Email = normalizedEmail;
+                    user.EmailVerified = true;
+                    await _userRepository.UpdateAsync(user);
+                    await MarkOtpAsUsedAsync(validEmailOtp.Id, normalizedEmail, otp);
+                    return "email";
+                }
+            }
+
+            if (phoneNeedsVerification)
+            {
+                var normalizedPhoneNumber = NormalizePhoneIdentity(user.PhoneNumber!);
+                var (validPhoneOtp, _) = await _otpRepository.GetValidOtpWithDetailAsync(normalizedPhoneNumber, otp);
+
+                if (validPhoneOtp != null)
+                {
+                    user.PhoneNumber = normalizedPhoneNumber;
+                    user.PhoneNumberVerified = true;
+                    await _userRepository.UpdateAsync(user);
+                    await MarkOtpAsUsedAsync(validPhoneOtp.Id, normalizedPhoneNumber, otp);
+                    return "phone";
+                }
+            }
+
+            throw new DomainExceptions("OTP không hợp lệ hoặc đã hết hạn");
+        }
         public async Task<User> UpdateUserProfile(int userId, UpdateUserProfileDto updateDto)
         {
             var user = await GetUserByIdAsync(userId);
 
             if (!string.IsNullOrWhiteSpace(updateDto.Username))
-                user.UserName = updateDto.Username;
+                user.UserName = updateDto.Username.Trim();
 
-            if (!string.IsNullOrWhiteSpace(updateDto.Email) && updateDto.Email != user.Email)
+            if (!string.IsNullOrWhiteSpace(updateDto.Email))
             {
-                await ValidateEmailNotExistsAsync(updateDto.Email);
-                user.Email = updateDto.Email;
+                var normalizedEmail = NormalizeEmailIdentity(updateDto.Email);
+                var currentEmail = string.IsNullOrWhiteSpace(user.Email) ? string.Empty : NormalizeEmailIdentity(user.Email);
+
+                if (!string.Equals(normalizedEmail, currentEmail, StringComparison.Ordinal))
+                {
+                    await ValidateEmailNotExistsForAnotherUserAsync(normalizedEmail, userId);
+                    user.Email = normalizedEmail;
+                    user.EmailVerified = false;
+                }
             }
 
-            if (!string.IsNullOrWhiteSpace(updateDto.PhoneNumber) && updateDto.PhoneNumber != user.PhoneNumber)
+            if (!string.IsNullOrWhiteSpace(updateDto.PhoneNumber))
             {
-                var existingUser = await _userRepository.GetByPhoneNumberAsync(updateDto.PhoneNumber);
-                if (existingUser != null)
+                var normalizedPhoneNumber = NormalizePhoneIdentity(updateDto.PhoneNumber);
+                var currentPhoneNumber = string.IsNullOrWhiteSpace(user.PhoneNumber) ? string.Empty : NormalizePhoneIdentity(user.PhoneNumber);
+
+                if (!string.Equals(normalizedPhoneNumber, currentPhoneNumber, StringComparison.Ordinal))
                 {
-                    throw new DomainExceptions("Số điện thoại đã tồn tại");
+                    await ValidatePhoneNotExistsForAnotherUserAsync(normalizedPhoneNumber, userId);
+                    user.PhoneNumber = normalizedPhoneNumber;
+                    user.PhoneNumberVerified = false;
                 }
-                user.PhoneNumber = updateDto.PhoneNumber;
             }
 
             if (!string.IsNullOrWhiteSpace(updateDto.AvatarUrl))
@@ -224,7 +352,9 @@ namespace Service
 
             if (!string.IsNullOrWhiteSpace(updateDto.LastName))
                 user.LastName = updateDto.LastName;
+
             await _userRepository.UpdateAsync(user);
+
             return user;
         }
 
@@ -416,6 +546,11 @@ namespace Service
                     throw new DomainExceptions("Tài khoản của bạn đã bị khóa.");
                 }
 
+                if (!string.IsNullOrWhiteSpace(user.Email) && !user.EmailVerified)
+                {
+                    throw new DomainExceptions("Email chưa được xác minh. Vui lòng xác minh email trước khi đăng nhập bằng email này.");
+                }
+
                 var token = _jwt_service.GenerateToken(user);
                 await PopulatedUserNotMappedFieldsAsync(user);
                 return new LoginResponse { Token = token, User = user };
@@ -451,29 +586,96 @@ namespace Service
         }
 
         // Helper methods
-        private async Task ValidateEmailNotExistsAsync(string email)
+        private async Task ValidateEmailNotExistsForAnotherUserAsync(string email, int currentUserId)
         {
-            if (await _userRepository.EmailExistsAsync(email))
+            var existingUser = await _userRepository.GetByEmailAsync(email);
+            if (existingUser != null && existingUser.Id != currentUserId)
+            {
                 throw new DomainExceptions("Email đã tồn tại");
+            }
         }
+
+        private async Task ValidatePhoneNotExistsForAnotherUserAsync(string phoneNumber, int currentUserId)
+        {
+            var existingUser = await _userRepository.GetByPhoneNumberAsync(phoneNumber);
+            if (existingUser != null && existingUser.Id != currentUserId)
+            {
+                throw new DomainExceptions("Số điện thoại đã tồn tại");
+            }
+        }
+
         private async Task<User> GetUserByIdAsync(int userId)
         {
             var user = await _userRepository.GetUserById(userId);
             if (user == null) throw new DomainExceptions("Không tìm thấy người dùng");
             return user;
         }
-        private async Task CheckOtpRequestLimitAsync(string email)
+
+        private async Task<string> SendPhoneOtpAsync(string normalizedPhoneNumber, string? forcedOtp = null)
         {
-            var recentOtps = await _otpRepository.GetRecentOtpsAsync(email, TimeSpan.FromMinutes(1));
+            await CheckOtpRequestLimitAsync(normalizedPhoneNumber);
+
+            var otpCode = await GenerateAndStoreOtpAsync(normalizedPhoneNumber, forcedOtp);
+            if (forcedOtp == null && !_otpDebugMode)
+            {
+                var smsPhoneNumber = NormalizePhoneForSms(normalizedPhoneNumber);
+                await _sms_sender.SendOtpSmsAsync(smsPhoneNumber, otpCode, OtpExpiryMinutes);
+            }
+
+            return otpCode;
+        }
+
+        private async Task<string> SendEmailOtpAsync(string normalizedEmail)
+        {
+            await CheckOtpRequestLimitAsync(normalizedEmail);
+
+            var otpCode = await GenerateAndStoreOtpAsync(normalizedEmail);
+            if (!_otpDebugMode)
+            {
+                var subject = "StreetFood - Ma OTP xac minh email";
+                var body = BuildEmailOtpBody(otpCode);
+                await _emailSender.SendEmailAsync(normalizedEmail, subject, body);
+            }
+
+            return otpCode;
+        }
+
+        private string BuildEmailOtpBody(string otpCode)
+        {
+            return $@"
+                <div style='font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto;'>
+                    <h2 style='color: #1f2937;'>Xac minh email StreetFood</h2>
+                    <p>Ma OTP cua ban la:</p>
+                    <p style='font-size: 28px; letter-spacing: 4px; font-weight: bold; color: #111827;'>{otpCode}</p>
+                    <p>Ma co hieu luc trong {OtpExpiryMinutes} phut.</p>
+                    <p>Vui long khong chia se ma nay cho bat ky ai.</p>
+                </div>";
+        }
+
+        private string NormalizeEmailIdentity(string email)
+        {
+            var normalized = email.Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                throw new DomainExceptions("Email không hợp lệ");
+            }
+
+            return normalized;
+        }
+
+        private async Task CheckOtpRequestLimitAsync(string identity)
+        {
+            var recentOtps = await _otpRepository.GetRecentOtpsAsync(identity, TimeSpan.FromMinutes(1));
             if (recentOtps.Count >= MaxOtpRequestsPerMinute)
                 throw new DomainExceptions("Yêu cầu OTP quá nhiều. Vui lòng đợi trước khi thử lại.");
         }
-        private async Task<string> GenerateAndStoreOtpAsync(string email, string? forcedOtp = null)
+
+        private async Task<string> GenerateAndStoreOtpAsync(string identity, string? forcedOtp = null)
         {
             var otpCode = forcedOtp ?? GenerateOtp();
             var otpVerify = new OtpVerify
             {
-                Email = email,
+                Email = identity,
                 Otp = otpCode,
                 CreatedAt = DateTime.UtcNow,
                 ExpiredAt = DateTime.UtcNow.AddMinutes(OtpExpiryMinutes),
@@ -500,7 +702,13 @@ namespace Service
 
         private string NormalizePhoneIdentity(string phoneNumber)
         {
-            return phoneNumber.Trim();
+            var normalized = phoneNumber.Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                throw new DomainExceptions("Số điện thoại không hợp lệ");
+            }
+
+            return normalized;
         }
 
         private string NormalizePhoneForSms(string phoneNumber)

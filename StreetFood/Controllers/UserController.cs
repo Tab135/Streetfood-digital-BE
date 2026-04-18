@@ -128,8 +128,10 @@ namespace StreetFood.Controllers
                     userId = user.Id,
                     username = user.UserName,
                     email = user.Email,
+                    emailVerified = user.EmailVerified,
                     role = user.Role,
                     phoneNumber = user.PhoneNumber,
+                    phoneNumberVerified = user.PhoneNumberVerified,
                     avatarUrl = user.AvatarUrl,
                     point = user.Point, 
                     createdAt = user.CreatedAt,
@@ -175,8 +177,10 @@ namespace StreetFood.Controllers
                     userId = updatedUser.Id,
                     username = updatedUser.UserName,
                     email = updatedUser.Email,
+                    emailVerified = updatedUser.EmailVerified,
                     role = updatedUser.Role,
                     phoneNumber = updatedUser.PhoneNumber,
+                    phoneNumberVerified = updatedUser.PhoneNumberVerified,
                     avatarUrl = updatedUser.AvatarUrl,
                     point = updatedUser.Point,
                     createdAt = updatedUser.CreatedAt,
@@ -193,6 +197,44 @@ namespace StreetFood.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
+        }
+
+        [HttpPost("profile/verify-otp")]
+        [Authorize]
+        public async Task<IActionResult> VerifyPendingContactOtp([FromBody] VerifyOtpCodeDto request)
+        {
+            try
+            {
+                if (!TryGetCurrentUserId(out var userId))
+                {
+                    return Unauthorized(new { message = "Invalid user token" });
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var verifiedChannel = await _userService.VerifyPendingContactOtpAsync(userId, request.Otp);
+                return Ok(new
+                {
+                    message = "Contact verified successfully",
+                    channel = verifiedChannel
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        private bool TryGetCurrentUserId(out int userId)
+        {
+            userId = 0;
+            var userIdClaim = User.FindFirst("userId")?.Value
+                              ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            return !string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out userId);
         }
     }
 }

@@ -25,12 +25,11 @@ namespace Service
         {
             var apiKey = _configuration["Brevo:ApiKey"];
             var sender = _configuration["Brevo:SmsSender"] ?? "StreetFood";
-
+            string formatPhoneNumber = "";
             if (string.IsNullOrWhiteSpace(apiKey))
             {
                 throw new Exception("Brevo API Key is missing in configuration.");
             }
-
             var payload = new
             {
                 sender,
