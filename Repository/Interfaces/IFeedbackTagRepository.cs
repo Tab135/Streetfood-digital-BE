@@ -10,8 +10,8 @@ namespace Repository.Interfaces
         Task<FeedbackTag?> GetById(int tagId);
         Task<List<FeedbackTag>> GetAll();
         Task<FeedbackTag> Update(FeedbackTag tag);
-        Task<bool> Delete(int tagId);
         Task<bool> Exists(int tagId);
         Task<bool> IsInUseAsync(int id);
+        Task<bool> UpdateIsActiveAsync(int id, bool isActive);
     }
 }

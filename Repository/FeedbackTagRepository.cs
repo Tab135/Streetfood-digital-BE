@@ -36,10 +36,6 @@ namespace Repository
             return await _dao.Update(tag);
         }
 
-        public async Task<bool> Delete(int tagId)
-        {
-            return await _dao.Delete(tagId);
-        }
 
         public async Task<bool> Exists(int tagId)
         {
@@ -49,6 +45,11 @@ namespace Repository
         public async Task<bool> IsInUseAsync(int id)
         {
             return await _dao.IsInUseAsync(id);
+        }
+
+        public async Task<bool> UpdateIsActiveAsync(int id, bool isActive)
+        {
+            return await _dao.UpdateIsActiveAsync(id, isActive);
         }
     }
 }
