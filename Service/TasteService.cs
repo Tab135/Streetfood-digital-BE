@@ -79,8 +79,8 @@ namespace Service
                     throw new DomainExceptions($"Không thể vô hiệu hóa vị này vì đang được sử dụng");
             }
 
-            existing.IsActive = !existing.IsActive;
-            await _repo.UpdateAsync(existing);
+            var newStatus = !existing.IsActive;
+            await _repo.UpdateIsActiveAsync(id, newStatus);
             return true;
         }
 

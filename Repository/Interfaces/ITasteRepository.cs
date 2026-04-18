@@ -10,9 +10,8 @@ namespace Repository.Interfaces
         Task<Taste?> GetByIdAsync(int tasteId);
         Task<List<Taste>> GetAllAsync();
         Task UpdateAsync(Taste taste);
-        Task DeleteAsync(int tasteId);
-        Task<bool> ExistsByIdAsync(int tasteId);
         Task<List<Taste>> GetByIdsAsync(List<int> tasteIds);
         Task<bool> IsInUseAsync(int id);
+        Task<bool> UpdateIsActiveAsync(int id, bool isActive);
     }
 }

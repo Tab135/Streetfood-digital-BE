@@ -38,15 +38,6 @@ namespace DAL
             return feedbackTag;
         }
 
-        public async Task<bool> Delete(int id)
-        {
-            var existing = await _context.FeedbackTags.FirstOrDefaultAsync(x => x.TagId == id);
-            if (existing == null) return false;
-            _context.FeedbackTags.Remove(existing);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
         public async Task<bool> Exists(int id)
         {
             return await _context.FeedbackTags.AnyAsync(x => x.TagId == id);
@@ -54,5 +45,14 @@ namespace DAL
         public async Task<bool> IsInUseAsync(int id)
         {
             return await _context.FeedbackTagAssociations.AnyAsync(x => x.TagId == id);
-        }    }
+        }
+
+        public async Task<bool> UpdateIsActiveAsync(int id, bool isActive)
+        {
+            var rowsAffected = await _context.FeedbackTags
+                .Where(t => t.TagId == id)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.IsActive, isActive));
+            return rowsAffected > 0;
+        }
+    }
 }

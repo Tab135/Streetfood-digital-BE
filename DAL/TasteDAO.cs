@@ -38,20 +38,6 @@ namespace DAL
             await _context.SaveChangesAsync();
         }
 
-        public async Task DeleteAsync(int tasteId)
-        {
-            var taste = await _context.Tastes.FindAsync(tasteId);
-            if (taste != null)
-            {
-                _context.Tastes.Remove(taste);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        public async Task<bool> ExistsByIdAsync(int tasteId)
-        {
-            return await _context.Tastes.AnyAsync(t => t.TasteId == tasteId);
-        }
 
         public async Task<List<Taste>> GetByIdsAsync(List<int> tasteIds)
         {
@@ -62,5 +48,14 @@ namespace DAL
         public async Task<bool> IsInUseAsync(int id)
         {
             return await _context.DishTastes.AnyAsync(x => x.TasteId == id);
-        }    }
+        }
+
+        public async Task<bool> UpdateIsActiveAsync(int id, bool isActive)
+        {
+            var rowsAffected = await _context.Tastes
+                .Where(t => t.TasteId == id)
+                .ExecuteUpdateAsync(s => s.SetProperty(t => t.IsActive, isActive));
+            return rowsAffected > 0;
+        }
+    }
 }

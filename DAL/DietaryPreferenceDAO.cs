@@ -45,20 +45,7 @@ namespace DAL
             await _context.SaveChangesAsync();
             return dietaryPreference;
         }
-
-        public async Task<bool> Delete(int id)
-        {
-            var existing = await _context.DietaryPreferences.FirstOrDefaultAsync(x => x.DietaryPreferenceId == id);
-            if (existing == null) return false;
-            _context.DietaryPreferences.Remove(existing);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> Exists(int id)
-        {
-            return await _context.DietaryPreferences.AnyAsync(x => x.DietaryPreferenceId == id);
-        }
+    
 
         public async Task<bool> IsInUseAsync(int id)
         {
@@ -67,6 +54,14 @@ namespace DAL
 
             var usedByVendor = await _context.VendorDietaryPreferences.AnyAsync(x => x.DietaryPreferenceId == id);
             return usedByVendor;
+        }
+
+        public async Task<bool> UpdateIsActiveAsync(int id, bool isActive)
+        {
+            var rowsAffected = await _context.DietaryPreferences
+                .Where(dp => dp.DietaryPreferenceId == id)
+                .ExecuteUpdateAsync(s => s.SetProperty(dp => dp.IsActive, isActive));
+            return rowsAffected > 0;
         }
     }
 }

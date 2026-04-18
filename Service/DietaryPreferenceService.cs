@@ -41,8 +41,8 @@ namespace Service
                     throw new BO.Exceptions.DomainExceptions($"Không thể vô hiệu hóa sở thích ăn uống này vì đang được sử dụng");
             }
 
-            entity.IsActive = !entity.IsActive;
-            await _repo.Update(entity);
+            var newStatus = !entity.IsActive;
+            await _repo.UpdateIsActiveAsync(id, newStatus);
             return true;
         }
 

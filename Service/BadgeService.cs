@@ -70,7 +70,7 @@ namespace Service
             }
 
             var newStatus = !entity.IsActive;
-            var updatedBadge = await _badgeRepository.UpdateIsActiveAsync(badgeId, newStatus);
+            await _badgeRepository.UpdateIsActiveAsync(badgeId, newStatus);
             return true;
         }
 
