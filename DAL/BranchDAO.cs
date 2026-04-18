@@ -448,12 +448,14 @@ namespace DAL
                 return (new List<SimilarBranchResponseDto>(), 0);
             }
 
-            var currentDishIds = (currentBranch.BranchDishes ?? new List<BranchDish>())
-                .Where(bd => bd.Dish != null && bd.Dish.IsActive)
-                .Select(bd => bd.DishId)
-                .ToHashSet();
+            // Use normalized dish names for fuzzy matching
+            var currentDishNames = (currentBranch.BranchDishes ?? new List<BranchDish>())
+                .Where(bd => bd.Dish != null && bd.Dish.IsActive && !string.IsNullOrWhiteSpace(bd.Dish.Name))
+                .Select(bd => bd.Dish.Name.ToLower().Trim())
+                .Distinct()
+                .ToList();
 
-            if (currentDishIds.Count == 0)
+            if (currentDishNames.Count == 0)
             {
                 return (new List<SimilarBranchResponseDto>(), 0);
             }
@@ -463,35 +465,47 @@ namespace DAL
                 .Select(branch =>
                 {
                     var candidateDishes = (branch.BranchDishes ?? new List<BranchDish>())
-                        .Where(bd => bd.Dish != null && bd.Dish.IsActive)
+                        .Where(bd => bd.Dish != null && bd.Dish.IsActive && !string.IsNullOrWhiteSpace(bd.Dish.Name))
                         .ToList();
 
-                    var candidateDishIds = candidateDishes
-                        .Select(bd => bd.DishId)
-                        .ToHashSet();
+                    var candidateDishNames = candidateDishes
+                        .Select(bd => bd.Dish.Name.ToLower().Trim())
+                        .Distinct()
+                        .ToList();
 
-                    if (candidateDishIds.Count == 0)
+                    if (candidateDishNames.Count == 0)
                     {
                         return null;
                     }
 
-                    var sharedDishIds = candidateDishIds
-                        .Where(currentDishIds.Contains)
-                        .ToHashSet();
+                    // Fuzzy matching: find candidate dishes similar to current dishes (threshold: 0.7 = 70% similar)
+                    var sharedDishPairs = new HashSet<string>();
+                    const double similarityThreshold = 0.7;
 
-                    if (sharedDishIds.Count == 0)
+                    foreach (var currentDish in currentDishNames)
+                    {
+                        foreach (var candidateDish in candidateDishNames)
+                        {
+                            double similarity = CalculateSimilarity(currentDish, candidateDish);
+                            if (similarity >= similarityThreshold)
+                            {
+                                sharedDishPairs.Add(candidateDish);
+                            }
+                        }
+                    }
+
+                    if (sharedDishPairs.Count == 0)
                     {
                         return null;
                     }
 
-                    var unionCount = currentDishIds.Union(candidateDishIds).Count();
-                    var jaccard = unionCount == 0 ? 0 : (double)sharedDishIds.Count / unionCount;
+                    var unionCount = currentDishNames.Union(candidateDishNames).Count();
+                    var jaccard = unionCount == 0 ? 0 : (double)sharedDishPairs.Count / unionCount;
                     var similarityScore = Math.Round((jaccard * 0.8) + ((branch.AvgRating / 5.0) * 0.2), 4);
 
-                    var sharedDishNames = candidateDishes
-                        .Where(bd => sharedDishIds.Contains(bd.DishId))
+                    var displayedDishNames = candidateDishes
+                        .Where(bd => sharedDishPairs.Contains(bd.Dish.Name.ToLower().Trim()))
                         .Select(bd => bd.Dish.Name)
-                        .Where(name => !string.IsNullOrWhiteSpace(name))
                         .Distinct()
                         .Take(5)
                         .ToList();
@@ -510,9 +524,9 @@ namespace DAL
                         AvgRating = branch.AvgRating,
                         TotalReviewCount = branch.TotalReviewCount,
                         IsSubscribed = branch.IsSubscribed,
-                        CommonDishCount = sharedDishIds.Count,
+                        CommonDishCount = sharedDishPairs.Count,
                         SimilarityScore = similarityScore,
-                        SharedDishNames = sharedDishNames
+                        SharedDishNames = displayedDishNames
                     };
                 })
                 .Where(item => item != null)
@@ -779,6 +793,51 @@ namespace DAL
                 b.BatchRatingSum = 0;
             }
             await _context.SaveChangesAsync(ct);
+        }
+
+        /// <summary>
+        /// Calculate string similarity using Levenshtein distance (0.0 to 1.0, where 1.0 is identical).
+        /// </summary>
+        private static double CalculateSimilarity(string a, string b)
+        {
+            int maxLength = Math.Max(a.Length, b.Length);
+            if (maxLength == 0) return 1.0; // Both empty strings
+
+            int distance = LevenshteinDistance(a, b);
+            return 1.0 - (double)distance / maxLength;
+        }
+
+        /// <summary>
+        /// Calculate the Levenshtein distance between two strings.
+        /// </summary>
+        private static int LevenshteinDistance(string a, string b)
+        {
+            if (a.Length == 0) return b.Length;
+            if (b.Length == 0) return a.Length;
+
+            int[] row = new int[b.Length + 1];
+            int[] prevRow = new int[b.Length + 1];
+
+            for (int j = 0; j <= b.Length; j++)
+                prevRow[j] = j;
+
+            for (int i = 1; i <= a.Length; i++)
+            {
+                row[0] = i;
+                for (int j = 1; j <= b.Length; j++)
+                {
+                    int cost = a[i - 1] == b[j - 1] ? 0 : 1;
+                    row[j] = Math.Min(
+                        Math.Min(row[j - 1] + 1, prevRow[j] + 1),
+                        prevRow[j - 1] + cost);
+                }
+
+                var temp = row;
+                row = prevRow;
+                prevRow = temp;
+            }
+
+            return prevRow[b.Length];
         }
     }
 }
