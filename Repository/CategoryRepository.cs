@@ -47,7 +47,7 @@ namespace Repository
             return await _categoryDAO.IsInUseAsync(id);
         }
 
-        public async Task<Category> UpdateIsActiveAsync(int categoryId, bool isActive)
+        public async Task<bool> UpdateIsActiveAsync(int categoryId, bool isActive)
         {
             return await _categoryDAO.UpdateIsActiveAsync(categoryId, isActive);
         }

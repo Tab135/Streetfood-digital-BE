@@ -41,7 +41,7 @@ namespace Repository
             return await _badgeDAO.IsInUseAsync(badgeId);
         }
 
-        public async Task<Badge> UpdateIsActiveAsync(int badgeId, bool isActive)
+        public async Task<bool> UpdateIsActiveAsync(int badgeId, bool isActive)
         {
             return await _badgeDAO.UpdateIsActiveAsync(badgeId, isActive);
         }

@@ -85,7 +85,7 @@ namespace Service
 
             var newStatus = !existing.IsActive;
             var updatedCategory = await _repo.UpdateIsActiveAsync(id, newStatus);
-            return updatedCategory.IsActive;
+            return true;
         }
 
         private async Task ValidateVendorHasVerifiedBranchAsync(int userId)

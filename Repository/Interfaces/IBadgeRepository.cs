@@ -11,6 +11,6 @@ namespace Repository.Interfaces
         Task<List<Badge>> GetAll();
         Task<Badge> Update(Badge badge);
         Task<bool> IsInUseAsync(int badgeId);
-        Task<Badge> UpdateIsActiveAsync(int badgeId, bool isActive);
+        Task<bool> UpdateIsActiveAsync(int badgeId, bool isActive);
     }
 }

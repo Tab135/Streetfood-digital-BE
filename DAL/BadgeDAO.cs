@@ -49,7 +49,7 @@ namespace DAL
             return usedInQuest;
         }
 
-        public async Task<Badge> UpdateIsActiveAsync(int badgeId, bool isActive)
+        public async Task<bool> UpdateIsActiveAsync(int badgeId, bool isActive)
         {
            var rowsAffected = await _context.Badges
                 .Where(b => b.BadgeId == badgeId)

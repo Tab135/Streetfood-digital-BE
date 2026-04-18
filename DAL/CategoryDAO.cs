@@ -49,7 +49,7 @@ namespace DAL
             return await _context.Dishes.AnyAsync(x => x.CategoryId == id);
         }
 
-        public async Task<Category> UpdateIsActiveAsync(int categoryId, bool isActive)
+        public async Task<bool> UpdateIsActiveAsync(int categoryId, bool isActive)
         {
            var rowsAffected =  await _context.Categories
                 .Where(c => c.CategoryId == categoryId)

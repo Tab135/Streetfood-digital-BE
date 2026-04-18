@@ -12,6 +12,6 @@ namespace Repository.Interfaces
         Task UpdateAsync(Category category);
         Task<bool> ExistsByIdAsync(int categoryId);
         Task<bool> IsInUseAsync(int id);
-        Task<Category> UpdateIsActiveAsync(int categoryId, bool isActive);
+        Task<bool> UpdateIsActiveAsync(int categoryId, bool isActive);
     }
 }
