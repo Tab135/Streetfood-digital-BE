@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
+using StreetFood.Services;
 using System;
 using System.Threading.Tasks;
 
@@ -15,10 +16,12 @@ namespace StreetFood.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly IS3Service _s3Service;
 
-        public UserController(IUserService userService)
+        public UserController(IUserService userService, IS3Service s3Service)
         {
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
+            _s3Service = s3Service ?? throw new ArgumentNullException(nameof(s3Service));
         }
 
         [HttpGet]
@@ -191,6 +194,43 @@ namespace StreetFood.Controllers
                     moneyBalance = updatedUser.MoneyBalance,
                     tierId = updatedUser.TierId,
                     xp = updatedUser.XP
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("profile/avatar")]
+        [Authorize]
+        public async Task<IActionResult> UploadAvatar([FromForm] IFormFile image)
+        {
+            try
+            {
+                if (image == null || image.Length == 0)
+                {
+                    return BadRequest(new { message = "Image is required" });
+                }
+
+                if (!TryGetCurrentUserId(out var userId))
+                {
+                    return Unauthorized(new { message = "Invalid user token" });
+                }
+
+                var imageUrl = await _s3Service.UploadFileAsync(image, "avatars");
+                var updatedUser = await _userService.UpdateUserProfile(userId, new UpdateUserProfileDto
+                {
+                    AvatarUrl = imageUrl
+                });
+
+                return Ok(new
+                {
+                    message = "Avatar uploaded successfully",
+                    data = new
+                    {
+                        avatarUrl = updatedUser.AvatarUrl
+                    }
                 });
             }
             catch (Exception ex)
