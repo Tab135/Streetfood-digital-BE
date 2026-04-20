@@ -175,8 +175,21 @@ namespace Service
                 foreach (var reward in taskDto.Rewards)
                     await ValidateTaskRewardAsync(reward.RewardType, reward.RewardValue);
             }
+            var incomingVoucherIds = tasks
+                .SelectMany(t => t.Rewards)
+                .Where(r => r.RewardType == QuestRewardType.VOUCHER)
+                .Select(r => r.RewardValue)
+                .ToHashSet();
 
-            await RemoveVouchersFromTasksAsync(quest.QuestTasks);
+            var tasksWithVouchersToRemove = quest.QuestTasks.Select(t => new QuestTask
+            {
+                QuestTaskRewards = t.QuestTaskRewards
+                    .Where(r => r.RewardType == QuestRewardType.VOUCHER && !incomingVoucherIds.Contains(r.RewardValue))
+                    .ToList()
+            }).ToList();
+
+            await RemoveVouchersFromTasksAsync(tasksWithVouchersToRemove);
+
             await _questRepository.RemoveTasksAsync([.. quest.QuestTasks]);
             var newTasks = tasks.Select(t => new QuestTask
             {
@@ -494,6 +507,7 @@ namespace Service
                 Tasks = quest.QuestTasks.Select(t => new QuestTaskResponseDto
                 {
                     QuestTaskId = t.QuestTaskId,
+                    QuestId = quest.QuestId,
                     Type = t.Type,
                     TargetValue = t.TargetValue,
                     Description = t.Description,
