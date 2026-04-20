@@ -37,11 +37,13 @@ namespace StreetFood.Controllers
                 }
 
                 var response = await _userService.GoogleLoginAsync(googleAuthDto);
+                var refreshToken = response.User != null ? _jwtService.GenerateRefreshToken(response.User) : string.Empty;
                 
                 return Ok(new
                 {
                     message = "Login successful",
                     token = response.Token,
+                    refreshToken,
                     user = new
                     {
                         id = response.User?.Id,
@@ -87,11 +89,13 @@ namespace StreetFood.Controllers
                 }
 
                 var response = await _userService.FacebookLoginAsync(facebookAuthDto);
+                var refreshToken = response.User != null ? _jwtService.GenerateRefreshToken(response.User) : string.Empty;
                 
                 return Ok(new
                 {
                     message = "Login successful",
                     token = response.Token,
+                    refreshToken,
                     user = new
                     {
                         id = response.User?.Id,
@@ -159,11 +163,13 @@ namespace StreetFood.Controllers
                 }
 
                 var response = await _userService.VerifyPhoneOtpAsync(request.PhoneNumber, request.Otp);
+                var refreshToken = response.User != null ? _jwtService.GenerateRefreshToken(response.User) : string.Empty;
 
                 return Ok(new
                 {
                     message = "Login successful",
                     token = response.Token,
+                    refreshToken,
                     user = new
                     {
                         id = response.User?.Id,
@@ -190,6 +196,66 @@ namespace StreetFood.Controllers
             catch (Exception ex)
             {
                 return Unauthorized(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("refresh-token")]
+        [ProducesResponseType(typeof(ApiResponse<LoginResponse>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var userId = _jwtService.GetUserIdFromRefreshToken(request.RefreshToken);
+                if (!userId.HasValue)
+                {
+                    return Unauthorized(new { message = "Invalid refresh token" });
+                }
+
+                var user = await _userService.GetUserById(userId.Value);
+                if (user.Status == "Banned")
+                {
+                    return Unauthorized(new { message = "Tài khoản của bạn đã bị khóa." });
+                }
+
+                var accessToken = _jwtService.GenerateToken(user);
+                var newRefreshToken = _jwtService.GenerateRefreshToken(user);
+
+                return Ok(new
+                {
+                    message = "Token refreshed successfully",
+                    token = accessToken,
+                    refreshToken = newRefreshToken,
+                    user = new
+                    {
+                        id = user.Id,
+                        username = user.UserName,
+                        email = user.Email,
+                        emailVerified = user.EmailVerified,
+                        role = user.Role,
+                        phoneNumber = user.PhoneNumber,
+                        phoneNumberVerified = user.PhoneNumberVerified,
+                        avatarUrl = user.AvatarUrl,
+                        point = user.Point,
+                        createdAt = user.CreatedAt,
+                        firstName = user.FirstName,
+                        lastName = user.LastName,
+                        userInfoSetup = user.UserInfoSetup,
+                        dietarySetup = user.DietarySetup,
+                        status = user.Status,
+                        moneyBalance = user.MoneyBalance,
+                        tierId = user.TierId,
+                        xp = user.XP
+                    }
+                });
+            }
+            catch
+            {
+                return Unauthorized(new { message = "Invalid refresh token" });
             }
         }
 
