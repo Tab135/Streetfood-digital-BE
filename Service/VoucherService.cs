@@ -101,9 +101,9 @@ public class VoucherService : IVoucherService
         return voucher == null ? null : MapToDto(voucher);
     }
 
-    public async Task<List<VoucherDto>> GetAllVouchersAsync()
+    public async Task<List<VoucherDto>> GetAllVouchersAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null)
     {
-        var vouchers = await _voucherRepository.GetAllAsync();
+        var vouchers = await _voucherRepository.GetAllAsync(isBelongAQuestTask, isRemaining);
         return vouchers.Select(MapToDto).ToList();
     }
 

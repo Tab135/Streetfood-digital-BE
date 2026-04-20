@@ -57,9 +57,9 @@ public class VoucherController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] bool? isBelongAQuestTask = null, [FromQuery] bool? isRemaining = null)
     {
-        var vouchers = await _voucherService.GetAllVouchersAsync();
+        var vouchers = await _voucherService.GetAllVouchersAsync(isBelongAQuestTask, isRemaining);
         return Ok(vouchers);
     }
 

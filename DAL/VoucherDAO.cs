@@ -31,10 +31,37 @@ public class VoucherDAO
         return await _context.Vouchers.FirstOrDefaultAsync(v => v.VoucherCode == voucherCode);
     }
 
-    public async Task<List<Voucher>> GetAllAsync()
+    public async Task<List<Voucher>> GetAllAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null)
     {
-        return await _context.Vouchers
-            .Include(v => v.Campaign)
+        var query = _context.Vouchers.Include(v => v.Campaign).AsQueryable();
+
+        if (isRemaining.HasValue)
+        {
+            if (isRemaining.Value)
+            {
+                query = query.Where(v => v.UsedQuantity < v.Quantity);
+            }
+            else
+            {
+                query = query.Where(v => v.UsedQuantity >= v.Quantity);
+            }
+        }
+
+        if (isBelongAQuestTask.HasValue)
+        {
+            if (isBelongAQuestTask.Value)
+            {
+                query = query.Where(v => _context.QuestTaskRewards
+                    .Any(q => q.RewardType == BO.Enums.QuestRewardType.VOUCHER && q.RewardValue == v.VoucherId));
+            }
+            else
+            {
+                query = query.Where(v => !_context.QuestTaskRewards
+                    .Any(q => q.RewardType == BO.Enums.QuestRewardType.VOUCHER && q.RewardValue == v.VoucherId));
+            }
+        }
+
+        return await query
             .OrderByDescending(v => v.VoucherId)
             .ToListAsync();
     }
