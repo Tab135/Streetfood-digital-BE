@@ -22,7 +22,7 @@ public class VoucherDAO
     public async Task<Voucher?> GetByIdAsync(int voucherId)
     {
         return await _context.Vouchers
-            .Include(v => v.Campaign)
+            .Include(v => v.VendorCampaign)
             .FirstOrDefaultAsync(v => v.VoucherId == voucherId);
     }
 
@@ -31,10 +31,37 @@ public class VoucherDAO
         return await _context.Vouchers.FirstOrDefaultAsync(v => v.VoucherCode == voucherCode);
     }
 
-    public async Task<List<Voucher>> GetAllAsync()
+    public async Task<List<Voucher>> GetAllAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null)
     {
-        return await _context.Vouchers
-            .Include(v => v.Campaign)
+        var query = _context.Vouchers.Include(v => v.VendorCampaign).AsQueryable();
+
+        if (isRemaining.HasValue)
+        {
+            if (isRemaining.Value)
+            {
+                query = query.Where(v => v.UsedQuantity < v.Quantity);
+            }
+            else
+            {
+                query = query.Where(v => v.UsedQuantity >= v.Quantity);
+            }
+        }
+
+        if (isBelongAQuestTask.HasValue)
+        {
+            if (isBelongAQuestTask.Value)
+            {
+                query = query.Where(v => _context.QuestTaskRewards
+                    .Any(q => q.RewardType == BO.Enums.QuestRewardType.VOUCHER && q.RewardValue == v.VoucherId));
+            }
+            else
+            {
+                query = query.Where(v => !_context.QuestTaskRewards
+                    .Any(q => q.RewardType == BO.Enums.QuestRewardType.VOUCHER && q.RewardValue == v.VoucherId));
+            }
+        }
+
+        return await query
             .OrderByDescending(v => v.VoucherId)
             .ToListAsync();
     }
@@ -65,7 +92,11 @@ public class VoucherDAO
     public async Task<List<Voucher>> GetByCampaignIdAsync(int campaignId)
     {
         return await _context.Vouchers
-            .Where(v => v.CampaignId == campaignId)
+            .Where(v => v.VendorCampaignId == campaignId || 
+                        _context.QuestTaskRewards
+                            .Any(qtr => qtr.RewardType == BO.Enums.QuestRewardType.VOUCHER &&
+                                        qtr.RewardValue == v.VoucherId &&
+                                        qtr.QuestTask.Quest.CampaignId == campaignId))
             .OrderByDescending(v => v.VoucherId)
             .ToListAsync();
     }
@@ -73,7 +104,7 @@ public class VoucherDAO
     public async Task<List<Voucher>> GetMarketplaceVouchersAsync(DateTime now)
     {
         return await _context.Vouchers
-            .Where(v => v.IsActive && v.StartDate <= now && (!v.EndDate.HasValue || v.EndDate >= now) && v.CampaignId == null && v.RedeemPoint > 0)
+            .Where(v => v.IsActive && v.StartDate <= now && (!v.EndDate.HasValue || v.EndDate >= now) && v.VendorCampaignId == null && v.RedeemPoint > 0)
             .OrderByDescending(v => v.VoucherId)
             .ToListAsync();
     }
@@ -82,7 +113,13 @@ public class VoucherDAO
     {
         return await _context.Vouchers
             .AsNoTracking()
-            .Where(v => v.CampaignId.HasValue && campaignIds.Contains(v.CampaignId.Value) && v.IsActive)
+            .Where(v => v.IsActive && 
+                        ((v.VendorCampaignId.HasValue && campaignIds.Contains(v.VendorCampaignId.Value)) ||
+                         _context.QuestTaskRewards
+                             .Any(qtr => qtr.RewardType == BO.Enums.QuestRewardType.VOUCHER &&
+                                         qtr.RewardValue == v.VoucherId &&
+                                         qtr.QuestTask.Quest.CampaignId.HasValue &&
+                                         campaignIds.Contains(qtr.QuestTask.Quest.CampaignId.Value))))
             .ToListAsync();
     }
 }

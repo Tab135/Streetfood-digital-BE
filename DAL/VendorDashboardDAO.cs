@@ -80,8 +80,8 @@ namespace DAL
                 .Where(o => branchIds.Contains(o.BranchId) 
                             && o.Status == OrderStatus.Complete 
                             && o.AppliedVoucherId != null
-                            && o.AppliedVoucher!.Campaign != null 
-                            && o.AppliedVoucher.Campaign.CreatedByVendorId == vendorId)
+                            && o.AppliedVoucher!.VendorCampaign != null 
+                            && o.AppliedVoucher.VendorCampaign.CreatedByVendorId == vendorId)
                 .Include(o => o.AppliedVoucher)
                 .GroupBy(o => new { o.AppliedVoucher!.Type, o.AppliedVoucher.Name })
                 .Select(g => new VoucherUsageDto

@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260420082007_RemoveCreatedByBranchIdFromCampaign")]
+    partial class RemoveCreatedByBranchIdFromCampaign
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1898,6 +1901,9 @@ namespace DAL.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("VoucherId"));
 
+                    b.Property<int?>("CampaignId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
@@ -1939,9 +1945,6 @@ namespace DAL.Migrations
                     b.Property<int>("UsedQuantity")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("VendorCampaignId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("VoucherCode")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1949,7 +1952,7 @@ namespace DAL.Migrations
 
                     b.HasKey("VoucherId");
 
-                    b.HasIndex("VendorCampaignId");
+                    b.HasIndex("CampaignId");
 
                     b.HasIndex("VoucherCode")
                         .IsUnique();
@@ -2618,12 +2621,12 @@ namespace DAL.Migrations
 
             modelBuilder.Entity("BO.Entities.Voucher", b =>
                 {
-                    b.HasOne("BO.Entities.Campaign", "VendorCampaign")
+                    b.HasOne("BO.Entities.Campaign", "Campaign")
                         .WithMany()
-                        .HasForeignKey("VendorCampaignId")
+                        .HasForeignKey("CampaignId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.Navigation("VendorCampaign");
+                    b.Navigation("Campaign");
                 });
 
             modelBuilder.Entity("BO.Entities.WorkSchedule", b =>

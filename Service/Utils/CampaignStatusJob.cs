@@ -57,7 +57,7 @@ namespace Service.Utils
             }
 
             // For vendor/branch campaigns, branch rows should align to campaign active window.
-            if (campaign.CreatedByBranchId != null || campaign.CreatedByVendorId != null)
+            if (campaign.CreatedByVendorId != null)
             {
                 await _branchCampaignRepo.SetAllIsActiveForCampaignAsync(campaign.CampaignId, true);
             }
@@ -162,7 +162,7 @@ namespace Service.Utils
                 return;
             }
 
-            if (campaign.CreatedByBranchId != null || campaign.CreatedByVendorId != null)
+            if (campaign.CreatedByVendorId != null)
             {
                 return;
             }

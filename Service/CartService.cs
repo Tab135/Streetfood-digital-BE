@@ -246,33 +246,23 @@ public class CartService : ICartService
                 throw new DomainExceptions("Voucher is out of stock");
             }
 
-            if (voucher.CampaignId.HasValue)
+            if (voucher.VendorCampaignId.HasValue)
             {
-                var campaign = voucher.Campaign
+                var campaign = voucher.VendorCampaign
                     ?? throw new DomainExceptions("Campaign voucher is invalid");
 
-                if (campaign.CreatedByBranchId.HasValue)
+                var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(request.BranchId, campaign.CampaignId);
+                if (joinInfo == null || joinInfo.IsActive != true)
                 {
-                    if (request.BranchId != campaign.CreatedByBranchId.Value)
+                    if (campaign.CreatedByVendorId.HasValue)
                     {
-                        throw new DomainExceptions("This voucher is only applicable to a specific branch.");
+                        throw new DomainExceptions("This branch is not included in this vendor campaign.");
                     }
-                }
-                else
-                {
-                    var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(request.BranchId, campaign.CampaignId);
-                    if (joinInfo == null || joinInfo.IsActive != true)
-                    {
-                        if (campaign.CreatedByVendorId.HasValue)
-                        {
-                            throw new DomainExceptions("This branch is not included in this vendor campaign.");
-                        }
 
-                        throw new DomainExceptions("This voucher campaign is not active for this branch.");
-                    }
+                    throw new DomainExceptions("This voucher campaign is not active for this branch.");
                 }
 
-                if (campaign.CreatedByVendorId.HasValue || campaign.CreatedByBranchId.HasValue)
+                if (campaign.CreatedByVendorId.HasValue)
                 {
                     redeemedVendorVoucher = voucher;
                 }
@@ -461,18 +451,18 @@ public class CartService : ICartService
 
     private static bool IsSystemFundedVoucher(BO.Entities.Voucher voucher)
     {
-        if (!voucher.CampaignId.HasValue)
+        if (!voucher.VendorCampaignId.HasValue)
         {
             return true;
         }
 
-        var campaign = voucher.Campaign;
+        var campaign = voucher.VendorCampaign;
         if (campaign == null)
         {
             return false;
         }
 
-        return !campaign.CreatedByBranchId.HasValue && !campaign.CreatedByVendorId.HasValue;
+        return !campaign.CreatedByVendorId.HasValue;
     }
 
     private async Task EnsureUserExistsAsync(int userId)
