@@ -31,9 +31,29 @@ public class VoucherDAO
         return await _context.Vouchers.FirstOrDefaultAsync(v => v.VoucherCode == voucherCode);
     }
 
-    public async Task<List<Voucher>> GetAllAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null)
+    public async Task<int?> GetSystemCampaignIdAsync(int voucherId)
+    {
+        return await _context.QuestTaskRewards
+            .Where(qtr => qtr.RewardType == BO.Enums.QuestRewardType.VOUCHER && qtr.RewardValue == voucherId)
+            .Select(qtr => qtr.QuestTask.Quest.CampaignId)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<List<Voucher>> GetAllAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null, bool? isSystemVoucher = null)
     {
         var query = _context.Vouchers.Include(v => v.VendorCampaign).AsQueryable();
+
+        if (isSystemVoucher.HasValue)
+        {
+            if (isSystemVoucher.Value)
+            {
+                query = query.Where(v => v.VendorCampaignId == null);
+            }
+            else
+            {
+                query = query.Where(v => v.VendorCampaignId != null);
+            }
+        }
 
         if (isRemaining.HasValue)
         {

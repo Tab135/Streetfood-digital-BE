@@ -27,6 +27,11 @@ public class UserVoucherDAO
             .FirstOrDefaultAsync(uv => uv.UserId == userId && uv.VoucherId == voucherId);
     }
 
+    public async Task<bool> HasUsersClaimedVoucherAsync(int voucherId)
+    {
+        return await _context.UserVouchers.AnyAsync(uv => uv.VoucherId == voucherId);
+    }
+
     public async Task<IEnumerable<UserVoucher>> GetByUserIdAsync(int userId)
     {
         return await _context.UserVouchers

@@ -123,9 +123,9 @@ public class VoucherService : IVoucherService
         return voucher == null ? null : MapToDto(voucher);
     }
 
-    public async Task<List<VoucherDto>> GetAllVouchersAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null)
+    public async Task<List<VoucherDto>> GetAllVouchersAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null, bool? isSystemVoucher = null)
     {
-        var vouchers = await _voucherRepository.GetAllAsync(isBelongAQuestTask, isRemaining);
+        var vouchers = await _voucherRepository.GetAllAsync(isBelongAQuestTask, isRemaining, isSystemVoucher);
         return vouchers.Select(MapToDto).ToList();
     }
 
@@ -415,12 +415,6 @@ public class VoucherService : IVoucherService
                 continue;
             }
 
-            var isVendorCreatedCampaign = voucher.VendorCampaign.CreatedByVendorId.HasValue;
-            if (!isVendorCreatedCampaign)
-            {
-                continue;
-            }
-
             var isApplicable = await IsVoucherApplicableToBranchAsync(voucher, branchId, branch.IsSubscribed);
             if (!isApplicable)
             {
@@ -461,15 +455,16 @@ public class VoucherService : IVoucherService
 
     private async Task<bool> IsVoucherApplicableToBranchAsync(Voucher voucher, int branchId, bool isBranchSubscribed)
     {
-        if (voucher.VendorCampaignId.HasValue)
+        int? campaignId = voucher.VendorCampaignId;
+        
+        if (!campaignId.HasValue)
         {
-            var campaign = voucher.VendorCampaign;
-            if (campaign == null)
-            {
-                return false;
-            }
+            campaignId = await _voucherRepository.GetSystemCampaignIdAsync(voucher.VoucherId);
+        }
 
-            var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);
+        if (campaignId.HasValue)
+        {
+            var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaignId.Value);
             return joinInfo != null && joinInfo.IsActive == true;
         }
 

@@ -18,6 +18,9 @@ public class UserVoucherRepository : IUserVoucherRepository
     public Task<UserVoucher?> GetByUserAndVoucherAsync(int userId, int voucherId)
         => _userVoucherDAO.GetByUserAndVoucherAsync(userId, voucherId);
 
+    public Task<bool> HasUsersClaimedVoucherAsync(int voucherId)
+        => _userVoucherDAO.HasUsersClaimedVoucherAsync(voucherId);
+
     public Task<IEnumerable<UserVoucher>> GetByUserIdAsync(int userId)
         => _userVoucherDAO.GetByUserIdAsync(userId);
 

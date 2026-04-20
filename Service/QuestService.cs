@@ -20,19 +20,22 @@ namespace Service
         private readonly ICampaignRepository _campaignRepository;
         private readonly IBadgeRepository _badgeRepository;
         private readonly IVoucherRepository _voucherRepository;
+        private readonly IUserVoucherRepository _userVoucherRepository;
 
         public QuestService(
             IQuestRepository questRepository,
             IUserQuestRepository userQuestRepository,
             ICampaignRepository campaignRepository,
             IBadgeRepository badgeRepository,
-            IVoucherRepository voucherRepository)
+            IVoucherRepository voucherRepository,
+            IUserVoucherRepository userVoucherRepository)
         {
             _questRepository = questRepository;
             _userQuestRepository = userQuestRepository;
             _campaignRepository = campaignRepository;
             _badgeRepository = badgeRepository;
             _voucherRepository = voucherRepository;
+            _userVoucherRepository = userVoucherRepository;
         }
 
         public async Task<QuestResponseDto> CreateQuestAsync(CreateQuestDto dto)
@@ -125,7 +128,12 @@ namespace Service
             if (dto.ImageUrl != null)
                 quest.ImageUrl = dto.ImageUrl;
             if (dto.IsActive.HasValue)
+            {
+                var hasUsers = await _questRepository.HasEnrolledUsersAsync(questId);
+                if (hasUsers)
+                    throw new DomainExceptions("Không thể cập nhật trạng thái hoạt động khi đã có người dùng tham gia quest.");
                 quest.IsActive = dto.IsActive.Value;
+            }
             if (dto.IsStandalone.HasValue)
                 quest.IsStandalone = dto.IsStandalone.Value;
 
@@ -168,6 +176,7 @@ namespace Service
                     await ValidateTaskRewardAsync(reward.RewardType, reward.RewardValue);
             }
 
+            await RemoveVouchersFromTasksAsync(quest.QuestTasks);
             await _questRepository.RemoveTasksAsync([.. quest.QuestTasks]);
             var newTasks = tasks.Select(t => new QuestTask
             {
@@ -196,6 +205,12 @@ namespace Service
             var hasUsers = await _questRepository.HasEnrolledUsersAsync(questId);
             if (hasUsers)
                 throw new DomainExceptions("Không thể xóa quest khi vẫn còn người dùng đang tham gia");
+
+            var quest = await _questRepository.GetByIdAsync(questId);
+            if (quest != null)
+            {
+                await RemoveVouchersFromTasksAsync(quest.QuestTasks);
+            }
 
             return await _questRepository.DeleteAsync(questId);
         }
@@ -400,6 +415,41 @@ namespace Service
                     break;
                 case QuestRewardType.POINTS:
                     break;
+            }
+        }
+
+        private async Task RemoveVouchersFromTasksAsync(IEnumerable<QuestTask> tasks)
+        {
+            if (tasks == null) return;
+
+            foreach (var task in tasks)
+            {
+                if (task.QuestTaskRewards == null) continue;
+
+                foreach (var reward in task.QuestTaskRewards)
+                {
+                    if (reward.RewardType == QuestRewardType.VOUCHER)
+                    {
+                        var voucher = await _voucherRepository.GetByIdAsync(reward.RewardValue);
+                        if (voucher != null)
+                        {
+                            var isMarketplaceVoucher = voucher.VendorCampaignId == null && voucher.RedeemPoint > 0;
+                            if (!isMarketplaceVoucher)
+                            {
+                                var hasUsers = await _userVoucherRepository.HasUsersClaimedVoucherAsync(voucher.VoucherId);
+                                if (!hasUsers)
+                                {
+                                    await _voucherRepository.DeleteAsync(voucher.VoucherId);
+                                }
+                                else
+                                {
+                                    voucher.IsActive = false;
+                                    await _voucherRepository.UpdateAsync(voucher);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 

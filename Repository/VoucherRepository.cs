@@ -19,7 +19,9 @@ public class VoucherRepository : IVoucherRepository
 
     public Task<Voucher?> GetByCodeAsync(string voucherCode) => _voucherDAO.GetByCodeAsync(voucherCode);
 
-    public Task<List<Voucher>> GetAllAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null) => _voucherDAO.GetAllAsync(isBelongAQuestTask, isRemaining);
+    public Task<int?> GetSystemCampaignIdAsync(int voucherId) => _voucherDAO.GetSystemCampaignIdAsync(voucherId);
+
+    public Task<List<Voucher>> GetAllAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null, bool? isSystemVoucher = null) => _voucherDAO.GetAllAsync(isBelongAQuestTask, isRemaining, isSystemVoucher);
 
     public Task UpdateAsync(Voucher voucher) => _voucherDAO.UpdateAsync(voucher);
 

@@ -246,15 +246,20 @@ public class CartService : ICartService
                 throw new DomainExceptions("Voucher is out of stock");
             }
 
-            if (voucher.VendorCampaignId.HasValue)
-            {
-                var campaign = voucher.VendorCampaign
-                    ?? throw new DomainExceptions("Campaign voucher is invalid");
+            int? associatedCampaignId = voucher.VendorCampaignId;
+            bool isVendorCampaign = voucher.VendorCampaignId.HasValue;
 
-                var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(request.BranchId, campaign.CampaignId);
+            if (!associatedCampaignId.HasValue)
+            {
+                associatedCampaignId = await _voucherRepository.GetSystemCampaignIdAsync(voucher.VoucherId);
+            }
+
+            if (associatedCampaignId.HasValue)
+            {
+                var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(request.BranchId, associatedCampaignId.Value);
                 if (joinInfo == null || joinInfo.IsActive != true)
                 {
-                    if (campaign.CreatedByVendorId.HasValue)
+                    if (isVendorCampaign)
                     {
                         throw new DomainExceptions("This branch is not included in this vendor campaign.");
                     }
@@ -262,7 +267,7 @@ public class CartService : ICartService
                     throw new DomainExceptions("This voucher campaign is not active for this branch.");
                 }
 
-                if (campaign.CreatedByVendorId.HasValue)
+                if (isVendorCampaign)
                 {
                     redeemedVendorVoucher = voucher;
                 }
@@ -451,18 +456,7 @@ public class CartService : ICartService
 
     private static bool IsSystemFundedVoucher(BO.Entities.Voucher voucher)
     {
-        if (!voucher.VendorCampaignId.HasValue)
-        {
-            return true;
-        }
-
-        var campaign = voucher.VendorCampaign;
-        if (campaign == null)
-        {
-            return false;
-        }
-
-        return !campaign.CreatedByVendorId.HasValue;
+        return !voucher.VendorCampaignId.HasValue;
     }
 
     private async Task EnsureUserExistsAsync(int userId)
