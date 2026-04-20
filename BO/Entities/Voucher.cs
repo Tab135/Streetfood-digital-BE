@@ -39,9 +39,9 @@ public class Voucher
     public int Quantity { get; set; }
     public int UsedQuantity { get; set; }
 
-    public int? CampaignId { get; set; }
-    [ForeignKey("CampaignId")]
-    public virtual Campaign? Campaign { get; set; }
+    public int? VendorCampaignId { get; set; }
+    [ForeignKey("VendorCampaignId")]
+    public virtual Campaign? VendorCampaign { get; set; }
 
     [JsonIgnore]
     public virtual ICollection<UserVoucher> UserVouchers { get; set; } = new List<UserVoucher>();

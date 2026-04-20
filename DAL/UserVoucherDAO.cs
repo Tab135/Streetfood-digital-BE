@@ -16,7 +16,7 @@ public class UserVoucherDAO
     {
         return await _context.UserVouchers
             .Include(uv => uv.Voucher)
-                .ThenInclude(v => v!.Campaign)
+                .ThenInclude(v => v!.VendorCampaign)
             .FirstOrDefaultAsync(uv => uv.UserVoucherId == userVoucherId);
     }
 
@@ -31,7 +31,7 @@ public class UserVoucherDAO
     {
         return await _context.UserVouchers
             .Include(uv => uv.Voucher)
-                .ThenInclude(v => v!.Campaign)
+                .ThenInclude(v => v!.VendorCampaign)
             .Where(uv => uv.UserId == userId)
             .ToListAsync();
     }

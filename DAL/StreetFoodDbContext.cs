@@ -408,9 +408,9 @@ public class StreetFoodDbContext : DbContext
             entity.Property(e => e.VoucherCode).IsRequired().HasMaxLength(100);
             entity.HasIndex(e => e.VoucherCode).IsUnique();
             
-            entity.HasOne(e => e.Campaign)
+            entity.HasOne(e => e.VendorCampaign)
                 .WithMany()
-                .HasForeignKey(e => e.CampaignId)
+                .HasForeignKey(e => e.VendorCampaignId)
                 .OnDelete(DeleteBehavior.SetNull);
           });
 

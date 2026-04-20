@@ -176,7 +176,7 @@ namespace DAL
                     .Any(bc => bc.BranchId == b.BranchId && bc.IsActive 
                         && bc.Campaign.CreatedByVendorId != null 
                         && bc.Campaign.IsActive 
-                        && _context.Vouchers.Any(v => v.CampaignId == bc.CampaignId)))
+                        && _context.Vouchers.Any(v => v.VendorCampaignId == bc.CampaignId)))
                 .ToListAsync();
 
             var branchIds = branches.Select(b => b.BranchId).ToList();
@@ -187,7 +187,7 @@ namespace DAL
                     && bc.IsActive
                     && bc.Campaign.CreatedByVendorId != null
                     && bc.Campaign.IsActive
-                    && _context.Vouchers.Any(v => v.CampaignId == bc.CampaignId))
+                    && _context.Vouchers.Any(v => v.VendorCampaignId == bc.CampaignId))
                 .Include(bc => bc.Campaign)
                 .ToListAsync();
 
@@ -196,7 +196,7 @@ namespace DAL
             var vouchers = campaignIds.Count > 0
                 ? await _context.Vouchers
                     .AsNoTracking()
-                    .Where(v => v.CampaignId.HasValue && campaignIds.Contains(v.CampaignId.Value))
+                    .Where(v => v.VendorCampaignId.HasValue && campaignIds.Contains(v.VendorCampaignId.Value))
                     .ToListAsync()
                 : new List<Voucher>();
 
@@ -292,7 +292,7 @@ namespace DAL
             var now = DateTime.UtcNow;
 
             var vouchersByCampaign = vouchers
-                .GroupBy(v => v.CampaignId!.Value)
+                .GroupBy(v => v.VendorCampaignId!.Value)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
             var campaignsByBranch = branchCampaigns

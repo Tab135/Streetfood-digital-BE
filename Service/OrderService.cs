@@ -836,9 +836,9 @@ public class OrderService : IOrderService
         var now = DateTime.UtcNow;
         VoucherRules.EnsureVoucherIsWithinValidDateRange(voucher, now);
 
-        if (voucher.CampaignId.HasValue)
+        if (voucher.VendorCampaignId.HasValue)
         {
-            var campaign = voucher.Campaign;
+            var campaign = voucher.VendorCampaign;
             if (campaign == null)
             {
                 throw new DomainExceptions("Chiến dịch của phiếu giảm giá không tồn tại", "ERR_NOT_FOUND");
@@ -909,12 +909,12 @@ public class OrderService : IOrderService
 
     private static bool IsSystemFundedVoucher(Voucher voucher)
     {
-        if (!voucher.CampaignId.HasValue)
+        if (!voucher.VendorCampaignId.HasValue)
         {
             return true;
         }
 
-        var campaign = voucher.Campaign;
+        var campaign = voucher.VendorCampaign;
         if (campaign == null)
         {
             return false;

@@ -133,9 +133,9 @@ namespace DAL
                             && o.UpdatedAt >= startDate
                             && o.UpdatedAt < endExclusive
                             && o.AppliedVoucher!.UserVouchers.Any(uv => uv.UserId == o.UserId)
-                            && (o.AppliedVoucher!.CampaignId == null
-                                || (o.AppliedVoucher.Campaign != null
-                                    && !o.AppliedVoucher.Campaign.CreatedByVendorId.HasValue)))
+                            && (o.AppliedVoucher!.VendorCampaignId == null
+                                || (o.AppliedVoucher.VendorCampaign != null
+                                    && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue)))
                 .GroupBy(o => o.UpdatedAt.Date)
                 .Select(g => new
                 {

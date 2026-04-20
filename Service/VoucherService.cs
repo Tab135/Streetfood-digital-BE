@@ -12,6 +12,7 @@ public class VoucherService : IVoucherService
     private readonly IVoucherRepository _voucherRepository;
     private readonly IUserVoucherRepository _userVoucherRepository;
     private readonly IUserRepository _userRepository;
+    private readonly ICampaignRepository _campaignRepository;
     private readonly IBranchCampaignRepository _branchCampaignRepository;
     private readonly IBranchRepository _branchRepository;
 
@@ -19,12 +20,14 @@ public class VoucherService : IVoucherService
         IVoucherRepository voucherRepository,
         IUserVoucherRepository userVoucherRepository,
         IUserRepository userRepository,
+        ICampaignRepository campaignRepository,
         IBranchCampaignRepository branchCampaignRepository,
         IBranchRepository branchRepository)
     {
         _voucherRepository = voucherRepository ?? throw new ArgumentNullException(nameof(voucherRepository));
         _userVoucherRepository = userVoucherRepository ?? throw new ArgumentNullException(nameof(userVoucherRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
+        _campaignRepository = campaignRepository ?? throw new ArgumentNullException(nameof(campaignRepository));
         _branchCampaignRepository = branchCampaignRepository ?? throw new ArgumentNullException(nameof(branchCampaignRepository));
         _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
     }
@@ -49,6 +52,23 @@ public class VoucherService : IVoucherService
         if (duplicateCodes.Count > 0)
         {
             throw new DomainExceptions($"Duplicate voucher codes in request: {string.Join(", ", duplicateCodes)}");
+        }
+
+        // Validate campaigns
+        var uniqueCampaignIds = createDtos
+            .Where(dto => dto.CampaignId.HasValue)
+            .Select(dto => dto.CampaignId!.Value)
+            .Distinct()
+            .ToList();
+
+        var validVendorCampaignIds = new HashSet<int>();
+        foreach (var campaignId in uniqueCampaignIds)
+        {
+            var campaign = await _campaignRepository.GetByIdAsync(campaignId);
+            if (campaign != null && campaign.CreatedByVendorId != null)
+            {
+                validVendorCampaignIds.Add(campaignId);
+            }
         }
 
         var vouchersToCreate = new List<Voucher>(createDtos.Count);
@@ -87,7 +107,9 @@ public class VoucherService : IVoucherService
                 RedeemPoint = createDto.RedeemPoint,
                 Quantity = createDto.Quantity,
                 UsedQuantity = 0,
-                CampaignId = createDto.CampaignId
+                VendorCampaignId = createDto.CampaignId.HasValue && validVendorCampaignIds.Contains(createDto.CampaignId.Value) 
+                    ? createDto.CampaignId.Value 
+                    : null
             });
         }
 
@@ -223,7 +245,7 @@ public class VoucherService : IVoucherService
         var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, voucherId);
 
         // Voucher Hunt Logic: if linked to a campaign, it's free but limited to 1 per user
-        bool isCampaignVoucher = voucher.CampaignId.HasValue;
+        bool isCampaignVoucher = voucher.VendorCampaignId.HasValue;
 
         if (isCampaignVoucher)
         {
@@ -308,7 +330,7 @@ public class VoucherService : IVoucherService
             StartDate = uv.Voucher?.StartDate,
             EndDate = uv.Voucher?.EndDate,
             IsActive = uv.Voucher?.IsActive ?? false,
-            CampaignId = uv.Voucher?.CampaignId,
+            CampaignId = uv.Voucher?.VendorCampaignId,
             Quantity = uv.Quantity,
             IsAvailable = uv.IsAvailable
         }).ToList();
@@ -356,7 +378,7 @@ public class VoucherService : IVoucherService
                 StartDate = voucher.StartDate,
                 EndDate = voucher.EndDate,
                 IsActive = voucher.IsActive,
-                CampaignId = voucher.CampaignId,
+                CampaignId = voucher.VendorCampaignId,
                 Quantity = uv.Quantity,
                 IsAvailable = uv.IsAvailable
             };
@@ -366,7 +388,7 @@ public class VoucherService : IVoucherService
         var allVouchers = await _voucherRepository.GetAllAsync();
         foreach (var voucher in allVouchers)
         {
-            if (!voucher.CampaignId.HasValue || voucher.Campaign == null)
+            if (!voucher.VendorCampaignId.HasValue || voucher.VendorCampaign == null)
             {
                 continue;
             }
@@ -381,7 +403,7 @@ public class VoucherService : IVoucherService
                 continue;
             }
 
-            var isVendorCreatedCampaign = voucher.Campaign.CreatedByVendorId.HasValue;
+            var isVendorCreatedCampaign = voucher.VendorCampaign.CreatedByVendorId.HasValue;
             if (!isVendorCreatedCampaign)
             {
                 continue;
@@ -412,7 +434,7 @@ public class VoucherService : IVoucherService
                 StartDate = voucher.StartDate,
                 EndDate = voucher.EndDate,
                 IsActive = voucher.IsActive,
-                CampaignId = voucher.CampaignId,
+                CampaignId = voucher.VendorCampaignId,
                 Quantity = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0),
                 IsAvailable = true
             };
@@ -427,9 +449,9 @@ public class VoucherService : IVoucherService
 
     private async Task<bool> IsVoucherApplicableToBranchAsync(Voucher voucher, int branchId, bool isBranchSubscribed)
     {
-        if (voucher.CampaignId.HasValue)
+        if (voucher.VendorCampaignId.HasValue)
         {
-            var campaign = voucher.Campaign;
+            var campaign = voucher.VendorCampaign;
             if (campaign == null)
             {
                 return false;
@@ -475,7 +497,7 @@ public class VoucherService : IVoucherService
             RedeemPoint = voucher.RedeemPoint,
             Quantity = voucher.Quantity,
             UsedQuantity = voucher.UsedQuantity,
-            CampaignId = voucher.CampaignId,
+            CampaignId = voucher.VendorCampaignId,
             Remain = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0)
         };
     }

@@ -246,9 +246,9 @@ public class CartService : ICartService
                 throw new DomainExceptions("Voucher is out of stock");
             }
 
-            if (voucher.CampaignId.HasValue)
+            if (voucher.VendorCampaignId.HasValue)
             {
-                var campaign = voucher.Campaign
+                var campaign = voucher.VendorCampaign
                     ?? throw new DomainExceptions("Campaign voucher is invalid");
 
                 var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(request.BranchId, campaign.CampaignId);
@@ -451,12 +451,12 @@ public class CartService : ICartService
 
     private static bool IsSystemFundedVoucher(BO.Entities.Voucher voucher)
     {
-        if (!voucher.CampaignId.HasValue)
+        if (!voucher.VendorCampaignId.HasValue)
         {
             return true;
         }
 
-        var campaign = voucher.Campaign;
+        var campaign = voucher.VendorCampaign;
         if (campaign == null)
         {
             return false;
