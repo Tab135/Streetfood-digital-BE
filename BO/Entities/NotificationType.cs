@@ -9,5 +9,6 @@ public enum NotificationType
     QuestCompleted = 4,
     NewOrder = 5,
     CurrentPickInvite = 6,
-    BranchVerificationStatus = 7
+    BranchVerificationStatus = 7,
+    SystemCampaignCreated = 8
 }

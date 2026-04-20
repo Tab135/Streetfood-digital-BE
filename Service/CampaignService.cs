@@ -17,6 +17,7 @@ namespace Service
         private readonly IBranchCampaignRepository _branchCampaignRepo;
         private readonly IBranchRepository _branchRepo;
         private readonly IVendorRepository _vendorRepo;
+        private readonly INotificationService _notificationService;
         private readonly Service.PaymentsService.IPaymentService _paymentService;
         private readonly IBackgroundJobClient _backgroundJobClient;
 
@@ -25,6 +26,7 @@ namespace Service
             IBranchCampaignRepository branchCampaignRepo,
             IBranchRepository branchRepo,
             IVendorRepository vendorRepo,
+            INotificationService notificationService,
             Service.PaymentsService.IPaymentService paymentService,
             IBackgroundJobClient backgroundJobClient)
         {
@@ -32,6 +34,7 @@ namespace Service
             _branchCampaignRepo = branchCampaignRepo;
             _branchRepo = branchRepo;
             _vendorRepo = vendorRepo;
+            _notificationService = notificationService;
             _paymentService = paymentService;
             _backgroundJobClient = backgroundJobClient;
         }
@@ -730,7 +733,86 @@ namespace Service
                 job => job.ExpireCampaignQuestsAsync(campaign.CampaignId),
                 ResolveHangfireRunAt(campaign.EndDate));
 
+            await NotifyVendorsAboutNewSystemCampaignAsync(campaign);
+
             return await GetCampaignByIdAsync(campaign.CampaignId);
+        }
+
+        private async Task NotifyVendorsAboutNewSystemCampaignAsync(Campaign campaign)
+        {
+            const int pageSize = 200;
+            var pageNumber = 1;
+            var notifiedUserIds = new HashSet<int>();
+
+            var title = "Chiến dịch hệ thống mới";
+            var message = $"Chiến dịch #{campaign.CampaignId} - {campaign.Name} vừa được tạo. Hãy tham gia ngay.";
+            var pushData = new
+            {
+                type = "system_campaign_created",
+                campaignId = campaign.CampaignId,
+                campaignName = campaign.Name
+            };
+
+            while (true)
+            {
+                var (vendors, totalCount) = await _vendorRepo.GetAllAsync(pageNumber, pageSize);
+                if (vendors.Count == 0)
+                {
+                    break;
+                }
+
+                var notifyTasks = new List<Task>(vendors.Count);
+
+                foreach (var vendor in vendors)
+                {
+                    if (vendor.UserId <= 0 || !notifiedUserIds.Add(vendor.UserId))
+                    {
+                        continue;
+                    }
+
+                    notifyTasks.Add(NotifySystemCampaignCreatedToVendorSafeAsync(
+                        vendor.UserId,
+                        campaign.CampaignId,
+                        title,
+                        message,
+                        pushData));
+                }
+
+                if (notifyTasks.Count > 0)
+                {
+                    await Task.WhenAll(notifyTasks);
+                }
+
+                if (pageNumber * pageSize >= totalCount)
+                {
+                    break;
+                }
+
+                pageNumber++;
+            }
+        }
+
+        private async Task NotifySystemCampaignCreatedToVendorSafeAsync(
+            int vendorUserId,
+            int campaignId,
+            string title,
+            string message,
+            object pushData)
+        {
+            try
+            {
+                await _notificationService.NotifyAsync(
+                    vendorUserId,
+                    NotificationType.SystemCampaignCreated,
+                    title,
+                    message,
+                    campaignId,
+                    pushData);
+            }
+            catch
+            {
+                // Keep campaign creation successful even if one vendor notification fails.
+            }
         }
 
         public async Task<int> JoinSystemCampaignAsync(int userId, int branchId, int campaignId)
