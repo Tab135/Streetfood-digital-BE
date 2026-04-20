@@ -204,7 +204,7 @@ public class VoucherService : IVoucherService
             voucher.UsedQuantity = updateDto.UsedQuantity.Value;
         }
 
-        if (voucher.UsedQuantity > voucher.Quantity)
+        if (voucher.Quantity >= 0 && voucher.UsedQuantity > voucher.Quantity)
         {
             throw new DomainExceptions("Used quantity cannot be greater than quantity");
         }
@@ -235,7 +235,7 @@ public class VoucherService : IVoucherService
 
         VoucherRules.EnsureVoucherIsWithinValidDateRange(voucher, now);
 
-        if (voucher.UsedQuantity >= voucher.Quantity)
+        if (VoucherRules.IsOutOfStock(voucher))
         {
             throw new DomainExceptions("Voucher is out of stock");
         }
@@ -296,7 +296,7 @@ public class VoucherService : IVoucherService
             MaxDiscountValue = voucher.MaxDiscountValue,
             Quantity = userVoucher.Quantity,
             RemainingUserPoint = user.Point,
-            Remain = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0)
+            Remain = VoucherRules.GetRemainingQuantity(voucher)
         };
     }
 
@@ -405,7 +405,7 @@ public class VoucherService : IVoucherService
                 continue;
             }
 
-            if (!voucher.IsActive || voucher.UsedQuantity >= voucher.Quantity)
+            if (!voucher.IsActive || VoucherRules.IsOutOfStock(voucher))
             {
                 continue;
             }
@@ -447,7 +447,7 @@ public class VoucherService : IVoucherService
                 EndDate = voucher.EndDate,
                 IsActive = voucher.IsActive,
                 CampaignId = voucher.VendorCampaignId,
-                Quantity = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0),
+                Quantity = VoucherRules.GetRemainingQuantity(voucher),
                 IsAvailable = true
             };
         }
@@ -510,7 +510,7 @@ public class VoucherService : IVoucherService
             Quantity = voucher.Quantity,
             UsedQuantity = voucher.UsedQuantity,
             CampaignId = voucher.VendorCampaignId,
-            Remain = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0)
+            Remain = VoucherRules.GetRemainingQuantity(voucher)
         };
     }
 
@@ -532,7 +532,7 @@ public class VoucherService : IVoucherService
             RedeemPoint = voucher.RedeemPoint,
             Quantity = voucher.Quantity,
             UsedQuantity = voucher.UsedQuantity,
-            Remain = Math.Max(voucher.Quantity - voucher.UsedQuantity, 0)
+            Remain = VoucherRules.GetRemainingQuantity(voucher)
         };
     }
 }

@@ -39,11 +39,11 @@ public class VoucherDAO
         {
             if (isRemaining.Value)
             {
-                query = query.Where(v => v.UsedQuantity < v.Quantity);
+                query = query.Where(v => v.Quantity < 0 || v.UsedQuantity < v.Quantity);
             }
             else
             {
-                query = query.Where(v => v.UsedQuantity >= v.Quantity);
+                query = query.Where(v => v.Quantity >= 0 && v.UsedQuantity >= v.Quantity);
             }
         }
 

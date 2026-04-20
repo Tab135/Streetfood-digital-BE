@@ -63,6 +63,28 @@ public static class VoucherRules
             && (!voucher.EndDate.HasValue || now <= voucher.EndDate.Value);
     }
 
+    public static bool HasUnlimitedQuantity(Voucher voucher)
+    {
+        return voucher.Quantity < 0;
+    }
+
+    public static bool HasRemainingQuantity(Voucher voucher)
+    {
+        return HasUnlimitedQuantity(voucher) || voucher.UsedQuantity < voucher.Quantity;
+    }
+
+    public static bool IsOutOfStock(Voucher voucher)
+    {
+        return !HasRemainingQuantity(voucher);
+    }
+
+    public static int GetRemainingQuantity(Voucher voucher)
+    {
+        return HasUnlimitedQuantity(voucher)
+            ? voucher.Quantity
+            : Math.Max(voucher.Quantity - voucher.UsedQuantity, 0);
+    }
+
     public static void EnsureVoucherIsWithinValidDateRange(Voucher voucher, DateTime now)
     {
         if (!IsWithinValidDateRange(voucher, now))

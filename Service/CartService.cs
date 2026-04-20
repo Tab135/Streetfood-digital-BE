@@ -241,7 +241,7 @@ public class CartService : ICartService
             var now = DateTime.UtcNow;
             VoucherRules.EnsureVoucherIsWithinValidDateRange(voucher, now);
 
-            if (voucher.UsedQuantity >= voucher.Quantity)
+            if (VoucherRules.IsOutOfStock(voucher))
             {
                 throw new DomainExceptions("Voucher is out of stock");
             }
@@ -415,7 +415,7 @@ public class CartService : ICartService
         if (selectedVendorVoucher != null)
         {
             selectedVendorVoucher.UsedQuantity += 1;
-            if (selectedVendorVoucher.UsedQuantity > selectedVendorVoucher.Quantity)
+            if (VoucherRules.IsOutOfStock(selectedVendorVoucher))
             {
                 throw new DomainExceptions("Voucher is out of stock");
             }

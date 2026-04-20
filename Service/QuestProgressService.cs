@@ -2,6 +2,7 @@ using BO.Entities;
 using BO.Enums;
 using Repository.Interfaces;
 using Service.Interfaces;
+using Service.Utils;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -175,9 +176,11 @@ namespace Service
 
                     case QuestRewardType.VOUCHER:
                         var voucher = await _voucherRepository.GetByIdAsync(reward.RewardValue);
-                        if (voucher != null && voucher.UsedQuantity < voucher.Quantity)
+                        if (voucher != null && VoucherRules.HasRemainingQuantity(voucher))
                         {
-                            int grantQty = Math.Min(reward.Quantity, voucher.Quantity - voucher.UsedQuantity);
+                            int grantQty = VoucherRules.HasUnlimitedQuantity(voucher)
+                                ? reward.Quantity
+                                : Math.Min(reward.Quantity, voucher.Quantity - voucher.UsedQuantity);
                             voucher.UsedQuantity += grantQty;
                             await _voucherRepository.UpdateAsync(voucher);
 
@@ -198,7 +201,7 @@ namespace Service
                                 });
                             }
 
-                            if (voucher.UsedQuantity >= voucher.Quantity)
+                            if (!VoucherRules.HasUnlimitedQuantity(voucher) && VoucherRules.IsOutOfStock(voucher))
                             {
                                 userQuestTask.QuestTask.IsActive = false;
                                 await _questRepository.UpdateTaskAsync(userQuestTask.QuestTask);

@@ -869,7 +869,7 @@ public class OrderService : IOrderService
             return;
         }
 
-        if (voucher.UsedQuantity >= voucher.Quantity)
+        if (VoucherRules.IsOutOfStock(voucher))
         {
             throw new DomainExceptions("Phiếu giảm giá đã hết hàng", "ERR_BAD_REQUEST");
         }
