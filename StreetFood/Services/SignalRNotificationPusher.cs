@@ -17,14 +17,14 @@ public class SignalRNotificationPusher : INotificationPusher
     public async Task PushToUserAsync(int userId, NotificationDto notification)
     {
         await _hubContext.Clients
-            .Group(userId.ToString())
+            .User(userId.ToString())
             .SendAsync("ReceiveNotification", notification);
     }
 
     public async Task PushPaymentStatusAsync(int userId, long orderCode, string status, int? orderId)
     {
         await _hubContext.Clients
-            .Group(userId.ToString())
+            .User(userId.ToString())
             .SendAsync("PaymentStatusUpdate", new { orderCode, status, orderId });
     }
 }

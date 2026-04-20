@@ -2,6 +2,7 @@ using BO.DTO.Campaigns;
 using BO.Entities;
 using BO.Exceptions;
 using Hangfire;
+using Microsoft.Extensions.Logging;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -21,6 +22,7 @@ namespace Service
         private readonly INotificationService _notificationService;
         private readonly Service.PaymentsService.IPaymentService _paymentService;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ILogger<CampaignService> _logger;
 
         public CampaignService(
             ICampaignRepository campaignRepo,
@@ -30,7 +32,8 @@ namespace Service
             IUserRepository userRepo,
             INotificationService notificationService,
             Service.PaymentsService.IPaymentService paymentService,
-            IBackgroundJobClient backgroundJobClient)
+            IBackgroundJobClient backgroundJobClient,
+            ILogger<CampaignService> logger)
         {
             _campaignRepo = campaignRepo;
             _branchCampaignRepo = branchCampaignRepo;
@@ -40,6 +43,7 @@ namespace Service
             _notificationService = notificationService;
             _paymentService = paymentService;
             _backgroundJobClient = backgroundJobClient;
+            _logger = logger;
         }
 
         private static DateTimeOffset ResolveHangfireRunAt(DateTime targetUtc)
@@ -744,55 +748,59 @@ namespace Service
         private async Task NotifyVendorsAboutNewSystemCampaignAsync(Campaign campaign)
         {
             const int pageSize = 200;
-            var pageNumber = 1;
-            var notifiedUserIds = new HashSet<int>();
+            var recipientUserIds = new HashSet<int>();
 
             var title = "Chiến dịch hệ thống mới";
-            var message = $"Chiến dịch #{campaign.CampaignId} - {campaign.Name} vừa được tạo. Hãy tham gia ngay.";
+            var message = $"Chiến dịch {campaign.Name} vừa được tạo. Hãy tham gia ngay.";
             var pushData = new
             {
                 type = "system_campaign_created",
                 campaignId = campaign.CampaignId,
                 campaignName = campaign.Name
             };
-
+            var pageNumber = 1;
             while (true)
             {
                 var (users, totalCount) = await _userRepo.GetUsersAsync(Role.Vendor, pageNumber, pageSize);
-                if (users.Count == 0)
-                {
-                    break;
-                }
+                if (users.Count == 0) break;
 
-                var notifyTasks = new List<Task>(users.Count);
+                // Replaces the first foreach
+                recipientUserIds.UnionWith(users.Where(u => u.Id > 0).Select(u => u.Id));
 
-                foreach (var user in users)
-                {
-                    if (user.Id <= 0 || !notifiedUserIds.Add(user.Id))
-                    {
-                        continue;
-                    }
-
-                    notifyTasks.Add(NotifySystemCampaignCreatedToVendorSafeAsync(
-                        user.Id,
-                        campaign.CampaignId,
-                        title,
-                        message,
-                        pushData));
-                }
-
-                if (notifyTasks.Count > 0)
-                {
-                    await Task.WhenAll(notifyTasks);
-                }
-
-                if (pageNumber * pageSize >= totalCount)
-                {
-                    break;
-                }
-
+                if (pageNumber * pageSize >= totalCount) break;
                 pageNumber++;
             }
+
+            pageNumber = 1;
+            while (true)
+            {
+                var (vendors, totalCount) = await _vendorRepo.GetAllAsync(pageNumber, pageSize);
+                if (vendors.Count == 0) break;
+
+                // Replaces the second foreach
+                recipientUserIds.UnionWith(vendors.Where(v => v.UserId > 0).Select(v => v.UserId));
+
+                if (pageNumber * pageSize >= totalCount) break;
+                pageNumber++;
+            }
+
+            if (recipientUserIds.Count == 0)
+            {
+                _logger.LogWarning(
+                    "No vendor recipients found for system campaign notification. CampaignId={CampaignId}",
+                    campaign.CampaignId);
+                return;
+            }
+
+            var notificationTasks = recipientUserIds.Select(userId =>
+                NotifySystemCampaignCreatedToVendorSafeAsync(userId, campaign.CampaignId, title, message, pushData));
+
+            await Task.WhenAll(notificationTasks);
+
+            _logger.LogInformation(
+                "Dispatched system campaign notification to {RecipientCount} recipient(s). CampaignId={CampaignId}",
+                recipientUserIds.Count,
+                campaign.CampaignId);
         }
 
         private async Task NotifySystemCampaignCreatedToVendorSafeAsync(
@@ -812,9 +820,13 @@ namespace Service
                     campaignId,
                     pushData);
             }
-            catch
+            catch (Exception ex)
             {
-                // Keep campaign creation successful even if one vendor notification fails.
+                _logger.LogError(
+                    ex,
+                    "Failed to notify vendor user {UserId} for system campaign {CampaignId}",
+                    vendorUserId,
+                    campaignId);
             }
         }
 

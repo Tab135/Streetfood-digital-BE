@@ -44,6 +44,7 @@ namespace StreetFood
             });
 
             builder.Services.AddSignalR();
+            builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, SignalRUserIdProvider>();
 
             builder.Services.AddCors(options =>
             {
