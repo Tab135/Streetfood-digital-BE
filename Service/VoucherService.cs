@@ -339,7 +339,19 @@ public class VoucherService : IVoucherService
     public async Task<List<VoucherDto>> GetVouchersByCampaignIdAsync(int campaignId)
     {
         var vouchers = await _voucherRepository.GetByCampaignIdAsync(campaignId);
-        return vouchers.Select(MapToDto).ToList();
+        return vouchers
+            .Select(voucher =>
+            {
+                var dto = MapToDto(voucher);
+                var isMarketplaceVoucher = voucher.VendorCampaignId == null && voucher.RedeemPoint > 0;
+                if (!dto.CampaignId.HasValue && !isMarketplaceVoucher)
+                {
+                    dto.CampaignId = campaignId;
+                }
+
+                return dto;
+            })
+            .ToList();
     }
 
     public async Task<List<UserVoucherResponseDto>> GetApplicableUserVouchersAsync(int userId, int branchId)
