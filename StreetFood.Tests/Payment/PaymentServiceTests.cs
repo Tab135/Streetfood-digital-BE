@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using BO.DTO.Payments;
 using BO.Entities;
 using BO.Exceptions;
+using Hangfire;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -29,6 +30,7 @@ namespace StreetFood.Tests.Payment
         private readonly Mock<INotificationPusher> _pusherMock;
         private readonly Mock<INotificationService> _notifServiceMock;
         private readonly Mock<ISettingService> _settingsMock;
+        private readonly Mock<IBackgroundJobClient> _backgroundJobClientMock;
         private readonly Mock<IConfiguration> _configMock;
         private readonly Mock<ILogger<PaymentService>> _loggerMock;
         private PaymentService _paymentService;
@@ -45,6 +47,7 @@ namespace StreetFood.Tests.Payment
             _pusherMock = new Mock<INotificationPusher>();
             _notifServiceMock = new Mock<INotificationService>();
             _settingsMock = new Mock<ISettingService>();
+            _backgroundJobClientMock = new Mock<IBackgroundJobClient>();
             _configMock = new Mock<IConfiguration>();
             _loggerMock = new Mock<ILogger<PaymentService>>();
 
@@ -78,6 +81,7 @@ namespace StreetFood.Tests.Payment
                 _pusherMock.Object,
                 _notifServiceMock.Object,
                 _settingsMock.Object,
+                _backgroundJobClientMock.Object,
                 _configMock.Object,
                 _loggerMock.Object
             );

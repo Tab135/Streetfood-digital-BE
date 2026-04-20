@@ -1,6 +1,7 @@
 using BO.DTO.Payments;
 using BO.Entities;
 using BO.Exceptions;
+using Hangfire;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using PayOS;
@@ -39,6 +40,7 @@ namespace Service.PaymentsService
         private readonly INotificationPusher _notificationPusher;
         private readonly INotificationService _notificationService;
         private readonly ISettingService _settings;
+        private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly bool _isDebugMode;
 
         public PaymentService(
@@ -52,6 +54,7 @@ namespace Service.PaymentsService
             INotificationPusher notificationPusher,
             INotificationService notificationService,
             ISettingService settings,
+            IBackgroundJobClient backgroundJobClient,
             IConfiguration configuration,
             ILogger<PaymentService> logger)
         {
@@ -65,6 +68,7 @@ namespace Service.PaymentsService
             _notificationPusher = notificationPusher;
             _notificationService = notificationService;
             _settings = settings;
+            _backgroundJobClient = backgroundJobClient;
             _configuration = configuration;
             _logger = logger;
             _isDebugMode = bool.TryParse(_configuration["PayOS:DebugMode"], out var debugMode) && debugMode;
@@ -129,6 +133,17 @@ namespace Service.PaymentsService
             });
 
             _logger.LogInformation("PayOS Client initialized successfully");
+        }
+
+        private static DateTimeOffset ResolveHangfireRunAt(DateTime targetUtc)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var normalizedTargetUtc = targetUtc.Kind == DateTimeKind.Utc
+                ? targetUtc
+                : DateTime.SpecifyKind(targetUtc, DateTimeKind.Utc);
+
+            var target = new DateTimeOffset(normalizedTargetUtc);
+            return target > now ? target : now.AddSeconds(5);
         }
 
         public async Task<decimal> GetVendorBalanceAsync(int vendorUserId)
@@ -1292,6 +1307,13 @@ namespace Service.PaymentsService
             branch.IsSubscribed = true;
             branch.SubscriptionExpiresAt = DateTime.UtcNow.AddDays(SubscriptionDurationDays);
             await _branchRepo.UpdateAsync(branch);
+
+            if (branch.SubscriptionExpiresAt.HasValue)
+            {
+                _backgroundJobClient.Schedule<ISubscriptionExpiryJob>(
+                    job => job.ExpireBranchSubscriptionAsync(branch.BranchId),
+                    ResolveHangfireRunAt(branch.SubscriptionExpiresAt.Value));
+            }
 
             // Promote user to Vendor role
             var user = await _userRepo.GetUserById(payment.UserId);

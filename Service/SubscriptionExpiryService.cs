@@ -1,22 +1,15 @@
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Service.Interfaces;
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Service
 {
-    /// <summary>
-    /// Background service that runs every 6 hours and revokes branch verification
-    /// for branches whose 30-day subscription has expired without renewal.
-    /// </summary>
-    public class SubscriptionExpiryService : BackgroundService
+    public class SubscriptionExpiryService : ISubscriptionExpiryJob
     {
-        private static readonly TimeSpan CheckInterval = TimeSpan.FromHours(6);
-
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<SubscriptionExpiryService> _logger;
 
@@ -28,27 +21,41 @@ namespace Service
             _logger = logger;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        public async Task ExpireBranchSubscriptionAsync(int branchId)
         {
-            _logger.LogInformation("SubscriptionExpiryService started — checking every {Interval}.", CheckInterval);
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<StreetFoodDbContext>();
 
-            // Run once at startup, then on the interval
-            while (!stoppingToken.IsCancellationRequested)
+            var now = DateTime.UtcNow;
+            var branch = await db.Branches.FirstOrDefaultAsync(b => b.BranchId == branchId);
+            if (branch == null)
             {
-                try
-                {
-                    await ExpireSubscriptionsAsync(stoppingToken);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Unhandled error in SubscriptionExpiryService.");
-                }
-
-                await Task.Delay(CheckInterval, stoppingToken);
+                _logger.LogWarning("SubscriptionExpiryService: branch {BranchId} not found for expiration.", branchId);
+                return;
             }
+
+            if (!branch.IsSubscribed || !branch.SubscriptionExpiresAt.HasValue)
+            {
+                return;
+            }
+
+            // Guard stale jobs when subscription was renewed after scheduling.
+            if (branch.SubscriptionExpiresAt.Value > now)
+            {
+                return;
+            }
+
+            branch.IsSubscribed = false;
+            branch.UpdatedAt = now;
+            await db.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Branch {BranchId} subscription expired at {ExpiresAt} — IsSubscribed set to false.",
+                branch.BranchId,
+                branch.SubscriptionExpiresAt);
         }
 
-        private async Task ExpireSubscriptionsAsync(CancellationToken ct)
+        public async Task ReconcileExpiredSubscriptionsAsync()
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<StreetFoodDbContext>();
@@ -59,8 +66,8 @@ namespace Service
             var expiredBranches = await db.Branches
                 .Where(b => b.IsSubscribed
                          && b.SubscriptionExpiresAt.HasValue
-                         && b.SubscriptionExpiresAt.Value < now)
-                .ToListAsync(ct);
+                         && b.SubscriptionExpiresAt.Value <= now)
+                .ToListAsync();
 
             if (expiredBranches.Count == 0)
             {
@@ -79,10 +86,10 @@ namespace Service
                     branch.BranchId, branch.SubscriptionExpiresAt);
             }
 
-            await db.SaveChangesAsync(ct);
+            await db.SaveChangesAsync();
 
             _logger.LogInformation(
-                "SubscriptionExpiryService: revoked verification for {Count} expired branch(es).",
+                "SubscriptionExpiryService: deactivated subscription for {Count} expired branch(es).",
                 expiredBranches.Count);
         }
     }

@@ -17,6 +17,7 @@ namespace Service
         private readonly IBranchCampaignRepository _branchCampaignRepo;
         private readonly IBranchRepository _branchRepo;
         private readonly IVendorRepository _vendorRepo;
+        private readonly IUserRepository _userRepo;
         private readonly INotificationService _notificationService;
         private readonly Service.PaymentsService.IPaymentService _paymentService;
         private readonly IBackgroundJobClient _backgroundJobClient;
@@ -26,6 +27,7 @@ namespace Service
             IBranchCampaignRepository branchCampaignRepo,
             IBranchRepository branchRepo,
             IVendorRepository vendorRepo,
+            IUserRepository userRepo,
             INotificationService notificationService,
             Service.PaymentsService.IPaymentService paymentService,
             IBackgroundJobClient backgroundJobClient)
@@ -34,6 +36,7 @@ namespace Service
             _branchCampaignRepo = branchCampaignRepo;
             _branchRepo = branchRepo;
             _vendorRepo = vendorRepo;
+            _userRepo = userRepo;
             _notificationService = notificationService;
             _paymentService = paymentService;
             _backgroundJobClient = backgroundJobClient;
@@ -755,23 +758,23 @@ namespace Service
 
             while (true)
             {
-                var (vendors, totalCount) = await _vendorRepo.GetAllAsync(pageNumber, pageSize);
-                if (vendors.Count == 0)
+                var (users, totalCount) = await _userRepo.GetUsersAsync(Role.Vendor, pageNumber, pageSize);
+                if (users.Count == 0)
                 {
                     break;
                 }
 
-                var notifyTasks = new List<Task>(vendors.Count);
+                var notifyTasks = new List<Task>(users.Count);
 
-                foreach (var vendor in vendors)
+                foreach (var user in users)
                 {
-                    if (vendor.UserId <= 0 || !notifiedUserIds.Add(vendor.UserId))
+                    if (user.Id <= 0 || !notifiedUserIds.Add(user.Id))
                     {
                         continue;
                     }
 
                     notifyTasks.Add(NotifySystemCampaignCreatedToVendorSafeAsync(
-                        vendor.UserId,
+                        user.Id,
                         campaign.CampaignId,
                         title,
                         message,

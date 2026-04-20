@@ -73,7 +73,7 @@ namespace StreetFood
             builder.Services.AddSingleton<SettingService>();
             builder.Services.AddSingleton<ISettingService>(sp => sp.GetRequiredService<SettingService>());
             builder.Services.AddHostedService(sp => sp.GetRequiredService<SettingService>());
-            builder.Services.AddHostedService<SubscriptionExpiryService>();
+            builder.Services.AddScoped<ISubscriptionExpiryJob, SubscriptionExpiryService>();
             builder.Services.AddHostedService<AbandonedCheckoutCleanupService>();
             builder.Services.AddHostedService<TierResetService>();
             // Register DAL
@@ -319,8 +319,14 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
                 job => job.ReconcileCampaignStatusesAsync(),
                 Cron.Hourly);
 
+            recurringJobManager.AddOrUpdate<ISubscriptionExpiryJob>(
+                "subscription-expiry-reconcile",
+                job => job.ReconcileExpiredSubscriptionsAsync(),
+                Cron.Hourly);
+
             var backgroundJobClient = app.Services.GetRequiredService<IBackgroundJobClient>();
             backgroundJobClient.Enqueue<ICampaignStatusJob>(job => job.ReconcileCampaignStatusesAsync());
+            backgroundJobClient.Enqueue<ISubscriptionExpiryJob>(job => job.ReconcileExpiredSubscriptionsAsync());
 
             app.UseHangfireDashboard("/hangfire", new DashboardOptions
             {
