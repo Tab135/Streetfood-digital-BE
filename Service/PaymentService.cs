@@ -753,8 +753,8 @@ namespace Service.PaymentsService
             await _paymentRepo.UpdatePaymentStatus(latestPayment.OrderCode, "CANCELLED");
         }
 
-        public async Task<PaymentStatusResponse> ConfirmPaymentFromRedirect(long orderCode, string status, string? transactionId)
-        {
+            public async Task<PaymentStatusResponse> ConfirmPaymentFromRedirect(long orderCode, string status, string? transactionId)
+            {
             try
             {
                 var payment = await _paymentRepo.GetPaymentByOrderCode(orderCode);

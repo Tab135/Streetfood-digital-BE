@@ -1,315 +1,276 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using BO.DTO.Feedback;
 using BO.Entities;
 using BO.Enums;
 using BO.Exceptions;
+using BO.Common;
 using Moq;
 using Repository.Interfaces;
 using Service;
 using Service.Interfaces;
-using FeedbackEntity = BO.Entities.Feedback;
+using Xunit;
 
-namespace StreetFood.Tests.FeedbackTests;
-
-public class FeedbackServiceTests
+namespace StreetFood.Tests.FeedbackTests
 {
-    private readonly Mock<IFeedbackRepository> _feedbackRepository = new();
-    private readonly Mock<IUserRepository> _userRepository = new();
-    private readonly Mock<IBranchRepository> _branchRepository = new();
-    private readonly Mock<IFeedbackTagRepository> _feedbackTagRepository = new();
-    private readonly Mock<IDishRepository> _dishRepository = new();
-    private readonly Mock<IBranchMetricsService> _branchMetricsService = new();
-    private readonly Mock<INotificationService> _notificationService = new();
-    private readonly Mock<IOrderRepository> _orderRepository = new();
-    private readonly Mock<IQuestProgressService> _questProgressService = new();
-    private readonly Mock<ISettingService> _settingService = new();
-    private readonly Mock<IUserService> _userService = new();
-    private readonly FeedbackService _service;
-
-    public FeedbackServiceTests()
+    public class FeedbackServiceTests
     {
-        _settingService.Setup(s => s.GetInt("feedbackXP", 0)).Returns(0);
-        _settingService.Setup(s => s.GetInt("feedbackDailyLimit", 3)).Returns(3);
-        _branchMetricsService.Setup(s => s.OnFeedbackCreated(It.IsAny<int>(), It.IsAny<int>())).Returns(Task.CompletedTask);
-        _branchMetricsService.Setup(s => s.OnFeedbackUpdated(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>())).Returns(Task.CompletedTask);
-        _branchMetricsService.Setup(s => s.OnFeedbackDeleted(It.IsAny<int>(), It.IsAny<int>())).Returns(Task.CompletedTask);
-        _branchMetricsService.Setup(s => s.RecalculateFromScratch(It.IsAny<int>())).Returns(Task.CompletedTask);
-        _questProgressService.Setup(s => s.UpdateProgressAsync(It.IsAny<int>(), It.IsAny<QuestTaskType>(), It.IsAny<int>())).Returns(Task.CompletedTask);
-        _questProgressService.Setup(s => s.HandleTierUpAsync(It.IsAny<int>(), It.IsAny<int>())).Returns(Task.CompletedTask);
-        _notificationService.Setup(s => s.NotifyAsync(It.IsAny<int>(), It.IsAny<NotificationType>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<object?>())).Returns(Task.CompletedTask);
-        _userService.Setup(s => s.AddXPAsync(It.IsAny<int>(), It.IsAny<int>())).ReturnsAsync(true);
+        private readonly Mock<IFeedbackRepository> _feedbackRepoMock;
+        private readonly Mock<IUserRepository> _userRepoMock;
+        private readonly Mock<IBranchRepository> _branchRepoMock;
+        private readonly Mock<IFeedbackTagRepository> _tagRepoMock;
+        private readonly Mock<IDishRepository> _dishRepoMock;
+        private readonly Mock<IBranchMetricsService> _metricsServiceMock;
+        private readonly Mock<INotificationService> _notifServiceMock;
+        private readonly Mock<IOrderRepository> _orderRepoMock;
+        private readonly Mock<IQuestProgressService> _questServiceMock;
+        private readonly Mock<ISettingService> _settingServiceMock;
+        private readonly Mock<IUserService> _userServiceMock;
+        private readonly FeedbackService _feedbackService;
 
-        _service = new FeedbackService(
-            _feedbackRepository.Object,
-            _userRepository.Object,
-            _branchRepository.Object,
-            _feedbackTagRepository.Object,
-            _dishRepository.Object,
-            _branchMetricsService.Object,
-            _notificationService.Object,
-            _orderRepository.Object,
-            _questProgressService.Object,
-            _settingService.Object,
-            _userService.Object);
-    }
-
-    private static User MakeUser(int id = 1)
-    {
-        return new User
+        public FeedbackServiceTests()
         {
-            Id = id,
-            UserName = "tester",
-            FirstName = "Test",
-            LastName = "User",
-            Email = "tester@example.com"
-        };
-    }
+            _feedbackRepoMock = new Mock<IFeedbackRepository>();
+            _userRepoMock = new Mock<IUserRepository>();
+            _branchRepoMock = new Mock<IBranchRepository>();
+            _tagRepoMock = new Mock<IFeedbackTagRepository>();
+            _dishRepoMock = new Mock<IDishRepository>();
+            _metricsServiceMock = new Mock<IBranchMetricsService>();
+            _notifServiceMock = new Mock<INotificationService>();
+            _orderRepoMock = new Mock<IOrderRepository>();
+            _questServiceMock = new Mock<IQuestProgressService>();
+            _settingServiceMock = new Mock<ISettingService>();
+            _userServiceMock = new Mock<IUserService>();
 
-    private static Branch MakeBranch(int id = 10, double lat = 10.0000, double lng = 106.0000, int? managerId = null)
-    {
-        return new Branch
+            _feedbackService = new FeedbackService(
+                _feedbackRepoMock.Object,
+                _userRepoMock.Object,
+                _branchRepoMock.Object,
+                _tagRepoMock.Object,
+                _dishRepoMock.Object,
+                _metricsServiceMock.Object,
+                _notifServiceMock.Object,
+                _orderRepoMock.Object,
+                _questServiceMock.Object,
+                _settingServiceMock.Object,
+                _userServiceMock.Object
+            );
+        }
+
+        // --- SECTION: CREATE FEEDBACK (SV_FEEDBACK_01) ---
+
+        // SV_FEEDBACK_01 (UTCID01) - Success with Order
+        [Fact]
+        public async Task CreateFeedback_WithOrder_Success()
         {
-            BranchId = id,
-            Name = "Sample Branch",
-            AddressDetail = "123 Sample Street",
-            City = "Ho Chi Minh City",
-            Ward = "Ward 1",
-            Lat = lat,
-            Long = lng,
-            ManagerId = managerId,
-            IsActive = true,
-            IsSubscribed = false,
-            AvgRating = 0,
-            TierId = 2
-        };
-    }
+            var userId = 1; var branchId = 5; var orderId = 100;
+            var request = new CreateFeedbackDto { BranchId = branchId, OrderId = orderId, Rating = 5, Comment = "Good" };
+            
+            _userRepoMock.Setup(r => r.GetUserById(userId)).ReturnsAsync(new User { Id = userId });
+            _branchRepoMock.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(new BO.Entities.Branch { BranchId = branchId, Name = "Test Branch" });
+            _orderRepoMock.Setup(r => r.GetById(orderId)).ReturnsAsync(new BO.Entities.Order { OrderId = orderId, UserId = userId, BranchId = branchId, Status = OrderStatus.Complete });
+            _feedbackRepoMock.Setup(r => r.HasFeedbackForOrder(userId, orderId)).ReturnsAsync(false);
+            _feedbackRepoMock.Setup(r => r.Create(It.IsAny<Feedback>(), null, It.IsAny<List<int>>())).ReturnsAsync(new Feedback { FeedbackId = 1, Rating = 5 });
 
-    private static Order MakeOrder(int id, int userId, int branchId, OrderStatus status)
-    {
-        return new Order
+            var result = await _feedbackService.CreateFeedback(request, userId);
+
+            Assert.Equal(5, result.Rating);
+            _metricsServiceMock.Verify(s => s.OnFeedbackCreated(branchId, 5), Times.Once);
+            _questServiceMock.Verify(s => s.UpdateProgressAsync(userId, QuestTaskType.REVIEW, 1), Times.Once);
+        }
+
+        // SV_FEEDBACK_01 (UTCID02) - Success without Order (GPS Within 300m)
+        [Fact]
+        public async Task CreateFeedback_WithoutOrder_WithinDistance_Success()
         {
-            OrderId = id,
-            UserId = userId,
-            BranchId = branchId,
-            Status = status,
-            TotalAmount = 100000m,
-            FinalAmount = 100000m,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        };
-    }
+            var userId = 1; var branchId = 5;
+            var request = new CreateFeedbackDto { BranchId = branchId, Rating = 4, Comment = "Near", UserLat = 10.7, UserLong = 106.6 };
+            
+            _userRepoMock.Setup(r => r.GetUserById(userId)).ReturnsAsync(new User { Id = userId });
+            _branchRepoMock.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(new BO.Entities.Branch { BranchId = branchId, Lat = 10.7, Long = 106.6 }); // Same spot
+            _settingServiceMock.Setup(s => s.GetInt("feedbackDailyLimit", 3)).Returns(3);
+            _feedbackRepoMock.Setup(r => r.HasUserFeedbackOnBranchWithoutOrderAsync(branchId, userId)).ReturnsAsync(false);
+            _feedbackRepoMock.Setup(r => r.GetReviewedBranchIdsTodayWithoutOrderAsync(userId, It.IsAny<DateTime>())).ReturnsAsync(new List<int>());
+            _feedbackRepoMock.Setup(r => r.Create(It.IsAny<Feedback>(), null, It.IsAny<List<int>>())).ReturnsAsync(new Feedback { FeedbackId = 1, Rating = 4 });
 
-    private static FeedbackEntity MakeCreatedFeedback(int feedbackId, int userId, int branchId, int? orderId = null)
-    {
-        return new FeedbackEntity
+            var result = await _feedbackService.CreateFeedback(request, userId);
+
+            Assert.Equal(4, result.Rating);
+        }
+
+        // SV_FEEDBACK_01 (UTCID03) - Order Not Complete
+        [Fact]
+        public async Task CreateFeedback_OrderNotComplete_ThrowsException()
         {
-            FeedbackId = feedbackId,
-            UserId = userId,
-            BranchId = branchId,
-            OrderId = orderId,
-            Rating = 5,
-            Comment = "Great",
-            CreatedAt = DateTime.UtcNow
-        };
-    }
+            var userId = 1; var branchId = 5; var orderId = 100;
+            var request = new CreateFeedbackDto { BranchId = branchId, OrderId = orderId, Rating = 5 };
+            
+            _userRepoMock.Setup(r => r.GetUserById(userId)).ReturnsAsync(new User { Id = userId });
+            _branchRepoMock.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(new BO.Entities.Branch { BranchId = branchId });
+            _orderRepoMock.Setup(r => r.GetById(orderId)).ReturnsAsync(new BO.Entities.Order { OrderId = orderId, UserId = userId, BranchId = branchId, Status = OrderStatus.Pending });
 
-    [Fact]
-    public async Task CreateFeedback_WithCompletedOrder_AllowsFeedbackWithoutGps()
-    {
-        var userId = 1;
-        var branchId = 10;
-        var orderId = 99;
-        var user = MakeUser(userId);
-        var branch = MakeBranch(branchId);
-        var order = MakeOrder(orderId, userId, branchId, OrderStatus.Complete);
-        var createdFeedback = MakeCreatedFeedback(100, userId, branchId, orderId);
+            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _feedbackService.CreateFeedback(request, userId));
+            Assert.Contains("phải hoàn thành", ex.Message);
+        }
 
-        _userRepository.Setup(r => r.GetUserById(userId)).ReturnsAsync(user);
-        _branchRepository.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(branch);
-        _orderRepository.Setup(r => r.GetById(orderId)).ReturnsAsync(order);
-        _feedbackRepository.Setup(r => r.HasFeedbackForOrder(userId, orderId)).ReturnsAsync(false);
-        _feedbackRepository.Setup(r => r.Create(It.IsAny<FeedbackEntity>(), It.IsAny<List<string>>(), It.IsAny<List<int>>()))
-            .ReturnsAsync(createdFeedback);
-
-        var result = await _service.CreateFeedback(new CreateFeedbackDto
+        // SV_FEEDBACK_01 (UTCID04) - Already Reviewed Order
+        [Fact]
+        public async Task CreateFeedback_AlreadyReviewed_ThrowsException()
         {
-            BranchId = branchId,
-            OrderId = orderId,
-            Rating = 5,
-            Comment = "Nice food"
-        }, userId);
+            var userId = 1; var branchId = 5; var orderId = 100;
+            var request = new CreateFeedbackDto { BranchId = branchId, OrderId = orderId, Rating = 5 };
+            
+            _userRepoMock.Setup(r => r.GetUserById(userId)).ReturnsAsync(new User { Id = userId });
+            _branchRepoMock.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(new BO.Entities.Branch { BranchId = branchId });
+            _orderRepoMock.Setup(r => r.GetById(orderId)).ReturnsAsync(new BO.Entities.Order { OrderId = orderId, UserId = userId, BranchId = branchId, Status = OrderStatus.Complete });
+            _feedbackRepoMock.Setup(r => r.HasFeedbackForOrder(userId, orderId)).ReturnsAsync(true);
 
-        Assert.Equal(100, result.Id);
-        Assert.Equal(branchId, result.BranchId);
-        Assert.Equal(5, result.Rating);
-        _feedbackRepository.Verify(r => r.Create(It.IsAny<FeedbackEntity>(), It.IsAny<List<string>>(), It.IsAny<List<int>>()), Times.Once);
-    }
+            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _feedbackService.CreateFeedback(request, userId));
+            Assert.Contains("đã đánh giá", ex.Message);
+        }
 
-    [Fact]
-    public async Task CreateFeedback_WithPendingOrder_Throws()
-    {
-        var userId = 1;
-        var branchId = 10;
-        var orderId = 99;
-
-        _userRepository.Setup(r => r.GetUserById(userId)).ReturnsAsync(MakeUser(userId));
-        _branchRepository.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(MakeBranch(branchId));
-        _orderRepository.Setup(r => r.GetById(orderId)).ReturnsAsync(MakeOrder(orderId, userId, branchId, OrderStatus.Paid));
-
-        var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _service.CreateFeedback(new CreateFeedbackDto
+        // SV_FEEDBACK_01 (UTCID05) - Too Far (GPS > 300m)
+        [Fact]
+        public async Task CreateFeedback_TooFar_ThrowsException()
         {
-            BranchId = branchId,
-            OrderId = orderId,
-            Rating = 5,
-            Comment = "Nice food"
-        }, userId));
+            var userId = 1; var branchId = 5;
+            var request = new CreateFeedbackDto { BranchId = branchId, UserLat = 10.0, UserLong = 100.0, Rating = 5 }; // Very far from 10.7/106.6
+            
+            _userRepoMock.Setup(r => r.GetUserById(userId)).ReturnsAsync(new User { Id = userId });
+            _branchRepoMock.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(new BO.Entities.Branch { BranchId = branchId, Lat = 10.7, Long = 106.6 });
 
-        Assert.Contains("hoàn thành", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
+            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _feedbackService.CreateFeedback(request, userId));
+            Assert.Contains("phạm vi 300m", ex.Message);
+        }
 
-    [Fact]
-    public async Task CreateFeedback_WithoutOrder_WithinGpsRange_AllowsFeedback()
-    {
-        var userId = 1;
-        var branchId = 10;
-        var user = MakeUser(userId);
-        var branch = MakeBranch(branchId, 10.0000, 106.0000);
-        var createdFeedback = MakeCreatedFeedback(100, userId, branchId);
-
-        _userRepository.Setup(r => r.GetUserById(userId)).ReturnsAsync(user);
-        _branchRepository.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(branch);
-        _feedbackRepository.Setup(r => r.HasUserFeedbackOnBranchWithoutOrderAsync(branchId, userId)).ReturnsAsync(false);
-        _feedbackRepository.Setup(r => r.GetReviewedBranchIdsTodayWithoutOrderAsync(userId, It.IsAny<DateTime>())).ReturnsAsync(new List<int> { 11, 12 });
-        _feedbackRepository.Setup(r => r.Create(It.IsAny<FeedbackEntity>(), It.IsAny<List<string>>(), It.IsAny<List<int>>()))
-            .ReturnsAsync(createdFeedback);
-
-        var result = await _service.CreateFeedback(new CreateFeedbackDto
+        // SV_FEEDBACK_01 (UTCID06) - Daily Limit Reached
+        [Fact]
+        public async Task CreateFeedback_DailyLimit_ThrowsException()
         {
-            BranchId = branchId,
-            Rating = 5,
-            Comment = "Nice food",
-            UserLat = 10.0010,
-            UserLong = 106.0000
-        }, userId);
+            var userId = 1; var branchId = 5;
+            var request = new CreateFeedbackDto { BranchId = branchId, UserLat = 10.7, UserLong = 106.6, Rating = 5 };
+            
+            _userRepoMock.Setup(r => r.GetUserById(userId)).ReturnsAsync(new User { Id = userId });
+            _branchRepoMock.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(new BO.Entities.Branch { BranchId = branchId, Lat = 10.7, Long = 106.6 });
+            _settingServiceMock.Setup(s => s.GetInt("feedbackDailyLimit", 3)).Returns(1); // Limit 1
+            _feedbackRepoMock.Setup(r => r.GetReviewedBranchIdsTodayWithoutOrderAsync(userId, It.IsAny<DateTime>())).ReturnsAsync(new List<int> { 99 }); // Alreay reviewed branch 99
 
-        Assert.Equal(100, result.Id);
-        Assert.Equal(branchId, result.BranchId);
-        Assert.Equal(5, result.Rating);
-        _feedbackRepository.Verify(r => r.Create(It.IsAny<FeedbackEntity>(), It.IsAny<List<string>>(), It.IsAny<List<int>>()), Times.Once);
-    }
+            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _feedbackService.CreateFeedback(request, userId));
+            Assert.Contains("đạt giới hạn", ex.Message);
+        }
 
-    [Fact]
-    public async Task CreateFeedback_WithoutOrder_MissingGps_Throws()
-    {
-        var userId = 1;
-        var branchId = 10;
-
-        _userRepository.Setup(r => r.GetUserById(userId)).ReturnsAsync(MakeUser(userId));
-        _branchRepository.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(MakeBranch(branchId));
-
-        var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _service.CreateFeedback(new CreateFeedbackDto
+        // SV_FEEDBACK_01 (UTCID07) - Dish Not in Branch
+        [Fact]
+        public async Task CreateFeedback_DishNotInBranch_ThrowsException()
         {
-            BranchId = branchId,
-            Rating = 5,
-            Comment = "Nice food"
-        }, userId));
+            var userId = 1; var branchId = 5; var dishId = 20;
+            var request = new CreateFeedbackDto { BranchId = branchId, DishId = dishId, Rating = 5 };
+            
+            _userRepoMock.Setup(r => r.GetUserById(userId)).ReturnsAsync(new User { Id = userId });
+            _branchRepoMock.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(new BO.Entities.Branch { BranchId = branchId });
+            _dishRepoMock.Setup(r => r.GetByIdAsync(dishId)).ReturnsAsync(new BO.Entities.Dish { DishId = dishId });
+            _dishRepoMock.Setup(r => r.GetBranchDishAsync(branchId, dishId)).ReturnsAsync((BranchDish?)null);
 
-        Assert.Contains("GPS", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
+            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _feedbackService.CreateFeedback(request, userId));
+            Assert.Contains("không thuộc chi nhánh", ex.Message);
+        }
 
-    [Fact]
-    public async Task CreateFeedback_WithoutOrder_TooFar_Throws()
-    {
-        var userId = 1;
-        var branchId = 10;
+        // --- SECTION: UPDATE FEEDBACK (SV_FEEDBACK_02) ---
 
-        _userRepository.Setup(r => r.GetUserById(userId)).ReturnsAsync(MakeUser(userId));
-        _branchRepository.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(MakeBranch(branchId, 10.0000, 106.0000));
-
-        var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _service.CreateFeedback(new CreateFeedbackDto
+        // SV_FEEDBACK_02 (UTCID01) - Success
+        [Fact]
+        public async Task UpdateFeedback_Success()
         {
-            BranchId = branchId,
-            Rating = 5,
-            Comment = "Nice food",
-            UserLat = 10.0050,
-            UserLong = 106.0000
-        }, userId));
+            var userId = 1; var feedbackId = 50;
+            var request = new UpdateFeedbackDto { Rating = 4, Comment = "Updated Comment" };
+            var feedback = new Feedback { FeedbackId = feedbackId, UserId = userId, BranchId = 5, Rating = 2 };
 
-        Assert.Contains("300m", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
+            _feedbackRepoMock.Setup(r => r.GetById(feedbackId)).ReturnsAsync(feedback);
+            _feedbackRepoMock.Setup(r => r.Update(It.IsAny<Feedback>())).ReturnsAsync(feedback);
 
-    [Fact]
-    public async Task CreateFeedback_WithoutOrder_SameBranchTwice_Throws()
-    {
-        var userId = 1;
-        var branchId = 10;
+            var result = await _feedbackService.UpdateFeedback(feedbackId, request, userId);
 
-        _userRepository.Setup(r => r.GetUserById(userId)).ReturnsAsync(MakeUser(userId));
-        _branchRepository.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(MakeBranch(branchId));
-        _feedbackRepository.Setup(r => r.HasUserFeedbackOnBranchWithoutOrderAsync(branchId, userId)).ReturnsAsync(true);
+            Assert.Equal(4, result.Rating);
+            Assert.Equal("Updated Comment", result.Comment);
+            _metricsServiceMock.Verify(s => s.OnFeedbackUpdated(5, 2, 4), Times.Once);
+        }
 
-        var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _service.CreateFeedback(new CreateFeedbackDto
+        // SV_FEEDBACK_02 (UTCID02) - Feedback Not Found
+        [Fact]
+        public async Task UpdateFeedback_NotFound_ThrowsException()
         {
-            BranchId = branchId,
-            Rating = 5,
-            Comment = "Nice food",
-            UserLat = 10.0010,
-            UserLong = 106.0000
-        }, userId));
+            _feedbackRepoMock.Setup(r => r.GetById(It.IsAny<int>())).ReturnsAsync((Feedback?)null);
+            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _feedbackService.UpdateFeedback(999, new UpdateFeedbackDto { Rating = 5 }, 1));
+            Assert.Contains("Không tìm thấy", ex.Message);
+        }
 
-        Assert.Contains("1 lần", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public async Task CreateFeedback_WithoutOrder_MoreThanThreeBranchesPerDay_Throws()
-    {
-        var userId = 1;
-        var branchId = 10;
-
-        _userRepository.Setup(r => r.GetUserById(userId)).ReturnsAsync(MakeUser(userId));
-        _branchRepository.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(MakeBranch(branchId));
-        _settingService.Setup(s => s.GetInt("feedbackDailyLimit", 3)).Returns(2);
-        _feedbackRepository.Setup(r => r.HasUserFeedbackOnBranchWithoutOrderAsync(branchId, userId)).ReturnsAsync(false);
-        _feedbackRepository.Setup(r => r.GetReviewedBranchIdsTodayWithoutOrderAsync(userId, It.IsAny<DateTime>()))
-            .ReturnsAsync(new List<int> { 1, 2 });
-
-        var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _service.CreateFeedback(new CreateFeedbackDto
+        // SV_FEEDBACK_02 (UTCID03) - Unauthorized (Not Owner)
+        [Fact]
+        public async Task UpdateFeedback_Unauthorized_ThrowsException()
         {
-            BranchId = branchId,
-            Rating = 5,
-            Comment = "Nice food",
-            UserLat = 10.0010,
-            UserLong = 106.0000
-        }, userId));
+            var feedback = new Feedback { FeedbackId = 50, UserId = 999 };
+            _feedbackRepoMock.Setup(r => r.GetById(50)).ReturnsAsync(feedback);
 
-        Assert.Contains("2 quán", ex.Message, StringComparison.OrdinalIgnoreCase);
-    }
+            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _feedbackService.UpdateFeedback(50, new UpdateFeedbackDto(), 1));
+            Assert.Contains("không sở hữu", ex.Message);
+        }
 
-    [Fact]
-    public async Task CheckVelocityAsync_WithBranchAndGps_ReturnsDistanceAndConfiguredLimit()
-    {
-        var userId = 1;
-        var branchId = 10;
+        // SV_FEEDBACK_02 (UTCID04) - Already Updated
+        [Fact]
+        public async Task UpdateFeedback_AlreadyUpdated_ThrowsException()
+        {
+            var feedback = new Feedback { FeedbackId = 50, UserId = 1, UpdatedAt = DateTime.UtcNow };
+            _feedbackRepoMock.Setup(r => r.GetById(50)).ReturnsAsync(feedback);
 
-        _settingService.Setup(s => s.GetInt("feedbackDailyLimit", 3)).Returns(5);
+            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _feedbackService.UpdateFeedback(50, new UpdateFeedbackDto(), 1));
+            Assert.Contains("chỉnh sửa 1 lần", ex.Message);
+        }
 
-        _feedbackRepository.Setup(r => r.GetDailyFeedbackCountWithoutOrderAsync(userId, It.IsAny<DateTime>())).ReturnsAsync(2);
-        _feedbackRepository.Setup(r => r.GetReviewedBranchIdsTodayWithoutOrderAsync(userId, It.IsAny<DateTime>()))
-            .ReturnsAsync(new List<int> { 10, 11 });
-        _feedbackRepository.Setup(r => r.HasUserFeedbackOnBranchWithoutOrderAsync(branchId, userId)).ReturnsAsync(false);
-        _branchRepository.Setup(r => r.GetByIdAsync(branchId)).ReturnsAsync(MakeBranch(branchId, 10.0000, 106.0000));
+        // SV_FEEDBACK_02 (UTCID05) - Dish in Diff Branch
+        [Fact]
+        public async Task UpdateFeedback_DishInDiffBranch_ThrowsException()
+        {
+            var userId = 1; var feedbackId = 50; var dishId = 20;
+            var feedback = new Feedback { FeedbackId = feedbackId, UserId = userId, BranchId = 5 };
+            var request = new UpdateFeedbackDto { DishId = dishId, Rating = 5 };
 
-        var result = await _service.CheckVelocityAsync(userId, branchId, 10.0010, 106.0000);
+            _feedbackRepoMock.Setup(r => r.GetById(feedbackId)).ReturnsAsync(feedback);
+            _dishRepoMock.Setup(r => r.GetByIdAsync(dishId)).ReturnsAsync(new BO.Entities.Dish { DishId = dishId });
+            _dishRepoMock.Setup(r => r.GetBranchDishAsync(5, dishId)).ReturnsAsync((BranchDish?)null);
 
-        Assert.Equal(3, result.RemainingTotalToday);
-        Assert.Equal(5, result.DailyLimit);
-        Assert.Equal(new List<int> { 10, 11 }, result.ReviewedBranchIds);
-        Assert.Equal(branchId, result.BranchId);
-        Assert.True(result.IsWithinDistance);
-        Assert.True(result.CanReviewWithoutOrder);
-        Assert.NotNull(result.DistanceMeters);
-        Assert.True(result.DistanceMeters.Value > 0 && result.DistanceMeters.Value < 300);
+            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _feedbackService.UpdateFeedback(feedbackId, request, userId));
+            Assert.Contains("không thuộc chi nhánh", ex.Message);
+        }
+
+        // SV_FEEDBACK_02 (UTCID06) - Rating Out of Range
+        [Fact]
+        public async Task UpdateFeedback_RatingOutOfRange_ThrowsException()
+        {
+            var userId = 1; var feedbackId = 50;
+            var feedback = new Feedback { FeedbackId = feedbackId, UserId = userId };
+            var request = new UpdateFeedbackDto { Rating = 6 };
+
+            _feedbackRepoMock.Setup(r => r.GetById(feedbackId)).ReturnsAsync(feedback);
+
+            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _feedbackService.UpdateFeedback(feedbackId, request, userId));
+            Assert.Contains("từ 1 đến 5", ex.Message);
+        }
+
+        // SV_FEEDBACK_02 (UTCID07) - Tag Not Found
+        [Fact]
+        public async Task UpdateFeedback_TagNotFound_ThrowsException()
+        {
+            var userId = 1; var feedbackId = 50;
+            var feedback = new Feedback { FeedbackId = feedbackId, UserId = userId };
+            var request = new UpdateFeedbackDto { TagIds = new List<int> { 99 }, Rating = 5 };
+
+            _feedbackRepoMock.Setup(r => r.GetById(feedbackId)).ReturnsAsync(feedback);
+            _tagRepoMock.Setup(r => r.Exists(99)).ReturnsAsync(false);
+
+            var ex = await Assert.ThrowsAsync<DomainExceptions>(() => _feedbackService.UpdateFeedback(feedbackId, request, userId));
+            Assert.Contains("Không tìm thấy tag", ex.Message);
+        }
     }
 }

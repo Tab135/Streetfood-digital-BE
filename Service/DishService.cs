@@ -35,6 +35,15 @@ namespace Service
 
         public async Task<DishResponse> CreateDishAsync(int vendorId, CreateDishRequest request, int userId, string imageUrl)
         {
+            if (string.IsNullOrWhiteSpace(request?.Name))
+            {
+                throw new DomainExceptions("Tên món ăn là bắt buộc");
+            }
+            if (request.Price <= 0)
+            {
+                throw new DomainExceptions("Giá món ăn phải lớn hơn 0");
+            }
+
             // Validate vendor exists and user can manage it
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
             if (vendor == null)
