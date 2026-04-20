@@ -844,25 +844,15 @@ public class OrderService : IOrderService
                 throw new DomainExceptions("Chiến dịch của phiếu giảm giá không tồn tại", "ERR_NOT_FOUND");
             }
 
-            if (campaign.CreatedByBranchId.HasValue)
+            var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branch.BranchId, campaign.CampaignId);
+            if (joinInfo == null || joinInfo.IsActive != true)
             {
-                if (branch.BranchId != campaign.CreatedByBranchId.Value)
+                if (campaign.CreatedByVendorId.HasValue)
                 {
-                    throw new DomainExceptions("Phiếu giảm giá này chỉ áp dụng cho một chi nhánh khác", "ERR_BAD_REQUEST");
+                    throw new DomainExceptions("Chi nhánh này chưa tham gia chiến dịch của chủ quán, không thể sử dụng phiếu giảm giá này", "ERR_BAD_REQUEST");
                 }
-            }
-            else
-            {
-                var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branch.BranchId, campaign.CampaignId);
-                if (joinInfo == null || joinInfo.IsActive != true)
-                {
-                    if (campaign.CreatedByVendorId.HasValue)
-                    {
-                        throw new DomainExceptions("Chi nhánh này chưa tham gia chiến dịch của chủ quán, không thể sử dụng phiếu giảm giá này", "ERR_BAD_REQUEST");
-                    }
 
-                    throw new DomainExceptions("Chi nhánh này chưa hoàn thành thanh toán tham gia chiến dịch", "ERR_BAD_REQUEST");
-                }
+                throw new DomainExceptions("Chi nhánh này chưa hoàn thành thanh toán tham gia chiến dịch", "ERR_BAD_REQUEST");
             }
         }
 
@@ -930,7 +920,7 @@ public class OrderService : IOrderService
             return false;
         }
 
-        return !campaign.CreatedByBranchId.HasValue && !campaign.CreatedByVendorId.HasValue;
+        return !campaign.CreatedByVendorId.HasValue;
     }
 
     private async Task RestoreVoucherAfterVendorRejectAsync(Order order)

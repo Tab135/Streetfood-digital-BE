@@ -10,10 +10,6 @@ namespace BO.Entities
         [Key]
         public int CampaignId { get; set; }
 
-        public int? CreatedByBranchId { get; set; }
-        [ForeignKey("CreatedByBranchId")]
-        public virtual Branch? CreatedByBranch { get; set; }
-
         public int? CreatedByVendorId { get; set; }
         [ForeignKey("CreatedByVendorId")]
         public virtual Vendor? CreatedByVendor { get; set; }

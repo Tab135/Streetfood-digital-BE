@@ -381,7 +381,7 @@ public class VoucherService : IVoucherService
                 continue;
             }
 
-            var isVendorCreatedCampaign = voucher.Campaign.CreatedByVendorId.HasValue || voucher.Campaign.CreatedByBranchId.HasValue;
+            var isVendorCreatedCampaign = voucher.Campaign.CreatedByVendorId.HasValue;
             if (!isVendorCreatedCampaign)
             {
                 continue;
@@ -433,11 +433,6 @@ public class VoucherService : IVoucherService
             if (campaign == null)
             {
                 return false;
-            }
-
-            if (campaign.CreatedByBranchId.HasValue)
-            {
-                return branchId == campaign.CreatedByBranchId.Value;
             }
 
             var joinInfo = await _branchCampaignRepository.GetByBranchAndCampaignAsync(branchId, campaign.CampaignId);

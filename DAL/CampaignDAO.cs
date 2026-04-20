@@ -32,14 +32,14 @@ namespace DAL
         public async Task<List<Campaign>> GetAllSystemActiveAsync()
         {
             return await _context.Campaigns
-                .Where(c => c.CreatedByBranchId == null && c.EndDate >= DateTime.UtcNow)
+                .Where(c => c.CreatedByVendorId == null && c.EndDate >= DateTime.UtcNow)
                 .ToListAsync();
         }
 
         public async Task<List<Campaign>> GetByBranchIdAsync(int branchId)
         {
             return await _context.Campaigns
-                .Where(c => c.CreatedByBranchId == branchId)
+                .Where(c => c.BranchCampaigns.Any(bc => bc.BranchId == branchId))
                 .ToListAsync();
         }
 
@@ -83,8 +83,7 @@ namespace DAL
         public async Task<List<int>> GetCampaignIdsToOpenRegistrationAsync(DateTime now)
         {
             return await _context.Campaigns
-                .Where(c => c.CreatedByBranchId == null
-                            && c.CreatedByVendorId == null
+                .Where(c => c.CreatedByVendorId == null
                             && !c.IsRegisterable
                             && c.RegistrationStartDate != null
                             && c.RegistrationStartDate <= now
@@ -96,8 +95,7 @@ namespace DAL
         public async Task<List<int>> GetCampaignIdsToCloseRegistrationAsync(DateTime now)
         {
             return await _context.Campaigns
-                .Where(c => c.CreatedByBranchId == null
-                            && c.CreatedByVendorId == null
+                .Where(c => c.CreatedByVendorId == null
                             && c.IsRegisterable
                             && (c.RegistrationStartDate == null
                                 || c.RegistrationStartDate > now
@@ -108,19 +106,18 @@ namespace DAL
 
         public async Task<(List<Campaign> Items, int TotalCount)> GetCampaignsAsync(bool? isSystem, int? vendorId, int page, int pageSize)
         {
-            var query = _context.Campaigns.Include(c => c.CreatedByBranch).AsQueryable();
+            var query = _context.Campaigns.AsQueryable();
 
             if (isSystem == true)
             {
-                query = query.Where(c => c.CreatedByBranchId == null && c.CreatedByVendorId == null);
+                query = query.Where(c => c.CreatedByVendorId == null);
             }
             if (vendorId.HasValue)
             {
                 // Fetch campaigns created by the vendor OR created by any branch owned by this vendor
                 query = query.Where(c => c.CreatedByVendorId == vendorId.Value || 
-                                        (c.CreatedByBranchId != null && c.CreatedByBranch.VendorId == vendorId.Value) ||
                                         // Additionally include system campaigns that the vendor has joined and paid
-                                        (c.CreatedByBranchId == null && c.CreatedByVendorId == null &&
+                                        (c.CreatedByVendorId == null &&
                                          c.BranchCampaigns.Any(bc => bc.Branch.VendorId == vendorId.Value && bc.IsActive)));
             }
 
@@ -136,7 +133,7 @@ namespace DAL
         public async Task<(List<Campaign> Items, int TotalCount)> GetJoinableSystemCampaignsAsync(int page, int pageSize)
         {
             var query = _context.Campaigns
-                .Where(c => c.CreatedByBranchId == null && c.CreatedByVendorId == null) // system campaigns
+                .Where(c => c.CreatedByVendorId == null) // system campaigns
                 .Where(c => c.IsRegisterable);
 
             int totalCount = await query.CountAsync();
@@ -151,14 +148,14 @@ namespace DAL
         public async Task<(List<Campaign> Items, int TotalCount)> GetPublicCampaignsAsync(bool? isSystem, int page, int pageSize)
         {
             var now = DateTime.UtcNow;
-            var query = _context.Campaigns.Include(c => c.CreatedByBranch)
+            var query = _context.Campaigns
                 .Where(c => c.IsActive && c.StartDate <= now && c.EndDate >= now);
 
             if (isSystem.HasValue)
             {
                 query = isSystem.Value
-                    ? query.Where(c => c.CreatedByBranchId == null && c.CreatedByVendorId == null)
-                    : query.Where(c => c.CreatedByBranchId != null || c.CreatedByVendorId != null);
+                    ? query.Where(c => c.CreatedByVendorId == null)
+                    : query.Where(c => c.CreatedByVendorId != null);
             }
 
             int totalCount = await query.CountAsync();
@@ -327,8 +324,7 @@ namespace DAL
                         StartDate = bc.Campaign.StartDate,
                         EndDate = bc.Campaign.EndDate,
                         IsActive = bc.Campaign.IsActive,
-                        IsRegisterable = bc.Campaign.CreatedByBranchId == null
-                            && bc.Campaign.CreatedByVendorId == null
+                        IsRegisterable = bc.Campaign.CreatedByVendorId == null
                             && bc.Campaign.RegistrationStartDate.HasValue
                             && now >= bc.Campaign.RegistrationStartDate.Value
                             && (!bc.Campaign.RegistrationEndDate.HasValue || now <= bc.Campaign.RegistrationEndDate.Value),

@@ -87,7 +87,7 @@ namespace Service
 
         private static bool IsSystemCampaign(Campaign campaign)
         {
-            return campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null;
+            return campaign.CreatedByVendorId == null;
         }
 
         private static bool ComputeIsRegisterableForCampaign(Campaign campaign)
@@ -145,7 +145,6 @@ namespace Service
                 throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
 
             var targetBranchIds = await ResolveTargetBranchIdsForVendorCampaignAsync(vendor.VendorId, dto.BranchIds);
-            int? createdByBranchId = targetBranchIds.Count == 1 ? targetBranchIds[0] : null;
 
             bool isCampaignActive = dto.IsActive;
             if (dto.StartDate > DateTime.UtcNow)
@@ -164,8 +163,7 @@ namespace Service
                 EndDate = dto.EndDate,
                 IsActive = isCampaignActive,
                 IsRegisterable = false,
-                CreatedByVendorId = vendor.VendorId,
-                CreatedByBranchId = createdByBranchId
+                CreatedByVendorId = vendor.VendorId
             };
             await _campaignRepo.CreateAsync(campaign);
             foreach (var branchId in targetBranchIds)
@@ -196,7 +194,7 @@ namespace Service
         public async Task<BO.Common.PaginatedResponse<BO.DTO.Campaigns.CampaignBranchResponseDto>> GetSystemCampaignBranchesAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng)
         {
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
-            if (campaign == null || (campaign.CreatedByVendorId != null || campaign.CreatedByBranchId != null))
+            if (campaign == null || campaign.CreatedByVendorId != null)
             {
                 throw new DomainExceptions("Chiến dịch hệ thống không tồn tại hoặc đây không phải chiến dịch hệ thống.");
             }
@@ -296,47 +294,37 @@ namespace Service
 
             await _branchCampaignRepo.SetAllIsActiveForCampaignAsync(campaign.CampaignId, true);
 
-            var ids = await _branchCampaignRepo.GetBranchIdsByCampaignAndVendorAsync(campaign.CampaignId, vendorId);
-            int? nextBranchId = ids.Count == 1 ? ids[0] : null;
-
             bool shouldBeActive = campaign.StartDate <= DateTime.UtcNow;
 
-            if (campaign.CreatedByBranchId == nextBranchId && campaign.IsActive == shouldBeActive)
+            if (campaign.IsActive == shouldBeActive)
                 return;
 
-            campaign.CreatedByBranchId = nextBranchId;
             campaign.IsActive = shouldBeActive;
             campaign.UpdatedAt = DateTime.UtcNow;
             await _campaignRepo.UpdateAsync(campaign);
         }
 
         /// <summary>
-        /// Keeps <see cref="Campaign.CreatedByBranchId"/> in sync (exactly one branch → set, else null).
         /// If no <see cref="BranchCampaign"/> rows remain for the campaign → <see cref="Campaign.IsActive"/> = false.
         /// </summary>
         private async Task SyncVendorCampaignAfterParticipationChangeAsync(Campaign campaign, int vendorId)
         {
             var remainingAllBranches = await _branchCampaignRepo.CountByCampaignIdAsync(campaign.CampaignId);
-            var ids = await _branchCampaignRepo.GetBranchIdsByCampaignAndVendorAsync(campaign.CampaignId, vendorId);
 
-            int? nextBranchId;
             bool nextActive = campaign.IsActive;
 
             if (remainingAllBranches == 0)
             {
-                nextBranchId = null;
                 nextActive = false;
             }
             else
             {
-                nextBranchId = ids.Count == 1 ? ids[0] : null;
                 nextActive = campaign.StartDate <= DateTime.UtcNow;
             }
 
-            if (campaign.CreatedByBranchId == nextBranchId && campaign.IsActive == nextActive)
+            if (campaign.IsActive == nextActive)
                 return;
 
-            campaign.CreatedByBranchId = nextBranchId;
             campaign.IsActive = nextActive;
             campaign.UpdatedAt = DateTime.UtcNow;
             await _campaignRepo.UpdateAsync(campaign);
@@ -400,7 +388,7 @@ namespace Service
         public async Task<SystemCampaignDetailDto> GetSystemCampaignDetailWithJoinableBranchesAsync(int userId, int campaignId)
         {
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
-            if (campaign == null || campaign.CreatedByBranchId != null || campaign.CreatedByVendorId != null)
+            if (campaign == null || campaign.CreatedByVendorId != null)
                 throw new DomainExceptions("Chiến dịch không phải là System Campaign.");
 
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
@@ -447,7 +435,7 @@ namespace Service
         public async Task<VendorJoinSystemCampaignResultDto> VendorJoinSystemCampaignAsync(int userId, int campaignId)
         {
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
-            if (campaign == null || campaign.CreatedByBranchId != null || campaign.CreatedByVendorId != null)
+            if (campaign == null || campaign.CreatedByVendorId != null)
                 throw new DomainExceptions("Chiến dịch không phải là System Campaign.");
 
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
@@ -541,7 +529,7 @@ namespace Service
         public async Task<VendorJoinSystemCampaignResultDto> VendorJoinSystemCampaignForBranchesAsync(int userId, int campaignId, List<int> branchIds)
         {
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
-            if (campaign == null || campaign.CreatedByBranchId != null || campaign.CreatedByVendorId != null)
+            if (campaign == null || campaign.CreatedByVendorId != null)
                 throw new DomainExceptions("Chiến dịch không phải là System Campaign.");
 
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
@@ -681,7 +669,7 @@ namespace Service
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
             if (campaign == null) throw new DomainExceptions("Không tìm thấy chiến dịch.");
 
-            if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null)
+            if (campaign.CreatedByVendorId == null)
             {
                 if (role != "Admin") throw new DomainExceptions("Chỉ Admin mới có thể thao tác ảnh chiến dịch hệ thống.");
             }
@@ -693,11 +681,7 @@ namespace Service
                 bool isOwner = false;
                 if (campaign.CreatedByVendorId == vendor.VendorId)
                     isOwner = true;
-                else if (campaign.CreatedByBranchId != null)
-                {
-                    var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
-                    if (branch != null && branch.VendorId == vendor.VendorId) isOwner = true;
-                }
+                
                 if (!isOwner) throw new DomainExceptions("Bạn không có quyền thao tác ảnh cho chiến dịch này.");
             }
             campaign.ImageUrl = imageUrl;
@@ -728,7 +712,6 @@ namespace Service
                 EndDate = dto.EndDate,
                 IsActive = isCampaignActive,
                 IsRegisterable = isCampaignRegisterable,
-                CreatedByBranchId = null
             };
             await _campaignRepo.CreateAsync(campaign);
 
@@ -841,7 +824,7 @@ namespace Service
                 throw new DomainExceptions("Không tìm thấy chi nhánh hoặc không có quyền truy cập.");
 
             var campaign = await _campaignRepo.GetByIdAsync(campaignId);
-            if (campaign == null || campaign.CreatedByBranchId != null || campaign.CreatedByVendorId != null)
+            if (campaign == null || campaign.CreatedByVendorId != null)
                 throw new DomainExceptions("Chiến dịch hệ thống không tồn tại.");
 
             var now = DateTime.UtcNow;
@@ -852,7 +835,6 @@ namespace Service
             }
 
             // Eligibility check for system campaigns
-            if (campaign.CreatedByBranchId == null && campaign.CreatedByVendorId == null)
             {
                 if (branch.Tier == null || branch.Tier.Weight < 1)
                 {
@@ -897,7 +879,6 @@ namespace Service
                 mappedItems.Add(new CampaignResponseDto
                 {
                     CampaignId = item.CampaignId,
-                    CreatedByBranchId = item.CreatedByBranchId,
                     CreatedByVendorId = item.CreatedByVendorId,
                     Name = item.Name,
                     Description = item.Description,
@@ -956,7 +937,6 @@ namespace Service
                 mappedItems.Add(new CampaignResponseDto
                 {
                     CampaignId = item.CampaignId,
-                    CreatedByBranchId = item.CreatedByBranchId,
                     CreatedByVendorId = item.CreatedByVendorId,
                     Name = item.Name,
                     Description = item.Description,
@@ -995,7 +975,6 @@ namespace Service
                 mappedItems.Add(new CampaignResponseDto
                 {
                     CampaignId = item.CampaignId,
-                    CreatedByBranchId = item.CreatedByBranchId,
                     CreatedByVendorId = item.CreatedByVendorId,
                     Name = item.Name,
                     Description = item.Description,
@@ -1034,7 +1013,6 @@ namespace Service
                 mappedItems.Add(new CampaignResponseDto
                 {
                     CampaignId = item.CampaignId,
-                    CreatedByBranchId = item.CreatedByBranchId,
                     CreatedByVendorId = item.CreatedByVendorId,
                     Name = item.Name,
                     Description = item.Description,
@@ -1071,7 +1049,6 @@ namespace Service
             return new CampaignResponseDto
             {
                 CampaignId = item.CampaignId,
-                CreatedByBranchId = item.CreatedByBranchId,
                 CreatedByVendorId = item.CreatedByVendorId,
                 Name = item.Name,
                 Description = item.Description,
@@ -1126,14 +1103,7 @@ namespace Service
                 {
                     isOwner = true;
                 }
-                else if (campaign.CreatedByBranchId != null)
-                {
-                    var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
-                    if (branch != null && branch.VendorId == vendor.VendorId)
-                    {
-                        isOwner = true;
-                    }
-                }
+
 
                 if (!isOwner)
                 {
@@ -1231,14 +1201,7 @@ namespace Service
                 {
                     isOwner = true;
                 }
-                else if (campaign.CreatedByBranchId != null)
-                {
-                    var branch = await _branchRepo.GetByIdAsync(campaign.CreatedByBranchId.Value);
-                    if (branch != null && branch.VendorId == vendor.VendorId)
-                    {
-                        isOwner = true;
-                    }
-                }
+
 
                 if (!isOwner)
                 {

@@ -6,7 +6,6 @@ namespace BO.DTO.Campaigns
     public class CampaignResponseDto
     {
         public int CampaignId { get; set; }
-        public int? CreatedByBranchId { get; set; }
         public int? CreatedByVendorId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
@@ -29,6 +28,6 @@ namespace BO.DTO.Campaigns
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public string? ImageUrl { get; set; }
-        public bool IsSystemCampaign => CreatedByBranchId == null && CreatedByVendorId == null;
+        public bool IsSystemCampaign => CreatedByVendorId == null;
     }
 }
