@@ -211,9 +211,14 @@ namespace DAL
             return (users, totalCount);
         }
 
-        public async Task<(System.Collections.Generic.List<User> Users, int TotalCount)> SearchUsersAsync(string keyword, int pageNumber, int pageSize)
+        public async Task<(System.Collections.Generic.List<User> Users, int TotalCount)> SearchUsersAsync(string keyword, bool onlyUserRole, int pageNumber, int pageSize)
         {
             var query = _context.Users.AsQueryable();
+
+            if (onlyUserRole)
+            {
+                query = query.Where(u => u.Role == Role.User);
+            }
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {

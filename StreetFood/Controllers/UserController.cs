@@ -43,11 +43,11 @@ namespace StreetFood.Controllers
         [HttpGet("search")]
         [Authorize(Roles = "Admin,Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<UserProfileDto>>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> SearchUsers([FromQuery] string query, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> SearchUsers([FromQuery] string query, [FromQuery] bool onlyUserRole = true, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             try
             {
-                var result = await _userService.SearchUsersAsync(query, pageNumber, pageSize);
+                var result = await _userService.SearchUsersAsync(query, onlyUserRole, pageNumber, pageSize);
                 return Ok(new { message = "Users retrieved successfully", data = result });
             }
             catch (Exception ex)

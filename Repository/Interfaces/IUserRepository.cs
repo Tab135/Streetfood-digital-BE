@@ -18,7 +18,7 @@ namespace Repository.Interfaces
         Task<User> FindOrCreateUserFromFacebookAsync(FacebookUserInfo info);
         Task<User> GetUserById(int userId);
         Task<(System.Collections.Generic.List<User> Users, int TotalCount)> GetUsersAsync(Role? role, int pageNumber, int pageSize);
-        Task<(System.Collections.Generic.List<User> Users, int TotalCount)> SearchUsersAsync(string keyword, int pageNumber, int pageSize);
+        Task<(System.Collections.Generic.List<User> Users, int TotalCount)> SearchUsersAsync(string keyword, bool onlyUserRole, int pageNumber, int pageSize);
         Task<System.Collections.Generic.List<int>> ResetAllCustomerTiersAsync(int goldXP, int diamondXP, System.Threading.CancellationToken ct);
     }
 }

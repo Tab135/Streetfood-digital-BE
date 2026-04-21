@@ -424,9 +424,9 @@ namespace Service
             return new BO.Common.PaginatedResponse<UserProfileDto>(mappedUsers, totalCount, pageNumber, pageSize);
         }
 
-        public async Task<BO.Common.PaginatedResponse<UserProfileDto>> SearchUsersAsync(string keyword, int pageNumber, int pageSize)
+        public async Task<BO.Common.PaginatedResponse<UserProfileDto>> SearchUsersAsync(string keyword, bool onlyUserRole, int pageNumber, int pageSize)
         {
-            var (users, totalCount) = await _userRepository.SearchUsersAsync(keyword, pageNumber, pageSize);
+            var (users, totalCount) = await _userRepository.SearchUsersAsync(keyword, onlyUserRole, pageNumber, pageSize);
             var mappedUsers = new List<UserProfileDto>();
 
             // Fetch dynamic admin XP thresholds once for the entire list
