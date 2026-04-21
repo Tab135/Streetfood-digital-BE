@@ -46,7 +46,9 @@ namespace Service
                 matchingItems = matchingItems
                     .Where(item =>
                         (item.branch.Vendor != null && TextNormalizer.NormalizeForSearch(item.branch.Vendor.Name).Contains(normalizedKeyword)) ||
-                        item.branch.BranchDishes.Any(bd => bd.Dish != null && TextNormalizer.NormalizeForSearch(bd.Dish.Name).Contains(normalizedKeyword)))
+                        item.branch.BranchDishes.Any(bd => bd.Dish != null && TextNormalizer.NormalizeForSearch(bd.Dish.Name).Contains(normalizedKeyword)) ||
+                         item.branch.Vendor.Branches.Any(bd => bd.Name != null && TextNormalizer.NormalizeForSearch(bd.Name).Contains(normalizedKeyword))
+                        )
                     .ToList();
             }
 
