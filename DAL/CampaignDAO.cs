@@ -172,6 +172,7 @@ namespace DAL
             var branches = await _context.Branches
                 .AsNoTracking()
                 .Include(b => b.Tier)
+                .Include(b => b.Vendor)
                 .Where(b => _context.BranchCampaigns
                     .Any(bc => bc.BranchId == b.BranchId && bc.IsActive 
                         && bc.Campaign.CreatedByVendorId != null 
@@ -208,6 +209,7 @@ namespace DAL
             var branches = await _context.Branches
                 .AsNoTracking()
                 .Include(b => b.Tier)
+                .Include(b => b.Vendor)
                 .Where(b => _context.BranchCampaigns
                     .Any(bc => bc.CampaignId == campaignId && bc.BranchId == b.BranchId && (includeInactiveBranches || bc.IsActive)))
                 .ToListAsync();
@@ -241,6 +243,7 @@ namespace DAL
                 {
                     BranchId = b.BranchId,
                     VendorId = b.VendorId ?? 0,
+                    VendorName = b.Vendor?.Name ?? string.Empty,
                     ManagerId = b.ManagerId,
                     Name = b.Name,
                     PhoneNumber = b.PhoneNumber,
@@ -354,6 +357,7 @@ namespace DAL
                 {
                     BranchId = b.BranchId,
                     VendorId = b.VendorId ?? 0,
+                    VendorName = b.Vendor?.Name ?? string.Empty,
                     ManagerId = b.ManagerId,
                     Name = b.Name,
                     PhoneNumber = b.PhoneNumber,
