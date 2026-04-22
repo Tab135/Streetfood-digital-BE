@@ -70,7 +70,8 @@ namespace Service
                         NotificationType.QuestTaskCompleted,
                         "Nhiệm vụ hoàn thành!",
                         $"Bạn đã hoàn thành nhiệm vụ: {taskLabel}",
-                        userQuestTask.QuestTaskId);
+                        userQuestTask.QuestTaskId,
+                        new { type = "quest_task_complete", questTaskId = userQuestTask.QuestTaskId });
 
                     await CheckAndCompleteQuestAsync(userId, userQuestTask.UserQuestId);
                 }
