@@ -37,5 +37,8 @@ namespace BO.DTO.Branch
 
         /// <summary>Array of category IDs to filter dishes. Ignored if null or empty.</summary>
         public List<int>? CategoryIds { get; set; }
+
+        /// <summary>Whether to only include branches with active promotions. Default: false</summary>
+        public Boolean? IsSubscribed { get; set; } 
     }
 }

@@ -1149,7 +1149,8 @@ namespace Service
             bool hasTaste = filter.TasteIds != null && filter.TasteIds.Count > 0;
             bool hasDietary = filter.DietaryIds != null && filter.DietaryIds.Count > 0;
             bool hasCategory = filter.CategoryIds != null && filter.CategoryIds.Count > 0;
-            bool hasAnyFilter = hasLatLong || hasDistance || hasPrice || hasTaste || hasDietary || hasCategory;
+            bool hasIsSubscribed = filter.IsSubscribed.HasValue;
+            bool hasAnyFilter = hasLatLong || hasDistance || hasPrice || hasTaste || hasDietary || hasCategory || hasIsSubscribed;
 
             // If NO filters provided, return all active branches without filtering
             if (!hasAnyFilter)
@@ -1186,7 +1187,13 @@ namespace Service
                         City          = branch.City,
                         Lat           = branch.Lat,
                         Long          = branch.Long,
-                        AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, IsSubscribed = branch.IsSubscribed, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = null,
+                        AvgRating = branch.AvgRating, 
+                        TotalReviewCount = branch.TotalReviewCount,
+                        TotalRatingSum = branch.TotalRatingSum, 
+                        IsVerified = branch.IsVerified, 
+                        IsSubscribed = branch.IsSubscribed, 
+                        TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", 
+                        FinalScore = Math.Round(finalScore, 4), DistanceKm = null,
                         Dishes = dishes.Select(x => new ActiveDishResponseDto
                         {
                             DishId       = x.Dish.DishId,
@@ -1227,7 +1234,7 @@ namespace Service
                 userLat, userLong, maxDistance,
                 filter.DietaryIds, filter.TasteIds,
                 filter.MinPrice, filter.MaxPrice,
-                filter.CategoryIds);
+                filter.CategoryIds, filter.IsSubscribed);
 
             // Service layer only maps to DTOs - NO additional filtering
             var responseDtos = items.Select(item =>
@@ -1266,7 +1273,15 @@ namespace Service
                     City          = branch.City,
                     Lat           = branch.Lat,
                     Long          = branch.Long,
-                    AvgRating = branch.AvgRating, TotalReviewCount = branch.TotalReviewCount, TotalRatingSum = branch.TotalRatingSum, IsVerified = branch.IsVerified, IsSubscribed = branch.IsSubscribed, TierId = branch.TierId, TierName = branch.Tier?.Name ?? "Silver", FinalScore = Math.Round(finalScore, 4), DistanceKm = Math.Round(distanceKm, 2),
+                    AvgRating = branch.AvgRating,
+                    TotalReviewCount = branch.TotalReviewCount,
+                    TotalRatingSum = branch.TotalRatingSum,
+                    IsVerified = branch.IsVerified,
+                    IsSubscribed = branch.IsSubscribed,
+                    TierId = branch.TierId,
+                    TierName = branch.Tier?.Name ?? "Silver",
+                    FinalScore = Math.Round(finalScore, 4),
+                    DistanceKm = Math.Round(distanceKm, 2),
                     Dishes = dishes.Select(x => new ActiveDishResponseDto
                     {
                         DishId       = x.Dish.DishId,
