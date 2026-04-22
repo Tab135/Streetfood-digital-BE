@@ -74,16 +74,6 @@ namespace Repository
             await _branchDAO.UpdateAsync(branch);
         }
 
-        public async Task DeleteAsync(int branchId)
-        {
-            await _branchDAO.DeleteAsync(branchId);
-        }
-
-        public async Task<bool> ExistsByIdAsync(int branchId)
-        {
-            return await _branchDAO.ExistsByIdAsync(branchId);
-        }
-
         public async Task<List<WorkSchedule>> GetWorkSchedulesAsync(int branchId)
         {
             return await _branchDAO.GetWorkSchedulesAsync(branchId);

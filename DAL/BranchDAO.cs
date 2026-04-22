@@ -194,58 +194,30 @@ namespace DAL
 
         public async Task UpdateAsync(Branch branch)
         {
-            branch.UpdatedAt = DateTime.UtcNow;
-
-            // Detach related entities before Update to avoid tracking conflicts
-            if (branch.Vendor != null)
-            {
-                _context.Entry(branch.Vendor).State = EntityState.Detached;
-                branch.Vendor = null;
-            }
-
-            if (branch.Tier != null)
-            {
-                _context.Entry(branch.Tier).State = EntityState.Detached;
-                branch.Tier = null;
-            }
-            
-            if (branch.Manager != null)
-            {
-                _context.Entry(branch.Manager).State = EntityState.Detached;
-                branch.Manager = null;
-            }
-
-            if (branch.CreatedBy != null)
-            {
-                _context.Entry(branch.CreatedBy).State = EntityState.Detached;
-                branch.CreatedBy = null;
-            }
-
-            // Optional: Detach collections if they exist to prevent full graph updates
-            branch.WorkSchedules = null;
-            branch.DayOffs = null;
-            branch.BranchImages = null;
-            branch.BranchDishes = null;
-
-            _context.Branches.Update(branch);
-            await _context.SaveChangesAsync();
+            await _context.Branches
+                .Where(b => b.BranchId == branch.BranchId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(b => b.Name, branch.Name)
+                    .SetProperty(b => b.PhoneNumber, branch.PhoneNumber)
+                    .SetProperty(b => b.Email, branch.Email)
+                    .SetProperty(b => b.AddressDetail, branch.AddressDetail)
+                    .SetProperty(b => b.Ward, branch.Ward)
+                    .SetProperty(b => b.City, branch.City)
+                    .SetProperty(b => b.Lat, branch.Lat)
+                    .SetProperty(b => b.Long, branch.Long)
+                    .SetProperty(b => b.IsActive, branch.IsActive)
+                    .SetProperty(b => b.IsVerified, branch.IsVerified)
+                    .SetProperty(b => b.IsSubscribed, branch.IsSubscribed)
+                    .SetProperty(b => b.SubscriptionExpiresAt, branch.SubscriptionExpiresAt)
+                    .SetProperty(b => b.TierId, branch.TierId)
+                    .SetProperty(b => b.GhostpinXP, branch.GhostpinXP)
+                    .SetProperty(b => b.BatchReviewCount, branch.BatchReviewCount)
+                    .SetProperty(b => b.BatchRatingSum, branch.BatchRatingSum)
+                    .SetProperty(b => b.LastTierResetAt, branch.LastTierResetAt)
+                    .SetProperty(b => b.VendorId, branch.VendorId)
+                    .SetProperty(b => b.ManagerId, branch.ManagerId)
+                    .SetProperty(b => b.UpdatedAt, DateTime.UtcNow));
         }
-
-        public async Task DeleteAsync(int branchId)
-        {
-            var branch = await _context.Branches.FindAsync(branchId);
-            if (branch != null)
-            {
-                _context.Branches.Remove(branch);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        public async Task<bool> ExistsByIdAsync(int branchId)
-        {
-            return await _context.Branches.AnyAsync(b => b.BranchId == branchId);
-        }
-
         public async Task<List<WorkSchedule>> GetWorkSchedulesAsync(int branchId)
         {
             return await _context.WorkSchedules
