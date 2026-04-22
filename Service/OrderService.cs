@@ -429,7 +429,7 @@ public class OrderService : IOrderService
             return MapToDto(completedOrder);
         }
 
-        if (order.Status != OrderStatus.Pending)
+        if (order.Status == OrderStatus.Complete)
         {
             throw new DomainExceptions("Đơn hàng không thể được cập nhật sau khi thanh toán đã hoàn tất");
         }
