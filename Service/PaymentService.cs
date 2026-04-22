@@ -42,6 +42,9 @@ namespace Service.PaymentsService
         private readonly ISettingService _settings;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly bool _isDebugMode;
+        private static readonly object OrderCodeLock = new();
+        private static int _lastGeneratedOrderCode =
+            (int)(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() % int.MaxValue);
 
         public PaymentService(
             IPaymentRepository paymentRepo,
@@ -569,20 +572,7 @@ namespace Service.PaymentsService
                     };
                 }
 
-                // 5. Generate unique order code (timestamp-based)
-                int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                int random = new Random().Next(100, 999);
-                long orderCode = long.Parse($"{timestamp}{random}");
-
-                if (orderCode > int.MaxValue)
-                    orderCode = timestamp;
-
-                while (await _paymentRepo.OrderCodeExists(orderCode))
-                {
-                    random = new Random().Next(100, 999);
-                    orderCode = long.Parse($"{timestamp}{random}");
-                    if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
-                }
+                var orderCode = await GenerateUniqueOrderCodeAsync();
 
                 var description = $"Dang ky vendor {branch.Name} {SubscriptionDurationDays} ngay";
                 var payOsDescription = BuildPayOSDescription(description, "Dang ky vendor 30 ngay");
@@ -975,17 +965,7 @@ namespace Service.PaymentsService
                 if (joinJoin.IsActive == true)
                     return new PaymentLinkResult { Success = false, Message = "Bạn đã thanh toán cho chiến dịch này." };
 
-                int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                int random = new Random().Next(100, 999);
-                long orderCode = long.Parse($"{timestamp}{random}");
-
-                if (orderCode > int.MaxValue) orderCode = timestamp;
-                while (await _paymentRepo.OrderCodeExists(orderCode))
-                {
-                    random = new Random().Next(100, 999);
-                    orderCode = long.Parse($"{timestamp}{random}");
-                    if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
-                }
+                var orderCode = await GenerateUniqueOrderCodeAsync();
 
                 int campaignFee = CampaignJoinFee;
                 var description = $"Phi tham gia campaign {branch.Name}";
@@ -1096,16 +1076,7 @@ namespace Service.PaymentsService
                 }
 
                 // Create one payment for the vendor's whole campaign selection
-                int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                int random = new Random().Next(100, 999);
-                long orderCode = long.Parse($"{timestamp}{random}");
-                if (orderCode > int.MaxValue) orderCode = timestamp;
-                while (await _paymentRepo.OrderCodeExists(orderCode))
-                {
-                    random = new Random().Next(100, 999);
-                    orderCode = long.Parse($"{timestamp}{random}");
-                    if (orderCode > int.MaxValue) { orderCode = timestamp; break; }
-                }
+                var orderCode = await GenerateUniqueOrderCodeAsync();
 
                 // Keep selected ids marker in DB description for webhook activation logic.
                 var description = $"Phi tham gia campaign {branch.Name} | VENDOR_SYSTEM_CAMPAIGN_BATCH:{string.Join(",", distinct)}";
@@ -1410,27 +1381,37 @@ namespace Service.PaymentsService
 
         private async Task<long> GenerateUniqueOrderCodeAsync()
         {
-            int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            int random = Random.Shared.Next(100, 999);
-            long orderCode = long.Parse($"{timestamp}{random}");
+            const int minOrderCode = 100_000_000;
+            const int maxAttempts = 100;
 
-            if (orderCode > int.MaxValue)
+            for (var attempt = 0; attempt < maxAttempts; attempt++)
             {
-                orderCode = timestamp;
-            }
-
-            while (await _paymentRepo.OrderCodeExists(orderCode))
-            {
-                random = Random.Shared.Next(100, 999);
-                orderCode = long.Parse($"{timestamp}{random}");
-                if (orderCode > int.MaxValue)
+                int candidate;
+                lock (OrderCodeLock)
                 {
-                    orderCode = timestamp;
-                    break;
+                    var nowCode = (int)(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() % int.MaxValue);
+                    if (nowCode < minOrderCode)
+                    {
+                        nowCode += minOrderCode;
+                    }
+
+                    var nextCandidate = Math.Max((long)_lastGeneratedOrderCode + 1, nowCode);
+                    if (nextCandidate >= int.MaxValue)
+                    {
+                        nextCandidate = minOrderCode + Random.Shared.Next(0, 1_000_000);
+                    }
+
+                    candidate = (int)nextCandidate;
+                    _lastGeneratedOrderCode = candidate;
+                }
+
+                if (!await _paymentRepo.OrderCodeExists(candidate))
+                {
+                    return candidate;
                 }
             }
 
-            return orderCode;
+            throw new DomainExceptions("Không thể tạo mã đơn hàng duy nhất, vui lòng thử lại.");
         }
 
         private static PaymentStatusResponse BuildStatusResponse(Payment payment) =>

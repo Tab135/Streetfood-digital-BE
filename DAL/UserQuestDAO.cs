@@ -133,7 +133,7 @@ namespace DAL
                 .AsQueryable();
 
             if (query.QuestId.HasValue)
-                dbQuery = dbQuery.Where(uq => uq.QuestId == query.QuestId.Value);
+                dbQuery = dbQuery.Where(uq => uq.QuestId == query.QuestId.Value);   
 
             if (query.UserId.HasValue)
                 dbQuery = dbQuery.Where(uq => uq.UserId == query.UserId.Value);

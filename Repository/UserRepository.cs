@@ -72,9 +72,9 @@ namespace Repository
             return await _userDAO.GetUsersAsync(role, pageNumber, pageSize);
         }
 
-        public async Task<(System.Collections.Generic.List<User> Users, int TotalCount)> SearchUsersAsync(string keyword, int pageNumber, int pageSize)
+        public async Task<(System.Collections.Generic.List<User> Users, int TotalCount)> SearchUsersAsync(string keyword, bool onlyUserRole, int pageNumber, int pageSize)
         {
-            return await _userDAO.SearchUsersAsync(keyword, pageNumber, pageSize);
+            return await _userDAO.SearchUsersAsync(keyword, onlyUserRole, pageNumber, pageSize);
         }
 
         public async Task<System.Collections.Generic.List<int>> ResetAllCustomerTiersAsync(int goldXP, int diamondXP, System.Threading.CancellationToken ct)

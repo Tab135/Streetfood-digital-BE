@@ -14,8 +14,6 @@ public class User
     [StringLength(100)]
     [EmailAddress]
     public string? Email { get; set; }
-    [StringLength(255)]
-    public string? Password { get; set; }
     public Role Role { get; set; } = Role.User;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

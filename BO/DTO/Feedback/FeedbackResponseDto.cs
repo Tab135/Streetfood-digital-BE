@@ -4,6 +4,7 @@ public class FeedbackResponseDto
 {
     public int Id { get; set; }
     public FeedbackUserDto? User { get; set; }
+    public int? OrderId { get; set; }
     public int? DishId { get; set; }
     public FeedbackDishDto? Dish { get; set; }
     public int BranchId { get; set; }

@@ -161,11 +161,18 @@ namespace DAL
 
         public async Task UpdateAsync(Dish dish)
         {
-            dish.UpdatedAt = DateTime.UtcNow;
-            _context.Dishes.Update(dish);
-            await _context.SaveChangesAsync();
+            await _context.Dishes
+                .Where(d => d.DishId == dish.DishId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(d => d.Name, dish.Name)
+                    .SetProperty(d => d.Price, dish.Price)
+                    .SetProperty(d => d.Description, dish.Description)
+                    .SetProperty(d => d.ImageUrl, dish.ImageUrl)
+                    .SetProperty(d => d.IsActive, dish.IsActive)
+                    .SetProperty(d => d.CategoryId, dish.CategoryId)
+                    .SetProperty(d => d.VendorId, dish.VendorId)
+                    .SetProperty(d => d.UpdatedAt, DateTime.UtcNow));
         }
-
         public async Task DeleteAsync(int dishId)
         {
             var dish = await _context.Dishes.FindAsync(dishId);

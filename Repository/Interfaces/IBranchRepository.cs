@@ -18,8 +18,6 @@ namespace Repository.Interfaces
         Task<(List<Branch> items, int totalCount)> GetActiveBranchesAsync(int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetUnverifiedBranchesAsync(int pageNumber, int pageSize);
         Task UpdateAsync(Branch branch);
-        Task DeleteAsync(int branchId);
-        Task<bool> ExistsByIdAsync(int branchId);
         Task<List<WorkSchedule>> GetWorkSchedulesAsync(int branchId);
         Task<List<DayOff>> GetDayOffsAsync(int branchId);
         Task<(List<BranchImage> items, int totalCount)> GetBranchImagesAsync(int branchId, int pageNumber, int pageSize);

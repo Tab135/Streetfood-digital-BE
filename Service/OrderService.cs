@@ -400,7 +400,7 @@ public class OrderService : IOrderService
         var branch = await _branchRepository.GetByIdAsync(order.BranchId)
             ?? throw new DomainExceptions("Chi nhánh không tồn tại");
 
-        if (!branch.ManagerId.HasValue || branch.ManagerId.Value != userId)
+        if (!branch.ManagerId.HasValue || branch.ManagerId.Value != userId )
         {
             throw new DomainExceptions("Bạn không quản lý chi nhánh này", "ERR_FORBIDDEN");
         }
@@ -429,7 +429,7 @@ public class OrderService : IOrderService
             return MapToDto(completedOrder);
         }
 
-        if (order.Status != OrderStatus.Pending)
+        if (order.Status == OrderStatus.Complete)
         {
             throw new DomainExceptions("Đơn hàng không thể được cập nhật sau khi thanh toán đã hoàn tất");
         }

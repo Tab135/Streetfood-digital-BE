@@ -28,7 +28,7 @@ namespace Service.Interfaces
         Task<bool> MarkDietarySetupAsync(int userId);
 
         Task<BO.Common.PaginatedResponse<UserProfileDto>> GetUsersAsync(Role? role, int pageNumber, int pageSize);
-        Task<BO.Common.PaginatedResponse<UserProfileDto>> SearchUsersAsync(string keyword, int pageNumber, int pageSize);
+        Task<BO.Common.PaginatedResponse<UserProfileDto>> SearchUsersAsync(string keyword, bool onlyUserRole, int pageNumber, int pageSize);
         Task<UserProfileDto> GetUserProfileByIdAsync(int userId);
 
         Task<bool> AddXPAsync(int userId, int xpAmount);

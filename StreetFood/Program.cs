@@ -43,6 +43,8 @@ namespace StreetFood
                 // options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
             });
 
+            builder.Services.AddMemoryCache();
+
             builder.Services.AddSignalR();
             builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, SignalRUserIdProvider>();
 
@@ -203,6 +205,8 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
 
         // Search Service
             builder.Services.AddScoped<ISearchService, SearchService>();
+            builder.Services.AddSingleton<IAiConversationMemoryService, AiConversationMemoryService>();
+            builder.Services.AddScoped<IAiAssistantService, AiAssistantService>();
             builder.Services.AddHostedService<OtpCleanupService>();
             builder.Services.AddSingleton<StreetFood.Services.IS3Service, StreetFood.Services.S3Service>();
 
