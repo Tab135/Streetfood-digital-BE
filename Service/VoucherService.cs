@@ -120,7 +120,14 @@ public class VoucherService : IVoucherService
     public async Task<VoucherDto?> GetVoucherByIdAsync(int voucherId)
     {
         var voucher = await _voucherRepository.GetByIdAsync(voucherId);
-        return voucher == null ? null : MapToDto(voucher);
+        if (voucher == null)
+        {
+            return null;
+        }
+
+        var dto = MapToDto(voucher);
+        dto.CampaignId = await ResolveCampaignIdAsync(voucher);
+        return dto;
     }
 
     public async Task<List<VoucherDto>> GetAllVouchersAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null, bool? isSystemVoucher = null)
@@ -316,24 +323,32 @@ public class VoucherService : IVoucherService
     {
         var userVouchers = await _userVoucherRepository.GetByUserIdAsync(userId);
 
-        return userVouchers.Select(uv => new UserVoucherResponseDto
+        var responses = new List<UserVoucherResponseDto>();
+        foreach (var uv in userVouchers)
         {
-            UserVoucherId = uv.UserVoucherId,
-            VoucherId = uv.VoucherId,
-            VoucherCode = uv.Voucher?.VoucherCode ?? string.Empty,
-            VoucherName = uv.Voucher?.Name ?? string.Empty,
-            Description = uv.Voucher?.Description,
-            VoucherType = uv.Voucher?.Type ?? string.Empty,
-            DiscountValue = uv.Voucher?.DiscountValue ?? 0m,
-            MinAmountRequired = uv.Voucher?.MinAmountRequired,
-            MaxDiscountValue = uv.Voucher?.MaxDiscountValue,
-            StartDate = uv.Voucher?.StartDate,
-            EndDate = uv.Voucher?.EndDate,
-            IsActive = uv.Voucher?.IsActive ?? false,
-            CampaignId = uv.Voucher?.VendorCampaignId,
-            Quantity = uv.Quantity,
-            IsAvailable = uv.IsAvailable
-        }).ToList();
+            var campaignId = uv.Voucher == null ? null : await ResolveCampaignIdAsync(uv.Voucher);
+
+            responses.Add(new UserVoucherResponseDto
+            {
+                UserVoucherId = uv.UserVoucherId,
+                VoucherId = uv.VoucherId,
+                VoucherCode = uv.Voucher?.VoucherCode ?? string.Empty,
+                VoucherName = uv.Voucher?.Name ?? string.Empty,
+                Description = uv.Voucher?.Description,
+                VoucherType = uv.Voucher?.Type ?? string.Empty,
+                DiscountValue = uv.Voucher?.DiscountValue ?? 0m,
+                MinAmountRequired = uv.Voucher?.MinAmountRequired,
+                MaxDiscountValue = uv.Voucher?.MaxDiscountValue,
+                StartDate = uv.Voucher?.StartDate,
+                EndDate = uv.Voucher?.EndDate,
+                IsActive = uv.Voucher?.IsActive ?? false,
+                CampaignId = campaignId,
+                Quantity = uv.Quantity,
+                IsAvailable = uv.IsAvailable
+            });
+        }
+
+        return responses;
     }
 
     public async Task<List<VoucherDto>> GetVouchersByCampaignIdAsync(int campaignId)
@@ -455,12 +470,7 @@ public class VoucherService : IVoucherService
 
     private async Task<bool> IsVoucherApplicableToBranchAsync(Voucher voucher, int branchId, bool isBranchSubscribed)
     {
-        int? campaignId = voucher.VendorCampaignId;
-        
-        if (!campaignId.HasValue)
-        {
-            campaignId = await _voucherRepository.GetSystemCampaignIdAsync(voucher.VoucherId);
-        }
+        var campaignId = await ResolveCampaignIdAsync(voucher);
 
         if (campaignId.HasValue)
         {
@@ -469,6 +479,16 @@ public class VoucherService : IVoucherService
         }
 
         return isBranchSubscribed;
+    }
+
+    private async Task<int?> ResolveCampaignIdAsync(Voucher voucher)
+    {
+        if (voucher.VendorCampaignId.HasValue)
+        {
+            return voucher.VendorCampaignId.Value;
+        }
+
+        return await _voucherRepository.GetSystemCampaignIdAsync(voucher.VoucherId);
     }
 
     public async Task<List<VoucherDto>> GetMarketplaceVouchersAsync()
