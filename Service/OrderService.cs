@@ -400,7 +400,7 @@ public class OrderService : IOrderService
         var branch = await _branchRepository.GetByIdAsync(order.BranchId)
             ?? throw new DomainExceptions("Chi nhánh không tồn tại");
 
-        if (!branch.ManagerId.HasValue || branch.ManagerId.Value != userId)
+        if (!branch.ManagerId.HasValue || branch.ManagerId.Value != userId )
         {
             throw new DomainExceptions("Bạn không quản lý chi nhánh này", "ERR_FORBIDDEN");
         }

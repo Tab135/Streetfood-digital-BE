@@ -145,7 +145,7 @@ public class OrderController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Roles = "Manager")]
+    [Authorize(Roles = "Manager,Vendor")]
     [ProducesResponseType(typeof(ApiResponse<OrderResponseDto>), StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateOrder(int id, [FromBody] UpdateOrderRequest request)
     {
