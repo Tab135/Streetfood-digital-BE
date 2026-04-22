@@ -560,6 +560,7 @@ namespace Service
             {
                 Id = feedback.FeedbackId,
                 User = userDto,
+                OrderId = feedback.OrderId,
                 DishId = feedback.DishId,
                 Dish = dishDto,
                 BranchId = feedback.BranchId,
