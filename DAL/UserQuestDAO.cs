@@ -74,6 +74,7 @@ namespace DAL
         {
             return await _context.UserQuestTasks
                 .Include(uqt => uqt.QuestTask)
+                    .ThenInclude(qt => qt.QuestTaskRewards)
                 .Include(uqt => uqt.UserQuest)
                 .Where(uqt => uqt.UserQuest.UserId == userId
                     && uqt.UserQuest.Status == "IN_PROGRESS"
