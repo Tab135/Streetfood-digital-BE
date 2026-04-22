@@ -33,7 +33,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "User,Vendor")]
+        [Authorize(Roles = "User")]
         [ProducesResponseType(typeof(ApiResponse<FeedbackResponseDto>), StatusCodes.Status201Created)]
         public async Task<IActionResult> CreateFeedback([FromBody] CreateFeedbackDto createFeedbackDto)
         {

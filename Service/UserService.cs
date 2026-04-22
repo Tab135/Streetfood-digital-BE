@@ -176,7 +176,6 @@ namespace Service
                 {
                     UserName = normalizedPhoneNumber,
                     Email = string.Empty,
-                    Password = string.Empty,
                     Role = hasRoleOverride ? overrideRole : Role.User,
                     CreatedAt = DateTime.UtcNow,
                     EmailVerified = false,

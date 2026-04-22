@@ -110,7 +110,6 @@ namespace DAL
                 {
                     UserName = payload.Name ?? payload.Email,
                     Email = payload.Email,
-                    Password = "", // No password for Google users
                     Role = Role.User,
                     CreatedAt = DateTime.UtcNow,
                     EmailVerified = true, // Google auth implies verified email
@@ -148,7 +147,6 @@ namespace DAL
                 {
                     UserName = info.Name ?? info.Email,
                     Email = info.Email,
-                    Password = "",
                     Role = Role.User,
                     CreatedAt = DateTime.UtcNow,
                     EmailVerified = true,

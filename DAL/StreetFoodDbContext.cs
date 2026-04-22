@@ -106,7 +106,6 @@ public class StreetFoodDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.UserName).HasMaxLength(50);
             entity.Property(e => e.Email).HasMaxLength(100);
-            entity.Property(e => e.Password).HasMaxLength(255);
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.AvatarUrl).HasMaxLength(500);
             entity.Property(e => e.Status).HasMaxLength(100);
