@@ -204,13 +204,14 @@ namespace StreetFood.Controllers
 
         [HttpPost("profile/avatar")]
         [Authorize]
-        public async Task<IActionResult> UploadAvatar([FromForm] IFormFile image)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadAvatar([FromForm(Name = "fileName")] IFormFile? fileName)
         {
             try
             {
-                if (image == null || image.Length == 0)
+                if (fileName == null || fileName.Length == 0)
                 {
-                    return BadRequest(new { message = "Image is required" });
+                    return BadRequest(new { message = "fileName is required" });
                 }
 
                 if (!TryGetCurrentUserId(out var userId))
@@ -218,7 +219,7 @@ namespace StreetFood.Controllers
                     return Unauthorized(new { message = "Invalid user token" });
                 }
 
-                var imageUrl = await _s3Service.UploadFileAsync(image, "avatars");
+                var imageUrl = await _s3Service.UploadFileAsync(fileName, "avatars");
                 var updatedUser = await _userService.UpdateUserProfile(userId, new UpdateUserProfileDto
                 {
                     AvatarUrl = imageUrl
