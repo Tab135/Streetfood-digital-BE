@@ -533,7 +533,8 @@ namespace DAL
             List<int>? tasteIds,
             decimal? minPrice,
             decimal? maxPrice,
-            List<int>? categoryIds)
+            List<int>? categoryIds,
+            bool? isSubscribed)
         {
             var branches = await _context.Branches
                 .AsNoTracking()
@@ -555,7 +556,8 @@ namespace DAL
             bool hasTasteFilter    = tasteIds    != null && tasteIds.Count    > 0;
             bool hasPriceFilter    = minPrice.HasValue || maxPrice.HasValue;
             bool hasCategoryFilter = categoryIds != null && categoryIds.Count > 0;
-            bool hasAnyFilter = hasDietaryFilter || hasTasteFilter || hasPriceFilter || hasCategoryFilter;
+            bool hasIsSubscribedFilter = isSubscribed.HasValue;
+            bool hasAnyFilter = hasDietaryFilter || hasTasteFilter || hasPriceFilter || hasCategoryFilter || hasIsSubscribedFilter;
 
             var filteredBranches = new List<(Branch branch, double distanceKm)>();
 
@@ -610,6 +612,11 @@ namespace DAL
 
                     if (!hasQualifyingDish)
                         continue;
+                }
+
+                if (hasIsSubscribedFilter && isSubscribed != branch.IsSubscribed)
+                {
+                    continue;
                 }
 
                 filteredBranches.Add((branch, distanceKm));

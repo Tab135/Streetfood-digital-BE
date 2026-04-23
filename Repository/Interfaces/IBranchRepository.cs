@@ -54,7 +54,8 @@ namespace Repository.Interfaces
             List<int>? tasteIds,
             decimal? minPrice,
             decimal? maxPrice,
-            List<int>? categoryIds);
+            List<int>? categoryIds,
+            bool? isSubscribed);
 
         Task UpdateBranchMetricsAndTierAsync(int branchId, int rating, int newBatchReviewCount, int newBatchRatingSum, int newTierId, bool banBranch);
         Task UpdateBranchMetricsOnFeedbackUpdatedAsync(int branchId, int oldRating, int newRating);
