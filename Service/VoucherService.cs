@@ -133,7 +133,16 @@ public class VoucherService : IVoucherService
     public async Task<List<VoucherDto>> GetAllVouchersAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null, bool? isSystemVoucher = null)
     {
         var vouchers = await _voucherRepository.GetAllAsync(isBelongAQuestTask, isRemaining, isSystemVoucher);
-        return vouchers.Select(MapToDto).ToList();
+
+        var responses = new List<VoucherDto>(vouchers.Count);
+        foreach (var voucher in vouchers)
+        {
+            var dto = MapToDto(voucher);
+            dto.CampaignId = await ResolveCampaignIdAsync(voucher);
+            responses.Add(dto);
+        }
+
+        return responses;
     }
 
     public async Task<VoucherDto> UpdateVoucherAsync(int voucherId, UpdateVoucherDto updateDto, int userId)
