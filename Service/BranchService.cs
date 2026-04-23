@@ -667,6 +667,8 @@ namespace Service
             }
             if (approvedRecipientId.HasValue)
             {
+                await _questProgressService.UpdateProgressAsync(approvedRecipientId.Value, QuestTaskType.CREATE_GHOST_PIN, 1);
+
                 await _notificationService.NotifyAsync(
                     approvedRecipientId.Value,
                     NotificationType.BranchVerificationStatus,
