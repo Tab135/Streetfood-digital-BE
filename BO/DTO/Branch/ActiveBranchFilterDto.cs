@@ -40,5 +40,8 @@ namespace BO.DTO.Branch
 
         /// <summary>Whether to only include branches with active promotions. Default: false</summary>
         public Boolean? IsSubscribed { get; set; } 
+
+        /// <summary>Ward to filter by</summary>
+        public string? Ward { get; set; }
     }
 }

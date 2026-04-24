@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.Json.Serialization;
 
 namespace BO.DTO.Campaigns
@@ -28,6 +28,8 @@ namespace BO.DTO.Campaigns
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         public string? ImageUrl { get; set; }
+        public int JoinFee { get; set; }
+        public int? ExpectedBranchJoin { get; set; }
         public bool IsSystemCampaign => CreatedByVendorId == null;
     }
 }

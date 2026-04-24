@@ -534,12 +534,21 @@ namespace DAL
             decimal? minPrice,
             decimal? maxPrice,
             List<int>? categoryIds,
-            bool? isSubscribed)
+            bool? isSubscribed,
+            string? ward)
         {
-            var branches = await _context.Branches
+            var branchesQuery = _context.Branches
                 .AsNoTracking()
                 .AsSplitQuery()
-                .Where(b => b.IsActive && b.IsVerified)
+                .Where(b => b.IsActive && b.IsVerified);
+
+            if (!string.IsNullOrWhiteSpace(ward))
+            {
+                var normalizedWard = ward.ToLower().Trim();
+                branchesQuery = branchesQuery.Where(b => b.Ward != null && b.Ward.ToLower().Contains(normalizedWard));
+            }
+
+            var branches = await branchesQuery
                 .Include(b => b.Vendor)
                     .ThenInclude(v => v.VendorDietaryPreferences)
                         .ThenInclude(vdp => vdp.DietaryPreference)

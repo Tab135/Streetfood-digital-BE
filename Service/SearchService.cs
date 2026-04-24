@@ -44,10 +44,17 @@ namespace Service
             double? userLong = filter.Long;
 
             var filteredItems = await _branchRepository.GetActiveBranchesFilteredAsync(
-                userLat, userLong, filter.Distance,
-                filter.DietaryIds, filter.TasteIds,
-                filter.MinPrice, filter.MaxPrice,
-                filter.CategoryIds, filter.IsSubscribed);
+                userLat,
+                userLong,
+                filter.Distance,
+                filter.DietaryIds,
+                filter.TasteIds,
+                filter.MinPrice,
+                filter.MaxPrice,
+                filter.CategoryIds,
+                filter.IsSubscribed,
+                filter.Ward
+            );
 
             if (filteredItems == null || filteredItems.Count == 0)
                 return new List<SearchResultDto>();
@@ -58,6 +65,7 @@ namespace Service
             var scored = filteredItems
                 .Select(item => new ScoredBranch(item.branch, item.distanceKm))
                 .ToList();
+              
 
             if (hasKeyword)
             {

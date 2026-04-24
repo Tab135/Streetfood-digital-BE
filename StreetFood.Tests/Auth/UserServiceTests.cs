@@ -9,7 +9,6 @@ using Repository.Interfaces;
 using Service;
 using Service.Interfaces;
 using Service.JWT;
-using Service.Auth;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
