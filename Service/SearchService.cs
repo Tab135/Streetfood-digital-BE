@@ -36,7 +36,8 @@ namespace Service
                 filter.MinPrice,
                 filter.MaxPrice,
                 filter.CategoryIds,
-                filter.IsSubscribed
+                filter.IsSubscribed,
+                filter.Ward
             );
 
             // Filter by keyword client-side if a keyword is provided

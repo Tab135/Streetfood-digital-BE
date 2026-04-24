@@ -1152,7 +1152,8 @@ namespace Service
             bool hasDietary = filter.DietaryIds != null && filter.DietaryIds.Count > 0;
             bool hasCategory = filter.CategoryIds != null && filter.CategoryIds.Count > 0;
             bool hasIsSubscribed = filter.IsSubscribed.HasValue;
-            bool hasAnyFilter = hasLatLong || hasDistance || hasPrice || hasTaste || hasDietary || hasCategory || hasIsSubscribed;
+            bool hasWard = !string.IsNullOrWhiteSpace(filter.Ward);
+            bool hasAnyFilter = hasLatLong || hasDistance || hasPrice || hasTaste || hasDietary || hasCategory || hasIsSubscribed || hasWard;
 
             // If NO filters provided, return all active branches without filtering
             if (!hasAnyFilter)
@@ -1236,7 +1237,8 @@ namespace Service
                 userLat, userLong, maxDistance,
                 filter.DietaryIds, filter.TasteIds,
                 filter.MinPrice, filter.MaxPrice,
-                filter.CategoryIds, filter.IsSubscribed);
+                filter.CategoryIds, filter.IsSubscribed,
+                filter.Ward);
 
             // Service layer only maps to DTOs - NO additional filtering
             var responseDtos = items.Select(item =>
