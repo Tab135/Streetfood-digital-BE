@@ -25,7 +25,8 @@ namespace DAL
 
             var dailySignups = await _context.Users
                 .AsNoTracking()
-                .Where(u => u.CreatedAt >= startDate && u.CreatedAt < endExclusive)
+                .Where(u => u.CreatedAt >= startDate && u.CreatedAt < endExclusive
+                            && u.Role != Role.Admin && u.Role != Role.Moderator)
                 .GroupBy(u => u.CreatedAt.Date)
                 .Select(g => new AdminUserSignupPointDto
                 {
