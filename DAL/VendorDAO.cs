@@ -105,5 +105,22 @@ namespace DAL
             return await _context.Vendors
                 .AnyAsync(v => v.UserId == userId);
         }
+
+        public async Task RefundCampaignJoinFeeAsync(int campaignId, decimal fee)
+        {
+            if (fee <= 0) return;
+
+            var refundInfos = await _context.BranchCampaigns
+                .Where(bc => bc.CampaignId == campaignId && bc.IsActive && bc.Branch.VendorId.HasValue)
+                .GroupBy(bc => bc.Branch.VendorId!.Value)
+                .Select(g => new { VendorId = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            var updateTasks = refundInfos.Select(info => _context.Vendors
+                .Where(v => v.VendorId == info.VendorId)
+                .ExecuteUpdateAsync(s => s.SetProperty(v => v.MoneyBalance, v => v.MoneyBalance + (info.Count * fee))));
+
+            await Task.WhenAll(updateTasks);
+        }
     }
 }

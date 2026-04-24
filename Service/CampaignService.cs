@@ -713,6 +713,7 @@ namespace Service
                 IsActive = isCampaignActive,
                 IsRegisterable = isCampaignRegisterable,
                 JoinFee = dto.JoinFee,
+                ExpectedBranchJoin = dto.ExpectedBranchJoin,
             };
             await _campaignRepo.CreateAsync(campaign);
 
@@ -895,7 +896,8 @@ namespace Service
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl,
-                    JoinFee = item.JoinFee
+                    JoinFee = item.JoinFee,
+                    ExpectedBranchJoin = item.ExpectedBranchJoin
                 });
             }
 
@@ -954,7 +956,8 @@ namespace Service
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl,
-                    JoinFee = item.JoinFee
+                    JoinFee = item.JoinFee,
+                    ExpectedBranchJoin = item.ExpectedBranchJoin
                 });
             }
 
@@ -993,7 +996,8 @@ namespace Service
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl,
-                    JoinFee = item.JoinFee
+                    JoinFee = item.JoinFee,
+                    ExpectedBranchJoin = item.ExpectedBranchJoin
                 });
             }
 
@@ -1032,7 +1036,8 @@ namespace Service
                     CreatedAt = item.CreatedAt,
                     UpdatedAt = item.UpdatedAt,
                     ImageUrl = item.ImageUrl,
-                    JoinFee = item.JoinFee
+                    JoinFee = item.JoinFee,
+                    ExpectedBranchJoin = item.ExpectedBranchJoin
                 });
             }
 
@@ -1069,7 +1074,8 @@ namespace Service
                 CreatedAt = item.CreatedAt,
                 UpdatedAt = item.UpdatedAt,
                 ImageUrl = item.ImageUrl,
-                JoinFee = item.JoinFee
+                JoinFee = item.JoinFee,
+                ExpectedBranchJoin = item.ExpectedBranchJoin
             };
         }
 
@@ -1140,6 +1146,7 @@ namespace Service
             campaign.EndDate = dto.EndDate;
             if (dto.IsActive != null) campaign.IsActive = dto.IsActive.Value;
             if (dto.JoinFee != null) campaign.JoinFee = dto.JoinFee.Value;
+            if (isSystemCampaign && dto.ExpectedBranchJoin != null) campaign.ExpectedBranchJoin = dto.ExpectedBranchJoin.Value;
             campaign.UpdatedAt = DateTime.UtcNow;
 
             var statusFieldsChanged = oldStartDate != campaign.StartDate

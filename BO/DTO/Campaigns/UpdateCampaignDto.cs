@@ -21,6 +21,7 @@ namespace BO.DTO.Campaigns
 
         public bool? IsActive { get; set; }
         public int? JoinFee { get; set; }
+        public int? ExpectedBranchJoin { get; set; }
     }
 }
 

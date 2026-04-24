@@ -15,15 +15,18 @@ namespace Service
     {
         private readonly ICampaignRepository _campaignRepo;
         private readonly IBranchCampaignRepository _branchCampaignRepo;
+        private readonly IVendorRepository _vendorRepo;
         private readonly ILogger<CampaignStatusJob> _logger;
 
         public CampaignStatusJob(
             ICampaignRepository campaignRepo,
             IBranchCampaignRepository branchCampaignRepo,
+            IVendorRepository vendorRepo,
             ILogger<CampaignStatusJob> logger)
         {
             _campaignRepo = campaignRepo;
             _branchCampaignRepo = branchCampaignRepo;
+            _vendorRepo = vendorRepo;
             _logger = logger;
         }
 
@@ -182,6 +185,23 @@ namespace Service
             }
 
             campaign.IsRegisterable = isRegisterable;
+            
+            if (!isRegisterable && campaign.ExpectedBranchJoin.HasValue && campaign.ExpectedBranchJoin > 0)
+            {
+                var branchCount = await _branchCampaignRepo.CountByCampaignIdAsync(campaignId);
+                if (branchCount < campaign.ExpectedBranchJoin.Value)
+                {
+                    _logger.LogWarning("CampaignStatusJob: Campaign {CampaignId} did not meet ExpectedBranchJoin ({Count}/{Expected}). Canceling.", campaignId, branchCount, campaign.ExpectedBranchJoin.Value);
+                    campaign.IsActive = false;
+                    campaign.EndDate = now;
+                    
+                    if (campaign.JoinFee > 0)
+                    {
+                        await _vendorRepo.RefundCampaignJoinFeeAsync(campaignId, campaign.JoinFee);
+                    }
+                }
+            }
+
             campaign.UpdatedAt = now;
             await _campaignRepo.UpdateAsync(campaign);
         }

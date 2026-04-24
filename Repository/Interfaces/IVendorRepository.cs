@@ -15,5 +15,6 @@ namespace Repository.Interfaces
         Task DeleteAsync(int vendorId);
         Task<bool> ExistsByIdAsync(int vendorId);
         Task<bool> ExistsByUserIdAsync(int userId);
+        Task RefundCampaignJoinFeeAsync(int campaignId, decimal fee);
     }
 }

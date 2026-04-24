@@ -44,6 +44,8 @@ namespace BO.Entities
         public bool IsRegisterable { get; set; } = false;
 
         public int JoinFee { get; set; }
+        
+        public int? ExpectedBranchJoin { get; set; }
 
         public virtual ICollection<BranchCampaign> BranchCampaigns { get; set; } = new List<BranchCampaign>();
         public string? ImageUrl { get; set; }

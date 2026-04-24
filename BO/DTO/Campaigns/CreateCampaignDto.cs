@@ -17,5 +17,6 @@ namespace BO.DTO.Campaigns
 
         public int? RequiredTierId { get; set; }
         public int JoinFee { get; set; }
+        public int? ExpectedBranchJoin { get; set; }
     }
 }
