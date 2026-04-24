@@ -20,4 +20,8 @@
     <ProjectReference Include="..\Repository\Repository.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Utils\SearchSynonyms.json" />
+  </ItemGroup>
+
 </Project>

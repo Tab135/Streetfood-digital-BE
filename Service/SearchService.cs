@@ -1,4 +1,6 @@
 using BO.DTO.Search;
+using BO.Entities;
+using Microsoft.Extensions.Logging;
 using Repository.Interfaces;
 using Service.Interfaces;
 using Service.Utils;
@@ -11,122 +13,321 @@ namespace Service
 {
     public class SearchService : ISearchService
     {
-        private readonly IBranchRepository _branchRepository;
+        private const int MaxDishesPerBranch = 10;
+        private const double DishWeight = 0.01;
+        private const double WDist = 0.6;
+        private const double WRate = 0.4;
 
-        public SearchService(IBranchRepository branchRepository)
+        private readonly IBranchRepository _branchRepository;
+        private readonly IVendorDashboardService _dashboardService;
+        private readonly ILogger<SearchService>? _logger;
+
+        public SearchService(
+            IBranchRepository branchRepository,
+            IVendorDashboardService dashboardService,
+            ILogger<SearchService>? logger = null)
         {
             _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
+            _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
+            _logger = logger;
         }
 
         public async Task<List<SearchResultDto>> SearchAsync(SearchFilterDto filter)
         {
             bool hasKeyword = !string.IsNullOrWhiteSpace(filter.Keyword);
-            string normalizedKeyword = hasKeyword ? TextNormalizer.NormalizeForSearch(filter.Keyword) : string.Empty;
+            string normalizedKeyword = hasKeyword ? TextNormalizer.NormalizeForSearch(filter.Keyword!) : string.Empty;
+            var keywordForms = hasKeyword
+                ? TextNormalizer.ExpandWithSynonyms(normalizedKeyword)
+                : new HashSet<string>();
 
             double? userLat = filter.Lat;
             double? userLong = filter.Long;
 
-            // Fetch filtered branches dynamically via DAO
             var filteredItems = await _branchRepository.GetActiveBranchesFilteredAsync(
-                userLat,
-                userLong,
-                filter.Distance,
-                filter.DietaryIds,
-                filter.TasteIds,
-                filter.MinPrice,
-                filter.MaxPrice,
-                filter.CategoryIds,
-                filter.IsSubscribed
-            );
+                userLat, userLong, filter.Distance,
+                filter.DietaryIds, filter.TasteIds,
+                filter.MinPrice, filter.MaxPrice,
+                filter.CategoryIds, filter.IsSubscribed);
 
-            // Filter by keyword client-side if a keyword is provided
-            var matchingItems = filteredItems;
-            
+            if (filteredItems == null || filteredItems.Count == 0)
+                return new List<SearchResultDto>();
+
+            // Score every filter-matched branch. A post-scoring gate below drops branches whose
+            // DisplayName, Dish, and Similar scores are all zero when a keyword is set — this keeps
+            // Jollibee (DisplayName=0, later lifted to Similar) in scope while excluding unrelated shops.
+            var scored = filteredItems
+                .Select(item => new ScoredBranch(item.branch, item.distanceKm))
+                .ToList();
+
             if (hasKeyword)
             {
-                matchingItems = matchingItems
-                    .Where(item =>
-                        (item.branch.Vendor != null && !string.IsNullOrWhiteSpace(item.branch.Vendor.Name) && TextNormalizer.NormalizeForSearch(item.branch.Vendor.Name).Contains(normalizedKeyword)) ||
-                        (!string.IsNullOrWhiteSpace(item.branch.Name) && TextNormalizer.NormalizeForSearch(item.branch.Name).Contains(normalizedKeyword)) ||
-                        item.branch.BranchDishes.Any(bd => bd.Dish != null && !string.IsNullOrWhiteSpace(bd.Dish.Name) && TextNormalizer.NormalizeForSearch(bd.Dish.Name).Contains(normalizedKeyword)))
+                foreach (var sb in scored)
+                {
+                    double bestDisplay = 0.0;
+                    foreach (var form in keywordForms)
+                    {
+                        var s = SearchScorer.ScoreDisplayName(form, sb.Branch.Vendor?.Name, sb.Branch.Name);
+                        if (s > bestDisplay) bestDisplay = s;
+                    }
+                    sb.DisplayNameScore = bestDisplay;
+                }
+            }
+
+            // ---------- KFC Rule: Similar bucket for non-anchor vendors ----------
+            // Every vendor matched by the filter is a candidate for best-seller metadata;
+            // anchor vendors (displayNameScore == 100 on any branch) seed the signature union.
+            var anchorVendorIds = scored
+                .Where(sb => sb.DisplayNameScore >= SearchScorer.DisplayNameExact && sb.Branch.VendorId.HasValue)
+                .Select(sb => sb.Branch.VendorId!.Value)
+                .Distinct()
+                .ToList();
+
+            var allVendorIds = scored
+                .Where(sb => sb.Branch.VendorId.HasValue)
+                .Select(sb => sb.Branch.VendorId!.Value)
+                .Distinct()
+                .ToList();
+
+            var signatureResolver = new AnchorSignatureResolver(_dashboardService);
+            // Resolve every vendor in scope so we can set per-dish IsBestSeller flags
+            // without extra roundtrips beyond the anchor-only spec minimum.
+            var signaturesByVendor = await signatureResolver.ResolveAsync(allVendorIds);
+
+            if (hasKeyword && anchorVendorIds.Count > 0)
+            {
+                var anchorSignatureUnion = anchorVendorIds
+                    .SelectMany(id => signaturesByVendor.TryGetValue(id, out var sigs) ? sigs : new List<string>())
+                    .Distinct()
+                    .ToList();
+
+                // Group candidate branches by vendor so the Similar score applies to every branch of a non-anchor brand.
+                var vendorGroups = scored
+                    .Where(sb => sb.Branch.VendorId.HasValue)
+                    .GroupBy(sb => sb.Branch.VendorId!.Value);
+
+                foreach (var g in vendorGroups)
+                {
+                    // Anchor vendors already scored 100 — skip.
+                    if (anchorVendorIds.Contains(g.Key)) continue;
+
+                    // Only recompute when every branch of this vendor currently has DisplayName = 0
+                    // (i.e. no exact/fuzzy match anywhere for this vendor).
+                    if (g.Any(sb => sb.DisplayNameScore > 0)) continue;
+
+                    var vendorDishNames = g
+                        .SelectMany(sb => sb.Branch.BranchDishes ?? new List<BranchDish>())
+                        .Where(bd => bd.Dish != null && bd.Dish.IsActive)
+                        .Select(bd => bd.Dish.Name)
+                        .Where(n => !string.IsNullOrWhiteSpace(n))
+                        .Distinct()
+                        .ToList();
+
+                    var similar = SearchScorer.ScoreSimilar(vendorDishNames, anchorSignatureUnion);
+                    if (similar > 0)
+                    {
+                        foreach (var sb in g) sb.DisplayNameScore = similar;
+                    }
+                }
+            }
+
+            // ---------- Dish scoring + top-10 selection per branch ----------
+            foreach (var sb in scored)
+            {
+                var branch = sb.Branch;
+                var signatureSet = branch.VendorId.HasValue && signaturesByVendor.TryGetValue(branch.VendorId.Value, out var sigs)
+                    ? new HashSet<string>(sigs)
+                    : new HashSet<string>();
+
+                var dishEntries = (branch.BranchDishes ?? new List<BranchDish>())
+                    .Where(bd => bd.Dish != null && bd.Dish.IsActive)
+                    .Select(bd =>
+                    {
+                        var normalizedDishName = TextNormalizer.NormalizeForSearch(bd.Dish.Name ?? string.Empty);
+                        var isBestSeller = signatureSet.Contains(normalizedDishName);
+
+                        double bestDishScore = 0.0;
+                        if (hasKeyword)
+                        {
+                            foreach (var form in keywordForms)
+                            {
+                                var s = SearchScorer.ScoreDish(form, bd.Dish.Name,
+                                    isBestSeller, branch.AvgRating, branch.TotalReviewCount);
+                                if (s > bestDishScore) bestDishScore = s;
+                            }
+                        }
+                        else
+                        {
+                            // No keyword: surface prominent dishes. Base "prominence" = 50 for best-sellers, 10 otherwise.
+                            bestDishScore = isBestSeller ? 50.0 : 10.0;
+                        }
+
+                        return new { BranchDish = bd, Score = bestDishScore, IsBestSeller = isBestSeller };
+                    })
+                    .Where(e => !hasKeyword || e.Score > 0)
+                    .OrderByDescending(e => e.Score)
+                    .ThenByDescending(e => e.IsBestSeller)
+                    .ThenBy(e => e.BranchDish.Dish.DishId)
+                    .Take(MaxDishesPerBranch)
+                    .ToList();
+
+                sb.Dishes = dishEntries
+                    .Select(e => new DishSearchDto
+                    {
+                        DishId = e.BranchDish.Dish.DishId,
+                        Name = e.BranchDish.Dish.Name,
+                        Price = e.BranchDish.Dish.Price,
+                        Description = e.BranchDish.Dish.Description,
+                        ImageUrl = e.BranchDish.Dish.ImageUrl,
+                        IsSoldOut = e.BranchDish.IsSoldOut,
+                        CategoryName = e.BranchDish.Dish.Category?.Name ?? string.Empty,
+                        Score = e.Score,
+                        IsBestSeller = e.IsBestSeller,
+                    })
+                    .ToList();
+
+                sb.DishScore = dishEntries.Count > 0 ? dishEntries.Max(e => e.Score) : 0.0;
+            }
+
+            // ---------- Drop branches that match only by dish when no dish actually scored > 0 ----------
+            // A keyword-search candidate must either have DisplayName > 0 or at least one dishScore > 0.
+            if (hasKeyword)
+            {
+                scored = scored
+                    .Where(sb => sb.DisplayNameScore > 0 || sb.DishScore > 0)
                     .ToList();
             }
 
-            // Calculate final score and sort branches
-            var branchesWithScores = matchingItems.Select(item =>
+            // ---------- Compute finalScore per branch ----------
+            foreach (var sb in scored)
             {
-                var branch = item.branch;
-                double distanceKm = item.distanceKm;
-
-                double wDist = 0.6;
-                double wRate = 0.4;
+                var branch = sb.Branch;
                 double tierWeight = branch.Tier != null ? branch.Tier.Weight : 1.0;
                 double subMultiplier = branch.IsSubscribed ? 1.2 : 0.7;
 
-                double distanceScore = (distanceKm == 0 && (!userLat.HasValue || !userLong.HasValue))
-                    ? 0 // If no user location, distance score is 0
-                    : (1 / (distanceKm + 1)) * wDist;
+                double distanceScore = (sb.DistanceKm == 0 && (!userLat.HasValue || !userLong.HasValue))
+                    ? 0.0
+                    : (1.0 / (sb.DistanceKm + 1.0)) * WDist;
 
-                double ratingScore = (branch.AvgRating / 5) * wRate;
+                double ratingScore = (branch.AvgRating / 5.0) * WRate;
 
-                double finalScore = (distanceScore + ratingScore) * tierWeight * subMultiplier;
+                sb.FinalScore = (distanceScore + ratingScore) * tierWeight * subMultiplier
+                                + sb.DishScore * DishWeight;
+            }
 
-                return new { Branch = branch, DistanceKm = distanceKm, FinalScore = finalScore };
-            })
-            .OrderByDescending(x => x.FinalScore)
-            .ToList();
-
-            // Group branches by Vendor and return vendor-centric results
-            var vendorResults = branchesWithScores
-                .GroupBy(x => new
+            // ---------- Collapse per-vendor: pick primary, siblings in OtherBranches ----------
+            var vendorBuckets = scored
+                .Where(sb => sb.Branch.VendorId.HasValue)
+                .GroupBy(sb => sb.Branch.VendorId!.Value)
+                .Select(g =>
                 {
-                    x.Branch.VendorId,
-                    VendorName = x.Branch.Vendor?.Name,
-                    x.Branch.ManagerId,
-                    VendorIsActive = x.Branch.Vendor?.IsActive
-                })
-                .Select(vendorGroup => new SearchResultDto
-                {
-                    VendorId = vendorGroup.Key.VendorId ?? 0,
-                    VendorName = vendorGroup.Key.VendorName ?? string.Empty,
-                    ManagerId = vendorGroup.Key.ManagerId ?? 0,
-                    IsActive = vendorGroup.Key.VendorIsActive ?? false,
-                    Branches = vendorGroup.Select(x => new BranchSearchDto
+                    ScoredBranch primary;
+                    if (userLat.HasValue && userLong.HasValue)
                     {
-                        BranchId = x.Branch.BranchId,
-                        Name = x.Branch.Name,
-                        AddressDetail = x.Branch.AddressDetail,
-                        City = x.Branch.City,
-                        Ward = x.Branch.Ward,
-                        Lat = x.Branch.Lat,
-                        Long = x.Branch.Long,
-                        AvgRating = x.Branch.AvgRating,
-                        TotalReviewCount = x.Branch.TotalReviewCount,
-                        FinalScore = x.FinalScore,
-                        DistanceKm = x.DistanceKm,
-                        IsSubscribed = x.Branch.IsSubscribed,
-                        IsVerified = x.Branch.IsVerified,
-                        IsActive = x.Branch.IsActive,
-                        Dishes = x.Branch.BranchDishes
-                            .Where(bd => bd.Dish != null && bd.Dish.IsActive && 
-                                (!hasKeyword || TextNormalizer.NormalizeForSearch(bd.Dish.Name).Contains(normalizedKeyword)))
-                            .Select(bd => new DishSearchDto
-                            {
-                                DishId = bd.Dish.DishId,
-                                Name = bd.Dish.Name,
-                                Price = bd.Dish.Price,
-                                Description = bd.Dish.Description,
-                                ImageUrl = bd.Dish.ImageUrl,
-                                IsSoldOut = bd.IsSoldOut,
-                                CategoryName = bd.Dish.Category?.Name ?? string.Empty
-                            })
-                            .ToList()
-                    }).ToList()
+                        primary = g.OrderBy(sb => sb.DistanceKm).First();
+                    }
+                    else
+                    {
+                        primary = g.OrderByDescending(sb => sb.FinalScore).First();
+                    }
+
+                    var siblings = g
+                        .Where(sb => sb.Branch.BranchId != primary.Branch.BranchId)
+                        .OrderBy(sb => sb.DistanceKm)
+                        .ToList();
+
+                    return new { Primary = primary, Siblings = siblings };
                 })
-                .OrderByDescending(v => v.Branches.Max(b => b.FinalScore))
                 .ToList();
 
-            return vendorResults;
+            // ---------- Two-pass ordering: DisplayName bucket first, then finalScore within bucket ----------
+            int BucketOf(double score)
+            {
+                if (score >= SearchScorer.DisplayNameExact) return 3;
+                if (score >= SearchScorer.DisplayNameFuzzy) return 2;
+                if (score >= SearchScorer.DisplayNameSimilarFloor) return 1;
+                return 0;
+            }
+
+            var orderedVendors = vendorBuckets
+                .OrderByDescending(v => BucketOf(v.Primary.DisplayNameScore))
+                .ThenByDescending(v => v.Primary.FinalScore)
+                .ToList();
+
+            // ---------- Project to DTOs ----------
+            var results = orderedVendors
+                .Select(v =>
+                {
+                    var primaryDto = ToBranchDto(v.Primary);
+                    primaryDto.OtherBranches = v.Siblings.Select(ToBranchDto).ToList();
+
+                    var vendorName = v.Primary.Branch.Vendor?.Name ?? string.Empty;
+                    return new SearchResultDto
+                    {
+                        VendorId = v.Primary.Branch.VendorId ?? 0,
+                        VendorName = vendorName,
+                        ManagerId = v.Primary.Branch.ManagerId ?? 0,
+                        IsActive = v.Primary.Branch.Vendor?.IsActive ?? false,
+                        Branches = new List<BranchSearchDto> { primaryDto }
+                    };
+                })
+                .ToList();
+
+            if (_logger != null && hasKeyword)
+            {
+                foreach (var r in results)
+                {
+                    var primary = r.Branches.FirstOrDefault();
+                    if (primary == null) continue;
+                    _logger.LogInformation(
+                        "Search keyword='{Keyword}' vendorId={VendorId} displayNameScore={DisplayNameScore} dishScore={DishScore} finalScore={FinalScore} isAnchor={IsAnchor} siblings={SiblingCount}",
+                        filter.Keyword,
+                        r.VendorId,
+                        primary.DisplayNameScore,
+                        primary.DishScore,
+                        primary.FinalScore,
+                        primary.DisplayNameScore >= SearchScorer.DisplayNameExact,
+                        primary.OtherBranches.Count);
+                }
+            }
+
+            return results;
+        }
+
+        private static BranchSearchDto ToBranchDto(ScoredBranch sb) => new BranchSearchDto
+        {
+            BranchId = sb.Branch.BranchId,
+            Name = sb.Branch.Name,
+            AddressDetail = sb.Branch.AddressDetail,
+            City = sb.Branch.City,
+            Ward = sb.Branch.Ward,
+            Lat = sb.Branch.Lat,
+            Long = sb.Branch.Long,
+            AvgRating = sb.Branch.AvgRating,
+            TotalReviewCount = sb.Branch.TotalReviewCount,
+            FinalScore = sb.FinalScore,
+            DistanceKm = sb.DistanceKm,
+            IsSubscribed = sb.Branch.IsSubscribed,
+            IsVerified = sb.Branch.IsVerified,
+            IsActive = sb.Branch.IsActive,
+            DisplayNameScore = sb.DisplayNameScore,
+            DishScore = sb.DishScore,
+            Dishes = sb.Dishes,
+        };
+
+        private sealed class ScoredBranch
+        {
+            public Branch Branch { get; }
+            public double DistanceKm { get; }
+            public double DisplayNameScore { get; set; }
+            public double DishScore { get; set; }
+            public double FinalScore { get; set; }
+            public List<DishSearchDto> Dishes { get; set; } = new();
+
+            public ScoredBranch(Branch branch, double distanceKm)
+            {
+                Branch = branch;
+                DistanceKm = distanceKm;
+            }
         }
     }
 }
