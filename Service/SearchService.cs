@@ -61,15 +61,14 @@ namespace Service
 
             if (hasKeyword)
             {
+                // Display name scoring uses only the original normalized keyword, not synonym-expanded
+                // forms. Synonym expansion is intentionally limited to dish matching so that brand-name
+                // synonyms (e.g. "jollibee" ↔ "kfc") do not inflate a competitor's display name score.
+                // Vendor similarity via synonym overlap is handled separately by ScoreSimilar (KFC Rule).
                 foreach (var sb in scored)
                 {
-                    double bestDisplay = 0.0;
-                    foreach (var form in keywordForms)
-                    {
-                        var s = SearchScorer.ScoreDisplayName(form, sb.Branch.Vendor?.Name, sb.Branch.Name);
-                        if (s > bestDisplay) bestDisplay = s;
-                    }
-                    sb.DisplayNameScore = bestDisplay;
+                    sb.DisplayNameScore = SearchScorer.ScoreDisplayName(
+                        normalizedKeyword, sb.Branch.Vendor?.Name, sb.Branch.Name);
                 }
             }
 
@@ -89,9 +88,25 @@ namespace Service
                 .ToList();
 
             var signatureResolver = new AnchorSignatureResolver(_dashboardService);
+
+            // Build IsSignature dish names from already-loaded branch data — no extra DB round-trip.
+            // When a vendor has no IsSignature dishes the resolver falls back to best-seller order.
+            var preloadedSignatures = scored
+                .Where(sb => sb.Branch.VendorId.HasValue)
+                .GroupBy(sb => sb.Branch.VendorId!.Value)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.SelectMany(sb => sb.Branch.BranchDishes ?? new List<BranchDish>())
+                           .Where(bd => bd.Dish != null && bd.Dish.IsActive && bd.Dish.IsSignature)
+                           .Select(bd => TextNormalizer.NormalizeForSearch(bd.Dish.Name ?? string.Empty))
+                           .Where(n => !string.IsNullOrEmpty(n))
+                           .Distinct()
+                           .ToList()
+                );
+
             // Resolve every vendor in scope so we can set per-dish IsBestSeller flags
             // without extra roundtrips beyond the anchor-only spec minimum.
-            var signaturesByVendor = await signatureResolver.ResolveAsync(allVendorIds);
+            var signaturesByVendor = await signatureResolver.ResolveAsync(allVendorIds, preloadedSignatures);
 
             if (hasKeyword && anchorVendorIds.Count > 0)
             {

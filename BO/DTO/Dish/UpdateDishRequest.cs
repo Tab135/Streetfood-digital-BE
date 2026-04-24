@@ -16,6 +16,8 @@ namespace BO.DTO.Dish
 
         public bool? IsActive { get; set; }
 
+        public bool? IsSignature { get; set; }
+
         public int? CategoryId { get; set; }
 
         /// <summary>

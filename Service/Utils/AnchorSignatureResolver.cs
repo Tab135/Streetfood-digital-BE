@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 namespace Service.Utils
 {
     /// <summary>
-    /// Per-request memoizer that fetches the top-N best-seller dish names for a set of anchor vendors
-    /// via <see cref="IVendorDashboardService.GetDishDashboardByVendorAsync"/>. Used by the KFC Rule
-    /// Similar-bucket scorer so each anchor vendor is only queried once per search request.
+    /// Per-request memoizer that resolves signature dish names for a set of vendors.
+    /// Priority: dishes flagged <c>IsSignature == true</c> (passed in via pre-loaded branch data);
+    /// fall back to top-N best-seller order from <see cref="IVendorDashboardService.GetDishDashboardByVendorAsync"/>
+    /// when no signature dishes are available for a vendor.
     /// </summary>
     public sealed class AnchorSignatureResolver
     {
@@ -25,19 +26,37 @@ namespace Service.Utils
         }
 
         /// <summary>
-        /// Returns a map { anchorVendorId -> top-N normalized signature dish names sorted by completed-order quantity desc }.
-        /// Anchor ids already resolved in this instance are served from cache.
+        /// Returns a map { vendorId -> normalized signature dish names }.
+        /// When <paramref name="preloadedSignatures"/> contains a non-empty list for a vendor those
+        /// names are used directly (no dashboard call). Otherwise the dashboard best-seller order is used.
         /// </summary>
-        public async Task<Dictionary<int, List<string>>> ResolveAsync(IEnumerable<int> anchorVendorIds)
+        /// <param name="vendorIds">All vendor IDs to resolve.</param>
+        /// <param name="preloadedSignatures">
+        /// Optional map of vendorId → already-normalized names of dishes with <c>IsSignature == true</c>
+        /// extracted from the branches that were loaded for this search request.
+        /// </param>
+        public async Task<Dictionary<int, List<string>>> ResolveAsync(
+            IEnumerable<int> vendorIds,
+            IReadOnlyDictionary<int, List<string>>? preloadedSignatures = null)
         {
-            if (anchorVendorIds == null)
+            if (vendorIds == null)
                 return new Dictionary<int, List<string>>();
 
-            var ids = anchorVendorIds.Distinct().ToList();
+            var ids = vendorIds.Distinct().ToList();
             foreach (var vendorId in ids)
             {
                 if (_cache.ContainsKey(vendorId)) continue;
 
+                // Prefer explicit IsSignature dishes when available.
+                if (preloadedSignatures != null &&
+                    preloadedSignatures.TryGetValue(vendorId, out var sigNames) &&
+                    sigNames.Count > 0)
+                {
+                    _cache[vendorId] = sigNames;
+                    continue;
+                }
+
+                // Fall back to best-seller order from the dashboard.
                 var dashboard = await _dashboardService.GetDishDashboardByVendorAsync(vendorId);
                 var topNames = (dashboard?.TopDishes ?? new())
                     .Where(d => d.TotalQuantityOrdered > 0 && !string.IsNullOrWhiteSpace(d.DishName))
@@ -54,7 +73,7 @@ namespace Service.Utils
         }
 
         /// <summary>
-        /// Returns the normalized set of best-seller dish ids for a previously-resolved anchor
+        /// Returns the normalized signature dish names for a previously-resolved vendor
         /// (for marking <c>IsBestSeller</c> on matching dishes). Empty when vendor hasn't been resolved.
         /// </summary>
         public IReadOnlySet<string> BestSellerNames(int vendorId)

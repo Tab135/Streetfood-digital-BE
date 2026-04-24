@@ -12,6 +12,8 @@ namespace BO.DTO.Dish
         public string? ImageUrl { get; set; }
         public bool IsSoldOut { get; set; }
         public bool IsActive { get; set; }
+        public bool IsSignature { get; set; }
+        public bool IsBestSeller { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
 

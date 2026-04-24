@@ -18,19 +18,22 @@ namespace Service
         private readonly ITasteRepository _tasteRepository;
         private readonly IBranchRepository _branchRepository;
         private readonly IVendorRepository _vendorRepository;
+        private readonly IVendorDashboardService _dashboardService;
 
         public DishService(
             IDishRepository dishRepository,
             ICategoryRepository categoryRepository,
             ITasteRepository tasteRepository,
             IBranchRepository branchRepository,
-            IVendorRepository vendorRepository)
+            IVendorRepository vendorRepository,
+            IVendorDashboardService dashboardService)
         {
             _dishRepository = dishRepository ?? throw new ArgumentNullException(nameof(dishRepository));
             _categoryRepository = categoryRepository ?? throw new ArgumentNullException(nameof(categoryRepository));
             _tasteRepository = tasteRepository ?? throw new ArgumentNullException(nameof(tasteRepository));
             _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
             _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
+            _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
         }
 
         public async Task<DishResponse> CreateDishAsync(int vendorId, CreateDishRequest request, int userId, string imageUrl)
@@ -83,6 +86,7 @@ namespace Service
                 Description = request.Description,
                 ImageUrl = imageUrl,
                 IsActive = request.IsActive,
+                IsSignature = request.IsSignature,
                 VendorId = vendorId,
                 CategoryId = request.CategoryId
             };
@@ -103,7 +107,8 @@ namespace Service
 
             // Reload dish with full navigation data
             var fullDish = await _dishRepository.GetByIdAsync(createdDish.DishId);
-            return MapToResponse(fullDish!);
+            var createBestSellerIds = await GetBestSellerIdsAsync(vendorId);
+            return MapToResponse(fullDish!, createBestSellerIds);
         }
 
         public async Task<DishResponse> GetDishByIdAsync(int dishId)
@@ -114,7 +119,8 @@ namespace Service
                 throw new DomainExceptions($"Dish with ID {dishId} not found");
             }
 
-            return MapToResponse(dish);
+            var bestSellerIds = await GetBestSellerIdsAsync(dish.VendorId);
+            return MapToResponse(dish, bestSellerIds);
         }
 
         public async Task<PaginatedResponse<DishResponse>> GetDishesByVendorAsync(
@@ -125,7 +131,8 @@ namespace Service
             int pageSize)
         {
             var (dishes, totalCount) = await _dishRepository.GetDishesAsync(vendorId, categoryId, keyword, pageNumber, pageSize);
-            var items = dishes.Select(MapToResponse).ToList();
+            var bestSellerIds = await GetBestSellerIdsAsync(vendorId);
+            var items = dishes.Select(d => MapToResponse(d, bestSellerIds)).ToList();
             return new PaginatedResponse<DishResponse>(items, totalCount, pageNumber, pageSize);
         }
 
@@ -148,7 +155,9 @@ namespace Service
             }
 
             var (dishes, totalCount) = await _dishRepository.GetDishesByBranchAsync(branchId, categoryId, keyword, pageNumber, pageSize, includeInactive);
-            var items = dishes.Select(d => MapToResponseForBranch(d, branchId)).ToList();
+            var vendorId = dishes.FirstOrDefault()?.VendorId ?? 0;
+            var bestSellerIds = vendorId > 0 ? await GetBestSellerIdsAsync(vendorId) : [];
+            var items = dishes.Select(d => MapToResponseForBranch(d, branchId, bestSellerIds)).ToList();
             return new PaginatedResponse<DishResponse>(items, totalCount, pageNumber, pageSize);
         }
 
@@ -193,6 +202,9 @@ namespace Service
             if (request.IsActive.HasValue)
                 dish.IsActive = request.IsActive.Value;
 
+            if (request.IsSignature.HasValue)
+                dish.IsSignature = request.IsSignature.Value;
+
             if (request.CategoryId.HasValue)
                 dish.CategoryId = request.CategoryId.Value;
 
@@ -229,7 +241,8 @@ namespace Service
 
             // Reload full dish
             var fullDish = await _dishRepository.GetByIdAsync(dishId);
-            return MapToResponse(fullDish!);
+            var updateBestSellerIds = await GetBestSellerIdsAsync(dish.VendorId);
+            return MapToResponse(fullDish!, updateBestSellerIds);
         }
 
         public async Task DeleteDishAsync(int dishId, int userId)
@@ -329,9 +342,20 @@ namespace Service
             await _dishRepository.UpdateBranchDishStatusAsync(branchId, dishId, isSoldOut);
         }
 
-        private static DishResponse MapToResponseForBranch(Dish dish, int branchId)
+        private async Task<HashSet<int>> GetBestSellerIdsAsync(int vendorId)
         {
-            var response = MapToResponse(dish);
+            var dashboard = await _dashboardService.GetDishDashboardByVendorAsync(vendorId);
+            return (dashboard?.TopDishes ?? new())
+                .Where(d => d.DishId.HasValue)
+                .OrderByDescending(d => d.TotalQuantityOrdered)
+                .Take(5)
+                .Select(d => d.DishId!.Value)
+                .ToHashSet();
+        }
+
+        private static DishResponse MapToResponseForBranch(Dish dish, int branchId, HashSet<int>? bestSellerIds = null)
+        {
+            var response = MapToResponse(dish, bestSellerIds);
             var branchDish = dish.BranchDishes?.FirstOrDefault(bd => bd.BranchId == branchId);
             if (branchDish != null)
             {
@@ -364,7 +388,7 @@ namespace Service
             return vendor != null && vendor.UserId == userId;
         }
 
-        private static DishResponse MapToResponse(Dish dish)
+        private static DishResponse MapToResponse(Dish dish, HashSet<int>? bestSellerIds = null)
         {
             return new DishResponse
             {
@@ -374,6 +398,8 @@ namespace Service
                 Description = dish.Description,
                 ImageUrl = dish.ImageUrl,
                 IsActive = dish.IsActive,
+                IsSignature = dish.IsSignature,
+                IsBestSeller = bestSellerIds?.Contains(dish.DishId) ?? false,
                 CreatedAt = dish.CreatedAt,
                 UpdatedAt = dish.UpdatedAt,
                 VendorId = dish.VendorId,

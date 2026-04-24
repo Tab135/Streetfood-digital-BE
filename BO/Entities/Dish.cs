@@ -24,6 +24,8 @@ namespace BO.Entities
 
         public bool IsActive { get; set; } = true;
 
+        public bool IsSignature { get; set; } = false;
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }

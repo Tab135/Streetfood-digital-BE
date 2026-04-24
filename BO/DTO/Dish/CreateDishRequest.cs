@@ -18,6 +18,8 @@ namespace BO.DTO.Dish
 
         public bool IsActive { get; set; } = true;
 
+        public bool IsSignature { get; set; } = false;
+
         [Required]
         public int CategoryId { get; set; }
 
