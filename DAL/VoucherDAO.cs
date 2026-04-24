@@ -142,4 +142,14 @@ public class VoucherDAO
                                          campaignIds.Contains(qtr.QuestTask.Quest.CampaignId.Value))))
             .ToListAsync();
     }
+
+    public async Task<List<int>> GetIndependentQuestVoucherIdsAsync()
+    {
+        return await _context.QuestTaskRewards
+            .AsNoTracking()
+            .Where(qtr => qtr.RewardType == BO.Enums.QuestRewardType.VOUCHER && qtr.QuestTask.Quest.IsStandalone)
+            .Select(qtr => qtr.RewardValue)
+            .Distinct()
+            .ToListAsync();
+    }
 }

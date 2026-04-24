@@ -15,4 +15,5 @@ public interface IVoucherRepository
     Task<List<Voucher>> GetByCampaignIdAsync(int campaignId);
     Task<List<Voucher>> GetByCampaignIdsAsync(List<int> campaignIds);
     Task<List<Voucher>> GetMarketplaceVouchersAsync(DateTime now);
+    Task<List<int>> GetIndependentQuestVoucherIdsAsync();
 }

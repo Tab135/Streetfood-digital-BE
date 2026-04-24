@@ -18,4 +18,5 @@ public class VoucherDto
     public int UsedQuantity { get; set; }
     public int? CampaignId { get; set; }
     public int Remain { get; set; }
+    public bool IsIndependentQuest { get; set; }
 }

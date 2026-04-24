@@ -133,12 +133,14 @@ public class VoucherService : IVoucherService
     public async Task<List<VoucherDto>> GetAllVouchersAsync(bool? isBelongAQuestTask = null, bool? isRemaining = null, bool? isSystemVoucher = null)
     {
         var vouchers = await _voucherRepository.GetAllAsync(isBelongAQuestTask, isRemaining, isSystemVoucher);
+        var independentVoucherIds = new HashSet<int>(await _voucherRepository.GetIndependentQuestVoucherIdsAsync());
 
         var responses = new List<VoucherDto>(vouchers.Count);
         foreach (var voucher in vouchers)
         {
             var dto = MapToDto(voucher);
             dto.CampaignId = await ResolveCampaignIdAsync(voucher);
+            dto.IsIndependentQuest = independentVoucherIds.Contains(voucher.VoucherId);
             responses.Add(dto);
         }
 

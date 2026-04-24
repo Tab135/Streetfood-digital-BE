@@ -32,4 +32,5 @@ public class VoucherRepository : IVoucherRepository
     public Task<List<Voucher>> GetByCampaignIdAsync(int campaignId) => _voucherDAO.GetByCampaignIdAsync(campaignId);
     public Task<List<Voucher>> GetByCampaignIdsAsync(List<int> campaignIds) => _voucherDAO.GetByCampaignIdsAsync(campaignIds);
     public Task<List<Voucher>> GetMarketplaceVouchersAsync(DateTime now) => _voucherDAO.GetMarketplaceVouchersAsync(now);
+    public Task<List<int>> GetIndependentQuestVoucherIdsAsync() => _voucherDAO.GetIndependentQuestVoucherIdsAsync();
 }
