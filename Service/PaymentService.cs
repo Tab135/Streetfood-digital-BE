@@ -967,7 +967,7 @@ namespace Service.PaymentsService
 
                 var orderCode = await GenerateUniqueOrderCodeAsync();
 
-                int campaignFee = CampaignJoinFee;
+                int campaignFee = joinJoin.Campaign?.JoinFee ?? 0;
                 var description = $"Phi tham gia campaign {branch.Name}";
                 var payOsDescription = BuildPayOSDescription(description, "Phi tham gia campaign");
 
@@ -1037,8 +1037,6 @@ namespace Service.PaymentsService
                 if (pendingBranchCampaignIds == null || pendingBranchCampaignIds.Count == 0)
                     return new PaymentLinkResult { Success = false, Message = "Không có chi nhánh cần thanh toán." };
 
-                int campaignFee = 20000;
-                // distinct while preserving input order
                 var distinct = new List<int>();
                 var seen = new HashSet<int>();
                 foreach (var id in pendingBranchCampaignIds)
@@ -1048,16 +1046,17 @@ namespace Service.PaymentsService
                 if (distinct.Count == 0)
                     return new PaymentLinkResult { Success = false, Message = "Danh sách BranchCampaignIds không hợp lệ." };
 
+                var firstBranchCampaignId = distinct[0];
+                var firstBranchCampaign = await _branchCampaignRepo.GetByIdAsync(firstBranchCampaignId);
+                if (firstBranchCampaign == null)
+                    return new PaymentLinkResult { Success = false, Message = "BranchCampaign không hợp lệ." };
+
+                int campaignFee = firstBranchCampaign.Campaign?.JoinFee ?? 0;
                 var totalAmount = campaignFee * distinct.Count;
 
                 // PayOS Amount is int; keep it safe
                 if (totalAmount <= 0 || totalAmount > int.MaxValue)
                     return new PaymentLinkResult { Success = false, Message = "Tổng tiền thanh toán không hợp lệ." };
-
-                var firstBranchCampaignId = distinct[0];
-                var firstBranchCampaign = await _branchCampaignRepo.GetByIdAsync(firstBranchCampaignId);
-                if (firstBranchCampaign == null)
-                    return new PaymentLinkResult { Success = false, Message = "BranchCampaign không hợp lệ." };
 
                 var branch = firstBranchCampaign.Branch;
                 if (branch == null || !branch.VendorId.HasValue || branch.VendorId.Value != vendorId)
