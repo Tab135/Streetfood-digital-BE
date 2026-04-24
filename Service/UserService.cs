@@ -6,7 +6,6 @@ using BO.Exceptions;
 using Google.Apis.Auth;
 using Microsoft.Extensions.Configuration;
 using Repository.Interfaces;
-using Service.Auth;
 using Service.Interfaces;
 using Service.JWT;
 using System;
@@ -142,13 +141,7 @@ namespace Service
                 }
             }
 
-            var forcedOtp = TemporaryPhoneOtpOverrides.GetForcedOtp(normalizedPhoneNumber);
-            var otpCode = await SendPhoneOtpAsync(normalizedPhoneNumber, forcedOtp);
-
-            if (forcedOtp != null)
-            {
-                return ($"OTP đã được tạo cho số {normalizedPhoneNumber}.", _otpDebugMode ? otpCode : null);
-            }
+            var otpCode = await SendPhoneOtpAsync(normalizedPhoneNumber);
 
             if (_otpDebugMode)
             {
@@ -168,15 +161,13 @@ namespace Service
 
             // Find existing user by phone
             var user = await _userRepository.GetByPhoneNumberAsync(normalizedPhoneNumber);
-            var hasRoleOverride = TemporaryPhoneOtpOverrides.TryGetRole(normalizedPhoneNumber, out var overrideRole);
-
             if (user == null)
             {
                 var newUser = new User
                 {
                     UserName = normalizedPhoneNumber,
                     Email = string.Empty,
-                    Role = hasRoleOverride ? overrideRole : Role.User,
+                    Role = Role.User,
                     CreatedAt = DateTime.UtcNow,
                     EmailVerified = false,
                     PhoneNumber = normalizedPhoneNumber,
@@ -194,11 +185,6 @@ namespace Service
             else if (!user.PhoneNumberVerified)
             {
                 throw new DomainExceptions("Số điện thoại chưa được xác minh. Vui lòng xác minh số điện thoại trong hồ sơ trước khi đăng nhập bằng số này.");
-            }
-            else if (hasRoleOverride && user.Role != overrideRole)
-            {
-                user.Role = overrideRole;
-                await _userRepository.UpdateAsync(user);
             }
 
             var token = _jwt_service.GenerateToken(user);
@@ -246,13 +232,7 @@ namespace Service
                 return ($"Số điện thoại {normalizedPhoneNumber} đã được xác minh trước đó.", null);
             }
 
-            var forcedOtp = TemporaryPhoneOtpOverrides.GetForcedOtp(normalizedPhoneNumber);
-            var otpCode = await SendPhoneOtpAsync(normalizedPhoneNumber, forcedOtp);
-
-            if (forcedOtp != null)
-            {
-                return ($"OTP xác minh số điện thoại đã được tạo cho {normalizedPhoneNumber}.", _otpDebugMode ? otpCode : null);
-            }
+            var otpCode = await SendPhoneOtpAsync(normalizedPhoneNumber);
 
             if (_otpDebugMode)
             {

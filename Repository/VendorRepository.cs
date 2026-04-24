@@ -60,5 +60,10 @@ namespace Repository
         {
             return await _vendorDAO.ExistsByUserIdAsync(userId);
         }
+
+        public async Task RefundCampaignJoinFeeAsync(int campaignId, decimal fee)
+        {
+            await _vendorDAO.RefundCampaignJoinFeeAsync(campaignId, fee);
+        }
     }
 }

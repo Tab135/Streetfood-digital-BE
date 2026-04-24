@@ -16,5 +16,7 @@ namespace BO.DTO.Campaigns
         public DateTime EndDate { get; set; }
 
         public int? RequiredTierId { get; set; }
+        public int JoinFee { get; set; }
+        public int? ExpectedBranchJoin { get; set; }
     }
 }
