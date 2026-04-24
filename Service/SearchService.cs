@@ -184,7 +184,7 @@ namespace Service
                             bestDishScore = isBestSeller ? 50.0 : 10.0;
                         }
 
-                        return new { BranchDish = bd, Score = bestDishScore, IsBestSeller = isBestSeller };
+                        return new { BranchDish = bd, Score = bestDishScore, IsBestSeller = isBestSeller, bd.Dish.IsSignature };
                     })
                     .Where(e => !hasKeyword || e.Score > 0)
                     .OrderByDescending(e => e.Score)
@@ -205,6 +205,7 @@ namespace Service
                         CategoryName = e.BranchDish.Dish.Category?.Name ?? string.Empty,
                         Score = e.Score,
                         IsBestSeller = e.IsBestSeller,
+                        IsSignature = e.IsSignature,
                     })
                     .ToList();
 

@@ -71,5 +71,10 @@ namespace BO.DTO.Search
         /// True when this dish is among its vendor's top completed-order quantity dishes.
         /// </summary>
         public bool IsBestSeller { get; set; }
+
+        /// <summary>
+        /// True when the vendor has explicitly flagged this dish as a signature item.
+        /// </summary>
+        public bool IsSignature { get; set; }
     }
 }
