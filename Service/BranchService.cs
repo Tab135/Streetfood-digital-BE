@@ -969,7 +969,7 @@ namespace Service
         }
 
 
-        public async Task<DayOff> AddDayOffAsync(int branchId, AddDayOffDto dto, int userId)
+        public async Task<DayOffResponseDto> AddDayOffAsync(int branchId, AddDayOffDto dto, int userId)
         {
             // Verify user can manage the branch
             if (!await UserCanManageBranchAsync(branchId, userId))
@@ -977,17 +977,27 @@ namespace Service
                 throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
 
+            if (dto.StartDate > dto.EndDate)
+            {
+                throw new DomainExceptions("Thời gian bắt đầu phải nhỏ hơn hoặc bằng thời gian kết thúc");
+            }
+
             var dayOff = new DayOff
             {
                 BranchId = branchId,
                 StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
-                StartTime = dto.StartTime,
-                EndTime = dto.EndTime
+                EndDate = dto.EndDate
             };
 
             await _branchRepository.AddDayOffAsync(dayOff);
-            return dayOff;
+
+            return new DayOffResponseDto
+            {
+                DayOffId = dayOff.DayOffId,
+                BranchId = dayOff.BranchId,
+                StartDate = dayOff.StartDate,
+                EndDate = dayOff.EndDate
+            };
         }
 
         public async Task<List<DayOffResponseDto>> GetBranchDayOffsAsync(int branchId)
@@ -998,9 +1008,7 @@ namespace Service
                 DayOffId = d.DayOffId,
                 BranchId = d.BranchId,
                 StartDate = d.StartDate,
-                EndDate = d.EndDate,
-                StartTime = d.StartTime,
-                EndTime = d.EndTime
+                EndDate = d.EndDate
             }).ToList();
         }
 

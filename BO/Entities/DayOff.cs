@@ -16,15 +16,9 @@ namespace BO.Entities
         [ForeignKey("Branch")]
         public int BranchId { get; set; }
 
-        [Column(TypeName = "date")]
         public DateTime StartDate { get; set; }
 
-        [Column(TypeName = "date")]
         public DateTime EndDate { get; set; }
-
-        public TimeSpan? StartTime { get; set; }
-
-        public TimeSpan? EndTime { get; set; }
 
         public virtual Branch Branch { get; set; }
     }

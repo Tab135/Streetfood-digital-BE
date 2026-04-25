@@ -25,7 +25,6 @@ namespace Service.PaymentsService
         // Keys match Setting.Name seeds: "SubscriptionFee", "SubscriptionDurationDays", "CampaignJoinFee".
         private int SubscriptionAmount      => _settings.GetInt("SubscriptionFee", 20000);
         private int SubscriptionDurationDays => _settings.GetInt("SubscriptionDurationDays", 30);
-        private int CampaignJoinFee         => _settings.GetInt("CampaignJoinFee", 20000);
 
         private readonly IPaymentRepository _paymentRepo;
         private readonly IBranchRepository _branchRepo;
