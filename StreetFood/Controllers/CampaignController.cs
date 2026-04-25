@@ -70,27 +70,7 @@ namespace StreetFood.Controllers
             var result = await _campaignService.CreateVendorCampaignAsync(userId, dto);
             return Ok(new { message = "Vendor campaign created successfully", data = result });
         }
-        // Legacy route (kept for backward compatibility), hide from Swagger/UI.
-        [ApiExplorerSettings(IgnoreApi = true)]
-        [HttpPost("join/system/{campaignId}/branch/{branchId}")]
-        [Authorize(Roles = "Vendor")]
-        public async Task<IActionResult> JoinSystemCampaign(int campaignId, int branchId, [FromBody] JoinSystemCampaignBranchesRequestDto? request)
-        {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-            // If caller sends BranchIds in body -> batch join + 1 payment link
-            if (request?.BranchIds != null && request.BranchIds.Count > 0)
-            {
-                var result = await _campaignService.VendorJoinSystemCampaignForBranchesAsync(userId, campaignId, request.BranchIds);
-                return Ok(new { message = "Đã tạo yêu cầu tham gia và link thanh toán cho các chi nhánh được chọn", data = result });
-            }
-
-            // Backward-compatible: if no body, treat path branchId as single-item selection
-            var singleResult = await _campaignService.VendorJoinSystemCampaignForBranchesAsync(userId, campaignId, new() { branchId });
-            return Ok(new { message = "Đã tạo yêu cầu tham gia và link thanh toán cho các chi nhánh được chọn", data = singleResult });
-        }
-
-        // NEW primary route: branchIds only in body (no branchId variable in URL)
         [HttpPost("join/system/{campaignId}/branch")]
         [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> JoinSystemCampaignByBody(int campaignId, [FromBody] JoinSystemCampaignBranchesRequestDto request)

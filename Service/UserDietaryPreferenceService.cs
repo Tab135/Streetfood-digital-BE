@@ -27,7 +27,7 @@ namespace Service
             var validIds = allPrefs.Select(p => p.DietaryPreferenceId).ToHashSet();
 
             if (dietaryPreferenceIds.Any(id => !validIds.Contains(id)))
-                throw new System.Exception("One or more dietary preference ids are invalid");
+                throw new System.Exception("Một hoặc nhiều mã sở thích ăn uống không hợp lệ");
 
             await _userDietaryRepo.AssignPreferencesToUser(userId, dietaryPreferenceIds);
         }

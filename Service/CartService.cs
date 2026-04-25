@@ -68,26 +68,26 @@ public class CartService : ICartService
 
         if (request.Quantity <= 0)
         {
-            throw new DomainExceptions("Quantity must be at least 1");
+            throw new DomainExceptions("Số lượng phải ít nhất là 1");
         }
 
         var dish = await _dishRepository.GetByIdAsync(request.DishId)
-            ?? throw new DomainExceptions("Dish not found");
+            ?? throw new DomainExceptions("Không tìm thấy món ăn");
 
         if (!dish.IsActive)
         {
-            throw new DomainExceptions("Dish is not active");
+            throw new DomainExceptions("Món ăn không hoạt động");
         }
 
         var branchDish = await _dishRepository.GetBranchDishAsync(request.BranchId, request.DishId);
         if (branchDish == null)
         {
-            throw new DomainExceptions("Dish is not available in this branch");
+            throw new DomainExceptions("Món ăn không có sẵn trong chi nhánh này");
         }
 
         if (branchDish.IsSoldOut)
         {
-            throw new DomainExceptions("Dish is currently sold out");
+            throw new DomainExceptions("Món ăn hiện đã hết");
         }
 
         var cart = await _cartRepository.GetByUserAndBranchAsync(userId, request.BranchId);
@@ -134,21 +134,21 @@ public class CartService : ICartService
 
         if (request.Quantity <= 0)
         {
-            throw new DomainExceptions("Quantity must be at least 1");
+            throw new DomainExceptions("Số lượng phải ít nhất là 1");
         }
 
         var cart = await _cartRepository.GetByUserAndBranchAsync(userId, branchId)
-            ?? throw new DomainExceptions("Cart not found");
+            ?? throw new DomainExceptions("Không tìm thấy giỏ hàng");
 
         await EnsureBranchAllowsOrderingAsync(branchId);
 
         var item = await _cartRepository.GetItemByDishIdAsync(cart.CartId, dishId)
-            ?? throw new DomainExceptions("Item not found in cart");
+            ?? throw new DomainExceptions("Món ăn không có trong giỏ hàng");
 
         item.Quantity = request.Quantity;
 
         var dish = await _dishRepository.GetByIdAsync(dishId)
-            ?? throw new DomainExceptions("Dish not found");
+            ?? throw new DomainExceptions("Không tìm thấy món ăn");
 
         item.UnitPrice = dish.Price;
         await _cartRepository.UpdateItemAsync(item);
@@ -164,10 +164,10 @@ public class CartService : ICartService
         await EnsureUserExistsAsync(userId);
 
         var cart = await _cartRepository.GetByUserAndBranchAsync(userId, branchId)
-            ?? throw new DomainExceptions("Cart not found");
+            ?? throw new DomainExceptions("Không tìm thấy giỏ hàng");
 
         var item = await _cartRepository.GetItemByDishIdAsync(cart.CartId, dishId)
-            ?? throw new DomainExceptions("Item not found in cart");
+            ?? throw new DomainExceptions("Món ăn không có trong giỏ hàng");
 
         await _cartRepository.RemoveItemAsync(item);
 
@@ -209,17 +209,17 @@ public class CartService : ICartService
 
         if (request.BranchId <= 0)
         {
-            throw new DomainExceptions("BranchId is required for checkout");
+            throw new DomainExceptions("Cần có mã chi nhánh để thanh toán");
         }
 
         var cart = await _cartRepository.GetByUserAndBranchAsync(userId, request.BranchId)
-            ?? throw new DomainExceptions("Cart not found");
+            ?? throw new DomainExceptions("Không tìm thấy giỏ hàng");
 
         await EnsureBranchAllowsOrderingAsync(request.BranchId);
 
         if (cart.Items.Count == 0)
         {
-            throw new DomainExceptions("Cart is empty");
+            throw new DomainExceptions("Giỏ hàng trống");
         }
 
         var cartTotal = cart.Items.Sum(i => i.UnitPrice * i.Quantity);
@@ -231,11 +231,11 @@ public class CartService : ICartService
         if (request.VoucherId.HasValue)
         {
             var voucher = await _voucherRepository.GetByIdAsync(request.VoucherId.Value)
-                ?? throw new DomainExceptions("Voucher not found");
+                ?? throw new DomainExceptions("Không tìm thấy phiếu giảm giá");
 
             if (!voucher.IsActive)
             {
-                throw new DomainExceptions("Voucher is inactive");
+                throw new DomainExceptions("Phiếu giảm giá không hoạt động");
             }
 
             var now = DateTime.UtcNow;
@@ -243,7 +243,7 @@ public class CartService : ICartService
 
             if (VoucherRules.IsOutOfStock(voucher))
             {
-                throw new DomainExceptions("Voucher is out of stock");
+                throw new DomainExceptions("Phiếu giảm giá đã hết");
             }
 
             int? associatedCampaignId = voucher.VendorCampaignId;
@@ -261,10 +261,10 @@ public class CartService : ICartService
                 {
                     if (isVendorCampaign)
                     {
-                        throw new DomainExceptions("This branch is not included in this vendor campaign.");
+                        throw new DomainExceptions("Chi nhánh này không nằm trong chiến dịch của Vendor này.");
                     }
 
-                    throw new DomainExceptions("This voucher campaign is not active for this branch.");
+                    throw new DomainExceptions("Chiến dịch phiếu giảm giá này không hoạt động cho chi nhánh này.");
                 }
 
                 if (isVendorCampaign)
@@ -276,11 +276,11 @@ public class CartService : ICartService
             if (redeemedVendorVoucher == null)
             {
                 var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, voucher.VoucherId)
-                    ?? throw new DomainExceptions("You have not claimed this voucher yet");
+                    ?? throw new DomainExceptions("Bạn chưa nhận phiếu giảm giá này");
 
                 if (!userVoucher.IsAvailable || userVoucher.Quantity <= 0)
                 {
-                    throw new DomainExceptions("Voucher is not available");
+                    throw new DomainExceptions("Phiếu giảm giá không có sẵn");
                 }
 
                 redeemedUserVoucher = userVoucher;
@@ -288,7 +288,7 @@ public class CartService : ICartService
 
             if (voucher.MinAmountRequired > cartTotal)
             {
-                throw new DomainExceptions("Order amount does not meet voucher minimum requirement");
+                throw new DomainExceptions("Số tiền đơn hàng không đạt yêu cầu tối thiểu của phiếu giảm giá");
             }
 
             discountAmount = VoucherRules.CalculateDiscountAmount(cartTotal, voucher);
@@ -332,7 +332,7 @@ public class CartService : ICartService
                 await _orderService.DeleteOrderAsync(order.OrderId, userId);
             }
 
-            throw new DomainExceptions(payment.Message ?? "Failed to create payment link for order");
+            throw new DomainExceptions(payment.Message ?? "Không thể tạo liên kết thanh toán cho đơn hàng");
         }
 
         if (createdNewOrder)
@@ -385,12 +385,12 @@ public class CartService : ICartService
         if (selectedUserVoucher == null && selectedVendorVoucher == null)
         {
             var selectedVoucher = await _voucherRepository.GetByIdAsync(requestedVoucherId.Value)
-                ?? throw new DomainExceptions("Voucher not found");
+                ?? throw new DomainExceptions("Không tìm thấy phiếu giảm giá");
 
             if (IsSystemFundedVoucher(selectedVoucher))
             {
                 selectedUserVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, selectedVoucher.VoucherId)
-                    ?? throw new DomainExceptions("You have not claimed this voucher yet");
+                    ?? throw new DomainExceptions("Bạn chưa nhận phiếu giảm giá này");
             }
             else
             {
@@ -422,7 +422,7 @@ public class CartService : ICartService
             selectedVendorVoucher.UsedQuantity += 1;
             if (VoucherRules.IsOutOfStock(selectedVendorVoucher))
             {
-                throw new DomainExceptions("Voucher is out of stock");
+                throw new DomainExceptions("Phiếu giảm giá đã hết");
             }
 
             await _voucherRepository.UpdateAsync(selectedVendorVoucher);
@@ -432,12 +432,12 @@ public class CartService : ICartService
     private async Task RestoreVoucherUsageAsync(int userId, int voucherId)
     {
         var voucher = await _voucherRepository.GetByIdAsync(voucherId)
-            ?? throw new DomainExceptions("Voucher not found for checkout update");
+            ?? throw new DomainExceptions("Không tìm thấy phiếu giảm giá để cập nhật thanh toán");
 
         if (IsSystemFundedVoucher(voucher))
         {
             var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(userId, voucher.VoucherId)
-                ?? throw new DomainExceptions("Claimed voucher not found for this user");
+                ?? throw new DomainExceptions("Không tìm thấy phiếu giảm giá đã nhận của người dùng này");
 
             userVoucher.Quantity += 1;
             userVoucher.IsAvailable = true;
@@ -464,18 +464,49 @@ public class CartService : ICartService
         var user = await _userRepository.GetUserById(userId);
         if (user == null)
         {
-            throw new DomainExceptions("User not found");
+            throw new DomainExceptions("Không tìm thấy người dùng");
         }
     }
 
     private async Task EnsureBranchAllowsOrderingAsync(int branchId)
     {
         var branch = await _branchRepository.GetByIdAsync(branchId)
-            ?? throw new DomainExceptions("Branch not found");
+            ?? throw new DomainExceptions("Không tìm thấy chi nhánh");
 
         if (!branch.IsSubscribed)
         {
-            throw new DomainExceptions("This branch is not subscribed and cannot accept cart or order checkout actions.");
+            throw new DomainExceptions("Chi nhánh này chưa đăng ký và không thể thực hiện các hành động trong giỏ hàng hoặc thanh toán.");
+        }
+
+        var now = DateTime.UtcNow;
+        var today = now.Date;
+        var currentTime = now.TimeOfDay;
+
+        // 1. Check DayOff first — if the current moment is within any day-off window, block immediately.
+        var activeDayOff = branch.DayOffs?.FirstOrDefault(d =>
+            today >= d.StartDate.Date && today <= d.EndDate.Date &&
+            (!d.StartTime.HasValue || !d.EndTime.HasValue || (currentTime >= d.StartTime.Value && currentTime <= d.EndTime.Value)));
+
+        if (activeDayOff != null)
+        {
+            throw new DomainExceptions("Chi nhánh đang trong thời gian nghỉ và không nhận đơn hàng.");
+        }
+
+        // 2. Check WorkSchedule — only if there are schedules defined.
+        if (branch.WorkSchedules != null && branch.WorkSchedules.Any())
+        {
+            var todayWeekday = (int)now.DayOfWeek; // 0 = Sunday … 6 = Saturday
+            var schedule = branch.WorkSchedules.FirstOrDefault(s => s.Weekday == todayWeekday);
+
+            if (schedule == null)
+            {
+                throw new DomainExceptions("Chi nhánh không hoạt động vào ngày hôm nay.");
+            }
+
+            if (currentTime < schedule.OpenTime || currentTime > schedule.CloseTime)
+            {
+                throw new DomainExceptions($"Chi nhánh hiện đang đóng cửa. Giờ mở cửa: {schedule.OpenTime:hh\\:mm} – {schedule.CloseTime:hh\\:mm}.");
+            }
         }
     }
 

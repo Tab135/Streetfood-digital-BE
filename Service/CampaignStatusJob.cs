@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging;
 using Repository.Interfaces;
 using Service.Interfaces;
+using BO.Entities;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Service
@@ -16,17 +18,20 @@ namespace Service
         private readonly ICampaignRepository _campaignRepo;
         private readonly IBranchCampaignRepository _branchCampaignRepo;
         private readonly IVendorRepository _vendorRepo;
+        private readonly INotificationService _notificationService;
         private readonly ILogger<CampaignStatusJob> _logger;
 
         public CampaignStatusJob(
             ICampaignRepository campaignRepo,
             IBranchCampaignRepository branchCampaignRepo,
             IVendorRepository vendorRepo,
+            INotificationService notificationService,
             ILogger<CampaignStatusJob> logger)
         {
             _campaignRepo = campaignRepo;
             _branchCampaignRepo = branchCampaignRepo;
             _vendorRepo = vendorRepo;
+            _notificationService = notificationService;
             _logger = logger;
         }
 
@@ -197,7 +202,15 @@ namespace Service
                     
                     if (campaign.JoinFee > 0)
                     {
-                        await _vendorRepo.RefundCampaignJoinFeeAsync(campaignId, campaign.JoinFee);
+                        var refunds = await _vendorRepo.RefundCampaignJoinFeeAsync(campaignId, campaign.JoinFee);
+                        var notifyTasks = refunds.Select(r => _notificationService.NotifyAsync(
+                            r.UserId,
+                            NotificationType.CampaignCancelledRefund,
+                            "Chiến dịch bị hủy và hoàn tiền",
+                            $"Chiến dịch '{campaign.Name}' đã bị hủy do không đủ số lượng chi nhánh tham gia. Số tiền {r.Amount:N0} VNĐ đã được hoàn vào tài khoản của bạn.",
+                            campaign.CampaignId
+                        ));
+                        await Task.WhenAll(notifyTasks);
                     }
                 }
             }

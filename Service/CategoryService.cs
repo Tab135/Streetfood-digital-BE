@@ -55,7 +55,7 @@ namespace Service
         {
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null)
-                throw new DomainExceptions($"Category with id {id} not found");
+                throw new DomainExceptions($"Không tìm thấy danh mục với mã {id}");
 
             if (!string.IsNullOrEmpty(updateDto.Name))
                 existing.Name = updateDto.Name;
@@ -74,7 +74,7 @@ namespace Service
         {
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null)
-                throw new DomainExceptions($"Category with id {id} not found");
+                throw new DomainExceptions($"Không tìm thấy danh mục với mã {id}");
 
             if (existing.IsActive)
             {
@@ -93,13 +93,13 @@ namespace Service
             var vendor = await _vendorRepository.GetByUserIdAsync(userId);
             if (vendor == null)
             {
-                throw new DomainExceptions("You must be a vendor to manage categories");
+                throw new DomainExceptions("Bạn phải là Vendor mới có thể quản lý danh mục");
             }
 
             var branches = await _branchRepository.GetAllByVendorIdAsync(vendor.VendorId);
             if (!branches.Any(b => b.IsVerified))
             {
-                throw new DomainExceptions("You must have at least one verified branch to manage categories");
+                throw new DomainExceptions("Bạn phải có ít nhất một chi nhánh đã xác thực mới có thể quản lý danh mục");
             }
         }
 

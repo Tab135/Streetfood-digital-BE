@@ -143,7 +143,6 @@ namespace Service
             var vendor = await _vendorRepo.GetByUserIdAsync(userId);
             if (vendor == null)
                 throw new DomainExceptions("Không tìm thấy Vendor của người dùng này.");
-
             var targetBranchIds = await ResolveTargetBranchIdsForVendorCampaignAsync(vendor.VendorId, dto.BranchIds);
 
             bool isCampaignActive = dto.IsActive;
@@ -699,7 +698,10 @@ namespace Service
         {
             bool isCampaignActive = dto.StartDate <= DateTime.UtcNow;
             bool isCampaignRegisterable = ComputeIsRegisterable(dto.RegistrationStartDate, dto.RegistrationEndDate);
-
+            if (dto.JoinFee < 10000)
+            {
+                throw new DomainExceptions("Phí tham gia chiến dịch tối thiểu phải là 10.000VND");
+            }
             var campaign = new Campaign
             {
                 Name = dto.Name,

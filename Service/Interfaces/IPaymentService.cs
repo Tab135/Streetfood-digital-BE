@@ -1,5 +1,6 @@
 using BO.DTO.Payments;
 using BO.Entities;
+using BO.Common;
 using PayOS.Models.Webhooks;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -21,7 +22,8 @@ namespace Service.PaymentsService
         Task<Payment?> GetPaymentByOrderCode(long orderCode);
         Task CancelOrderPaymentAsync(int orderId);
 
-        Task<List<Payment>> GetUserPaymentHistory(int userId);
+        Task<List<PaymentHistoryDto>> GetUserPaymentHistory(int userId);
+        Task<PaginatedResponse<PaymentHistoryDto>> GetAllPayoutsAsync(int pageNumber, int pageSize);
 
         Task<PaymentStatusResponse> GetPaymentStatus(long orderCode);
 

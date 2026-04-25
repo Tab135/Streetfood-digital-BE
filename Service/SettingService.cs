@@ -59,7 +59,7 @@ namespace Service
             var repo = scope.ServiceProvider.GetRequiredService<ISettingRepository>();
 
             var setting = await repo.GetByNameAsync(name)
-                ?? throw new KeyNotFoundException($"Setting '{name}' not found.");
+                ?? throw new KeyNotFoundException($"Cài đặt '{name}' không tìm thấy.");
 
             setting.Value = newValue;
             await repo.UpdateAsync(setting);

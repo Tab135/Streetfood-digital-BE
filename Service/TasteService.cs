@@ -54,7 +54,7 @@ namespace Service
         {
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null)
-                throw new DomainExceptions($"Taste with id {id} not found");
+                throw new DomainExceptions($"Không tìm thấy vị với mã {id}");
 
             if (!string.IsNullOrEmpty(updateDto.Name))
                 existing.Name = updateDto.Name;
@@ -70,7 +70,7 @@ namespace Service
         {
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null)
-                throw new DomainExceptions($"Taste with id {id} not found");
+                throw new DomainExceptions($"Không tìm thấy vị với mã {id}");
 
             if (existing.IsActive)
             {

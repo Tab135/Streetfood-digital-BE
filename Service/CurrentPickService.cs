@@ -39,7 +39,7 @@ public class CurrentPickService : ICurrentPickService
             var branch = await _currentPickRepository.GetBranchForPickAsync(branchId);
             if (branch == null)
             {
-                throw new DomainExceptions($"Chi nhanh {branchId} khong hop le hoac khong hoat dong");
+                throw new DomainExceptions($"Chi nhánh {branchId} không hợp lệ hoặc không hoạt động");
             }
         }
 
@@ -86,18 +86,18 @@ public class CurrentPickService : ICurrentPickService
 
         if (dto.UserId == hostUserId)
         {
-            throw new DomainExceptions("Khong the tu moi chinh minh vao phong");
+            throw new DomainExceptions("Không thể tự mời chính mình vào phòng");
         }
 
         var invitedUser = await _userRepository.GetUserById(dto.UserId);
         if (invitedUser == null)
         {
-            throw new DomainExceptions("Khong tim thay nguoi dung duoc moi");
+            throw new DomainExceptions("Không tìm thấy người dùng được mời");
         }
 
         if (room.Members.Any(m => m.UserId == invitedUser.Id))
         {
-            throw new DomainExceptions("Nguoi dung nay da o trong phong");
+            throw new DomainExceptions("Người dùng này đã ở trong phòng");
         }
 
         var invite = await _currentPickRepository.GetInviteAsync(roomId, invitedUser.Id);
@@ -132,8 +132,8 @@ public class CurrentPickService : ICurrentPickService
         await _notificationService.NotifyAsync(
             invitedUser.Id,
             NotificationType.CurrentPickInvite,
-            "Loi moi Current Pick",
-            $"{hostName} da moi ban tham gia phong Current Pick",
+            "Lời mời Current Pick",
+            $"{hostName} đã mời bạn tham gia phòng Current Pick",
             room.CurrentPickRoomId,
             new
             {
@@ -162,7 +162,7 @@ public class CurrentPickService : ICurrentPickService
 
         if (invite == null)
         {
-            throw new DomainExceptions("Ban khong co loi moi hop le vao phong nay", "ERR_FORBIDDEN");
+            throw new DomainExceptions("Bạn không có lời mời hợp lệ vào phòng này", "ERR_FORBIDDEN");
         }
 
         if (invite.Status == CurrentPickInviteStatus.Accepted && room.Members.Any(m => m.UserId == userId))
@@ -172,12 +172,12 @@ public class CurrentPickService : ICurrentPickService
 
         if (room.IsFinalized)
         {
-            throw new DomainExceptions("Phong da duoc chot quan", "ERR_FORBIDDEN");
+            throw new DomainExceptions("Phòng đã được chốt quán", "ERR_FORBIDDEN");
         }
 
         if (invite.Status != CurrentPickInviteStatus.Pending)
         {
-            throw new DomainExceptions("Loi moi nay khong con hieu luc", "ERR_FORBIDDEN");
+            throw new DomainExceptions("Lời mời này không còn hiệu lực", "ERR_FORBIDDEN");
         }
 
         var isMember = room.Members.Any(m => m.UserId == userId);
@@ -227,7 +227,7 @@ public class CurrentPickService : ICurrentPickService
         var branchInRoom = room.Branches.Any(b => b.BranchId == dto.BranchId);
         if (!branchInRoom)
         {
-            throw new DomainExceptions("Quan duoc chon khong ton tai trong phong");
+            throw new DomainExceptions("Quán được chọn không tồn tại trong phòng");
         }
 
         var existingVote = await _currentPickRepository.GetVoteAsync(roomId, userId);
@@ -261,7 +261,7 @@ public class CurrentPickService : ICurrentPickService
 
         if (room.Branches.Count == 0)
         {
-            throw new DomainExceptions("Phong chua co quan de chot");
+            throw new DomainExceptions("Phòng chưa có quán để chốt");
         }
 
         var finalizedBranchId = dto.BranchId ?? ChooseWinningBranchId(room);
@@ -269,7 +269,7 @@ public class CurrentPickService : ICurrentPickService
 
         if (finalizedBranch == null)
         {
-            throw new DomainExceptions("Quan duoc chot khong hop le");
+            throw new DomainExceptions("Quán được chốt không hợp lệ");
         }
 
         var trackedRoom = await _currentPickRepository.GetRoomByIdAsync(roomId, asNoTracking: false)
@@ -305,7 +305,7 @@ public class CurrentPickService : ICurrentPickService
         EnsureHost(room, userId);
 
         var trackedRoom = await _currentPickRepository.GetRoomByIdAsync(roomId, asNoTracking: false)
-            ?? throw new DomainExceptions("Khong tim thay phong Current Pick");
+            ?? throw new DomainExceptions("Không tìm thấy phòng Current Pick");
 
         trackedRoom.IsActive = false;
         trackedRoom.UpdatedAt = DateTime.UtcNow;
@@ -325,12 +325,12 @@ public class CurrentPickService : ICurrentPickService
     private async Task AddBranchInternalAsync(int roomId, int addedByUserId, int branchId)
     {
         var branch = await _currentPickRepository.GetBranchForPickAsync(branchId)
-            ?? throw new DomainExceptions("Khong tim thay quan hop le");
+            ?? throw new DomainExceptions("Không tìm thấy quán hợp lệ");
 
         var existing = await _currentPickRepository.GetRoomBranchAsync(roomId, branch.BranchId);
         if (existing != null)
         {
-            throw new DomainExceptions("Quan nay da co trong phong");
+            throw new DomainExceptions("Quán này đã có trong phòng");
         }
 
         await _currentPickRepository.AddRoomBranchAsync(new CurrentPickBranch
@@ -359,7 +359,7 @@ public class CurrentPickService : ICurrentPickService
     private async Task<CurrentPickRoom> RequireActiveRoomAsync(int roomId)
     {
         return await _currentPickRepository.GetRoomByIdAsync(roomId)
-            ?? throw new DomainExceptions("Khong tim thay phong Current Pick");
+            ?? throw new DomainExceptions("Không tìm thấy phòng Current Pick");
     }
 
     private async Task<CurrentPickRoom> RequireMemberRoomAsync(int roomId, int userId)
@@ -368,7 +368,7 @@ public class CurrentPickService : ICurrentPickService
         var isMember = room.Members.Any(m => m.UserId == userId);
         if (!isMember)
         {
-            throw new DomainExceptions("Ban khong thuoc phong Current Pick nay", "ERR_FORBIDDEN");
+            throw new DomainExceptions("Bạn không thuộc phòng Current Pick này", "ERR_FORBIDDEN");
         }
 
         return room;
@@ -378,7 +378,7 @@ public class CurrentPickService : ICurrentPickService
     {
         if (room.HostUserId != userId)
         {
-            throw new DomainExceptions("Chi host moi co quyen thuc hien thao tac nay", "ERR_FORBIDDEN");
+            throw new DomainExceptions("Chỉ host mới có quyền thực hiện thao tác này", "ERR_FORBIDDEN");
         }
     }
 
@@ -386,7 +386,7 @@ public class CurrentPickService : ICurrentPickService
     {
         if (room.IsFinalized)
         {
-            throw new DomainExceptions("Phong da duoc chot quan");
+            throw new DomainExceptions("Phòng đã được chốt quán");
         }
     }
 
@@ -395,7 +395,7 @@ public class CurrentPickService : ICurrentPickService
         var user = await _userRepository.GetUserById(userId);
         if (user == null)
         {
-            throw new DomainExceptions("Khong tim thay nguoi dung");
+            throw new DomainExceptions("Không tìm thấy người dùng");
         }
     }
 
@@ -414,7 +414,7 @@ public class CurrentPickService : ICurrentPickService
             }
         }
 
-        throw new DomainExceptions("Khong the tao ma phong. Vui long thu lai");
+        throw new DomainExceptions("Không thể tạo mã phòng. Vui lòng thử lại");
     }
 
     private async Task BroadcastRoomUpdateAsync(CurrentPickRoom room, string eventType)

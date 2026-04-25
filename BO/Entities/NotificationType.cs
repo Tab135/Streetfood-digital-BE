@@ -10,5 +10,6 @@ public enum NotificationType
     NewOrder = 5,
     CurrentPickInvite = 6,
     BranchVerificationStatus = 7,
-    SystemCampaignCreated = 8
+    SystemCampaignCreated = 8,
+    CampaignCancelledRefund = 9
 }

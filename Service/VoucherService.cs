@@ -38,7 +38,7 @@ public class VoucherService : IVoucherService
 
         if (createDtos == null || createDtos.Count == 0)
         {
-            throw new DomainExceptions("At least one voucher is required");
+            throw new DomainExceptions("Cần ít nhất một phiếu giảm giá");
         }
 
         var duplicateCodes = createDtos
@@ -51,7 +51,7 @@ public class VoucherService : IVoucherService
 
         if (duplicateCodes.Count > 0)
         {
-            throw new DomainExceptions($"Duplicate voucher codes in request: {string.Join(", ", duplicateCodes)}");
+            throw new DomainExceptions($"Mã phiếu giảm giá bị trùng lặp: {string.Join(", ", duplicateCodes)}");
         }
 
         // Validate campaigns
@@ -83,13 +83,13 @@ public class VoucherService : IVoucherService
             var voucherCode = createDto.VoucherCode?.Trim();
             if (string.IsNullOrWhiteSpace(voucherCode))
             {
-                throw new DomainExceptions("Voucher code is required");
+                throw new DomainExceptions("Mã phiếu giảm giá là bắt buộc");
             }
 
             var existed = await _voucherRepository.GetByCodeAsync(voucherCode);
             if (existed != null)
             {
-                throw new DomainExceptions($"Voucher code already exists: {voucherCode}");
+                throw new DomainExceptions($"Mã phiếu giảm giá đã tồn tại: {voucherCode}");
             }
 
             vouchersToCreate.Add(new Voucher
@@ -150,7 +150,7 @@ public class VoucherService : IVoucherService
     public async Task<VoucherDto> UpdateVoucherAsync(int voucherId, UpdateVoucherDto updateDto, int userId)
     {
         var voucher = await _voucherRepository.GetByIdAsync(voucherId)
-            ?? throw new DomainExceptions($"Voucher with id {voucherId} not found");
+            ?? throw new DomainExceptions($"Không tìm thấy phiếu giảm giá với mã {voucherId}");
 
         if (!string.IsNullOrWhiteSpace(updateDto.Name))
         {
@@ -201,7 +201,7 @@ public class VoucherService : IVoucherService
             var existed = await _voucherRepository.GetByCodeAsync(updateDto.VoucherCode);
             if (existed != null && existed.VoucherId != voucher.VoucherId)
             {
-                throw new DomainExceptions("Voucher code already exists");
+                throw new DomainExceptions("Mã phiếu giảm giá đã tồn tại");
             }
 
             voucher.VoucherCode = updateDto.VoucherCode;
@@ -224,7 +224,7 @@ public class VoucherService : IVoucherService
 
         if (voucher.Quantity >= 0 && voucher.UsedQuantity > voucher.Quantity)
         {
-            throw new DomainExceptions("Used quantity cannot be greater than quantity");
+            throw new DomainExceptions("Số lượng đã sử dụng không được lớn hơn tổng số lượng");
         }
 
         if (updateDto.IsActive.HasValue)
@@ -239,15 +239,15 @@ public class VoucherService : IVoucherService
     public async Task<ClaimVoucherResponseDto> ClaimVoucherAsync(int voucherId, int userId)
     {
         var user = await _userRepository.GetUserById(userId)
-            ?? throw new DomainExceptions("User not found");
+            ?? throw new DomainExceptions("Không tìm thấy người dùng");
 
         var voucher = await _voucherRepository.GetByIdAsync(voucherId)
-            ?? throw new DomainExceptions("Voucher not found");
+            ?? throw new DomainExceptions("Không tìm thấy phiếu giảm giá");
 
         var now = DateTime.UtcNow;
         if (!voucher.IsActive)
         {
-            throw new DomainExceptions("Voucher is inactive");
+            throw new DomainExceptions("Phiếu giảm giá không hoạt động");
         }
 
 
@@ -255,7 +255,7 @@ public class VoucherService : IVoucherService
 
         if (VoucherRules.IsOutOfStock(voucher))
         {
-            throw new DomainExceptions("Voucher is out of stock");
+            throw new DomainExceptions("Phiếu giảm giá đã hết");
         }
 
         VoucherRules.NormalizeDiscountType(voucher.Type);
@@ -269,14 +269,14 @@ public class VoucherService : IVoucherService
         {
             if (userVoucher != null)
             {
-                throw new DomainExceptions("You have already claimed this campaign voucher.");
+                throw new DomainExceptions("Bạn đã nhận phiếu giảm giá của chiến dịch này rồi.");
             }
         }
         else
         {
             if (user.Point < voucher.RedeemPoint)
             {
-                throw new DomainExceptions("Insufficient points to claim this voucher");
+                throw new DomainExceptions("Không đủ điểm để nhận phiếu giảm giá này");
             }
 
             user.Point -= voucher.RedeemPoint;
@@ -323,7 +323,7 @@ public class VoucherService : IVoucherService
         var exists = await _voucherRepository.ExistsByIdAsync(voucherId);
         if (!exists)
         {
-            throw new DomainExceptions($"Voucher with id {voucherId} not found");
+            throw new DomainExceptions($"Không tìm thấy phiếu giảm giá với mã {voucherId}");
         }
 
         await _voucherRepository.DeleteAsync(voucherId);
@@ -383,7 +383,7 @@ public class VoucherService : IVoucherService
     public async Task<List<UserVoucherResponseDto>> GetApplicableUserVouchersAsync(int userId, int branchId)
     {
         var branch = await _branchRepository.GetByIdAsync(branchId)
-            ?? throw new DomainExceptions("Branch not found");
+            ?? throw new DomainExceptions("Không tìm thấy chi nhánh");
 
         var userVouchers = await _userVoucherRepository.GetByUserIdAsync(userId);
         var applicableByVoucherId = new Dictionary<int, UserVoucherResponseDto>();
@@ -513,7 +513,7 @@ public class VoucherService : IVoucherService
     {
         if (endDate.HasValue && endDate.Value < startDate)
         {
-            throw new DomainExceptions("End date must be greater than or equal to start date");
+            throw new DomainExceptions("Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu");
         }
     }
 

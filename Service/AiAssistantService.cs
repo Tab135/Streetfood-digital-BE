@@ -47,7 +47,7 @@ namespace Service
         {
             if (request == null)
             {
-                throw new DomainExceptions("Request body is required");
+                throw new DomainExceptions("Yêu cầu không được để trống");
             }
 
             var memoryHistory = _conversationMemoryService.GetHistory(userId);
@@ -84,8 +84,8 @@ namespace Service
                 Intent = isRecommendation ? "recommend_food" : "chat",
                 Reply = string.IsNullOrWhiteSpace(aiDecision.Reply)
                     ? (isRecommendation
-                        ? "Here are nearby branch recommendations based on your preferences."
-                        : "I can help with food recommendations and branch discovery.")
+                        ? "Dưới đây là một số gợi ý quán gần bạn dựa trên sở thích của bạn."
+                        : "Tôi có thể giúp bạn gợi ý món ăn và tìm kiếm các quán ăn.")
                     : aiDecision.Reply.Trim(),
                 Query = query,
                 MatchedBranchCount = 0,
@@ -217,7 +217,7 @@ namespace Service
 
             if (string.IsNullOrWhiteSpace(apiKey))
             {
-                throw new DomainExceptions("Groq API key is not configured. Set Groq:ApiKey or GROQ_API_KEY.");
+                throw new DomainExceptions("Groq API key chưa được cấu hình. Vui lòng thiết lập Groq:ApiKey hoặc GROQ_API_KEY.");
             }
 
             var endpoint = _configuration["Groq:Endpoint"] ?? "https://api.groq.com/openai/v1/chat/completions";
@@ -243,7 +243,7 @@ namespace Service
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new DomainExceptions($"Groq request failed with status {(int)response.StatusCode}: {response.ReasonPhrase}");
+                throw new DomainExceptions($"Yêu cầu Groq thất bại với trạng thái {(int)response.StatusCode}: {response.ReasonPhrase}");
             }
 
             var content = ExtractAssistantContent(responseBody);
@@ -341,13 +341,13 @@ namespace Service
 
             if (!root.TryGetProperty("choices", out var choices) || choices.GetArrayLength() == 0)
             {
-                throw new DomainExceptions("Groq response does not contain choices");
+                throw new DomainExceptions("Phản hồi từ Groq không chứa các lựa chọn");
             }
 
             var content = choices[0].GetProperty("message").GetProperty("content").GetString();
             if (string.IsNullOrWhiteSpace(content))
             {
-                throw new DomainExceptions("Groq returned empty content");
+                throw new DomainExceptions("Groq trả về nội dung trống");
             }
 
             return content;

@@ -1,6 +1,7 @@
 using BO.DTO.Payments;
 using BO.Entities;
 using BO.Exceptions;
+using BO.Common;
 using Hangfire;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -152,7 +153,7 @@ namespace Service.PaymentsService
         public async Task<decimal> GetVendorBalanceAsync(int vendorUserId)
         {
             var vendor = await _vendorRepository.GetByUserIdAsync(vendorUserId)
-                ?? throw new DomainExceptions("Vendor not found");
+                ?? throw new DomainExceptions("Không tìm thấy Vendor");
 
             return vendor.MoneyBalance;
         }
@@ -160,7 +161,7 @@ namespace Service.PaymentsService
         public async Task<decimal> GetUserBalanceAsync(int userId)
         {
             var user = await _userRepo.GetUserById(userId)
-                ?? throw new DomainExceptions("User not found");
+                ?? throw new DomainExceptions("Không tìm thấy người dùng");
 
             return user.MoneyBalance;
         }
@@ -172,13 +173,13 @@ namespace Service.PaymentsService
 
             if (request.Amount <= 0)
             {
-                throw new DomainExceptions("Amount must be greater than 0");
+                throw new DomainExceptions("Số tiền phải lớn hơn 0");
             }
 
             var amount = Convert.ToDecimal(request.Amount);
             if (user.MoneyBalance < amount)
             {
-                throw new DomainExceptions("Insufficient user balance");
+                throw new DomainExceptions("Số dư tài khoản không đủ");
             }
 
             var payoutOrderCode = await CreatePayoutPaymentRecordAsync(
@@ -237,7 +238,7 @@ namespace Service.PaymentsService
 
                 _logger.LogError(ex,
                     "PayOS payout forbidden. Verify PayoutClientId/PayoutApiKey/PayoutChecksumKey and payout permission for this merchant.");
-                throw new DomainExceptions("PayOS payout is forbidden. Please verify payout credentials and payout permission with PayOS.");
+                throw new DomainExceptions("Giao dịch PayOS bị từ chối. Vui lòng kiểm tra lại cấu hình và quyền rút tiền.");
             }
             catch
             {
@@ -272,17 +273,17 @@ namespace Service.PaymentsService
         public async Task<VendorPayoutResponseDto> RequestVendorPayoutAsync(int vendorUserId, VendorPayoutRequestDto request)
         {
             var vendor = await _vendorRepository.GetByUserIdAsync(vendorUserId)
-                ?? throw new DomainExceptions("Vendor not found");
+                ?? throw new DomainExceptions("Không tìm thấy Vendor");
 
             if (request.Amount <= 0)
             {
-                throw new DomainExceptions("Amount must be greater than 0");
+                throw new DomainExceptions("Số tiền phải lớn hơn 0");
             }
 
             var amount = Convert.ToDecimal(request.Amount);
             if (vendor.MoneyBalance < amount)
             {
-                throw new DomainExceptions("Insufficient vendor balance");
+                throw new DomainExceptions("Số dư Vendor không đủ");
             }
 
             var payoutOrderCode = await CreatePayoutPaymentRecordAsync(
@@ -380,23 +381,23 @@ namespace Service.PaymentsService
                 var order = await _orderRepository.GetById(orderId);
                 if (order == null)
                 {
-                    return new PaymentLinkResult { Success = false, Message = "Order not found" };
+                    return new PaymentLinkResult { Success = false, Message = "Không tìm thấy đơn hàng" };
                 }
 
                 if (order.UserId != userId)
                 {
-                    return new PaymentLinkResult { Success = false, Message = "You do not own this order" };
+                    return new PaymentLinkResult { Success = false, Message = "Bạn không sở hữu đơn hàng này" };
                 }
 
                 if (order.Status != OrderStatus.Pending)
                 {
-                    return new PaymentLinkResult { Success = false, Message = "Only pending orders can be paid" };
+                    return new PaymentLinkResult { Success = false, Message = "Chỉ đơn hàng đang chờ mới có thể thanh toán" };
                 }
 
                 var amount = Convert.ToInt32(decimal.Round(order.FinalAmount, 0, MidpointRounding.AwayFromZero));
                 if (amount <= 0)
                 {
-                    return new PaymentLinkResult { Success = false, Message = "Order amount must be greater than 0" };
+                    return new PaymentLinkResult { Success = false, Message = "Số tiền đơn hàng phải lớn hơn 0" };
                 }
 
                 var latestPayment = await _paymentRepo.GetLatestPaymentByOrderId(orderId);
@@ -404,7 +405,7 @@ namespace Service.PaymentsService
                 {
                     if (string.Equals(latestPayment.Status, "PAID", StringComparison.OrdinalIgnoreCase))
                     {
-                        return new PaymentLinkResult { Success = false, Message = "This order is already paid" };
+                        return new PaymentLinkResult { Success = false, Message = "Đơn hàng này đã được thanh toán" };
                     }
 
                     if (string.Equals(latestPayment.Status, "PENDING", StringComparison.OrdinalIgnoreCase))
@@ -417,7 +418,7 @@ namespace Service.PaymentsService
                             return new PaymentLinkResult
                             {
                                 Success = true,
-                                Message = "Using existing pending payment link",
+                                Message = "Đang sử dụng link thanh toán chờ hiện có",
                                 PaymentUrl = latestPayment.CheckoutUrl,
                                 QrCode = latestPayment.CheckoutUrl,
                                 OrderCode = latestPayment.OrderCode,
@@ -506,7 +507,7 @@ namespace Service.PaymentsService
                 return new PaymentLinkResult
                 {
                     Success = true,
-                    Message = _isDebugMode ? "Debug payment link created" : "Create payment link successfully",
+                    Message = _isDebugMode ? "Đã tạo link thanh toán debug" : "Tạo link thanh toán thành công",
                     PaymentUrl = checkoutUrl,
                     QrCode = qrCode,
                     OrderCode = orderCode,
@@ -661,9 +662,58 @@ namespace Service.PaymentsService
             return await _paymentRepo.GetPaymentByOrderCode(orderCode);
         }
 
-        public async Task<List<Payment>> GetUserPaymentHistory(int userId)
+        public async Task<List<PaymentHistoryDto>> GetUserPaymentHistory(int userId)
         {
-            return await _paymentRepo.GetUserPayments(userId);
+            var payments = await _paymentRepo.GetUserPayments(userId);
+            return payments.Select(p => new PaymentHistoryDto
+            {
+                Id = p.Id,
+                UserId = p.UserId,
+                UserName = p.User?.UserName,
+                UserEmail = p.User?.Email,
+                Amount = p.Amount,
+                Description = p.Description,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                PaidAt = p.PaidAt,
+                TransactionCode = p.TransactionCode,
+                OrderId = p.OrderId,
+                BranchId = p.BranchId,
+                BranchCampaignId = p.BranchCampaignId,
+                PaymentMethod = p.PaymentMethod,
+                CheckoutUrl = p.CheckoutUrl
+            }).ToList();
+        }
+
+        public async Task<PaginatedResponse<PaymentHistoryDto>> GetAllPayoutsAsync(int pageNumber, int pageSize)
+        {
+            var payouts = await _paymentRepo.GetAllPayouts(pageNumber, pageSize);
+            var totalItems = await _paymentRepo.GetTotalPayoutsCount();
+
+            var data = payouts.Select(p => new PaymentHistoryDto
+            {
+                Id = p.Id,
+                UserId = p.UserId,
+                UserName = p.User?.UserName,
+                UserEmail = p.User?.Email,
+                Amount = p.Amount,
+                Description = p.Description,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                PaidAt = p.PaidAt,
+                TransactionCode = p.TransactionCode,
+                OrderId = p.OrderId,
+                BranchId = p.BranchId,
+                BranchCampaignId = p.BranchCampaignId,
+                PaymentMethod = p.PaymentMethod,
+                CheckoutUrl = p.CheckoutUrl
+            }).ToList();
+
+            return new PaginatedResponse<PaymentHistoryDto>(
+                data,
+                totalItems,
+                pageNumber,
+                pageSize);
         }
 
         public async Task<PaymentStatusResponse> GetPaymentStatus(long orderCode)
@@ -744,7 +794,7 @@ namespace Service.PaymentsService
                 {
                     await _payOS.PaymentRequests.CancelAsync(
                         latestPayment.OrderCode,
-                        "Order cancelled by user",
+                        "Đơn hàng đã bị hủy bởi người dùng",
                         null);
                 }
                 catch (Exception ex)

@@ -42,6 +42,16 @@ namespace Repository
             return await _paymentDAO.GetUserPayments(userId, status);
         }
 
+        public async Task<List<Payment>> GetAllPayouts(int pageNumber = 1, int pageSize = 10)
+        {
+            return await _paymentDAO.GetAllPayouts(pageNumber, pageSize);
+        }
+
+        public async Task<int> GetTotalPayoutsCount()
+        {
+            return await _paymentDAO.GetTotalPayoutsCount();
+        }
+
         public async Task<Payment> UpdatePaymentStatus(long orderCode, string status,
             string? transactionCode = null, string? paymentLinkId = null, string? paymentMethod = null)
         {
