@@ -53,7 +53,7 @@ namespace Service
                 filter.MaxPrice,
                 filter.CategoryIds,
                 filter.IsSubscribed,
-                filter.Ward
+                filter.Wards
             );
 
             if (filteredItems == null || filteredItems.Count == 0)

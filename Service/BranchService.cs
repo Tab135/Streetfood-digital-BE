@@ -1166,7 +1166,7 @@ namespace Service
             bool hasDietary = filter.DietaryIds != null && filter.DietaryIds.Count > 0;
             bool hasCategory = filter.CategoryIds != null && filter.CategoryIds.Count > 0;
             bool hasIsSubscribed = filter.IsSubscribed.HasValue;
-            bool hasWard = !string.IsNullOrWhiteSpace(filter.Ward);
+            bool hasWard = filter.Wards != null && filter.Wards.Any(w => !string.IsNullOrWhiteSpace(w));
             bool hasAnyFilter = hasLatLong || hasDistance || hasPrice || hasTaste || hasDietary || hasCategory || hasIsSubscribed || hasWard;
 
             // If NO filters provided, return all active branches without filtering
@@ -1264,7 +1264,7 @@ namespace Service
                 filter.DietaryIds, filter.TasteIds,
                 filter.MinPrice, filter.MaxPrice,
                 filter.CategoryIds, filter.IsSubscribed,
-                filter.Ward);
+                filter.Wards);
 
             // Pre-fetch best-seller IDs per vendor sequentially (DbContext is not thread-safe)
             var filteredVendorIds = items

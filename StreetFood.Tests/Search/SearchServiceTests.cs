@@ -86,7 +86,7 @@ namespace StreetFood.Tests.Search
                     It.IsAny<double?>(), It.IsAny<double?>(), It.IsAny<double?>(),
                     It.IsAny<List<int>?>(), It.IsAny<List<int>?>(),
                     It.IsAny<decimal?>(), It.IsAny<decimal?>(),
-                    It.IsAny<List<int>?>(), It.IsAny<bool?>(), It.IsAny<string?>()))
+                    It.IsAny<List<int>?>(), It.IsAny<bool?>(), It.IsAny<List<string>?>()))
                 .ReturnsAsync(items.ToList());
         }
 

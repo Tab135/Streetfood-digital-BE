@@ -535,17 +535,21 @@ namespace DAL
             decimal? maxPrice,
             List<int>? categoryIds,
             bool? isSubscribed,
-            string? ward)
+            List<string>? wards)
         {
             var branchesQuery = _context.Branches
                 .AsNoTracking()
                 .AsSplitQuery()
                 .Where(b => b.IsActive && b.IsVerified);
 
-            if (!string.IsNullOrWhiteSpace(ward))
+            if (wards != null && wards.Count > 0)
             {
-                var normalizedWard = ward.ToLower().Trim();
-                branchesQuery = branchesQuery.Where(b => b.Ward != null && b.Ward.ToLower().Contains(normalizedWard));
+                var normalizedWards = wards
+                    .Where(w => !string.IsNullOrWhiteSpace(w))
+                    .Select(w => w.ToLower().Trim())
+                    .ToList();
+                if (normalizedWards.Count > 0)
+                    branchesQuery = branchesQuery.Where(b => b.Ward != null && normalizedWards.Contains(b.Ward.ToLower()));
             }
 
             var branches = await branchesQuery

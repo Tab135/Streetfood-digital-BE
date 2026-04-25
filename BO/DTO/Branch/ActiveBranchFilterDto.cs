@@ -41,7 +41,7 @@ namespace BO.DTO.Branch
         /// <summary>Whether to only include branches with active promotions. Default: false</summary>
         public Boolean? IsSubscribed { get; set; } 
 
-        /// <summary>Ward to filter by</summary>
-        public string? Ward { get; set; }
+        /// <summary>Wards to filter by (OR logic — branch matches if its ward is in this list)</summary>
+        public List<string>? Wards { get; set; }
     }
 }
