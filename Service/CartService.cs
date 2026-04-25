@@ -477,6 +477,37 @@ public class CartService : ICartService
         {
             throw new DomainExceptions("Chi nhánh này chưa đăng ký và không thể thực hiện các hành động trong giỏ hàng hoặc thanh toán.");
         }
+
+        var now = DateTime.UtcNow;
+        var today = now.Date;
+        var currentTime = now.TimeOfDay;
+
+        // 1. Check DayOff first — if the current moment is within any day-off window, block immediately.
+        var activeDayOff = branch.DayOffs?.FirstOrDefault(d =>
+            today >= d.StartDate.Date && today <= d.EndDate.Date &&
+            (!d.StartTime.HasValue || !d.EndTime.HasValue || (currentTime >= d.StartTime.Value && currentTime <= d.EndTime.Value)));
+
+        if (activeDayOff != null)
+        {
+            throw new DomainExceptions("Chi nhánh đang trong thời gian nghỉ và không nhận đơn hàng.");
+        }
+
+        // 2. Check WorkSchedule — only if there are schedules defined.
+        if (branch.WorkSchedules != null && branch.WorkSchedules.Any())
+        {
+            var todayWeekday = (int)now.DayOfWeek; // 0 = Sunday … 6 = Saturday
+            var schedule = branch.WorkSchedules.FirstOrDefault(s => s.Weekday == todayWeekday);
+
+            if (schedule == null)
+            {
+                throw new DomainExceptions("Chi nhánh không hoạt động vào ngày hôm nay.");
+            }
+
+            if (currentTime < schedule.OpenTime || currentTime > schedule.CloseTime)
+            {
+                throw new DomainExceptions($"Chi nhánh hiện đang đóng cửa. Giờ mở cửa: {schedule.OpenTime:hh\\:mm} – {schedule.CloseTime:hh\\:mm}.");
+            }
+        }
     }
 
     private static CartResponseDto CreateEmptyCartDto(int userId, int? branchId = null)

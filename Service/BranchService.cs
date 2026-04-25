@@ -1130,14 +1130,14 @@ namespace Service
         {
             return weekday switch
             {
-                0 => "Chủ Nhật",
-                1 => "Thứ Hai",
-                2 => "Thứ Ba",
-                3 => "Thứ Tư",
-                4 => "Thứ Năm",
-                5 => "Thứ Sáu",
-                6 => "Thứ Bảy",
-                _ => "Không xác định"
+                0 => "Sunday",
+                1 => "Monday",
+                2 => "Tuesday",
+                3 => "Wednesday",
+                4 => "Thursday",
+                5 => "Friday",
+                6 => "Saturday",
+                _ => "Unknown"
             };
         }
 
