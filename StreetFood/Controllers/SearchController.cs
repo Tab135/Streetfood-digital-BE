@@ -1,9 +1,11 @@
 using BO.Common;
+using BO.DTO.Search;
 using Microsoft.AspNetCore.Mvc;
 using Service.Interfaces;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using BO.DTO.Search;
 
 namespace StreetFood.Controllers
 {
@@ -20,7 +22,9 @@ namespace StreetFood.Controllers
 
         [HttpGet]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> Search([FromQuery] SearchFilterDto filter)
+        public async Task<IActionResult> Search(
+            [FromQuery] SearchFilterDto filter,
+            [FromQuery(Name = "rankingV2")] int? rankingV2Query)
         {
             if (!ModelState.IsValid)
             {
@@ -28,7 +32,7 @@ namespace StreetFood.Controllers
             }
 
             bool hasKeyword = !string.IsNullOrWhiteSpace(filter.Keyword);
-            
+
             if (hasKeyword)
             {
                 filter.Keyword = filter.Keyword!.Trim();
@@ -40,26 +44,64 @@ namespace StreetFood.Controllers
                     });
                 }
             }
-            else
-            {
-                // If no keyword, they must provide at least Lat/Long or some other filter to make it valid
-                // But specifically ""n?u ch? c� gps m� b?m v�o search nhung ko nh?p m� ch? ch?n d? filter th� s? theo gps lu�n""
-                if (!filter.Lat.HasValue || !filter.Long.HasValue)
-                {
-                    // Maybe return error? Or just search all? 
-                    // To be safe, if no keyword and no location, let's reject or let it pass?
-                    // I will just let it pass, it will become an unfiltered search or filtered by other fields.
-                    // Wait, maybe I should require either keyword or GPS.
-                }
-            }
 
             var results = await _searchService.SearchAsync(filter);
+
+            if (!UseRankingV2(rankingV2Query))
+            {
+                results = FlattenToLegacyShape(results);
+            }
+
             return Ok(new
             {
                 keyword = filter.Keyword,
                 totalResults = results.Count,
                 results
             });
+        }
+
+        // Default to the new ranking. Clients can opt out with `?rankingV2=0` or `X-Search-Version: 1`
+        // during rollout to get the legacy flat shape (no OtherBranches grouping).
+        private bool UseRankingV2(int? rankingV2Query)
+        {
+            if (rankingV2Query.HasValue) return rankingV2Query.Value != 0;
+
+            if (Request.Headers.TryGetValue("X-Search-Version", out var header))
+            {
+                var value = header.ToString();
+                if (int.TryParse(value, out var parsed)) return parsed >= 2;
+            }
+
+            return true;
+        }
+
+        // Legacy shape: one top-level entry per vendor, with every matching branch (primary + siblings)
+        // flattened into the single Branches list. No OtherBranches, no DisplayNameScore/DishScore on branches.
+        private static List<SearchResultDto> FlattenToLegacyShape(List<SearchResultDto> results)
+        {
+            return results.Select(v =>
+            {
+                var primary = v.Branches.FirstOrDefault();
+                var allBranches = new List<BranchSearchDto>();
+                if (primary != null)
+                {
+                    var hoisted = primary.OtherBranches ?? new List<BranchSearchDto>();
+                    allBranches.Add(primary);
+                    allBranches.AddRange(hoisted);
+
+                    // Clear the nested grouping so legacy clients don't see it.
+                    primary.OtherBranches = new List<BranchSearchDto>();
+                }
+
+                return new SearchResultDto
+                {
+                    VendorId = v.VendorId,
+                    VendorName = v.VendorName,
+                    ManagerId = v.ManagerId,
+                    IsActive = v.IsActive,
+                    Branches = allBranches
+                };
+            }).ToList();
         }
     }
 }

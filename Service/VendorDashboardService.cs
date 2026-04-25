@@ -49,5 +49,10 @@ namespace Service
 
             return await _vendorDashboardRepo.GetDishDashboardAsync(vendorId.Value);
         }
+
+        public Task<DishDashboardDto> GetDishDashboardByVendorAsync(int vendorId)
+        {
+            return _vendorDashboardRepo.GetDishDashboardAsync(vendorId);
+        }
     }
 }

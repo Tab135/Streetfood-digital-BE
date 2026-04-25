@@ -3,6 +3,7 @@ using System;
 using DAL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DAL.Migrations
 {
     [DbContext(typeof(StreetFoodDbContext))]
-    partial class StreetFoodDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260424152345_AddDishIsSignature")]
+    partial class AddDishIsSignature
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -309,9 +312,6 @@ namespace DAL.Migrations
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("ExpectedBranchJoin")
-                        .HasColumnType("integer");
-
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
 
@@ -320,9 +320,6 @@ namespace DAL.Migrations
 
                     b.Property<bool>("IsRegisterable")
                         .HasColumnType("boolean");
-
-                    b.Property<int>("JoinFee")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()

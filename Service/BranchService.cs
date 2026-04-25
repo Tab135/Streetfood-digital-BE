@@ -21,6 +21,7 @@ namespace Service
         private readonly ISettingService _settingService;
         private readonly IUserService _userService;
         private readonly INotificationService _notificationService;
+        private readonly IVendorDashboardService _dashboardService;
 
         public BranchService(
             IBranchRepository branchRepository,
@@ -29,7 +30,8 @@ namespace Service
             IQuestProgressService questProgressService,
             ISettingService settingService,
             IUserService userService,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IVendorDashboardService dashboardService)
         {
             _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
             _vendorRepository = vendorRepository ?? throw new ArgumentNullException(nameof(vendorRepository));
@@ -38,6 +40,18 @@ namespace Service
             _settingService = settingService ?? throw new ArgumentNullException(nameof(settingService));
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
             _notificationService = notificationService ?? throw new ArgumentNullException(nameof(notificationService));
+            _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
+        }
+
+        private async Task<HashSet<int>> GetBestSellerIdsAsync(int vendorId)
+        {
+            var dashboard = await _dashboardService.GetDishDashboardByVendorAsync(vendorId);
+            return (dashboard?.TopDishes ?? [])
+                .Where(d => d.DishId.HasValue)
+                .OrderByDescending(d => d.TotalQuantityOrdered)
+                .Take(5)
+                .Select(d => d.DishId!.Value)
+                .ToHashSet();
         }
 
         public async Task<Branch> CreateBranchAsync(CreateBranchDto createBranchDto, int vendorId, int userId)
@@ -1152,16 +1166,26 @@ namespace Service
             bool hasDietary = filter.DietaryIds != null && filter.DietaryIds.Count > 0;
             bool hasCategory = filter.CategoryIds != null && filter.CategoryIds.Count > 0;
             bool hasIsSubscribed = filter.IsSubscribed.HasValue;
-            bool hasWard = !string.IsNullOrWhiteSpace(filter.Ward);
+            bool hasWard = filter.Wards != null && filter.Wards.Any(w => !string.IsNullOrWhiteSpace(w));
             bool hasAnyFilter = hasLatLong || hasDistance || hasPrice || hasTaste || hasDietary || hasCategory || hasIsSubscribed || hasWard;
 
             // If NO filters provided, return all active branches without filtering
             if (!hasAnyFilter)
             {
                 var allBranches = await _branchRepository.GetAllActiveBranchesWithoutFilterAsync();
-                
+
+                var vendorIdSet = allBranches
+                    .Where(b => b.VendorId.HasValue)
+                    .Select(b => b.VendorId!.Value)
+                    .Distinct();
+                var bestSellerMap = new Dictionary<int, HashSet<int>>();
+                foreach (var vid in vendorIdSet)
+                    bestSellerMap[vid] = await GetBestSellerIdsAsync(vid);
+
                 var allResponseDtos = allBranches.Select(branch =>
                 {
+                    var vendorId = branch.VendorId ?? 0;
+                    var bestSellerIds = bestSellerMap.GetValueOrDefault(vendorId);
                     var dishes = (branch.BranchDishes ?? new List<BranchDish>())
                         .Where(bd => bd.Dish != null && bd.Dish.IsActive)
                         .Select(bd => new { bd.Dish, bd.IsSoldOut });
@@ -1205,6 +1229,8 @@ namespace Service
                             Description  = x.Dish.Description,
                             ImageUrl     = x.Dish.ImageUrl,
                             IsSoldOut    = x.IsSoldOut,
+                            IsSignature  = x.Dish.IsSignature,
+                            IsBestSeller = bestSellerIds?.Contains(x.Dish.DishId) ?? false,
                             CategoryName = x.Dish.Category?.Name ?? string.Empty,
                             TasteNames = x.Dish.DishTastes?
                                 .Select(dt => dt.Taste?.Name ?? string.Empty)
@@ -1238,13 +1264,23 @@ namespace Service
                 filter.DietaryIds, filter.TasteIds,
                 filter.MinPrice, filter.MaxPrice,
                 filter.CategoryIds, filter.IsSubscribed,
-                filter.Ward);
+                filter.Wards);
+
+            // Pre-fetch best-seller IDs per vendor sequentially (DbContext is not thread-safe)
+            var filteredVendorIds = items
+                .Where(i => i.branch.VendorId.HasValue)
+                .Select(i => i.branch.VendorId!.Value)
+                .Distinct();
+            var filteredBestSellerMap = new Dictionary<int, HashSet<int>>();
+            foreach (var vid in filteredVendorIds)
+                filteredBestSellerMap[vid] = await GetBestSellerIdsAsync(vid);
 
             // Service layer only maps to DTOs - NO additional filtering
             var responseDtos = items.Select(item =>
             {
                 var branch     = item.branch;
                 var distanceKm = item.distanceKm;
+                var bestSellerIds = filteredBestSellerMap.GetValueOrDefault(branch.VendorId ?? 0);
 
                 // Map all active dishes (already filtered by DAL)
                 var dishes = (branch.BranchDishes ?? new List<BranchDish>())
@@ -1294,6 +1330,8 @@ namespace Service
                         Description  = x.Dish.Description,
                         ImageUrl     = x.Dish.ImageUrl,
                         IsSoldOut    = x.IsSoldOut,
+                        IsSignature  = x.Dish.IsSignature,
+                        IsBestSeller = bestSellerIds?.Contains(x.Dish.DishId) ?? false,
                         CategoryName = x.Dish.Category?.Name ?? string.Empty,
                         TasteNames = x.Dish.DishTastes?
                             .Select(dt => dt.Taste?.Name ?? string.Empty)

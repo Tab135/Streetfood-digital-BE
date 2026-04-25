@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BO.Common;
+using BO.DTO.Dashboard;
 using BO.DTO.Dish;
 using BO.Entities;
 using BO.Exceptions;
 using Moq;
 using Repository.Interfaces;
 using Service;
+using Service.Interfaces;
 using Xunit;
 
 namespace StreetFood.Tests.Dish
@@ -20,6 +22,7 @@ namespace StreetFood.Tests.Dish
         private readonly Mock<ITasteRepository> _tasteRepoMock;
         private readonly Mock<IBranchRepository> _branchRepoMock;
         private readonly Mock<IVendorRepository> _vendorRepoMock;
+        private readonly Mock<IVendorDashboardService> _dashboardServiceMock;
         private readonly DishService _dishService;
 
         public DishServiceTests()
@@ -29,13 +32,18 @@ namespace StreetFood.Tests.Dish
             _tasteRepoMock = new Mock<ITasteRepository>();
             _branchRepoMock = new Mock<IBranchRepository>();
             _vendorRepoMock = new Mock<IVendorRepository>();
+            _dashboardServiceMock = new Mock<IVendorDashboardService>();
+            _dashboardServiceMock
+                .Setup(s => s.GetDishDashboardByVendorAsync(It.IsAny<int>()))
+                .ReturnsAsync(new DishDashboardDto());
 
             _dishService = new DishService(
                 _dishRepoMock.Object,
                 _catRepoMock.Object,
                 _tasteRepoMock.Object,
                 _branchRepoMock.Object,
-                _vendorRepoMock.Object
+                _vendorRepoMock.Object,
+                _dashboardServiceMock.Object
             );
         }
 

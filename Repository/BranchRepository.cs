@@ -185,14 +185,14 @@ namespace Repository
             decimal? maxPrice,
             List<int>? categoryIds,
             bool? isSubscribed,
-            string? ward)
+            List<string>? wards)
         {
             return await _branchDAO.GetActiveBranchesFilteredAsync(
                 userLat, userLong, maxDistanceKm,
                 dietaryIds, tasteIds,
                 minPrice, maxPrice,
                 categoryIds, isSubscribed,
-                ward);
+                wards);
         }
 
         public async Task UpdateBranchMetricsAndTierAsync(int branchId, int rating, int newBatchReviewCount, int newBatchRatingSum, int newTierId, bool banBranch)
