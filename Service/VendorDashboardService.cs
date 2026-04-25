@@ -28,6 +28,17 @@ namespace Service
             return await _vendorDashboardRepo.GetRevenueDashboardAsync(vendorId.Value, fromDate, toDate);
         }
 
+        public async Task<CampaignDashboardDto> GetCampaignDashboardAsync(int userId, DateTime fromDate, DateTime toDate)
+        {
+            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
+            if (vendorId == null)
+            {
+                throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
+            }
+
+            return await _vendorDashboardRepo.GetCampaignDashboardAsync(vendorId.Value, fromDate, toDate);
+        }
+
         public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int userId)
         {
             var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);

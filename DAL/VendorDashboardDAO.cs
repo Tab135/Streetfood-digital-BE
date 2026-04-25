@@ -64,6 +64,49 @@ namespace DAL
             };
         }
 
+        public async Task<CampaignDashboardDto> GetCampaignDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
+        {
+            var branchIds = await _context.Branches
+                .AsNoTracking()
+                .Where(b => b.VendorId == vendorId)
+                .Select(b => b.BranchId)
+                .ToListAsync();
+
+            if (!branchIds.Any())
+            {
+                return new CampaignDashboardDto();
+            }
+
+            var campaignPerformances = await (
+                    from order in _context.Orders.AsNoTracking()
+                    join voucher in _context.Vouchers.AsNoTracking() on order.AppliedVoucherId equals voucher.VoucherId
+                    join campaign in _context.Campaigns.AsNoTracking() on voucher.VendorCampaignId equals campaign.CampaignId
+                    where branchIds.Contains(order.BranchId)
+                          && order.Status == OrderStatus.Complete
+                          && order.CreatedAt >= fromDate
+                          && order.CreatedAt <= toDate
+                    group order by new { campaign.CampaignId, campaign.Name }
+                    into grouped
+                    select new CampaignPerformanceDto
+                    {
+                        CampaignId = grouped.Key.CampaignId,
+                        CampaignName = grouped.Key.Name,
+                        OrderCount = grouped.Count(),
+                        Revenue = grouped.Sum(o => o.FinalAmount)
+                    })
+                .OrderByDescending(c => c.Revenue)
+                .ThenBy(c => c.CampaignName)
+                .ToListAsync();
+
+            return new CampaignDashboardDto
+            {
+                TotalCampaigns = campaignPerformances.Count,
+                TotalCampaignOrders = campaignPerformances.Sum(c => c.OrderCount),
+                TotalCampaignRevenue = campaignPerformances.Sum(c => c.Revenue),
+                Campaigns = campaignPerformances
+            };
+        }
+
         public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId)
         {
             var branchIds = await _context.Branches

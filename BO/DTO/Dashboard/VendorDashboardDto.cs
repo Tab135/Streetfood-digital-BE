@@ -27,11 +27,27 @@ namespace BO.DTO.Dashboard
         public List<TopDishDto> TopDishes { get; set; } = new List<TopDishDto>();
     }
 
+    public class CampaignDashboardDto
+    {
+        public int TotalCampaigns { get; set; }
+        public int TotalCampaignOrders { get; set; }
+        public decimal TotalCampaignRevenue { get; set; }
+        public List<CampaignPerformanceDto> Campaigns { get; set; } = new List<CampaignPerformanceDto>();
+    }
+
     public class VoucherUsageDto
     {
         public string VoucherType { get; set; } = string.Empty;
         public string VoucherName { get; set; } = string.Empty;
         public int UsageCount { get; set; }
+    }
+
+    public class CampaignPerformanceDto
+    {
+        public int CampaignId { get; set; }
+        public string CampaignName { get; set; } = string.Empty;
+        public int OrderCount { get; set; }
+        public decimal Revenue { get; set; }
     }
 
     public class TopDishDto

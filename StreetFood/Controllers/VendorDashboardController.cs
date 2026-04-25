@@ -88,6 +88,42 @@ namespace StreetFood.Controllers
             }
         }
 
+        [HttpGet("campaigns")]
+        [Authorize(Roles = "Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<CampaignDashboardDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetCampaignDashboard([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
+        {
+            try
+            {
+                if (fromDate == default || toDate == default)
+                {
+                    return BadRequest(new { message = "fromDate and toDate are required." });
+                }
+
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var dashboardDto = await _vendorDashboardService.GetCampaignDashboardAsync(userId, fromDate, toDate);
+
+                return Ok(new
+                {
+                    message = "Get campaign dashboard successfully",
+                    data = dashboardDto
+                });
+            }
+            catch (BO.Exceptions.DomainExceptions ex)
+            {
+                return BadRequest(new { message = ex.Message, errorCode = ex.ErrorCode });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+            }
+        }
+
         [HttpGet("dishes")]
         [Authorize(Roles = "Vendor")]
         [ProducesResponseType(typeof(ApiResponse<DishDashboardDto>), StatusCodes.Status200OK)]

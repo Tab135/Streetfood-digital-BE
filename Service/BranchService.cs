@@ -985,8 +985,8 @@ namespace Service
             var dayOff = new DayOff
             {
                 BranchId = branchId,
-                StartDate = dto.StartDate,
-                EndDate = dto.EndDate
+                StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc),
+                EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc)
             };
 
             await _branchRepository.AddDayOffAsync(dayOff);
