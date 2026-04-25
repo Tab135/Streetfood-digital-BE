@@ -127,7 +127,7 @@ namespace DAL
             var endDate = toDate.Date;
             var endExclusive = endDate.AddDays(1);
 
-            var systemVoucherCompensationByDate = await _context.Orders
+            var systemVoucherCompensableOrdersQuery = _context.Orders
                 .AsNoTracking()
                 .Where(o => o.Status == OrderStatus.Complete
                             && o.AppliedVoucherId.HasValue
@@ -136,7 +136,9 @@ namespace DAL
                             && o.AppliedVoucher!.UserVouchers.Any(uv => uv.UserId == o.UserId)
                             && (o.AppliedVoucher!.VendorCampaignId == null
                                 || (o.AppliedVoucher.VendorCampaign != null
-                                    && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue)))
+                                    && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue)));
+
+            var systemVoucherCompensationByDate = await systemVoucherCompensableOrdersQuery
                 .GroupBy(o => o.UpdatedAt.Date)
                 .Select(g => new
                 {
@@ -144,6 +146,24 @@ namespace DAL
                     Amount = g.Sum(o => o.DiscountAmount ?? 0m)
                 })
                 .ToDictionaryAsync(x => x.Date, x => x.Amount);
+
+            var compensationByVendors = await systemVoucherCompensableOrdersQuery
+                .Where(o => o.Branch.VendorId.HasValue)
+                .GroupBy(o => new
+                {
+                    VendorId = o.Branch.VendorId!.Value,
+                    VendorName = o.Branch.Vendor!.Name
+                })
+                .Select(g => new AdminVendorCompensationDto
+                {
+                    VendorId = g.Key.VendorId,
+                    VendorName = g.Key.VendorName,
+                    CompensationAmount = g.Sum(o => o.DiscountAmount ?? 0m)
+                })
+                .Where(x => x.CompensationAmount > 0m)
+                .OrderByDescending(x => x.CompensationAmount)
+                .ThenBy(x => x.VendorName)
+                .ToListAsync();
 
             var dailyCompensations = systemVoucherCompensationByDate
                 .Where(x => x.Value > 0m)
@@ -160,7 +180,8 @@ namespace DAL
                 FromDate = startDate,
                 ToDate = endDate,
                 TotalCompensationAmount = dailyCompensations.Sum(x => x.CompensationAmount),
-                DailyCompensations = dailyCompensations
+                DailyCompensations = dailyCompensations,
+                CompensationByVendors = compensationByVendors
             };
         }
 

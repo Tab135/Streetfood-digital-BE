@@ -39,11 +39,19 @@ namespace BO.DTO.Dashboard
         public DateTime ToDate { get; set; }
         public decimal TotalCompensationAmount { get; set; }
         public List<AdminCompensationPointDto> DailyCompensations { get; set; } = new List<AdminCompensationPointDto>();
+        public List<AdminVendorCompensationDto> CompensationByVendors { get; set; } = new List<AdminVendorCompensationDto>();
     }
 
     public class AdminCompensationPointDto
     {
         public DateTime Date { get; set; }
+        public decimal CompensationAmount { get; set; }
+    }
+
+    public class AdminVendorCompensationDto
+    {
+        public int VendorId { get; set; }
+        public string VendorName { get; set; } = string.Empty;
         public decimal CompensationAmount { get; set; }
     }
 
