@@ -106,21 +106,31 @@ namespace DAL
                 .AnyAsync(v => v.UserId == userId);
         }
 
-        public async Task RefundCampaignJoinFeeAsync(int campaignId, decimal fee)
+        public async Task<List<(int UserId, decimal Amount)>> RefundCampaignJoinFeeAsync(int campaignId, decimal fee)
         {
-            if (fee <= 0) return;
+            if (fee <= 0) return new List<(int UserId, decimal Amount)>();
 
-            var refundInfos = await _context.BranchCampaigns
+            var refundData = await _context.BranchCampaigns
                 .Where(bc => bc.CampaignId == campaignId && bc.IsActive && bc.Branch.VendorId.HasValue)
-                .GroupBy(bc => bc.Branch.VendorId!.Value)
-                .Select(g => new { VendorId = g.Key, Count = g.Count() })
+                .GroupBy(bc => new { bc.Branch.VendorId, bc.Branch.Vendor!.UserId })
+                .Select(g => new 
+                { 
+                    VendorId = g.Key.VendorId!.Value, 
+                    UserId = g.Key.UserId, 
+                    Count = g.Count(),
+                    Amount = g.Count() * fee
+                })
                 .ToListAsync();
 
-            var updateTasks = refundInfos.Select(info => _context.Vendors
+            if (!refundData.Any()) return new List<(int UserId, decimal Amount)>();
+
+            var updateTasks = refundData.Select(info => _context.Vendors
                 .Where(v => v.VendorId == info.VendorId)
-                .ExecuteUpdateAsync(s => s.SetProperty(v => v.MoneyBalance, v => v.MoneyBalance + (info.Count * fee))));
+                .ExecuteUpdateAsync(s => s.SetProperty(v => v.MoneyBalance, v => v.MoneyBalance + info.Amount)));
 
             await Task.WhenAll(updateTasks);
+
+            return refundData.Select(r => (r.UserId, r.Amount)).ToList();
         }
     }
 }
