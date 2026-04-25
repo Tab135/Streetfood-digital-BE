@@ -42,6 +42,7 @@ namespace Service.PaymentsService
         private readonly ISettingService _settings;
         private readonly IBackgroundJobClient _backgroundJobClient;
         private readonly bool _isDebugMode;
+        private const string LowcaWalletPaymentMethod = "Lowca Wallet";
         private static readonly object OrderCodeLock = new();
         private static int _lastGeneratedOrderCode =
             (int)(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() % int.MaxValue);
@@ -520,6 +521,140 @@ namespace Service.PaymentsService
             {
                 _logger.LogError(ex, "Error creating order payment link for UserId={UserId}, OrderId={OrderId}", userId, orderId);
                 return new PaymentLinkResult { Success = false, Message = "Có lỗi xảy ra khi tạo link thanh toán order." };
+            }
+        }
+
+        public async Task<PaymentLinkResult> PayOrderWithUserWalletAsync(int userId, int orderId)
+        {
+            try
+            {
+                var order = await _orderRepository.GetById(orderId);
+                if (order == null)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Không tìm thấy đơn hàng" };
+                }
+
+                if (order.UserId != userId)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Bạn không sở hữu đơn hàng này" };
+                }
+
+                if (order.Status != OrderStatus.Pending)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Chỉ đơn hàng đang chờ mới có thể thanh toán" };
+                }
+
+                var branch = await _branchRepo.GetByIdAsync(order.BranchId);
+                if (branch == null)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Không tìm thấy chi nhánh của đơn hàng" };
+                }
+
+                if (!branch.VendorId.HasValue || branch.VendorId.Value <= 0)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Chi nhánh chưa có Vendor để xử lý đơn hàng" };
+                }
+
+                var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value);
+                if (vendor == null)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Không tìm thấy Vendor của chi nhánh" };
+                }
+
+                var amount = Convert.ToInt32(decimal.Round(order.FinalAmount, 0, MidpointRounding.AwayFromZero));
+                if (amount <= 0)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Số tiền đơn hàng phải lớn hơn 0" };
+                }
+
+                var user = await _userRepo.GetUserById(userId);
+                if (user == null)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Không tìm thấy người dùng" };
+                }
+
+                if (user.MoneyBalance < amount)
+                {
+                    return new PaymentLinkResult { Success = false, Message = "Số dư ví Lowca không đủ để thanh toán đơn hàng" };
+                }
+
+                var latestPayment = await _paymentRepo.GetLatestPaymentByOrderId(orderId);
+                if (latestPayment != null)
+                {
+                    if (string.Equals(latestPayment.Status, "PAID", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return new PaymentLinkResult { Success = false, Message = "Đơn hàng này đã được thanh toán" };
+                    }
+
+                    if (string.Equals(latestPayment.Status, "PENDING", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!_isDebugMode)
+                        {
+                            try
+                            {
+                                await _payOS.PaymentRequests.CancelAsync(latestPayment.OrderCode, "Wallet checkout replaced pending PayOS link", null);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogWarning(ex,
+                                    "Could not cancel old PayOS payment link for OrderCode={OrderCode}; proceeding to cancel local payment record",
+                                    latestPayment.OrderCode);
+                            }
+                        }
+
+                        await _paymentRepo.UpdatePaymentStatus(latestPayment.OrderCode, "CANCELLED");
+                    }
+                }
+
+                var orderCode = await GenerateUniqueOrderCodeAsync();
+                var description = $"Thanh toan don hang {order.OrderId}";
+
+                await _paymentRepo.CreatePayment(
+                    userId: userId,
+                    orderCode: orderCode,
+                    branchId: order.BranchId,
+                    amount: amount,
+                    description: description,
+                    orderId: order.OrderId);
+
+                user.MoneyBalance -= amount;
+                await _userRepo.UpdateAsync(user);
+
+                await _paymentRepo.UpdatePaymentStatus(
+                    orderCode: orderCode,
+                    status: "PAID",
+                    transactionCode: $"LOWCA-WALLET-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                    paymentMethod: LowcaWalletPaymentMethod);
+
+                await MoveOrderToVendorConfirmationAsync(order.OrderId);
+
+                try
+                {
+                    var cart = await _cartRepo.GetByUserAndBranchAsync(userId, order.BranchId);
+                    if (cart != null)
+                    {
+                        await _cartRepo.DeleteAsync(cart.CartId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex,
+                        "Wallet payment succeeded for OrderId={OrderId} but cart cleanup failed for UserId={UserId}",
+                        order.OrderId,
+                        userId);
+                }
+
+                return new PaymentLinkResult
+                {
+                    Success = true,
+                    Message = "Thanh toán bằng ví Lowca thành công",
+                    OrderCode = orderCode
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error paying order with wallet for UserId={UserId}, OrderId={OrderId}", userId, orderId);
+                return new PaymentLinkResult { Success = false, Message = "Có lỗi xảy ra khi thanh toán bằng ví Lowca." };
             }
         }
 

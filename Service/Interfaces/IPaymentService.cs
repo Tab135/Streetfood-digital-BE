@@ -11,6 +11,7 @@ namespace Service.PaymentsService
     {
         Task<PaymentLinkResult> CreatePaymentLink(int userId, int branchId);
         Task<PaymentLinkResult> CreateOrderPaymentLink(int userId, int orderId);
+        Task<PaymentLinkResult> PayOrderWithUserWalletAsync(int userId, int orderId);
         Task<PaymentLinkResult> CreateCampaignPaymentLink(int userId, int branchId, int branchCampaignId);
         // Vendor joins a system campaign for all eligible branches in one bill
         Task<PaymentLinkResult> CreateVendorSystemCampaignPaymentLink(
