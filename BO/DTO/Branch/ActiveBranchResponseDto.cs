@@ -50,6 +50,8 @@ namespace BO.DTO.Branch
         public string? Description { get; set; }
         public string? ImageUrl { get; set; }
         public bool IsSoldOut { get; set; }
+        public bool IsSignature { get; set; }
+        public bool IsBestSeller { get; set; }
         public string CategoryName { get; set; } = string.Empty;
         public List<string> TasteNames { get; set; } = new List<string>();
     }
