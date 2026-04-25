@@ -1,4 +1,4 @@
-﻿using BO.Common;
+using BO.Common;
 using BO.DTO.Payments;
 using BO.Entities;
 using Microsoft.AspNetCore.Authorization;
@@ -76,9 +76,9 @@ namespace Ielts_System.Controllers.Payments
 
 
         [HttpGet("history")]
-        [Authorize]
-        [ProducesResponseType(typeof(ApiResponse<List<Payment>>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<List<Payment>>> GetPaymentHistory()
+        [Authorize(Roles = "User,Vendor,Manager,Admin")]
+        [ProducesResponseType(typeof(ApiResponse<List<PaymentHistoryDto>>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<List<PaymentHistoryDto>>> GetPaymentHistory()
         {
             try
             {
@@ -95,6 +95,23 @@ namespace Ielts_System.Controllers.Payments
             {
                 _logger.LogError(ex, "Error getting payment history");
                 return StatusCode(500, new { message = "Failed to retrieve payment history" });
+            }
+        }
+
+        [HttpGet("payouts")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<PaymentHistoryDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllPayouts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _paymentService.GetAllPayoutsAsync(pageNumber, pageSize);
+                return Ok(new { message = "Payouts retrieved successfully", data = result });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting payouts");
+                return StatusCode(500, new { message = "Failed to retrieve payouts" });
             }
         }
 

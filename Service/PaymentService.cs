@@ -1,6 +1,7 @@
 using BO.DTO.Payments;
 using BO.Entities;
 using BO.Exceptions;
+using BO.Common;
 using Hangfire;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -661,9 +662,58 @@ namespace Service.PaymentsService
             return await _paymentRepo.GetPaymentByOrderCode(orderCode);
         }
 
-        public async Task<List<Payment>> GetUserPaymentHistory(int userId)
+        public async Task<List<PaymentHistoryDto>> GetUserPaymentHistory(int userId)
         {
-            return await _paymentRepo.GetUserPayments(userId);
+            var payments = await _paymentRepo.GetUserPayments(userId);
+            return payments.Select(p => new PaymentHistoryDto
+            {
+                Id = p.Id,
+                UserId = p.UserId,
+                UserName = p.User?.UserName,
+                UserEmail = p.User?.Email,
+                Amount = p.Amount,
+                Description = p.Description,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                PaidAt = p.PaidAt,
+                TransactionCode = p.TransactionCode,
+                OrderId = p.OrderId,
+                BranchId = p.BranchId,
+                BranchCampaignId = p.BranchCampaignId,
+                PaymentMethod = p.PaymentMethod,
+                CheckoutUrl = p.CheckoutUrl
+            }).ToList();
+        }
+
+        public async Task<PaginatedResponse<PaymentHistoryDto>> GetAllPayoutsAsync(int pageNumber, int pageSize)
+        {
+            var payouts = await _paymentRepo.GetAllPayouts(pageNumber, pageSize);
+            var totalItems = await _paymentRepo.GetTotalPayoutsCount();
+
+            var data = payouts.Select(p => new PaymentHistoryDto
+            {
+                Id = p.Id,
+                UserId = p.UserId,
+                UserName = p.User?.UserName,
+                UserEmail = p.User?.Email,
+                Amount = p.Amount,
+                Description = p.Description,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                PaidAt = p.PaidAt,
+                TransactionCode = p.TransactionCode,
+                OrderId = p.OrderId,
+                BranchId = p.BranchId,
+                BranchCampaignId = p.BranchCampaignId,
+                PaymentMethod = p.PaymentMethod,
+                CheckoutUrl = p.CheckoutUrl
+            }).ToList();
+
+            return new PaginatedResponse<PaymentHistoryDto>(
+                data,
+                totalItems,
+                pageNumber,
+                pageSize);
         }
 
         public async Task<PaymentStatusResponse> GetPaymentStatus(long orderCode)

@@ -15,6 +15,8 @@ namespace Repository.Interfaces
         Task<Payment?> GetLatestPaymentByOrderId(int orderId);
         Task<Payment?> GetPaymentById(int id);
         Task<List<Payment>> GetUserPayments(int userId, string? status = null);
+        Task<List<Payment>> GetAllPayouts(int pageNumber = 1, int pageSize = 10);
+        Task<int> GetTotalPayoutsCount();
         Task<Payment> UpdatePaymentStatus(long orderCode, string status,
             string? transactionCode = null, string? paymentLinkId = null, string? paymentMethod = null);
         Task<bool> OrderCodeExists(long orderCode);

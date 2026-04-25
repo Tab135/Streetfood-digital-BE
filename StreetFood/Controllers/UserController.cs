@@ -8,6 +8,10 @@ using Service.Interfaces;
 using StreetFood.Services;
 using System;
 using System.Threading.Tasks;
+using Service.PaymentsService;
+using BO.DTO.Payments;
+using System.Collections.Generic;
+using System.Security.Claims;
 
 namespace StreetFood.Controllers
 {
@@ -17,11 +21,13 @@ namespace StreetFood.Controllers
     {
         private readonly IUserService _userService;
         private readonly IS3Service _s3Service;
+        private readonly IPaymentService _paymentService;
 
-        public UserController(IUserService userService, IS3Service s3Service)
+        public UserController(IUserService userService, IS3Service s3Service, IPaymentService paymentService)
         {
             _userService = userService ?? throw new ArgumentNullException(nameof(userService));
             _s3Service = s3Service ?? throw new ArgumentNullException(nameof(s3Service));
+            _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
         }
 
         [HttpGet]
@@ -263,6 +269,27 @@ namespace StreetFood.Controllers
                     message = "Contact verified successfully",
                     channel = verifiedChannel
                 });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("payment-history")]
+        [Authorize(Roles = "User,Vendor,Manager,Admin")]
+        [ProducesResponseType(typeof(ApiResponse<List<PaymentHistoryDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetPaymentHistory()
+        {
+            try
+            {
+                if (!TryGetCurrentUserId(out var userId))
+                {
+                    return Unauthorized(new { message = "Invalid user token" });
+                }
+
+                var result = await _paymentService.GetUserPaymentHistory(userId);
+                return Ok(new { message = "Payment history retrieved successfully", data = result });
             }
             catch (Exception ex)
             {

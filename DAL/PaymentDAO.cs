@@ -84,6 +84,7 @@ namespace DAL
         public async Task<List<Payment>> GetUserPayments(int userId, string? status = null)
         {
             var query = _context.Payments
+                .Include(p => p.User)
                 .Where(p => p.UserId == userId);
 
             if (!string.IsNullOrEmpty(status))
@@ -94,6 +95,26 @@ namespace DAL
             return await query
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
+        }
+
+        public async Task<List<Payment>> GetAllPayouts(int pageNumber = 1, int pageSize = 10)
+        {
+            var query = _context.Payments
+                .Include(p => p.User)
+                .Where(p => p.Amount < 0)
+                .OrderByDescending(p => p.CreatedAt);
+
+            return await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetTotalPayoutsCount()
+        {
+            return await _context.Payments
+                .Where(p => p.Amount < 0)
+                .CountAsync();
         }
 
         public async Task<Payment> UpdatePaymentStatus(

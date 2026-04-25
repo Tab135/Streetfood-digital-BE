@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -81,5 +81,24 @@ namespace BO.DTO.Payments
         public string? PayoutId { get; set; }
         public string? ApprovalState { get; set; }
         public decimal CurrentVendorBalance { get; set; }
+    }
+
+    public class PaymentHistoryDto
+    {
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public string? UserName { get; set; }
+        public string? UserEmail { get; set; }
+        public int Amount { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public string? Status { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? PaidAt { get; set; }
+        public string? TransactionCode { get; set; }
+        public int? OrderId { get; set; }
+        public int? BranchId { get; set; }
+        public int? BranchCampaignId { get; set; }
+        public string? PaymentMethod { get; set; }
+        public string? CheckoutUrl { get; set; }
     }
 }
