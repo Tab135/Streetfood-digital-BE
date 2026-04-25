@@ -995,8 +995,8 @@ namespace Service
             {
                 DayOffId = dayOff.DayOffId,
                 BranchId = dayOff.BranchId,
-                StartDate = dayOff.StartDate,
-                EndDate = dayOff.EndDate
+                StartDate = DateTime.SpecifyKind(dayOff.StartDate, DateTimeKind.Unspecified),
+                EndDate = DateTime.SpecifyKind(dayOff.EndDate, DateTimeKind.Unspecified)
             };
         }
 
@@ -1007,8 +1007,8 @@ namespace Service
             {
                 DayOffId = d.DayOffId,
                 BranchId = d.BranchId,
-                StartDate = d.StartDate,
-                EndDate = d.EndDate
+                StartDate = DateTime.SpecifyKind(d.StartDate, DateTimeKind.Unspecified),
+                EndDate = DateTime.SpecifyKind(d.EndDate, DateTimeKind.Unspecified)
             }).ToList();
         }
 

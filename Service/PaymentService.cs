@@ -715,6 +715,11 @@ namespace Service.PaymentsService
                 pageSize);
         }
 
+        public async Task<decimal> GetTotalPayoutAmountAsync()
+        {
+            return await _paymentRepo.GetTotalPayoutAmount();
+        }
+
         public async Task<PaymentStatusResponse> GetPaymentStatus(long orderCode)
         {
             try

@@ -24,6 +24,7 @@ namespace Service.PaymentsService
 
         Task<List<PaymentHistoryDto>> GetUserPaymentHistory(int userId);
         Task<PaginatedResponse<PaymentHistoryDto>> GetAllPayoutsAsync(int pageNumber, int pageSize);
+        Task<decimal> GetTotalPayoutAmountAsync();
 
         Task<PaymentStatusResponse> GetPaymentStatus(long orderCode);
 
