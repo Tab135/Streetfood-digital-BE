@@ -479,13 +479,11 @@ public class CartService : ICartService
         }
 
         var now = DateTime.UtcNow;
-        var today = now.Date;
         var currentTime = now.TimeOfDay;
 
         // 1. Check DayOff first — if the current moment is within any day-off window, block immediately.
         var activeDayOff = branch.DayOffs?.FirstOrDefault(d =>
-            today >= d.StartDate.Date && today <= d.EndDate.Date &&
-            (!d.StartTime.HasValue || !d.EndTime.HasValue || (currentTime >= d.StartTime.Value && currentTime <= d.EndTime.Value)));
+            now >= d.StartDate && now <= d.EndDate);
 
         if (activeDayOff != null)
         {

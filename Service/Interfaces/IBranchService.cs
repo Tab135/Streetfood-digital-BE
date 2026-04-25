@@ -42,7 +42,7 @@ namespace Service.Interfaces
         Task DeleteWorkScheduleAsync(int scheduleId, int userId);
 
         // Day Off operations
-        Task<DayOff> AddDayOffAsync(int branchId, AddDayOffDto dto, int userId);
+        Task<DayOffResponseDto> AddDayOffAsync(int branchId, AddDayOffDto dto, int userId);
         Task<List<DayOffResponseDto>> GetBranchDayOffsAsync(int branchId);
         Task DeleteDayOffAsync(int dayOffId, int userId);
 
