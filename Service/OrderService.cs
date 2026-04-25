@@ -64,11 +64,11 @@ public class OrderService : IOrderService
     {
         await EnsureUserExistsAsync(userId);
         var branch = await _branchRepository.GetByIdAsync(request.BranchId)
-            ?? throw new DomainExceptions("Branch not found");
+            ?? throw new DomainExceptions("Không tìm thấy chi nhánh");
 
         if (!branch.IsSubscribed)
         {
-            throw new DomainExceptions("This branch is not subscribed and cannot accept order checkout.");
+            throw new DomainExceptions("Chi nhánh này chưa đăng ký và không thể chấp nhận thanh toán đơn hàng.");
         }
 
         var (orderDishes, totalAmount) = await BuildValidatedOrderDishesAsync(request.BranchId, request.Items);
@@ -77,13 +77,13 @@ public class OrderService : IOrderService
         var discountAmount = request.DiscountAmount ?? 0m;
         if (discountAmount < 0)
         {
-            throw new DomainExceptions("Discount amount must be non-negative");
+            throw new DomainExceptions("Số tiền giảm giá không được âm");
         }
 
         var finalAmount = totalAmount - discountAmount;
         if (finalAmount < 0)
         {
-            throw new DomainExceptions("Final amount cannot be negative");
+            throw new DomainExceptions("Số tiền cuối cùng không được âm");
         }
 
         var order = new Order
@@ -111,11 +111,11 @@ public class OrderService : IOrderService
     {
         await EnsureUserExistsAsync(userId);
         var branch = await _branchRepository.GetByIdAsync(request.BranchId)
-            ?? throw new DomainExceptions("Branch not found");
+            ?? throw new DomainExceptions("Không tìm thấy chi nhánh");
 
         if (!branch.IsSubscribed)
         {
-            throw new DomainExceptions("This branch is not subscribed and cannot accept order checkout.");
+            throw new DomainExceptions("Chi nhánh này chưa đăng ký và không thể chấp nhận thanh toán đơn hàng.");
         }
 
         var (orderDishes, totalAmount) = await BuildValidatedOrderDishesAsync(request.BranchId, request.Items);
@@ -124,13 +124,13 @@ public class OrderService : IOrderService
         var discountAmount = request.DiscountAmount ?? 0m;
         if (discountAmount < 0)
         {
-            throw new DomainExceptions("Discount amount must be non-negative");
+            throw new DomainExceptions("Số tiền giảm giá không được âm");
         }
 
         var finalAmount = totalAmount - discountAmount;
         if (finalAmount < 0)
         {
-            throw new DomainExceptions("Final amount cannot be negative");
+            throw new DomainExceptions("Số tiền cuối cùng không được âm");
         }
 
         var existingPendingOrder = await _orderRepository.GetLatestPendingByUserAndBranch(userId, branch.BranchId);
@@ -229,7 +229,7 @@ public class OrderService : IOrderService
     public async Task<PaginatedResponse<OrderResponseDto>> GetVendorOrdersAsync(int vendorUserId, int pageNumber, int pageSize, OrderStatus? status = null)
     {
         var vendor = await _vendorRepository.GetByUserIdAsync(vendorUserId)
-            ?? throw new DomainExceptions("Vendor not found");
+            ?? throw new DomainExceptions("Không tìm thấy Vendor");
 
         var branches = await _branchRepository.GetAllByVendorIdAsync(vendor.VendorId);
         if (branches.Count == 0)
@@ -258,24 +258,24 @@ public class OrderService : IOrderService
     public async Task<PaginatedResponse<OrderResponseDto>> GetVendorOrdersByBranchAsync(int vendorUserId, int branchId, int pageNumber, int pageSize, OrderStatus? status = null)
     {
         var branch = await _branchRepository.GetByIdAsync(branchId)
-            ?? throw new DomainExceptions("Branch not found");
+            ?? throw new DomainExceptions("Không tìm thấy chi nhánh");
 
         var isBranchManager = branch.ManagerId.HasValue && branch.ManagerId.Value == vendorUserId;
 
         if (!isBranchManager)
         {
             var vendor = await _vendorRepository.GetByUserIdAsync(vendorUserId)
-                ?? throw new DomainExceptions("Vendor not found");
+                ?? throw new DomainExceptions("Không tìm thấy Vendor");
 
             if (branch.VendorId != vendor.VendorId)
             {
-                throw new DomainExceptions("You do not have access to this branch", "ERR_FORBIDDEN");
+                throw new DomainExceptions("Bạn không có quyền truy cập vào chi nhánh này", "ERR_FORBIDDEN");
             }
         }
 
         if (status == OrderStatus.Pending)
         {
-            throw new DomainExceptions("Pending orders are not visible to vendors before payment");
+            throw new DomainExceptions("Đơn hàng đang chờ không hiển thị cho chủ quán trước khi thanh toán");
         }
 
         if (pageNumber <= 0)
@@ -309,14 +309,14 @@ public class OrderService : IOrderService
         var branches = await _branchRepository.GetAllByManagerIdAsync(managerUserId);
         if (branches.Count == 0)
         {
-            throw new DomainExceptions("No branch assigned to this manager", "ERR_NOT_FOUND");
+            throw new DomainExceptions("Không có chi nhánh nào được gán cho quản lý này", "ERR_NOT_FOUND");
         }
 
         var branchIds = branches.Select(b => b.BranchId).ToList();
 
         if (status == OrderStatus.Pending)
         {
-            throw new DomainExceptions("Pending orders are not visible to managers before payment");
+            throw new DomainExceptions("Đơn hàng đang chờ không hiển thị cho quản lý trước khi thanh toán");
         }
 
         if (pageNumber <= 0)

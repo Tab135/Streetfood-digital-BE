@@ -48,11 +48,11 @@ namespace Service
             var vendor = await _vendorRepository.GetByIdAsync(vendorId);
             if (vendor == null)
             {
-                throw new DomainExceptions($"Vendor with ID {vendorId} not found");
+                throw new DomainExceptions($"Không tìm thấy Vendor với mã {vendorId}");
             }
             if (!await IsVendorOwnerOrManagerOfVendorAsync(vendorId, userId))
             {
-                throw new DomainExceptions("You do not manage this vendor");
+                throw new DomainExceptions("Bạn không quản lý Vendor này");
             }
 
             // TODO: (Optional) Get category instance instead of checking existence, to avoid multiple DB calls. Same for Taste and DietaryPreference.
@@ -60,7 +60,7 @@ namespace Service
             var categoryExists = await _categoryRepository.ExistsByIdAsync(request.CategoryId);
             if (!categoryExists)
             {
-                throw new DomainExceptions($"Category with ID {request.CategoryId} not found");
+                throw new DomainExceptions($"Không tìm thấy danh mục với mã {request.CategoryId}");
             }
 
             // TODO: Taste and DietaryPreference is required in CreateDishRequest
@@ -71,7 +71,7 @@ namespace Service
                 var missingTasteIds = request.TasteIds.Except(existingTastes.Select(t => t.TasteId)).ToList();
                 if (missingTasteIds.Any())
                 {
-                    throw new DomainExceptions($"Taste IDs not found: {string.Join(", ", missingTasteIds)}");
+                    throw new DomainExceptions($"Không tìm thấy mã hương vị: {string.Join(", ", missingTasteIds)}");
                 }
             }
 
@@ -111,7 +111,7 @@ namespace Service
             var dish = await _dishRepository.GetByIdAsync(dishId);
             if (dish == null)
             {
-                throw new DomainExceptions($"Dish with ID {dishId} not found");
+                throw new DomainExceptions($"Không tìm thấy món ăn với mã {dishId}");
             }
 
             return MapToResponse(dish);
@@ -158,13 +158,13 @@ namespace Service
             var dish = await _dishRepository.GetByIdAsync(dishId);
             if (dish == null)
             {
-                throw new DomainExceptions($"Dish with ID {dishId} not found");
+                throw new DomainExceptions($"Không tìm thấy món ăn với mã {dishId}");
             }
 
             // Validate user can manage the vendor
             if (!await IsVendorOwnerOrManagerOfVendorAsync(dish.VendorId, userId))
             {
-                throw new DomainExceptions("You do not manage this vendor");
+                throw new DomainExceptions("Bạn không quản lý Vendor này");
             }
 
             // Validate CategoryId if provided
@@ -173,7 +173,7 @@ namespace Service
                 var categoryExists = await _categoryRepository.ExistsByIdAsync(request.CategoryId.Value);
                 if (!categoryExists)
                 {
-                    throw new DomainExceptions($"Category with ID {request.CategoryId.Value} not found");
+                    throw new DomainExceptions($"Không tìm thấy danh mục với mã {request.CategoryId.Value}");
                 }
             }
 
@@ -208,7 +208,7 @@ namespace Service
                     var missingTasteIds = request.TasteIds.Except(existingTastes.Select(t => t.TasteId)).ToList();
                     if (missingTasteIds.Any())
                     {
-                        throw new DomainExceptions($"Taste IDs not found: {string.Join(", ", missingTasteIds)}");
+                        throw new DomainExceptions($"Không tìm thấy mã hương vị: {string.Join(", ", missingTasteIds)}");
                     }
                 }
 
@@ -237,13 +237,13 @@ namespace Service
             var dish = await _dishRepository.GetByIdAsync(dishId);
             if (dish == null)
             {
-                throw new DomainExceptions($"Dish with ID {dishId} not found");
+                throw new DomainExceptions($"Không tìm thấy món ăn với mã {dishId}");
             }
 
             // Validate user can manage the vendor
             if (!await IsVendorOwnerOrManagerOfVendorAsync(dish.VendorId, userId))
             {
-                throw new DomainExceptions("You do not manage this vendor");
+                throw new DomainExceptions("Bạn không quản lý Vendor này");
             }
 
             await _dishRepository.DeleteAsync(dishId);
@@ -253,18 +253,18 @@ namespace Service
         {
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
-                throw new DomainExceptions($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với mã {branchId}");
 
             if (!await IsBranchOwnerOrManagerAsync(branch, userId))
-                throw new DomainExceptions("You do not manage this branch");
+                throw new DomainExceptions("Bạn không quản lý chi nhánh này");
 
             foreach (var dishId in dishIds)
             {
                 var dish = await _dishRepository.GetByIdAsync(dishId);
                 if (dish == null)
-                    throw new DomainExceptions($"Dish with ID {dishId} not found");
+                    throw new DomainExceptions($"Không tìm thấy món ăn với mã {dishId}");
                 if (dish.VendorId != branch.VendorId)
-                    throw new DomainExceptions($"Dish with ID {dishId} does not belong to your vendor");
+                    throw new DomainExceptions($"Món ăn với mã {dishId} không thuộc về Vendor của bạn");
 
                 var existing = await _dishRepository.GetBranchDishAsync(branchId, dishId);
                 if (existing != null)
@@ -289,18 +289,18 @@ namespace Service
         {
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
-                throw new DomainExceptions($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với mã {branchId}");
 
             if (!await IsBranchOwnerOrManagerAsync(branch, userId))
-                throw new DomainExceptions("You do not manage this branch");
+                throw new DomainExceptions("Bạn không quản lý chi nhánh này");
 
             foreach (var dishId in dishIds)
             {
                 var dish = await _dishRepository.GetByIdAsync(dishId);
                 if (dish == null)
-                    throw new DomainExceptions($"Dish with ID {dishId} not found");
+                    throw new DomainExceptions($"Không tìm thấy món ăn với mã {dishId}");
                 if (dish.VendorId != branch.VendorId)
-                    throw new DomainExceptions($"Dish with ID {dishId} does not belong to your vendor");
+                    throw new DomainExceptions($"Món ăn với mã {dishId} không thuộc về Vendor của bạn");
 
                 await _dishRepository.RemoveBranchDishAsync(branchId, dishId);
             }
@@ -310,21 +310,21 @@ namespace Service
         {
             var dish = await _dishRepository.GetByIdAsync(dishId);
             if (dish == null)
-                throw new DomainExceptions($"Dish with ID {dishId} not found");
+                throw new DomainExceptions($"Không tìm thấy món ăn với mã {dishId}");
 
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
-                throw new DomainExceptions($"Branch with ID {branchId} not found");
+                throw new DomainExceptions($"Không tìm thấy chi nhánh với mã {branchId}");
 
             if (!await IsBranchOwnerOrManagerAsync(branch, userId))
-                throw new DomainExceptions("You do not manage this branch");
+                throw new DomainExceptions("Bạn không quản lý chi nhánh này");
 
             if (branch.VendorId != dish.VendorId)
-                throw new DomainExceptions("Branch does not belong to the same vendor as this dish");
+                throw new DomainExceptions("Chi nhánh không thuộc cùng Vendor với món ăn này");
 
             var branchDish = await _dishRepository.GetBranchDishAsync(branchId, dishId);
             if (branchDish == null)
-                throw new DomainExceptions("Dish is not assigned to this branch");
+                throw new DomainExceptions("Món ăn chưa được gán cho chi nhánh này");
 
             await _dishRepository.UpdateBranchDishStatusAsync(branchId, dishId, isSoldOut);
         }

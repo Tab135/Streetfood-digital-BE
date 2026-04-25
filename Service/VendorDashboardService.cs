@@ -22,7 +22,7 @@ namespace Service
             var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
             if (vendorId == null)
             {
-                throw new DomainExceptions("Vendor not found for this user.", "VENDOR_NOT_FOUND");
+                throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
             }
 
             return await _vendorDashboardRepo.GetRevenueDashboardAsync(vendorId.Value, fromDate, toDate);
@@ -33,7 +33,7 @@ namespace Service
             var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
             if (vendorId == null)
             {
-                throw new DomainExceptions("Vendor not found for this user.", "VENDOR_NOT_FOUND");
+                throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
             }
 
             return await _vendorDashboardRepo.GetVoucherDashboardAsync(vendorId.Value);
@@ -44,7 +44,7 @@ namespace Service
             var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
             if (vendorId == null)
             {
-                throw new DomainExceptions("Vendor not found for this user.", "VENDOR_NOT_FOUND");
+                throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
             }
 
             return await _vendorDashboardRepo.GetDishDashboardAsync(vendorId.Value);

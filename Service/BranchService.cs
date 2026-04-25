@@ -222,12 +222,12 @@ namespace Service
             var branches = await _branchRepository.GetAllByManagerIdAsync(managerUserId);
             if (branches == null || branches.Count == 0)
             {
-                throw new DomainExceptions("No branch assigned to this manager", "ERR_NOT_FOUND");
+                throw new DomainExceptions("Không có chi nhánh nào được gán cho quản lý này", "ERR_NOT_FOUND");
             }
 
             if (branches.Count > 1)
             {
-                throw new DomainExceptions("Manager is assigned to more than one branch", "ERR_CONFLICT");
+                throw new DomainExceptions("Quản lý này được gán cho nhiều hơn một chi nhánh", "ERR_CONFLICT");
             }
 
             var branch = branches[0];
@@ -385,23 +385,23 @@ namespace Service
         {
             if (!await UserOwnsBranchAsync(branchId, vendorUserId))
             {
-                throw new DomainExceptions("You are not authorized to assign a manager to this branch.", "ERR_UNAUTHORIZED");
+                throw new DomainExceptions("Bạn không có quyền gán quản lý cho chi nhánh này.", "ERR_UNAUTHORIZED");
             }
 
             var newManagerUser = await _userRepository.GetUserById(managerId);
             if (newManagerUser == null)
             {
-                throw new DomainExceptions("The user to be assigned as manager does not exist.", "ERR_USER_NOT_FOUND");
+                throw new DomainExceptions("Người dùng được chỉ định làm quản lý không tồn tại.", "ERR_USER_NOT_FOUND");
             }
             else if (newManagerUser.Role == Role.Vendor || newManagerUser.Role == Role.Manager)
             {
-                throw new DomainExceptions("The user to be assigned as manager must not be a vendor or a manager of another branch","ERR_UNAUTHORIZED");
+                throw new DomainExceptions("Người dùng được chỉ định làm quản lý không được là vendor hoặc quản lý của chi nhánh khác","ERR_UNAUTHORIZED");
             }
 
             var branch = await _branchRepository.GetByIdAsync(branchId);
             if (branch == null)
             {
-                throw new DomainExceptions("Branch not found.", "ERR_BRANCH_NOT_FOUND");
+                throw new DomainExceptions("Không tìm thấy chi nhánh.", "ERR_BRANCH_NOT_FOUND");
             }
 
             // If assigning another existing manager, demote the current branch manager first.
@@ -1058,12 +1058,12 @@ namespace Service
         {
             if (pageNumber <= 0)
             {
-                throw new DomainExceptions("Page number must be greater than 0");
+                throw new DomainExceptions("Số trang phải lớn hơn 0");
             }
 
             if (pageSize <= 0)
             {
-                throw new DomainExceptions("Page size must be greater than 0");
+                throw new DomainExceptions("Kích thước trang phải lớn hơn 0");
             }
 
             var branch = await _branchRepository.GetByIdAsync(branchId);
@@ -1130,14 +1130,14 @@ namespace Service
         {
             return weekday switch
             {
-                0 => "Sunday",
-                1 => "Monday",
-                2 => "Tuesday",
-                3 => "Wednesday",
-                4 => "Thursday",
-                5 => "Friday",
-                6 => "Saturday",
-                _ => "Unknown"
+                0 => "Chủ Nhật",
+                1 => "Thứ Hai",
+                2 => "Thứ Ba",
+                3 => "Thứ Tư",
+                4 => "Thứ Năm",
+                5 => "Thứ Sáu",
+                6 => "Thứ Bảy",
+                _ => "Không xác định"
             };
         }
 
