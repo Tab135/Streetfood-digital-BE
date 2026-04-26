@@ -113,11 +113,38 @@ namespace DAL
                         IconUrl = badge.IconUrl,
                         Description = badge.Description,
                         IsEarned = true,
-                        EarnedAt = ub.CreatedAt
+                        EarnedAt = ub.CreatedAt,
+                        IsSelected = ub.IsSelected
                     })
                 .ToListAsync();
 
             return result;
+        }
+
+        public async Task<bool> SetSelectedBadge(int userId, int badgeId)
+        {
+            var userBadges = await _context.UserBadges
+                .Where(ub => ub.UserId == userId)
+                .ToListAsync();
+
+            foreach (var ub in userBadges)
+                ub.IsSelected = ub.BadgeId == badgeId;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ClearSelectedBadge(int userId)
+        {
+            var userBadges = await _context.UserBadges
+                .Where(ub => ub.UserId == userId && ub.IsSelected)
+                .ToListAsync();
+
+            foreach (var ub in userBadges)
+                ub.IsSelected = false;
+
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

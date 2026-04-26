@@ -145,6 +145,20 @@ namespace Service
             return await _userBadgeRepository.GetUserBadgeCount(userId);
         }
 
+        public async Task<bool> SelectDisplayBadge(int userId, int badgeId)
+        {
+            var exists = await _userBadgeRepository.Exists(userId, badgeId);
+            if (!exists)
+                throw new DomainExceptions($"Người dùng không sở hữu huy hiệu này");
+
+            return await _userBadgeRepository.SetSelectedBadge(userId, badgeId);
+        }
+
+        public async Task<bool> ClearDisplayBadge(int userId)
+        {
+            return await _userBadgeRepository.ClearSelectedBadge(userId);
+        }
+
         // Helper methods
         private BadgeDto MapToDto(Badge badge)
         {

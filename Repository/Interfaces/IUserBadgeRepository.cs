@@ -14,5 +14,7 @@ namespace Repository.Interfaces
         Task<bool> Delete(int userId, int badgeId);
         Task<(List<UserWithBadgesDto> items, int totalCount)> GetAllUsersWithBadges(int pageNumber, int pageSize);
         Task<List<BadgeWithUserInfoDto>> GetUserBadgesWithInfo(int userId);
+        Task<bool> SetSelectedBadge(int userId, int badgeId);
+        Task<bool> ClearSelectedBadge(int userId);
     }
 }

@@ -509,11 +509,16 @@ namespace Service
             FeedbackUserDto? userDto = null;
             if (feedback.User != null)
             {
+                var selectedBadge = feedback.User.UserBadges?
+                    .FirstOrDefault(ub => ub.IsSelected)?.Badge;
+
                 userDto = new FeedbackUserDto
                 {
                     Id = feedback.User.Id,
                     Name = $"{feedback.User.FirstName} {feedback.User.LastName}".Trim(),
-                    Avatar = feedback.User.AvatarUrl
+                    Avatar = feedback.User.AvatarUrl,
+                    SelectedBadgeName = selectedBadge?.BadgeName,
+                    SelectedBadgeIconUrl = selectedBadge?.IconUrl
                 };
             }
 
