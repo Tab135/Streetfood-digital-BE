@@ -613,7 +613,7 @@ namespace Service.PaymentsService
                     userId: userId,
                     orderCode: orderCode,
                     branchId: order.BranchId,
-                    amount: amount,
+                    amount: -amount,
                     description: description,
                     orderId: order.OrderId);
 
@@ -656,6 +656,26 @@ namespace Service.PaymentsService
                 _logger.LogError(ex, "Error paying order with wallet for UserId={UserId}, OrderId={OrderId}", userId, orderId);
                 return new PaymentLinkResult { Success = false, Message = "Có lỗi xảy ra khi thanh toán bằng ví Lowca." };
             }
+        }
+
+        public async Task CreateWalletRefundAsync(int userId, int orderId, decimal amount)
+        {
+            var refundAmount = Convert.ToInt32(decimal.Round(amount, 0, MidpointRounding.AwayFromZero));
+            var orderCode = await GenerateUniqueOrderCodeAsync();
+
+            await _paymentRepo.CreatePayment(
+                userId: userId,
+                orderCode: orderCode,
+                branchId: null,
+                amount: refundAmount,
+                description: $"Hoan tien don hang {orderId}",
+                orderId: orderId);
+
+            await _paymentRepo.UpdatePaymentStatus(
+                orderCode: orderCode,
+                status: "PAID",
+                transactionCode: $"REFUND-{orderId}-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}",
+                paymentMethod: LowcaWalletPaymentMethod);
         }
 
         /// <summary>

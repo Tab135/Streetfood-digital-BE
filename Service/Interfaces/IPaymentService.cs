@@ -42,5 +42,7 @@ namespace Service.PaymentsService
         Task<bool> RegisterWebhookUrl(string webhookUrl);
 
         Task<bool> HandleWebhookAsync(Webhook webhook);
+
+        Task CreateWalletRefundAsync(int userId, int orderId, decimal amount);
     }
 }
