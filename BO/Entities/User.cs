@@ -50,6 +50,8 @@ public class User
 
     public virtual ICollection<UserDietaryPreference> DietaryPreferences { get; set; }
 
+    public virtual ICollection<UserBadge> UserBadges { get; set; } = new List<UserBadge>();
+
     // Setup flags
     public bool UserInfoSetup { get; set; } = false;
     public bool DietarySetup { get; set; } = false;

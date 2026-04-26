@@ -231,6 +231,40 @@ namespace StreetFood.Controllers
             }
         }
 
+        [HttpPut("user/select/{badgeId}")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> SelectDisplayBadge(int badgeId)
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _badgeService.SelectDisplayBadge(userId, badgeId);
+                return Ok(new { message = "Badge selected successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpDelete("user/select")]
+        [Authorize]
+        [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ClearDisplayBadge()
+        {
+            try
+            {
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "0");
+                await _badgeService.ClearDisplayBadge(userId);
+                return Ok(new { message = "Badge selection cleared" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("user/{userId}/count")]
         [Authorize]
         public async Task<IActionResult> GetUserBadgeCount(int userId)

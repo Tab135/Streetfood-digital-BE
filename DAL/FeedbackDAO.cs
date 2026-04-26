@@ -61,6 +61,8 @@ namespace DAL
         {
             return await _context.Feedbacks
                 .Include(f => f.User)
+                    .ThenInclude(u => u.UserBadges)
+                        .ThenInclude(ub => ub.Badge)
                 .Include(f => f.Branch)
                 .Include(f => f.FeedbackImages)
                 .Include(f => f.FeedbackTagAssociations)
@@ -100,6 +102,8 @@ namespace DAL
 
             var orderedQuery = query
                 .Include(f => f.User)
+                    .ThenInclude(u => u.UserBadges)
+                        .ThenInclude(ub => ub.Badge)
                 .Include(f => f.FeedbackImages)
                 .Include(f => f.FeedbackTagAssociations)
                     .ThenInclude(fta => fta.FeedbackTag)
@@ -318,6 +322,8 @@ namespace DAL
             
             var items = await query
                 .Include(f => f.User)
+                    .ThenInclude(u => u.UserBadges)
+                        .ThenInclude(ub => ub.Badge)
                 .Include(f => f.FeedbackImages)
                 .Include(f => f.FeedbackTagAssociations)
                     .ThenInclude(fta => fta.FeedbackTag)

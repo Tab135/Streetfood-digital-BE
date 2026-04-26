@@ -10,4 +10,5 @@ public class BadgeWithUserInfoDto
     public string? Description { get; set; }
     public bool IsEarned { get; set; }
     public DateTime? EarnedAt { get; set; }
+    public bool IsSelected { get; set; }
 }
