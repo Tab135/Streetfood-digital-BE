@@ -11,6 +11,7 @@ namespace Service.PaymentsService
     {
         Task<PaymentLinkResult> CreatePaymentLink(int userId, int branchId);
         Task<PaymentLinkResult> CreateOrderPaymentLink(int userId, int orderId);
+        Task<PaymentLinkResult> PayOrderWithUserWalletAsync(int userId, int orderId);
         Task<PaymentLinkResult> CreateCampaignPaymentLink(int userId, int branchId, int branchCampaignId);
         // Vendor joins a system campaign for all eligible branches in one bill
         Task<PaymentLinkResult> CreateVendorSystemCampaignPaymentLink(
@@ -24,6 +25,7 @@ namespace Service.PaymentsService
 
         Task<List<PaymentHistoryDto>> GetUserPaymentHistory(int userId);
         Task<PaginatedResponse<PaymentHistoryDto>> GetAllPayoutsAsync(int pageNumber, int pageSize);
+        Task<decimal> GetTotalPayoutAmountAsync();
 
         Task<PaymentStatusResponse> GetPaymentStatus(long orderCode);
 
@@ -40,5 +42,7 @@ namespace Service.PaymentsService
         Task<bool> RegisterWebhookUrl(string webhookUrl);
 
         Task<bool> HandleWebhookAsync(Webhook webhook);
+
+        Task CreateWalletRefundAsync(int userId, int orderId, decimal amount);
     }
 }

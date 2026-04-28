@@ -24,5 +24,7 @@ namespace Service.Interfaces
         Task<UserBadgeDto> AwardBadgeToUser(int userId, int badgeId);
         Task<bool> RemoveBadgeFromUser(int userId, int badgeId);
         Task<int> GetUserBadgeCount(int userId);
+        Task<bool> SelectDisplayBadge(int userId, int badgeId);
+        Task<bool> ClearDisplayBadge(int userId);
     }
 }

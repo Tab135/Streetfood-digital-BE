@@ -51,5 +51,15 @@ namespace Repository
         {
             return await _userBadgeDAO.GetUserBadgesWithInfo(userId);
         }
+
+        public async Task<bool> SetSelectedBadge(int userId, int badgeId)
+        {
+            return await _userBadgeDAO.SetSelectedBadge(userId, badgeId);
+        }
+
+        public async Task<bool> ClearSelectedBadge(int userId)
+        {
+            return await _userBadgeDAO.ClearSelectedBadge(userId);
+        }
     }
 }

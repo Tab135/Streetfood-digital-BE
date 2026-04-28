@@ -106,7 +106,14 @@ namespace Ielts_System.Controllers.Payments
             try
             {
                 var result = await _paymentService.GetAllPayoutsAsync(pageNumber, pageSize);
-                return Ok(new { message = "Payouts retrieved successfully", data = result });
+                var totalAmount = await _paymentService.GetTotalPayoutAmountAsync();
+                
+                return Ok(new 
+                { 
+                    message = "Payouts retrieved successfully", 
+                     result,
+                    totalAmount = totalAmount 
+                });
             }
             catch (Exception ex)
             {

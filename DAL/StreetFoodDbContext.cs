@@ -218,8 +218,6 @@ public class StreetFoodDbContext : DbContext
         modelBuilder.Entity<DayOff>(entity =>
         {
             entity.HasKey(e => e.DayOffId);
-            entity.Property(e => e.StartDate).HasColumnType("date");
-            entity.Property(e => e.EndDate).HasColumnType("date");
             entity.HasOne(e => e.Branch)
                   .WithMany(b => b.DayOffs)
                   .HasForeignKey(e => e.BranchId)

@@ -10,6 +10,8 @@ namespace Service;
 
 public class CartService : ICartService
 {
+    private const string LowcaWalletPaymentMethod = "Lowca Wallet";
+
     private readonly ICartRepository _cartRepository;
     private readonly IUserRepository _userRepository;
     private readonly IBranchRepository _branchRepository;
@@ -212,6 +214,11 @@ public class CartService : ICartService
             throw new DomainExceptions("Cần có mã chi nhánh để thanh toán");
         }
 
+        var useLowcaWallet = string.Equals(
+            request.PaymentMethod?.Trim(),
+            LowcaWalletPaymentMethod,
+            StringComparison.OrdinalIgnoreCase);
+
         var cart = await _cartRepository.GetByUserAndBranchAsync(userId, request.BranchId)
             ?? throw new DomainExceptions("Không tìm thấy giỏ hàng");
 
@@ -294,12 +301,30 @@ public class CartService : ICartService
             discountAmount = VoucherRules.CalculateDiscountAmount(cartTotal, voucher);
         }
 
+        var normalizedPaymentMethod = string.IsNullOrWhiteSpace(request.PaymentMethod)
+            ? null
+            : useLowcaWallet
+                ? LowcaWalletPaymentMethod
+                : request.PaymentMethod.Trim();
+
+        if (useLowcaWallet)
+        {
+            var payableAmount = Convert.ToInt32(decimal.Round(cartTotal - discountAmount, 0, MidpointRounding.AwayFromZero));
+            var user = await _userRepository.GetUserById(userId)
+                ?? throw new DomainExceptions("Không tìm thấy người dùng");
+
+            if (user.MoneyBalance < payableAmount)
+            {
+                throw new DomainExceptions("Số dư ví Lowca không đủ để thanh toán đơn hàng");
+            }
+        }
+
         var createOrderRequest = new CreateOrderRequest
         {
             BranchId = request.BranchId,
             AppliedVoucherId = request.VoucherId,
             Table = request.Table,
-            PaymentMethod = request.PaymentMethod,
+            PaymentMethod = normalizedPaymentMethod,
             Note = request.Note,
             DiscountAmount = discountAmount,
             IsTakeAway = request.IsTakeAway,
@@ -323,7 +348,9 @@ public class CartService : ICartService
                 redeemedVendorVoucher);
         }
 
-        var payment = await _paymentService.CreateOrderPaymentLink(userId, order.OrderId);
+        var payment = useLowcaWallet
+            ? await _paymentService.PayOrderWithUserWalletAsync(userId, order.OrderId)
+            : await _paymentService.CreateOrderPaymentLink(userId, order.OrderId);
 
         if (!payment.Success)
         {
@@ -344,6 +371,15 @@ public class CartService : ICartService
                 true,
                 redeemedUserVoucher,
                 redeemedVendorVoucher);
+        }
+
+        if (useLowcaWallet)
+        {
+            var refreshedOrder = await _orderService.GetOrderByIdAsync(order.OrderId, userId);
+            if (refreshedOrder != null)
+            {
+                order = refreshedOrder;
+            }
         }
 
         return new CheckoutCartResponseDto
@@ -479,13 +515,11 @@ public class CartService : ICartService
         }
 
         var now = DateTime.UtcNow;
-        var today = now.Date;
         var currentTime = now.TimeOfDay;
 
         // 1. Check DayOff first — if the current moment is within any day-off window, block immediately.
         var activeDayOff = branch.DayOffs?.FirstOrDefault(d =>
-            today >= d.StartDate.Date && today <= d.EndDate.Date &&
-            (!d.StartTime.HasValue || !d.EndTime.HasValue || (currentTime >= d.StartTime.Value && currentTime <= d.EndTime.Value)));
+            now >= d.StartDate && now <= d.EndDate);
 
         if (activeDayOff != null)
         {

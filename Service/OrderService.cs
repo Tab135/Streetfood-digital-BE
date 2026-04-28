@@ -544,6 +544,7 @@ public class OrderService : IOrderService
             
             user.MoneyBalance += order.FinalAmount;
             await _userRepository.UpdateAsync(user);
+            await _paymentService.CreateWalletRefundAsync(order.UserId, order.OrderId, order.FinalAmount);
             await RestoreVoucherAfterVendorRejectAsync(order);
         }
 

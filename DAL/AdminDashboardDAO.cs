@@ -22,6 +22,7 @@ namespace DAL
             var startDate = fromDate.Date;
             var endDate = toDate.Date;
             var endExclusive = endDate.AddDays(1);
+            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
 
             var dailySignups = await _context.Users
                 .AsNoTracking()
@@ -36,11 +37,20 @@ namespace DAL
                 .OrderBy(x => x.Date)
                 .ToListAsync();
 
+            var totalSignupCount = dailySignups.Sum(x => x.SignupCount);
+
+            var previousTotalSignupCount = await _context.Users
+                .AsNoTracking()
+                .Where(u => u.CreatedAt >= previousStartDate && u.CreatedAt < previousEndExclusive
+                            && u.Role != Role.Admin && u.Role != Role.Moderator)
+                .CountAsync();
+
             return new AdminUserSignupChartDto
             {
                 FromDate = startDate,
                 ToDate = endDate,
-                TotalSignupCount = dailySignups.Sum(x => x.SignupCount),
+                TotalSignupCount = totalSignupCount,
+                SignupGrowthRate = CalculateGrowthRate(totalSignupCount, previousTotalSignupCount),
                 DailySignups = dailySignups
             };
         }
@@ -50,6 +60,7 @@ namespace DAL
             var startDate = fromDate.Date;
             var endDate = toDate.Date;
             var endExclusive = endDate.AddDays(1);
+            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
 
             var branchRegistrationRevenueByDate = await _context.Payments
                 .AsNoTracking()
@@ -111,12 +122,47 @@ namespace DAL
                 .Where(x => x.BranchRegistrationAmount > 0m || x.SystemCampaignAmount > 0m)
                 .ToList();
 
+            var totalBranchRegistrationAmount = dailyAmounts.Sum(x => x.BranchRegistrationAmount);
+            var totalSystemCampaignAmount = dailyAmounts.Sum(x => x.SystemCampaignAmount);
+
+            var previousTotalBranchRegistrationAmount = await _context.Payments
+                .AsNoTracking()
+                .Where(p => p.Status == "PAID"
+                            && p.PaidAt.HasValue
+                            && p.PaidAt.Value >= previousStartDate
+                            && p.PaidAt.Value < previousEndExclusive
+                            && p.BranchId.HasValue
+                            && !p.OrderId.HasValue
+                            && !p.BranchCampaignId.HasValue)
+                .SumAsync(p => (decimal?)p.Amount) ?? 0m;
+
+            var previousTotalSystemCampaignAmount = await _context.Payments
+                .AsNoTracking()
+                .Where(p => p.Status == "PAID"
+                            && p.PaidAt.HasValue
+                            && p.PaidAt.Value >= previousStartDate
+                            && p.PaidAt.Value < previousEndExclusive
+                            && p.BranchCampaignId.HasValue
+                            && !p.OrderId.HasValue)
+                .Join(_context.BranchCampaigns.AsNoTracking(),
+                    p => p.BranchCampaignId!.Value,
+                    bc => bc.Id,
+                    (p, bc) => new { Payment = p, BranchCampaign = bc })
+                .Join(_context.Campaigns.AsNoTracking(),
+                    x => x.BranchCampaign.CampaignId,
+                    c => c.CampaignId,
+                    (x, c) => new { x.Payment, Campaign = c })
+                .Where(x => !x.Campaign.CreatedByVendorId.HasValue)
+                .SumAsync(x => (decimal?)x.Payment.Amount) ?? 0m;
+
             return new AdminMoneyChartDto
             {
                 FromDate = startDate,
                 ToDate = endDate,
-                TotalBranchRegistrationAmount = dailyAmounts.Sum(x => x.BranchRegistrationAmount),
-                TotalSystemCampaignAmount = dailyAmounts.Sum(x => x.SystemCampaignAmount),
+                TotalBranchRegistrationAmount = totalBranchRegistrationAmount,
+                TotalSystemCampaignAmount = totalSystemCampaignAmount,
+                BranchRegistrationGrowthRate = CalculateGrowthRate(totalBranchRegistrationAmount, previousTotalBranchRegistrationAmount),
+                SystemCampaignGrowthRate = CalculateGrowthRate(totalSystemCampaignAmount, previousTotalSystemCampaignAmount),
                 DailyAmounts = dailyAmounts
             };
         }
@@ -126,17 +172,9 @@ namespace DAL
             var startDate = fromDate.Date;
             var endDate = toDate.Date;
             var endExclusive = endDate.AddDays(1);
+            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
 
-            var systemVoucherCompensableOrdersQuery = _context.Orders
-                .AsNoTracking()
-                .Where(o => o.Status == OrderStatus.Complete
-                            && o.AppliedVoucherId.HasValue
-                            && o.UpdatedAt >= startDate
-                            && o.UpdatedAt < endExclusive
-                            && o.AppliedVoucher!.UserVouchers.Any(uv => uv.UserId == o.UserId)
-                            && (o.AppliedVoucher!.VendorCampaignId == null
-                                || (o.AppliedVoucher.VendorCampaign != null
-                                    && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue)));
+            var systemVoucherCompensableOrdersQuery = GetSystemVoucherCompensableOrdersQuery(startDate, endExclusive);
 
             var systemVoucherCompensationByDate = await systemVoucherCompensableOrdersQuery
                 .GroupBy(o => o.UpdatedAt.Date)
@@ -175,11 +213,17 @@ namespace DAL
                 })
                 .ToList();
 
+            var totalCompensationAmount = dailyCompensations.Sum(x => x.CompensationAmount);
+
+            var previousTotalCompensationAmount = await GetSystemVoucherCompensableOrdersQuery(previousStartDate, previousEndExclusive)
+                .SumAsync(o => o.DiscountAmount) ?? 0m;
+
             return new AdminCompensationChartDto
             {
                 FromDate = startDate,
                 ToDate = endDate,
-                TotalCompensationAmount = dailyCompensations.Sum(x => x.CompensationAmount),
+                TotalCompensationAmount = totalCompensationAmount,
+                CompensationGrowthRate = CalculateGrowthRate(totalCompensationAmount, previousTotalCompensationAmount),
                 DailyCompensations = dailyCompensations,
                 CompensationByVendors = compensationByVendors
             };
@@ -190,6 +234,7 @@ namespace DAL
             var startDate = fromDate.Date;
             var endDate = toDate.Date;
             var endExclusive = endDate.AddDays(1);
+            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
 
             var dailyConversions = await _context.Vendors
                 .AsNoTracking()
@@ -204,13 +249,56 @@ namespace DAL
                 .OrderBy(x => x.Date)
                 .ToListAsync();
 
+            var totalConversionCount = dailyConversions.Sum(x => x.ConversionCount);
+
+            var previousTotalConversionCount = await _context.Vendors
+                .AsNoTracking()
+                .Where(v => v.CreatedAt >= previousStartDate && v.CreatedAt < previousEndExclusive)
+                .Select(v => v.UserId)
+                .Distinct()
+                .CountAsync();
+
             return new AdminUserToVendorConversionChartDto
             {
                 FromDate = startDate,
                 ToDate = endDate,
-                TotalConversionCount = dailyConversions.Sum(x => x.ConversionCount),
+                TotalConversionCount = totalConversionCount,
+                ConversionGrowthRate = CalculateGrowthRate(totalConversionCount, previousTotalConversionCount),
                 DailyConversions = dailyConversions
             };
+        }
+
+        private IQueryable<Order> GetSystemVoucherCompensableOrdersQuery(DateTime periodStart, DateTime periodEndExclusive)
+        {
+            return _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Complete
+                            && o.AppliedVoucherId.HasValue
+                            && o.UpdatedAt >= periodStart
+                            && o.UpdatedAt < periodEndExclusive
+                            && o.AppliedVoucher!.UserVouchers.Any(uv => uv.UserId == o.UserId)
+                            && (o.AppliedVoucher!.VendorCampaignId == null
+                                || (o.AppliedVoucher.VendorCampaign != null
+                                    && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue)));
+        }
+
+        private static (DateTime PreviousStartDate, DateTime PreviousEndExclusive) GetPreviousPeriod(DateTime startDate, DateTime endDate)
+        {
+            var dayCount = (endDate - startDate).Days + 1;
+            var previousEndExclusive = startDate;
+            var previousStartDate = startDate.AddDays(-dayCount);
+
+            return (previousStartDate, previousEndExclusive);
+        }
+
+        private static decimal CalculateGrowthRate(decimal currentValue, decimal previousValue)
+        {
+            if (previousValue == 0m)
+            {
+                return currentValue == 0m ? 0m : 100m;
+            }
+
+            return Math.Round(((currentValue - previousValue) / previousValue) * 100m, 2);
         }
     }
 }

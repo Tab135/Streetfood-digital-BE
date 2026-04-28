@@ -117,6 +117,13 @@ namespace DAL
                 .CountAsync();
         }
 
+        public async Task<decimal> GetTotalPayoutAmount()
+        {
+            return await _context.Payments
+                .Where(p => p.Amount < 0)
+                .SumAsync(p => Math.Abs(p.Amount));
+        }
+
         public async Task<Payment> UpdatePaymentStatus(
              long orderCode,
              string status,
