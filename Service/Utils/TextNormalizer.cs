@@ -70,6 +70,76 @@ namespace Service.Utils
         }
 
         /// <summary>
+        /// Levenshtein edit distance between two strings.
+        /// </summary>
+        public static int EditDistance(string a, string b)
+        {
+            if (string.IsNullOrEmpty(a)) return b?.Length ?? 0;
+            if (string.IsNullOrEmpty(b)) return a.Length;
+
+            int m = a.Length, n = b.Length;
+            var dp = new int[m + 1, n + 1];
+            for (int i = 0; i <= m; i++) dp[i, 0] = i;
+            for (int j = 0; j <= n; j++) dp[0, j] = j;
+            for (int i = 1; i <= m; i++)
+                for (int j = 1; j <= n; j++)
+                    dp[i, j] = a[i - 1] == b[j - 1]
+                        ? dp[i - 1, j - 1]
+                        : 1 + Math.Min(dp[i - 1, j - 1], Math.Min(dp[i - 1, j], dp[i, j - 1]));
+            return dp[m, n];
+        }
+
+        // Tokens ≤ 2 chars: no fuzzy (too short, too many false positives).
+        // Tokens 3–4 chars: allow 1 typo. Tokens ≥ 5 chars: allow 2 typos.
+        private static int FuzzyThreshold(int tokenLength)
+        {
+            if (tokenLength <= 2) return 0;
+            if (tokenLength <= 4) return 1;
+            return 2;
+        }
+
+        /// <summary>
+        /// Returns the fraction of keywordTokens that fuzzy-match at least one candidateToken,
+        /// using per-token Levenshtein thresholds. Tokens ≤ 2 chars are excluded from fuzzy
+        /// (threshold 0) and count as unmatched when computing the fraction.
+        /// </summary>
+        public static double FuzzyMatchFraction(string[] keywordTokens, string[] candidateTokens)
+        {
+            if (keywordTokens.Length == 0) return 0.0;
+            int matched = 0;
+            foreach (var kw in keywordTokens)
+            {
+                int threshold = FuzzyThreshold(kw.Length);
+                if (threshold == 0) continue;
+                foreach (var cd in candidateTokens)
+                {
+                    if (EditDistance(kw, cd) <= threshold) { matched++; break; }
+                }
+            }
+            return (double)matched / keywordTokens.Length;
+        }
+
+        /// <summary>
+        /// Returns true when every keyword token fuzzy-matches some candidate token.
+        /// Tokens ≤ 2 chars require an exact candidate token match (threshold 0).
+        /// </summary>
+        public static bool FuzzyAllTokensMatch(string[] keywordTokens, string[] candidateTokens)
+        {
+            if (keywordTokens.Length == 0) return false;
+            foreach (var kw in keywordTokens)
+            {
+                int threshold = FuzzyThreshold(kw.Length);
+                bool found = false;
+                foreach (var cd in candidateTokens)
+                {
+                    if (EditDistance(kw, cd) <= threshold) { found = true; break; }
+                }
+                if (!found) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
         /// Given a normalized keyword, return every synonym-equivalent form (including the keyword itself).
         /// When no synonym entry matches, returns a set containing only the input keyword.
         /// </summary>

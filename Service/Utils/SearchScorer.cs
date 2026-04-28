@@ -12,10 +12,13 @@ namespace Service.Utils
     {
         public const double DisplayNameExact = 100.0;
         public const double DisplayNameFuzzy = 80.0;
+        public const double DisplayNameFuzzyTypo = 60.0;  // typo-tolerant brand match
         public const double DisplayNameSimilarFloor = 50.0;
         public const double DisplayNameSimilarCeil = 70.0;
         public const double DishExact = 100.0;
         public const double DishCap = 120.0;
+        public const double DishFuzzyFloor = 20.0;        // fuzzy dish match floor
+        public const double DishFuzzyCeil = 35.0;         // fuzzy dish match ceil
         public const double BestSellerBonus = 10.0;
         public const double HighRatingBonus = 5.0;
         public const double HighRatingThreshold = 4.5;
@@ -50,6 +53,15 @@ namespace Service.Utils
                 Fuzzy(normDisplay, normalizedKeyword))
             {
                 return DisplayNameFuzzy;
+            }
+
+            // Typo-tolerant fallback: every keyword token fuzzy-matches some token in
+            // the vendor or branch name (Levenshtein, per-token threshold).
+            var kwTokens = TextNormalizer.Tokenize(normalizedKeyword);
+            if (TextNormalizer.FuzzyAllTokensMatch(kwTokens, TextNormalizer.Tokenize(normVendor)) ||
+                TextNormalizer.FuzzyAllTokensMatch(kwTokens, TextNormalizer.Tokenize(normBranch)))
+            {
+                return DisplayNameFuzzyTypo;
             }
 
             return 0.0;
@@ -98,7 +110,10 @@ namespace Service.Utils
                 }
                 else
                 {
-                    return 0.0;
+                    // Fuzzy fallback: fraction of keyword tokens that fuzzy-match a dish token.
+                    var fuzzyFraction = TextNormalizer.FuzzyMatchFraction(keywordTokens, dishTokens);
+                    if (fuzzyFraction <= 0.0) return 0.0;
+                    baseScore = DishFuzzyFloor + (DishFuzzyCeil - DishFuzzyFloor) * fuzzyFraction;
                 }
             }
 
