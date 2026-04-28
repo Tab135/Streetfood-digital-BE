@@ -188,10 +188,15 @@ namespace Service
                         $"Một đánh giá {createFeedbackDto.Rating}-sao trên chi nhánh của bạn '{branch.Name}'",
                         createdFeedback.FeedbackId);
                 }
+
+                // Update quest progress for REVIEW tasks
+                if (branch.IsSubscribed)
+                {
+                await _questProgressService.UpdateProgressAsync(userId, QuestTaskType.REVIEW, 1);
+                }
             }
 
-            // Update quest progress for REVIEW tasks
-            await _questProgressService.UpdateProgressAsync(userId, QuestTaskType.REVIEW, 1);
+         
 
             return await MapToResponseDtoAsync(createdFeedback);
         }
