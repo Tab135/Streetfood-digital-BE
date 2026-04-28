@@ -514,7 +514,9 @@ public class CartService : ICartService
             throw new DomainExceptions("Chi nhánh này chưa đăng ký và không thể thực hiện các hành động trong giỏ hàng hoặc thanh toán.");
         }
 
-        var now = DateTime.UtcNow;
+        // Convert UTC to Vietnam time (UTC+7)
+        var vietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
+        var now = TimeZoneInfo.ConvertTime(DateTime.UtcNow, vietnamTimeZone);
         var currentTime = now.TimeOfDay;
 
         // 1. Check DayOff first — if the current moment is within any day-off window, block immediately.
