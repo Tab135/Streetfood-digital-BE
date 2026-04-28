@@ -105,7 +105,9 @@ namespace StreetFood.Controllers
         [HttpGet("public")]
         public async Task<IActionResult> GetPublicQuests([FromQuery] QuestQueryDto query)
         {
-            var result = await _questService.GetPublicQuestsAsync(query);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            int? userId = userIdClaim != null ? int.Parse(userIdClaim) : null;
+            var result = await _questService.GetPublicQuestsAsync(query, userId);
             return Ok(new { message = "Public quests retrieved successfully", data = result });
         }
 

@@ -14,7 +14,7 @@ namespace Service.Interfaces
         Task<QuestResponseDto?> GetQuestByIdAsync(int questId);
         Task<QuestTaskResponseDto?> GetQuestTaskByIdAsync(int questTaskId);
         Task<PaginatedResponse<QuestResponseDto>> GetQuestsAsync(QuestQueryDto query);
-        Task<PaginatedResponse<QuestResponseDto>> GetPublicQuestsAsync(QuestQueryDto query);
+        Task<PaginatedResponse<QuestResponseDto>> GetPublicQuestsAsync(QuestQueryDto query, int? userId = null);
         Task<PaginatedResponse<UserQuestTaskGroupedDto>> GetUserQuestTasksByQuestAsync(UserQuestTaskQueryDto query);
         Task<UserQuestProgressDto> EnrollInQuestAsync(int userId, int questId);
         Task<UserQuestProgressDto> StopQuestAsync(int userId, int questId);
