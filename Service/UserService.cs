@@ -33,6 +33,17 @@ namespace Service
         private const int OtpExpiryMinutes = 3;
         private const int MaxOtpRequestsPerMinute = 2;
 
+        // TEST OTP - Remove this set to disable hardcoded OTP for test accounts
+        private static readonly HashSet<string> TestPhoneNumbers = new()
+        {
+            "0933333333",  // nhatkhoa151204@gmail.com - Vendor
+            "0944444444",  // mrnhogiao2011@gmail.com - Manager
+            "0900000000",  // phuctan2505@gmail.com - User
+            "0911111111",  // nguyenvyscorpio3112004@gmail.com - Admin
+            "0922222222"   // vyntyse183836@fpt.edu.vn - Moderator
+        };
+        private const string TEST_OTP_CODE = "123456";
+
         public UserService(
             IUserRepository userRepository,
             IJwtService jwtService,
@@ -651,7 +662,9 @@ namespace Service
 
         private async Task<string> GenerateAndStoreOtpAsync(string identity, string? forcedOtp = null)
         {
-            var otpCode = forcedOtp ?? GenerateOtp();
+            // TEST OTP: Use hardcoded OTP for test phone numbers
+            var otpCode = forcedOtp ?? (TestPhoneNumbers.Contains(identity) ? TEST_OTP_CODE : GenerateOtp());
+            
             var otpVerify = new OtpVerify
             {
                 Email = identity,
