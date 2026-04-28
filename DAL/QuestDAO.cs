@@ -55,7 +55,7 @@ namespace DAL
             return (items, totalCount);
         }
 
-        public async Task<(List<Quest> Items, int TotalCount)> GetPublicQuestsAsync(int? campaignId, bool? isStandalone, bool? isTierUp, int page, int pageSize)
+        public async Task<(List<Quest> Items, int TotalCount)> GetPublicQuestsAsync(int? campaignId, bool? isStandalone, bool? isTierUp, int page, int pageSize, int? userId = null, bool? isCompleted = null)
         {
             var query = _context.Quests
                 .Include(q => q.QuestTasks)
@@ -72,6 +72,14 @@ namespace DAL
 
             if (isStandalone.HasValue)
                 query = query.Where(q => q.IsStandalone == isStandalone.Value);
+
+            if (isCompleted.HasValue && userId.HasValue)
+            {
+                if (isCompleted.Value)
+                    query = query.Where(q => _context.UserQuests.Any(uq => uq.QuestId == q.QuestId && uq.UserId == userId.Value && uq.Status == "COMPLETED"));
+                else
+                    query = query.Where(q => !_context.UserQuests.Any(uq => uq.QuestId == q.QuestId && uq.UserId == userId.Value && uq.Status == "COMPLETED"));
+            }
 
             int totalCount = await query.CountAsync();
             var items = await query

@@ -8,5 +8,6 @@ namespace BO.DTO.Quest
         public int? CampaignId { get; set; }
         public bool? IsStandalone { get; set; }
         public bool? IsTierUp { get; set; }
+        public bool? IsCompleted { get; set; }
     }
 }

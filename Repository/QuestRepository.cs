@@ -18,7 +18,7 @@ namespace Repository
         public Task<Quest> CreateAsync(Quest quest) => _dao.CreateAsync(quest);
         public Task<Quest?> GetByIdAsync(int questId) => _dao.GetByIdAsync(questId);
         public Task<(List<Quest> Items, int TotalCount)> GetQuestsAsync(bool? isActive, int? campaignId, int page, int pageSize) => _dao.GetQuestsAsync(isActive, campaignId, page, pageSize);
-        public Task<(List<Quest> Items, int TotalCount)> GetPublicQuestsAsync(int? campaignId, bool? isStandalone, bool? isTierUp, int page, int pageSize) => _dao.GetPublicQuestsAsync(campaignId, isStandalone, isTierUp, page, pageSize);
+        public Task<(List<Quest> Items, int TotalCount)> GetPublicQuestsAsync(int? campaignId, bool? isStandalone, bool? isTierUp, int page, int pageSize, int? userId = null, bool? isCompleted = null) => _dao.GetPublicQuestsAsync(campaignId, isStandalone, isTierUp, page, pageSize, userId, isCompleted);
         public Task<Dictionary<int, int>> GetUserQuestCountsByQuestIdsAsync(List<int> questIds) => _dao.GetUserQuestCountsByQuestIdsAsync(questIds);
         public Task UpdateAsync(Quest quest) => _dao.UpdateAsync(quest);
         public Task<bool> DeleteAsync(int questId) => _dao.DeleteAsync(questId);

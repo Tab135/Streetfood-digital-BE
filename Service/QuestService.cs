@@ -264,9 +264,9 @@ namespace Service
             return new PaginatedResponse<QuestResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
         }
 
-        public async Task<PaginatedResponse<QuestResponseDto>> GetPublicQuestsAsync(QuestQueryDto query)
+        public async Task<PaginatedResponse<QuestResponseDto>> GetPublicQuestsAsync(QuestQueryDto query, int? userId = null)
         {
-            var (items, totalCount) = await _questRepository.GetPublicQuestsAsync(query.CampaignId, query.IsStandalone, query.IsTierUp, query.PageNumber, query.PageSize);
+            var (items, totalCount) = await _questRepository.GetPublicQuestsAsync(query.CampaignId, query.IsStandalone, query.IsTierUp, query.PageNumber, query.PageSize, userId, query.IsCompleted);
             var dtos = await MapToResponseDtosAsync(items);
             return new PaginatedResponse<QuestResponseDto>(dtos, totalCount, query.PageNumber, query.PageSize);
         }
