@@ -40,6 +40,7 @@ namespace BO.DTO.AI
     public class AiRecommendationQueryDto
     {
         public string? Keyword { get; set; }
+        public List<string> SearchTerms { get; set; } = new();
         public double? Lat { get; set; }
         public double? Long { get; set; }
         public double? DistanceKm { get; set; }
@@ -63,6 +64,12 @@ namespace BO.DTO.AI
         public double? DistanceKm { get; set; }
         public double FinalScore { get; set; }
         public List<string> DietaryPreferenceNames { get; set; } = new();
-        public List<string> RecommendedDishes { get; set; } = new();
+        public List<AiRecommendedDishDto> RecommendedDishes { get; set; } = new();
+    }
+
+    public class AiRecommendedDishDto
+    {
+        public int DishId { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 }
