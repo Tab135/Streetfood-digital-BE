@@ -11,7 +11,7 @@ namespace Service.Utils
 {
     internal static class AiAssistantSupport
     {
-        public static object BuildGeminiRequestPayload(AiChatRequestDto request, List<DietaryPreferenceDto> userDietaryPreferences)
+        public static object BuildGeminiRequestPayload(AiChatRequestDto request, List<AiChatHistoryMessageDto> history, List<DietaryPreferenceDto> userDietaryPreferences)
         {
             return new
             {
@@ -32,7 +32,7 @@ namespace Service.Utils
                         }
                     }
                 },
-                contents = BuildGeminiContents(request, userDietaryPreferences),
+                contents = BuildGeminiContents(request, history, userDietaryPreferences),
                 generationConfig = new
                 {
                     temperature = 0.2,
@@ -41,13 +41,13 @@ namespace Service.Utils
             };
         }
 
-        public static List<object> BuildGeminiContents(AiChatRequestDto request, List<DietaryPreferenceDto> userDietaryPreferences)
+        public static List<object> BuildGeminiContents(AiChatRequestDto request, List<AiChatHistoryMessageDto> history, List<DietaryPreferenceDto> userDietaryPreferences)
         {
             var contents = new List<object>();
 
-            if (request.History != null && request.History.Count > 0)
+            if (history != null && history.Count > 0)
             {
-                foreach (var historyMessage in request.History
+                foreach (var historyMessage in history
                     .Where(h => !string.IsNullOrWhiteSpace(h.Content))
                     .TakeLast(6))
                 {

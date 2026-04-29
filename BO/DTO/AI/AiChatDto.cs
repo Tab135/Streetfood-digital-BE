@@ -17,8 +17,6 @@ namespace BO.DTO.AI
 
         [Range(0.1, 500, ErrorMessage = "Distance must be between 0.1 and 500 km")]
         public double? DistanceKm { get; set; }
-
-        public List<AiChatHistoryMessageDto>? History { get; set; }
     }
 
     public class AiChatHistoryMessageDto

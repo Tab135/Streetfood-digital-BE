@@ -51,30 +51,16 @@ namespace Service
 
             var memoryHistory = _conversationMemoryService.GetHistory(userId);
 
-            // Backward-compatible: if client sends full history, seed memory once.
-            if (memoryHistory.Count == 0 && request.History != null && request.History.Count > 0)
-            {
-                foreach (var message in request.History
-                    .Where(h => !string.IsNullOrWhiteSpace(h.Content))
-                    .TakeLast(6))
-                {
-                    _conversationMemoryService.AddMessage(userId, message.Role, message.Content);
-                }
-
-                memoryHistory = _conversationMemoryService.GetHistory(userId);
-            }
-
             var requestWithHistory = new AiChatRequestDto
             {
                 Message = request.Message,
                 Lat = request.Lat,
                 Long = request.Long,
-                DistanceKm = request.DistanceKm,
-                History = memoryHistory
+                DistanceKm = request.DistanceKm
             };
 
             var userDietaryPreferences = await _userDietaryPreferenceService.GetPreferencesByUserId(userId);
-            var aiDecision = await GetGeminiDecisionAsync(requestWithHistory, userDietaryPreferences);
+            var aiDecision = await GetGeminiDecisionAsync(requestWithHistory, memoryHistory, userDietaryPreferences);
             var query = AiAssistantSupport.NormalizeQuery(aiDecision.SearchQuery, requestWithHistory, userDietaryPreferences);
 
             var isRecommendation = string.Equals(aiDecision.Intent, "recommend_food", StringComparison.OrdinalIgnoreCase);
@@ -118,7 +104,7 @@ namespace Service
             return (result, filter.Distance);
         }
 
-        private async Task<AiAssistantSupport.GeminiDecisionPayload> GetGeminiDecisionAsync(AiChatRequestDto request, List<DietaryPreferenceDto> userDietaryPreferences)
+        private async Task<AiAssistantSupport.GeminiDecisionPayload> GetGeminiDecisionAsync(AiChatRequestDto request, List<AiChatHistoryMessageDto> history, List<DietaryPreferenceDto> userDietaryPreferences)
         {
             var apiKey = _configuration["Gemini:ApiKey"];
             if (string.IsNullOrWhiteSpace(apiKey))
@@ -143,7 +129,7 @@ namespace Service
                 endpoint += $"key={Uri.EscapeDataString(apiKey)}";
             }
 
-            var requestPayload = AiAssistantSupport.BuildGeminiRequestPayload(request, userDietaryPreferences);
+            var requestPayload = AiAssistantSupport.BuildGeminiRequestPayload(request, history, userDietaryPreferences);
 
             var client = _httpClientFactory.CreateClient();
             using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint)
