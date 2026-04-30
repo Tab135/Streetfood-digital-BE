@@ -9,4 +9,5 @@ public class NotificationDto
     public int? ReferenceId { get; set; }
     public bool IsRead { get; set; }
     public DateTime CreatedAt { get; set; }
+    public object? ExtraData { get; set; }
 }

@@ -39,7 +39,7 @@ public class NotificationService : INotificationService
         };
 
         var saved = await _notificationRepository.Create(notification);
-        var dto = MapToDto(saved);
+        var dto = MapToDto(saved, pushData);
 
         // SignalR push (in-app real-time)
         await _pusher.PushToUserAsync(recipientUserId, dto);
@@ -68,7 +68,7 @@ public class NotificationService : INotificationService
         int userId, int page, int pageSize)
     {
         var (notifications, totalCount) = await _notificationRepository.GetByUserId(userId, page, pageSize);
-        var items = notifications.Select(MapToDto).ToList();
+        var items = notifications.Select(n => MapToDto(n)).ToList();
         return new PaginatedResponse<NotificationDto>(items, totalCount, page, pageSize);
     }
 
@@ -77,7 +77,7 @@ public class NotificationService : INotificationService
         return await _notificationRepository.GetUnreadCount(userId);
     }
 
-    private static NotificationDto MapToDto(Notification n) => new()
+    private static NotificationDto MapToDto(Notification n, object? extraData = null) => new()
     {
         NotificationId = n.NotificationId,
         Type = n.Type.ToString(),
@@ -85,6 +85,7 @@ public class NotificationService : INotificationService
         Message = n.Message,
         ReferenceId = n.ReferenceId,
         IsRead = n.IsRead,
-        CreatedAt = n.CreatedAt
+        CreatedAt = n.CreatedAt,
+        ExtraData = extraData
     };
 }
