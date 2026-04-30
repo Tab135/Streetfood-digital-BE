@@ -142,11 +142,6 @@ namespace Service
             };
             await _branchRepository.AddBranchRequestAsync(branchRequest);
 
-            if (ghostpinXP > 0)
-            {
-                await _userService.AddXPAsync(userId, ghostpinXP);
-            }
-
             var responseDto = await MapToResponseDtoAsync(createdBranch);
 
             var createdByUser = await _userRepository.GetUserById(userId);
@@ -653,6 +648,10 @@ namespace Service
             branch.BatchRatingSum = 0;
             await _branchRepository.UpdateAsync(branch);
 
+            if (registrationRequest.Type == 0 && claimantUserId.HasValue && branch.GhostpinXP.HasValue && branch.GhostpinXP.Value > 0)
+            {
+                await _userService.AddXPAsync(claimantUserId.Value, branch.GhostpinXP.Value);
+            }
             // Update registration request status
             registrationRequest.Status = RegisterVendorStatusEnum.Accept;
             registrationRequest.VerifiedBy = verifierUserId;
