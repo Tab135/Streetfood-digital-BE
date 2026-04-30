@@ -250,8 +250,10 @@ namespace StreetFood.Controllers
                 IsVerified = full.IsVerified,
                 IsSubscribed = full.IsSubscribed,
                 AvgRating = full.AvgRating,
+                TotalReviewCount = full.TotalReviewCount,
                 IsActive = full.IsActive,
-
+                TierId = full.TierId,
+                TierName = full.TierName
             };
         }
 
