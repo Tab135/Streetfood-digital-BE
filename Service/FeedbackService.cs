@@ -74,6 +74,8 @@ namespace Service
                 throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {createFeedbackDto.BranchId}");
             }
 
+            bool isUserCreatedUnverifiedBranch = branch.VendorId == null && !branch.IsVerified && !branch.IsSubscribed;
+
             // If DishId is provided, verify it exists and belongs to the branch
             if (createFeedbackDto.DishId.HasValue)
             {
@@ -109,7 +111,7 @@ namespace Service
                 if (hasFeedback)
                     throw new DomainExceptions("Bạn đã đánh giá đơn hàng này rồi");
             }
-            else
+            else if (!isUserCreatedUnverifiedBranch)
             {
                 if (!createFeedbackDto.UserLat.HasValue || !createFeedbackDto.UserLong.HasValue)
                 {
@@ -166,8 +168,8 @@ namespace Service
                 null,
                 createFeedbackDto.TagIds);
 
-            // Award XP from config
-            if (feedbackXP > 0)
+            // Award XP from config - only for subscribed branches or user-created unverified branches
+            if (feedbackXP > 0 && (branch.IsSubscribed || isUserCreatedUnverifiedBranch))
             {
                 await _userService.AddXPAsync(userId, feedbackXP);
             }
@@ -190,9 +192,9 @@ namespace Service
                 }
 
                 // Update quest progress for REVIEW tasks
-                if (branch.IsSubscribed)
+                if (branch.IsSubscribed || isUserCreatedUnverifiedBranch)
                 {
-                await _questProgressService.UpdateProgressAsync(userId, QuestTaskType.REVIEW, 1);
+                    await _questProgressService.UpdateProgressAsync(userId, QuestTaskType.REVIEW, 1);
                 }
             }
 

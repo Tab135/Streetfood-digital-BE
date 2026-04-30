@@ -9,9 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using Microsoft.AspNetCore.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Service
 {
@@ -42,7 +44,7 @@ namespace Service
             _conversationMemoryService = conversationMemoryService ?? throw new ArgumentNullException(nameof(conversationMemoryService));
         }
 
-        public async Task<AiChatResponseDto> ChatAsync(int userId, AiChatRequestDto request)
+        public async Task<AiChatResponseDto> ChatAsync(int userId, AiChatRequestDto request, IFormFile? image = null)
         {
             if (request == null)
             {
@@ -60,7 +62,7 @@ namespace Service
             };
 
             var userDietaryPreferences = await _userDietaryPreferenceService.GetPreferencesByUserId(userId);
-            var aiDecision = await GetGeminiDecisionAsync(requestWithHistory, memoryHistory, userDietaryPreferences);
+            var aiDecision = await GetGeminiDecisionAsync(requestWithHistory, memoryHistory, userDietaryPreferences, image);
             var query = AiAssistantSupport.NormalizeQuery(aiDecision.SearchQuery, requestWithHistory, userDietaryPreferences);
 
             var isRecommendation = string.Equals(aiDecision.Intent, "recommend_food", StringComparison.OrdinalIgnoreCase);
@@ -104,7 +106,7 @@ namespace Service
             return (result, filter.Distance);
         }
 
-        private async Task<AiAssistantSupport.GeminiDecisionPayload> GetGeminiDecisionAsync(AiChatRequestDto request, List<AiChatHistoryMessageDto> history, List<DietaryPreferenceDto> userDietaryPreferences)
+        private async Task<AiAssistantSupport.GeminiDecisionPayload> GetGeminiDecisionAsync(AiChatRequestDto request, List<AiChatHistoryMessageDto> history, List<DietaryPreferenceDto> userDietaryPreferences, IFormFile? image = null)
         {
             var apiKey = _configuration["Gemini:ApiKey"];
             if (string.IsNullOrWhiteSpace(apiKey))
@@ -129,7 +131,7 @@ namespace Service
                 endpoint += $"key={Uri.EscapeDataString(apiKey)}";
             }
 
-            var requestPayload = AiAssistantSupport.BuildGeminiRequestPayload(request, history, userDietaryPreferences);
+            var requestPayload = await AiAssistantSupport.BuildGeminiRequestPayloadAsync(request, history, userDietaryPreferences, image);
 
             var client = _httpClientFactory.CreateClient();
             using var httpRequest = new HttpRequestMessage(HttpMethod.Post, endpoint)

@@ -2,16 +2,19 @@ using BO.DTO.AI;
 using BO.DTO.Branch;
 using BO.DTO.Dietary;
 using BO.Exceptions;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Service.Utils
 {
     internal static class AiAssistantSupport
     {
-        public static object BuildGeminiRequestPayload(AiChatRequestDto request, List<AiChatHistoryMessageDto> history, List<DietaryPreferenceDto> userDietaryPreferences)
+        public static async Task<object> BuildGeminiRequestPayloadAsync(AiChatRequestDto request, List<AiChatHistoryMessageDto> history, List<DietaryPreferenceDto> userDietaryPreferences, IFormFile? image = null)
         {
             return new
             {
@@ -24,6 +27,7 @@ namespace Service.Utils
                             text = "Bạn là một trợ lý ẩm thực. Luôn trả về JSON hợp lệ với cấu trúc sau: " +
                                 "{\"intent\":\"chat|recommend_food\",\"reply\":\"string\",\"searchQuery\":{\"keyword\":\"string|null\",\"searchTermsAccented\":[\"string\"],\"searchTermsNormalized\":[\"string\"],\"lat\":number|null,\"long\":number|null,\"distanceKm\":number|null,\"dietaryIds\":number[],\"tasteIds\":number[],\"minPrice\":number|null,\"maxPrice\":number|null,\"categoryIds\":number[]}}. " +
                                 "Chọn intent=recommend_food khi người dùng yêu cầu gợi ý ăn uống, nên ăn gì, hoặc gợi ý quán gần đó. " +
+                                "Nếu người dùng tải lên hình ảnh, hãy phân tích món ăn trong ảnh và tạo các searchTerms phù hợp để tìm món đó trong database. " +
                                 "Khi người dùng hỏi về sở thích ăn uống của chính họ, hãy dựa vào hồ sơ dietary đã lưu để trả lời rõ ràng, không nói là không biết nếu có dữ liệu. " +
                                 "Nếu intent=recommend_food, hãy tự suy luận 1 đến 5 searchTerms tiếng Việt thực tế và cụ thể để tìm món/quán, có thể gồm từ đồng nghĩa, biến thể món, tên món phổ biến liên quan; không dùng từ chung chung như 'món ăn' nếu có thể xác định cụ thể hơn. " +
                                 "Nếu không rõ, giữ các trường số là null và các mảng là rỗng. Không thêm markdown. " +
@@ -32,7 +36,7 @@ namespace Service.Utils
                         }
                     }
                 },
-                contents = BuildGeminiContents(request, history, userDietaryPreferences),
+                contents = await BuildGeminiContentsAsync(request, history, userDietaryPreferences, image),
                 generationConfig = new
                 {
                     temperature = 0.2,
@@ -41,7 +45,7 @@ namespace Service.Utils
             };
         }
 
-        public static List<object> BuildGeminiContents(AiChatRequestDto request, List<AiChatHistoryMessageDto> history, List<DietaryPreferenceDto> userDietaryPreferences)
+        public static async Task<List<object>> BuildGeminiContentsAsync(AiChatRequestDto request, List<AiChatHistoryMessageDto> history, List<DietaryPreferenceDto> userDietaryPreferences, IFormFile? image = null)
         {
             var contents = new List<object>();
 
@@ -86,16 +90,33 @@ namespace Service.Utils
                 })
             };
 
+            var userParts = new List<object>();
+
+            if (image != null)
+            {
+                using var ms = new MemoryStream();
+                await image.CopyToAsync(ms);
+                var base64Data = Convert.ToBase64String(ms.ToArray());
+
+                userParts.Add(new
+                {
+                    inline_data = new
+                    {
+                        mime_type = image.ContentType,
+                        data = base64Data
+                    }
+                });
+            }
+
+            userParts.Add(new
+            {
+                text = JsonSerializer.Serialize(userContext)
+            });
+
             contents.Add(new
             {
                 role = "user",
-                parts = new[]
-                {
-                    new
-                    {
-                        text = JsonSerializer.Serialize(userContext)
-                    }
-                }
+                parts = userParts
             });
 
             return contents;

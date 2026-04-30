@@ -23,7 +23,7 @@ namespace StreetFood.Controllers
         [HttpPost("chat")]
         [Authorize(Roles = "User")]
         [ProducesResponseType(typeof(ApiResponse<AiChatResponseDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> Chat([FromBody] AiChatRequestDto request)
+        public async Task<IActionResult> Chat([FromForm] AiChatRequestDto request, IFormFile? image)
         {
             if (!ModelState.IsValid)
             {
@@ -35,7 +35,7 @@ namespace StreetFood.Controllers
                 return Unauthorized(new { message = "User not authenticated" });
             }
 
-            var result = await _aiAssistantService.ChatAsync(userId, request);
+            var result = await _aiAssistantService.ChatAsync(userId, request, image);
             return Ok(new
             {
                 message = "AI response generated successfully",
