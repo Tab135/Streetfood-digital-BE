@@ -81,6 +81,7 @@ namespace StreetFood
             builder.Services.AddHostedService<TierResetService>();
             // Register DAL
             builder.Services.AddScoped<UserDAO>();
+            builder.Services.AddScoped<UserPinDAO>();
             builder.Services.AddScoped<OtpVerifyDAO>();
             builder.Services.AddScoped<BadgeDAO>();
             builder.Services.AddScoped<UserBadgeDAO>();
@@ -112,7 +113,8 @@ namespace StreetFood
 
             // Register Repositories
             builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<ITierRepository, TierRepository>();
+            builder.Services.AddScoped<IUserPinRepository, UserPinRepository>();
+            builder.Services.AddScoped<ITierRepository, TierRepository>();
             builder.Services.AddScoped<IOtpVerifyRepository, OtpVerifyRepository>();
             builder.Services.AddScoped<IBadgeRepository, BadgeRepository>();
             builder.Services.AddScoped<IUserBadgeRepository, UserBadgeRepository>();

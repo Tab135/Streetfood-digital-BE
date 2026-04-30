@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using BO.Entities;
 using DAL;
 using Microsoft.EntityFrameworkCore;
+using Repository;
 using Service;
 using Xunit;
 
@@ -23,7 +24,8 @@ namespace StreetFood.Tests.Pin
                 .Options;
 
             _context = new StreetFoodDbContext(options);
-            _pinService = new UserPinService(_context);
+            var pinRepository = new UserPinRepository(new UserPinDAO(_context));
+            _pinService = new UserPinService(pinRepository);
         }
 
         public void Dispose()
