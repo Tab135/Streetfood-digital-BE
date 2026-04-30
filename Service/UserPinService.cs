@@ -67,11 +67,12 @@ public class UserPinService : IUserPinService
         {
             user.PinLockedUntil = DateTime.UtcNow.AddSeconds(CooldownSeconds);
             user.PinAttempts = 0;
+            await _context.SaveChangesAsync();
+            throw new PinLockedException(CooldownSeconds);
         }
         await _context.SaveChangesAsync();
 
-        var isCurrentlyLocked = user.PinLockedUntil.HasValue && user.PinLockedUntil.Value > DateTime.UtcNow;
-        var remaining = isCurrentlyLocked ? 0 : MaxAttempts - user.PinAttempts;
+        var remaining = MaxAttempts - user.PinAttempts;
         return new VerifyPinResponseDto { Success = false, AttemptsRemaining = remaining };
     }
 
