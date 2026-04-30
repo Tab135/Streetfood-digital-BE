@@ -160,6 +160,11 @@ namespace StreetFood.Middleware
                     message = extracted.Message == "An error occurred" ? "Resource not found." : extracted.Message;
                     data = extracted.Data;
                     break;
+                case 429:
+                    errorCode = "ERR_429";
+                    message = extracted.Message == "An error occurred" ? "Too many requests." : extracted.Message;
+                    data = extracted.Data;
+                    break;
                 case 500:
                     errorCode = "ERR_500";
                     message = extracted.Message == "An error occurred" ? "Internal Server Error." : extracted.Message;

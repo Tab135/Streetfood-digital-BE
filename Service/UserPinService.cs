@@ -70,7 +70,8 @@ public class UserPinService : IUserPinService
         }
         await _context.SaveChangesAsync();
 
-        var remaining = user.PinLockedUntil.HasValue ? 0 : MaxAttempts - user.PinAttempts;
+        var isCurrentlyLocked = user.PinLockedUntil.HasValue && user.PinLockedUntil.Value > DateTime.UtcNow;
+        var remaining = isCurrentlyLocked ? 0 : MaxAttempts - user.PinAttempts;
         return new VerifyPinResponseDto { Success = false, AttemptsRemaining = remaining };
     }
 
