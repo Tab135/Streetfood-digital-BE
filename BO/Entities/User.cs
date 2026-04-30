@@ -57,5 +57,12 @@ public class User
     public bool DietarySetup { get; set; } = false;
 
     public decimal MoneyBalance { get; set; } = 0m;
+
+    // PIN security for balance actions
+    [Column(TypeName = "varchar(60)")]
+    public string? PinHash { get; set; }
+    public DateTime? PinSetAt { get; set; }
+    public int PinAttempts { get; set; } = 0;
+    public DateTime? PinLockedUntil { get; set; }
 }
 

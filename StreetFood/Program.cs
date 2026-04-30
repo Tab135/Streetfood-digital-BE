@@ -144,6 +144,7 @@ builder.Services.AddScoped<ITierRepository, TierRepository>();
 
             // Register Services
             builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IUserPinService, UserPinService>();
             builder.Services.AddScoped<IJwtService, JWTService>();
             builder.Services.AddScoped<IEmailSender, EmailSender>();
             builder.Services.AddScoped<ISmsSender, SmsSender>();
