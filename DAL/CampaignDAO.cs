@@ -413,6 +413,72 @@ namespace DAL
             return R * c;
         }
 
+        public async Task<List<BranchCampaignInfoDto>> GetVendorCampaignsByBranchAsync(int branchId, bool? isWorking = null)
+        {
+            var now = DateTime.UtcNow;
+
+            var branchCampaigns = await _context.BranchCampaigns
+                .AsNoTracking()
+                .Where(bc => bc.BranchId == branchId
+                    && bc.IsActive
+                    && bc.Campaign.CreatedByVendorId != null
+                    && bc.Campaign.IsActive
+                    && _context.Vouchers.Any(v => v.VendorCampaignId == bc.CampaignId)
+                    && (isWorking == null
+                        || (isWorking.Value
+                            ? bc.Campaign.StartDate <= now && bc.Campaign.EndDate >= now
+                            : bc.Campaign.StartDate > now || bc.Campaign.EndDate < now)))
+                .Include(bc => bc.Campaign)
+                .ToListAsync();
+
+            var campaignIds = branchCampaigns.Select(bc => bc.CampaignId).Distinct().ToList();
+
+            var vouchers = campaignIds.Count > 0
+                ? await _context.Vouchers
+                    .AsNoTracking()
+                    .Where(v => v.VendorCampaignId.HasValue && campaignIds.Contains(v.VendorCampaignId.Value))
+                    .ToListAsync()
+                : new List<Voucher>();
+
+            var vouchersByCampaign = vouchers
+                .GroupBy(v => v.VendorCampaignId!.Value)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            return branchCampaigns.Select(bc => new BranchCampaignInfoDto
+            {
+                CampaignId = bc.CampaignId,
+                Name = bc.Campaign.Name,
+                Description = bc.Campaign.Description,
+                ImageUrl = bc.Campaign.ImageUrl,
+                StartDate = bc.Campaign.StartDate,
+                EndDate = bc.Campaign.EndDate,
+                IsActive = bc.Campaign.IsActive,
+                IsRegisterable = bc.Campaign.CreatedByVendorId == null
+                    && bc.Campaign.RegistrationStartDate.HasValue
+                    && now >= bc.Campaign.RegistrationStartDate.Value
+                    && (!bc.Campaign.RegistrationEndDate.HasValue || now <= bc.Campaign.RegistrationEndDate.Value),
+                IsWorking = bc.Campaign.IsActive
+                    && bc.Campaign.StartDate <= now
+                    && bc.Campaign.EndDate >= now,
+                Vouchers = vouchersByCampaign.TryGetValue(bc.CampaignId, out var vs)
+                    ? vs.Select(v => new CampaignVoucherInfoDto
+                    {
+                        VoucherId = v.VoucherId,
+                        Name = v.Name,
+                        Type = v.Type,
+                        DiscountValue = v.DiscountValue,
+                        MinAmountRequired = v.MinAmountRequired,
+                        MaxDiscountValue = v.MaxDiscountValue,
+                        Quantity = v.Quantity,
+                        UsedQuantity = v.UsedQuantity,
+                        StartDate = v.StartDate,
+                        EndDate = v.EndDate,
+                        VoucherCode = v.VoucherCode
+                    }).ToList()
+                    : []
+            }).ToList();
+        }
+
         // --- Campaign Image Methods ---
     }
 }

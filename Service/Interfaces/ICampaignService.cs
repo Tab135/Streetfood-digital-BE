@@ -34,5 +34,6 @@ namespace Service.Interfaces
 
         // New: Vendor join system campaign for selected branches (batch payment)
         Task<VendorJoinSystemCampaignResultDto> VendorJoinSystemCampaignForBranchesAsync(int userId, int campaignId, System.Collections.Generic.List<int> branchIds);
+        Task<List<BranchCampaignInfoDto>> GetVendorCampaignsByBranchAsync(int branchId, bool? isWorking = null);
     }
 }

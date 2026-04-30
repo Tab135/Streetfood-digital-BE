@@ -1228,6 +1228,9 @@ namespace Service
             await _campaignRepo.DeleteAsync(campaignId);
         }
 
+        public Task<List<BranchCampaignInfoDto>> GetVendorCampaignsByBranchAsync(int branchId, bool? isWorking = null)
+            => _campaignRepo.GetVendorCampaignsByBranchAsync(branchId, isWorking);
+
         // --- Campaign Image Methods ---
     }
 }

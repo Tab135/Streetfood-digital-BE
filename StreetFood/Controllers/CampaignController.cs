@@ -116,6 +116,15 @@ namespace StreetFood.Controllers
             return Ok(new { message = "Lấy danh sách chiến dịch của vendor thành công", data = result });
         }
 
+        /// <summary>Danh sách vendor campaign đang hoạt động của một chi nhánh cụ thể.</summary>
+        [HttpGet("vendor/branch/{branchId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetVendorCampaignsByBranch(int branchId, [FromQuery] bool? isWorking = null)
+        {
+            var result = await _campaignService.GetVendorCampaignsByBranchAsync(branchId, isWorking);
+            return Ok(new { message = "Lấy danh sách vendor campaign của chi nhánh thành công", data = result });
+        }
+
         /// <summary>Danh sách tất cả chi nhánh đang tham gia bất kì campaign nào do vendor tạo.</summary>
         [HttpGet("vendor/branches")]
         [AllowAnonymous]

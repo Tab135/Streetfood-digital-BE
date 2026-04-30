@@ -23,6 +23,7 @@ namespace Repository.Interfaces
         Task<(List<Campaign> Items, int TotalCount)> GetPublicCampaignsAsync(bool? isSystem, int page, int pageSize);
         Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetBranchesInAnyVendorCampaignPaginatedAsync(int pageNumber, int pageSize, double? userLat, double? userLng, double? maxDistance = 5.0);
         Task<(List<CampaignBranchResponseDto> Items, int TotalCount)> GetCampaignBranchesPaginatedAsync(int campaignId, int pageNumber, int pageSize, double? userLat, double? userLng, bool includeInactiveBranches = false);
+        Task<List<BranchCampaignInfoDto>> GetVendorCampaignsByBranchAsync(int branchId, bool? isWorking = null);
 
         // Images
     }
