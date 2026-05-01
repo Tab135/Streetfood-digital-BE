@@ -515,68 +515,72 @@ namespace Service
         public async Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize, int? type = null)
         {
             var (pendingRequests, totalCount) = await _branchRepository.GetAllBranchRequestsAsync(pageNumber, pageSize, type);
-            var items = pendingRequests
-                .Select(r =>
-                {
-                    var claimUser = r.Type == 2
-                        ? (r.RequestedBy ?? r.Branch?.Manager ?? r.Branch?.Vendor?.VendorOwner)
-                        : null;
+            var items = new List<PendingRegistrationDto>();
+            foreach (var r in pendingRequests)
+            {
+                var claimUser = r.Type == 2
+                    ? (r.RequestedBy ?? r.Branch?.Manager ?? r.Branch?.Vendor?.VendorOwner)
+                    : null;
 
-                    return new PendingRegistrationDto
+                var claimantVendor = claimUser == null
+                    ? null
+                    : await _vendorRepository.GetByUserIdAsync(claimUser.Id);
+
+                items.Add(new PendingRegistrationDto
+                {
+                    BranchRequestId = r.BranchRequestId,
+                    BranchId = r.BranchId,
+                    LicenseUrl = r.LicenseUrl,
+                    Type = r.Type,
+                    Status = r.Status,
+                    VerifiedBy = r.VerifiedBy,
+                    RejectReason = r.RejectReason,
+                    CreatedAt = r.CreatedAt,
+                    UpdatedAt = r.UpdatedAt,
+                    IsCreatedByOwner = r.Branch?.VendorId != null,
+                    Branch = r.Branch == null ? null : new PendingRegistrationDto.PendingBranchInfo
                     {
-                        BranchRequestId = r.BranchRequestId,
-                        BranchId = r.BranchId,
-                        LicenseUrl = r.LicenseUrl,
-                        Type = r.Type,
-                        Status = r.Status,
-                        VerifiedBy = r.VerifiedBy,
-                        RejectReason = r.RejectReason,
-                        CreatedAt = r.CreatedAt,
-                        UpdatedAt = r.UpdatedAt,
-                        IsCreatedByOwner = r.Branch?.VendorId != null,
-                        Branch = r.Branch == null ? null : new PendingRegistrationDto.PendingBranchInfo
+                        UserShareName = r.Type == 0 && r.Branch.VendorId == null ? BuildUserShareName(r.Branch.CreatedBy) : null,
+                        UserShareEmail = r.Type == 0 && r.Branch.VendorId == null ? r.Branch.CreatedBy?.Email : null,
+                        UserSharePhone = r.Type == 0 && r.Branch.VendorId == null ? r.Branch.CreatedBy?.PhoneNumber : null,
+                        BranchId = r.Branch.BranchId,
+                        VendorId = r.Branch.VendorId ?? 0,
+                        ManagerId = r.Branch.ManagerId,
+                        CreatedById = r.Branch.CreatedById,
+                        RequestedByUserId = r.RequestedByUserId ?? r.Branch.ManagerId,
+                        VendorUserName = BuildUserShareName(claimUser),
+                        VendorUserEmail = string.IsNullOrWhiteSpace(claimUser?.Email) ? null : claimUser.Email,
+                        VendorUserPhone = string.IsNullOrWhiteSpace(claimUser?.PhoneNumber) ? null : claimUser.PhoneNumber,
+                        VendorName = claimantVendor?.Name ?? r.Branch.Vendor?.Name,
+                        Name = r.Branch.Name,
+                        PhoneNumber = r.Branch.PhoneNumber,
+                        Email = r.Branch.Email,
+                        AddressDetail = r.Branch.AddressDetail,
+                        Ward = r.Branch.Ward,
+                        City = r.Branch.City,
+                        Lat = r.Branch.Lat,
+                        Long = r.Branch.Long,
+                        CreatedAt = r.Branch.CreatedAt,
+                        UpdatedAt = r.Branch.UpdatedAt,
+                        IsVerified = r.Branch.IsVerified,
+                        AvgRating = r.Branch.AvgRating,
+                        TotalReviewCount = r.Branch.TotalReviewCount,
+                        TotalRatingSum = r.Branch.TotalRatingSum,
+                        BatchReviewCount = r.Branch.BatchReviewCount,
+                        BatchRatingSum = r.Branch.BatchRatingSum,
+                        IsActive = r.Branch.IsActive,
+                        IsSubscribed = r.Branch.IsSubscribed,
+                        SubscriptionExpiresAt = r.Branch.SubscriptionExpiresAt,
+                        TierId = r.Branch.TierId,
+                        TierName = r.Branch.Tier?.Name ?? "Silver",
+                        BranchImages = r.Branch.BranchImages?.Select(i => new BranchImageResponseDto
                         {
-                            UserShareName = r.Type == 0 && r.Branch.VendorId == null ? BuildUserShareName(r.Branch.CreatedBy) : null,
-                            UserShareEmail = r.Type == 0 && r.Branch.VendorId == null ? r.Branch.CreatedBy?.Email : null,
-                            UserSharePhone = r.Type == 0 && r.Branch.VendorId == null ? r.Branch.CreatedBy?.PhoneNumber : null,
-                            BranchId = r.Branch.BranchId,
-                            VendorId = r.Branch.VendorId ?? 0,
-                            ManagerId = r.Branch.ManagerId,
-                            CreatedById = r.Branch.CreatedById,
-                            RequestedByUserId = r.RequestedByUserId ?? r.Branch.ManagerId,
-                            VendorUserName = BuildUserShareName(claimUser),
-                            VendorUserEmail = string.IsNullOrWhiteSpace(claimUser?.Email) ? null : claimUser.Email,
-                            VendorUserPhone = string.IsNullOrWhiteSpace(claimUser?.PhoneNumber) ? null : claimUser.PhoneNumber,
-                            VendorName = r.Branch.Vendor?.Name ?? (r.Type == 2 ? r.Branch.Name : null),
-                            Name = r.Branch.Name,
-                            PhoneNumber = r.Branch.PhoneNumber,
-                            Email = r.Branch.Email,
-                            AddressDetail = r.Branch.AddressDetail,
-                            Ward = r.Branch.Ward,
-                            City = r.Branch.City,
-                            Lat = r.Branch.Lat,
-                            Long = r.Branch.Long,
-                            CreatedAt = r.Branch.CreatedAt,
-                            UpdatedAt = r.Branch.UpdatedAt,
-                            IsVerified = r.Branch.IsVerified,
-                            AvgRating = r.Branch.AvgRating,
-                            TotalReviewCount = r.Branch.TotalReviewCount,
-                            TotalRatingSum = r.Branch.TotalRatingSum,
-                            BatchReviewCount = r.Branch.BatchReviewCount,
-                            BatchRatingSum = r.Branch.BatchRatingSum,
-                            IsActive = r.Branch.IsActive,
-                            IsSubscribed = r.Branch.IsSubscribed,
-                            SubscriptionExpiresAt = r.Branch.SubscriptionExpiresAt,
-                            TierId = r.Branch.TierId,
-                            TierName = r.Branch.Tier?.Name ?? "Silver",
-                            BranchImages = r.Branch.BranchImages?.Select(i => new BranchImageResponseDto
-                            {
-                                BranchImageId = i.BranchImageId,
-                                ImageUrl = i.ImageUrl
-                            }).ToList()
-                        }
-                    };
-                }).ToList();
+                            BranchImageId = i.BranchImageId,
+                            ImageUrl = i.ImageUrl
+                        }).ToList()
+                    }
+                });
+            }
             return new PaginatedResponse<PendingRegistrationDto>(items, totalCount, pageNumber, pageSize);
         }
 
