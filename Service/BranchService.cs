@@ -547,6 +547,7 @@ namespace Service
                             VendorUserName = BuildUserShareName(claimUser),
                             VendorUserEmail = string.IsNullOrWhiteSpace(claimUser?.Email) ? null : claimUser.Email,
                             VendorUserPhone = string.IsNullOrWhiteSpace(claimUser?.PhoneNumber) ? null : claimUser.PhoneNumber,
+                            VendorName = r.Branch.Vendor?.Name ?? (r.Type == 2 ? r.Branch.Name : null),
                             Name = r.Branch.Name,
                             PhoneNumber = r.Branch.PhoneNumber,
                             Email = r.Branch.Email,
