@@ -346,6 +346,7 @@ namespace Service
         {
             var dashboard = await _dashboardService.GetDishDashboardByVendorAsync(vendorId);
             return (dashboard?.TopDishes ?? new())
+                .Where(d => d.TotalQuantityOrdered > 0)
                 .Where(d => d.DishId.HasValue)
                 .OrderByDescending(d => d.TotalQuantityOrdered)
                 .Take(5)

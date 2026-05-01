@@ -74,6 +74,37 @@ namespace StreetFood.Tests.Dish
             Assert.Equal("Spicy Ramen", result.Name);
         }
 
+        [Fact]
+        public async Task CreateDishAsync_ZeroSalesDashboard_DoesNotMarkBestSeller()
+        {
+            var vendorId = 5;
+            var userId = 10;
+            var request = new CreateDishRequest { Name = "Spicy Ramen", Price = 30000, CategoryId = 1 };
+
+            _vendorRepoMock.Setup(r => r.GetByIdAsync(vendorId)).ReturnsAsync(new BO.Entities.Vendor { VendorId = vendorId, UserId = userId });
+            _catRepoMock.Setup(r => r.ExistsByIdAsync(1)).ReturnsAsync(true);
+
+            _dishRepoMock.Setup(r => r.CreateAsync(It.IsAny<BO.Entities.Dish>()))
+                .ReturnsAsync(new BO.Entities.Dish { DishId = 100, VendorId = vendorId, Name = request.Name });
+            _dishRepoMock.Setup(r => r.GetByIdAsync(100))
+                .ReturnsAsync(new BO.Entities.Dish { DishId = 100, VendorId = vendorId, Name = request.Name });
+
+            _dashboardServiceMock
+                .Setup(s => s.GetDishDashboardByVendorAsync(vendorId))
+                .ReturnsAsync(new DishDashboardDto
+                {
+                    TopDishes = new List<TopDishDto>
+                    {
+                        new TopDishDto { DishId = 100, DishName = "Spicy Ramen", TotalQuantityOrdered = 0 },
+                        new TopDishDto { DishId = 101, DishName = "Another Dish", TotalQuantityOrdered = 0 }
+                    }
+                });
+
+            var result = await _dishService.CreateDishAsync(vendorId, request, userId, "url");
+
+            Assert.False(result.IsBestSeller);
+        }
+
         // SV_DISH_01 (UTCID02) - Empty Name
         [Fact]
         public async Task CreateDishAsync_EmptyName_ThrowsException()
