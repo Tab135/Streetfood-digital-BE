@@ -140,5 +140,30 @@ namespace StreetFood.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
             }
         }
+
+        [HttpGet("system-campaigns/{campaignId}/statistics")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<AdminSystemCampaignDetailsDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetSystemCampaignStatistics(int campaignId)
+        {
+            try
+            {
+                var dashboardDto = await _adminDashboardService.GetSystemCampaignDetailsAsync(campaignId);
+
+                return Ok(new
+                {
+                    message = "Lấy thống kê chiến dịch hệ thống thành công",
+                    data = dashboardDto
+                });
+            }
+            catch (DomainExceptions ex)
+            {
+                return BadRequest(new { message = ex.Message, errorCode = ex.ErrorCode });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+            }
+        }
     }
 }

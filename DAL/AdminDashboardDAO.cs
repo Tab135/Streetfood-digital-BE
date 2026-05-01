@@ -300,5 +300,100 @@ namespace DAL
 
             return Math.Round(((currentValue - previousValue) / previousValue) * 100m, 2);
         }
+
+        public async Task<AdminSystemCampaignDetailsDto> GetSystemCampaignDetailsAsync(int campaignId)
+        {
+            var campaign = await _context.Campaigns
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.CampaignId == campaignId && c.CreatedByVendorId == null);
+
+            if (campaign == null)
+            {
+                throw new BO.Exceptions.DomainExceptions("System campaign not found or not a system campaign.");
+            }
+
+            var totalBranchesJoined = await _context.BranchCampaigns
+                .AsNoTracking()
+                .Where(bc => bc.CampaignId == campaignId )
+                .CountAsync();
+
+            var branchOrdersQuery = await _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Complete 
+                            && o.AppliedVoucher != null 
+                            && o.AppliedVoucher.VendorCampaignId == campaignId)
+                .GroupBy(o => new { o.BranchId, o.Branch.Name })
+                .Select(g => new AdminSystemCampaignBranchOrderDto
+                {
+                    BranchId = g.Key.BranchId,
+                    BranchName = g.Key.Name,
+                    OrderCount = g.Count()
+                })
+                .ToListAsync();
+
+            var totalOrders = branchOrdersQuery.Sum(bo => bo.OrderCount);
+
+            var questsQuery = await _context.Quests
+                .AsNoTracking()
+                .Where(q => q.CampaignId == campaignId)
+                .Select(q => new
+                {
+                    q.QuestId,
+                    q.Title,
+                    TotalUsersDoing = q.UserQuests.Count,
+                    UsersCurrentlyDoing = q.UserQuests.Count(uq => uq.Status == "IN_PROGRESS"),
+                    UsersFinished = q.UserQuests.Count(uq => uq.Status == "COMPLETED")
+                })
+                .ToListAsync();
+
+            var questsDto = questsQuery.Select(q => new AdminSystemCampaignQuestDto
+            {
+                QuestId = q.QuestId,
+                QuestTitle = q.Title,
+                TotalUsersDoing = q.TotalUsersDoing,
+                UsersCurrentlyDoing = q.UsersCurrentlyDoing,
+                UsersFinished = q.UsersFinished
+            }).ToList();
+
+            var vouchersQuery = await _context.Vouchers
+                .AsNoTracking()
+                .Where(v => v.VendorCampaignId == campaignId)
+                .Select(v => new AdminSystemCampaignVoucherDto
+                {
+                    VoucherId = v.VoucherId,
+                    VoucherName = v.Name,
+                    TotalUsed = _context.Orders.Count(o => o.Status == OrderStatus.Complete && o.AppliedVoucherId == v.VoucherId)
+                })
+                .ToListAsync();
+
+            var campaignOrders = await _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Complete 
+                            && o.AppliedVoucher != null 
+                            && o.AppliedVoucher.VendorCampaignId == campaignId)
+                .OrderByDescending(o => o.CreatedAt)
+                .Select(o => new AdminSystemCampaignOrderDto
+                {
+                    OrderId = o.OrderId,
+                    BranchName = o.Branch.Name,
+                    VoucherName = o.AppliedVoucher!.Name,
+                    TotalAmount = o.TotalAmount,
+                    DiscountAmount = o.DiscountAmount ?? 0m,
+                    CreatedAt = o.CreatedAt
+                })
+                .ToListAsync();
+
+            return new AdminSystemCampaignDetailsDto
+            {
+                CampaignId = campaign.CampaignId,
+                CampaignName = campaign.Name,
+                TotalBranchesJoined = totalBranchesJoined,
+                TotalOrders = totalOrders,
+                BranchOrders = branchOrdersQuery,
+                Quests = questsDto,
+                Vouchers = vouchersQuery,
+                CampaignOrders = campaignOrders
+            };
+        }
     }
 }

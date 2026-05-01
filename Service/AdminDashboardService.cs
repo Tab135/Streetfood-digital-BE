@@ -40,6 +40,11 @@ namespace Service
             return await _adminDashboardRepository.GetUserToVendorConversionChartAsync(fromDate, toDate);
         }
 
+        public async Task<AdminSystemCampaignDetailsDto> GetSystemCampaignDetailsAsync(int campaignId)
+        {
+            return await _adminDashboardRepository.GetSystemCampaignDetailsAsync(campaignId);
+        }
+
         private static void ValidateDateRange(DateTime fromDate, DateTime toDate)
         {
             if (fromDate == default || toDate == default)

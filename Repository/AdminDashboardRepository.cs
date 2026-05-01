@@ -34,5 +34,10 @@ namespace Repository
         {
             return await _adminDashboardDAO.GetUserToVendorConversionChartAsync(fromDate, toDate);
         }
+
+        public async Task<AdminSystemCampaignDetailsDto> GetSystemCampaignDetailsAsync(int campaignId)
+        {
+            return await _adminDashboardDAO.GetSystemCampaignDetailsAsync(campaignId);
+        }
     }
 }
