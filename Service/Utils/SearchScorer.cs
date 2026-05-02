@@ -111,8 +111,10 @@ namespace Service.Utils
                 else
                 {
                     // Fuzzy fallback: fraction of keyword tokens that fuzzy-match a dish token.
+                    // Require >= 50% match to avoid false positives from short token coincidences
+                    // (e.g. "chau" from "tra sua tran chau" fuzzy-matching "cha" in unrelated dishes).
                     var fuzzyFraction = TextNormalizer.FuzzyMatchFraction(keywordTokens, dishTokens);
-                    if (fuzzyFraction <= 0.0) return 0.0;
+                    if (fuzzyFraction < 0.5) return 0.0;
                     baseScore = DishFuzzyFloor + (DishFuzzyCeil - DishFuzzyFloor) * fuzzyFraction;
                 }
             }
