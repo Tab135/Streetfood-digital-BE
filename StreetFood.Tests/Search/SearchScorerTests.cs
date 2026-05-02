@@ -169,5 +169,45 @@ namespace StreetFood.Tests.Search
             Assert.True(score < SearchScorer.DisplayNameFuzzy,
                 $"Similar score ({score}) must stay below fuzzy bucket ({SearchScorer.DisplayNameFuzzy})");
         }
+
+        // ----- DisplayName scoring — Trà sữa cases ----------------------------
+
+        [Fact]
+        public void ScoreDisplayName_TraSua_ExactVendorName_Returns100()
+        {
+            // Quán tên đúng "Trà Sữa" → exact
+            var score = SearchScorer.ScoreDisplayName("tra sua", "Trà Sữa", "Quận 1");
+            Assert.Equal(100.0, score);
+        }
+
+        [Fact]
+        public void ScoreDisplayName_TraSua_VendorContainsKeyword_Returns80()
+        {
+            // "Trà Sữa Minh" chứa "tra sua" → fuzzy substring
+            var score = SearchScorer.ScoreDisplayName("tra sua", "Trà Sữa Minh", "Quận 3");
+            Assert.Equal(80.0, score);
+        }
+
+        [Fact]
+        public void ScoreDisplayName_TraSua_GongCha_Returns0()
+        {
+            // Brand lớn không có "tra sua" trong tên → không khớp display name
+            var score = SearchScorer.ScoreDisplayName("tra sua", "Gong Cha", "Quận 1");
+            Assert.Equal(0.0, score);
+        }
+
+        [Fact]
+        public void ScoreDisplayName_TraSua_TheAlley_Returns0()
+        {
+            var score = SearchScorer.ScoreDisplayName("tra sua", "The Alley", "Quận 1");
+            Assert.Equal(0.0, score);
+        }
+
+        [Fact]
+        public void ScoreDisplayName_TraSua_PhucLong_Returns0()
+        {
+            var score = SearchScorer.ScoreDisplayName("tra sua", "Phúc Long", "Quận 1");
+            Assert.Equal(0.0, score);
+        }
     }
 }

@@ -199,6 +199,115 @@ namespace StreetFood.Tests.Search
             }
         }
 
+        // ----- Trà sữa: local shop outranks chain brand by display name bucket ---
+
+        [Fact]
+        public async Task SearchTraSua_LocalShopWithNameMatch_OutranksGongCha()
+        {
+            // "Quán Trà Sữa Minh" tên chứa "tra sua" → DisplayName=80 (bucket 2)
+            // Gong Cha không có "tra sua" trong tên → DisplayName=0 (bucket 0), chỉ có DishScore
+            var localShop = MakeBranch(1, 10, "Trà Sữa Minh", "Quận 3",
+                dishes: new[] { "Trà sữa đào", "Trà sữa trân châu" });
+            var gongCha = MakeBranch(2, 20, "Gong Cha", "Quận 1",
+                avgRating: 4.8, reviews: 500,
+                dishes: new[] { "Milk Tea", "Trà Sữa Đào", "Bubble Tea" });
+
+            SetupFilteredBranches((localShop, 1.5), (gongCha, 0.3));
+            SetupEmptyDashboardForAll();
+
+            var results = await _service.SearchAsync(new SearchFilterDto
+            {
+                Keyword = "trà sữa",
+                Lat = 10.77,
+                Long = 106.70
+            });
+
+            Assert.Equal(2, results.Count);
+            // Local shop bucket 2 (DisplayName=80) xếp trước Gong Cha bucket 0
+            Assert.Equal("Trà Sữa Minh", results[0].VendorName);
+            Assert.Equal("Gong Cha",     results[1].VendorName);
+            Assert.Equal(80.0, results[0].Branches[0].DisplayNameScore);
+            Assert.Equal(0.0,  results[1].Branches[0].DisplayNameScore);
+        }
+
+        [Fact]
+        public async Task SearchTraSua_GongCha_AppearsBecauseDishMatchesSynonym()
+        {
+            // Gong Cha có món "Milk Tea" → khớp keyword form "milk tea" (synonym của "tra sua")
+            var gongCha = MakeBranch(1, 10, "Gong Cha", "Quận 1",
+                dishes: new[] { "Milk Tea", "Trà Đào", "Matcha Latte" });
+
+            SetupFilteredBranches((gongCha, 0.5));
+            SetupEmptyDashboardForAll();
+
+            var results = await _service.SearchAsync(new SearchFilterDto
+            {
+                Keyword = "trà sữa",
+                Lat = 10.77,
+                Long = 106.70
+            });
+
+            Assert.Single(results);
+            Assert.Equal("Gong Cha", results[0].VendorName);
+            Assert.True(results[0].Branches[0].DishScore > 0,
+                "Gong Cha should score via synonym-expanded dish match (milk tea ↔ tra sua)");
+        }
+
+        [Fact]
+        public async Task SearchTraSua_UnrelatedVendor_IsDropped()
+        {
+            // "Cơm bì chả" previously got DishScore=23.75 via false fuzzy match:
+            // "chau" (from keyword form "tra sua tran chau") fuzzy-matched "cha" with EditDistance=1.
+            // Fixed by requiring fuzzyFraction >= 0.5 in ScoreDish — single-token coincidences no longer score.
+            var comTam = MakeBranch(1, 10, "Cơm Tấm Bà Sáu", "Quận 3",
+                dishes: new[] { "Cơm sườn", "Cơm bì chả" });
+
+            SetupFilteredBranches((comTam, 0.3));
+            SetupEmptyDashboardForAll();
+
+            var results = await _service.SearchAsync(new SearchFilterDto
+            {
+                Keyword = "trà sữa",
+                Lat = 10.77,
+                Long = 106.70
+            });
+
+            Assert.Empty(results);
+        }
+
+        [Fact]
+        public async Task SearchTraSua_MultipleChainsRankedByFinalScoreWithinBucket0()
+        {
+            // Không chain nào có "tra sua" trong tên → tất cả bucket 0
+            // Sắp xếp theo FinalScore: khoảng cách gần + đánh giá cao
+            var gongCha = MakeBranch(1, 10, "Gong Cha", "Quận 1",
+                avgRating: 4.8, reviews: 500, isSubscribed: true,
+                dishes: new[] { "Milk Tea", "Bubble Tea" });
+            var theAlley = MakeBranch(2, 20, "The Alley", "Quận 3",
+                avgRating: 4.5, reviews: 200,
+                dishes: new[] { "Brown Sugar Milk Tea", "Matcha Latte" });
+            var phucLong = MakeBranch(3, 30, "Phúc Long", "Quận 5",
+                avgRating: 4.3, reviews: 300,
+                dishes: new[] { "Trà Sữa Kem Trứng", "Trà Sữa Tắc" });
+
+            // Gong Cha xa nhất nhưng subscribed + rating cao nhất
+            SetupFilteredBranches((gongCha, 2.0), (theAlley, 0.8), (phucLong, 0.5));
+            SetupEmptyDashboardForAll();
+
+            var results = await _service.SearchAsync(new SearchFilterDto
+            {
+                Keyword = "trà sữa",
+                Lat = 10.77,
+                Long = 106.70
+            });
+
+            Assert.Equal(3, results.Count);
+            // Tất cả DisplayNameScore = 0 (bucket 0)
+            Assert.All(results, r => Assert.Equal(0.0, r.Branches[0].DisplayNameScore));
+            // Tất cả DishScore > 0 (có món khớp synonym)
+            Assert.All(results, r => Assert.True(r.Branches[0].DishScore > 0));
+        }
+
         // ----- No-GPS fallback -------------------------------------------------
 
         [Fact]

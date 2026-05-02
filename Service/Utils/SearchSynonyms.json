@@ -126,15 +126,10 @@
       "banh trang sa te"
     ],
     "ga ran": [
-      "kfc",
-      "lotteria",
-      "jollibee",
       "ga chien",
       "canh ga chien nuoc mam",
       "ga ran han quoc",
-      "ga u muoi",
-      "ga ran popeyes",
-      "texas chicken"
+      "ga u muoi"
     ],
     "lau": [
       "hotpot",
@@ -189,13 +184,7 @@
       "com ga phan rang",
       "com ga tam ky"
     ],
-    "mi cay": [
-      "mi cay 7 cap do",
-      "mi han quoc",
-      "mi koreno",
-      "mi cay sasin",
-      "mi cay itau"
-    ],
+    "mi cay": ["mi cay 7 cap do", "mi han quoc"],
     "nem nuong": [
       "nem lui",
       "nem nuong nha trang",
@@ -218,7 +207,6 @@
     ],
     "mi tron": [
       "mi goi xao",
-      "mi indomie",
       "mi tron muoi ot",
       "mi xao bo",
       "mi tron trung long dao",
@@ -350,10 +338,11 @@
       "sting",
       "cocacola",
       "pepsi",
+      "cocacola",
       "nuoc suoi",
-      "tra xanh khong do",
       "redbull",
-      "7up"
+      "7up",
+      "tra xanh khong do"
     ],
     "chao": [
       "chao long",

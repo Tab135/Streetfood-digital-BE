@@ -73,5 +73,42 @@ namespace StreetFood.Tests.Search
         {
             Assert.Empty(TextNormalizer.ExpandWithSynonyms(string.Empty));
         }
+
+        // ----- Trà sữa synonym expansion (no brand names) ----------------------
+
+        [Fact]
+        public void ExpandWithSynonyms_TraSua_IncludesFoodTypeForms()
+        {
+            var expansions = TextNormalizer.ExpandWithSynonyms(
+                TextNormalizer.NormalizeForSearch("Trà sữa"));
+
+            Assert.Contains("tra sua",          expansions);
+            Assert.Contains("milk tea",         expansions);
+            Assert.Contains("bubble tea",       expansions);
+            Assert.Contains("matcha",           expansions);
+            Assert.Contains("tra sua tran chau", expansions);
+        }
+
+        [Fact]
+        public void ExpandWithSynonyms_TraSua_DoesNotContainBrandNames()
+        {
+            var expansions = TextNormalizer.ExpandWithSynonyms(
+                TextNormalizer.NormalizeForSearch("Trà sữa"));
+
+            // Brand names không được nằm trong synonym expansion
+            Assert.DoesNotContain("gong cha",   expansions);
+            Assert.DoesNotContain("the alley",  expansions);
+            Assert.DoesNotContain("phuc long",  expansions);
+        }
+
+        [Fact]
+        public void ExpandWithSynonyms_MilkTea_ResolvesBidirectionalToTraSua()
+        {
+            var expansions = TextNormalizer.ExpandWithSynonyms("milk tea");
+
+            Assert.Contains("tra sua",    expansions);
+            Assert.Contains("bubble tea", expansions);
+            Assert.Contains("matcha",     expansions);
+        }
     }
 }
