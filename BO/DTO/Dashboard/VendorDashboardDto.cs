@@ -48,6 +48,15 @@ namespace BO.DTO.Dashboard
         public string CampaignName { get; set; } = string.Empty;
         public int OrderCount { get; set; }
         public decimal Revenue { get; set; }
+        public List<VendorCampaignBranchDto> Branches { get; set; } = new List<VendorCampaignBranchDto>();
+    }
+
+    public class VendorCampaignBranchDto
+    {
+        public int BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public int OrderCount { get; set; }
+        public decimal Revenue { get; set; }
     }
 
     public class TopDishDto

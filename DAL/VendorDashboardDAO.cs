@@ -66,37 +66,57 @@ namespace DAL
 
         public async Task<CampaignDashboardDto> GetCampaignDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
         {
-            var branchIds = await _context.Branches
+            var vendorCampaigns = await _context.Campaigns
                 .AsNoTracking()
-                .Where(b => b.VendorId == vendorId)
-                .Select(b => b.BranchId)
+                .Where(c => c.CreatedByVendorId == vendorId)
                 .ToListAsync();
 
-            if (!branchIds.Any())
+            if (!vendorCampaigns.Any())
             {
                 return new CampaignDashboardDto();
             }
 
-            var campaignPerformances = await (
-                    from order in _context.Orders.AsNoTracking()
-                    join voucher in _context.Vouchers.AsNoTracking() on order.AppliedVoucherId equals voucher.VoucherId
-                    join campaign in _context.Campaigns.AsNoTracking() on voucher.VendorCampaignId equals campaign.CampaignId
-                    where branchIds.Contains(order.BranchId)
-                          && order.Status == OrderStatus.Complete
-                          && order.CreatedAt >= fromDate
-                          && order.CreatedAt <= toDate
-                    group order by new { campaign.CampaignId, campaign.Name }
-                    into grouped
-                    select new CampaignPerformanceDto
+            var campaignPerformances = new List<CampaignPerformanceDto>();
+
+            foreach (var campaign in vendorCampaigns)
+            {
+                var joinedBranches = await _context.BranchCampaigns
+                    .AsNoTracking()
+                    .Where(bc => bc.CampaignId == campaign.CampaignId)
+                    .Select(bc => new { bc.BranchId, bc.Branch.Name })
+                    .ToListAsync();
+
+                var orders = await _context.Orders
+                    .AsNoTracking()
+                    .Where(o => o.Status == OrderStatus.Complete
+                                && o.AppliedVoucher != null
+                                && o.AppliedVoucher.VendorCampaignId == campaign.CampaignId
+                                && o.CreatedAt >= fromDate
+                                && o.CreatedAt <= toDate)
+                    .ToListAsync();
+
+                var branchesDto = new List<VendorCampaignBranchDto>();
+                foreach (var b in joinedBranches)
+                {
+                    var branchOrders = orders.Where(o => o.BranchId == b.BranchId).ToList();
+                    branchesDto.Add(new VendorCampaignBranchDto
                     {
-                        CampaignId = grouped.Key.CampaignId,
-                        CampaignName = grouped.Key.Name,
-                        OrderCount = grouped.Count(),
-                        Revenue = grouped.Sum(o => o.FinalAmount)
-                    })
-                .OrderByDescending(c => c.Revenue)
-                .ThenBy(c => c.CampaignName)
-                .ToListAsync();
+                        BranchId = b.BranchId,
+                        BranchName = b.Name,
+                        OrderCount = branchOrders.Count,
+                        Revenue = branchOrders.Sum(o => o.FinalAmount)
+                    });
+                }
+
+                campaignPerformances.Add(new CampaignPerformanceDto
+                {
+                    CampaignId = campaign.CampaignId,
+                    CampaignName = campaign.Name,
+                    OrderCount = orders.Count,
+                    Revenue = orders.Sum(o => o.FinalAmount),
+                    Branches = branchesDto
+                });
+            }
 
             return new CampaignDashboardDto
             {
