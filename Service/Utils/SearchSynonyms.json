@@ -10,7 +10,28 @@
       "com tam bui",
       "com suon trung",
       "com suon cha",
-      "com tam op la"
+      "com tam op la",
+      "com tam dac biet",
+      "com tam bi cha",
+      "com tam phu tho",
+      "com tam nguyen van cu",
+      "com suon bi cha trung",
+      "com tam suon bi cha",
+      "com tam suon bi cha trung",
+      "com tam suon bi cha op la",
+      "com tam suon bi trung",
+      "com tam suon cha trung",
+      "com tam suon cha op la",
+      "com tam bi cha trung",
+      "com tam bi cha op la",
+      "com tam suon nuong bi cha",
+      "com tam suon nuong bi cha trung",
+      "com tam suon can",
+      "com tam suon can bi cha",
+      "com tam suon bo",
+      "com tam thit nuong",
+      "com tam ga nuong",
+      "com tam tom nuong"
     ],
     "pho": [
       "pho bo",
@@ -21,7 +42,21 @@
       "pho bac",
       "pho kho gia lai",
       "pho thin",
-      "pho gia truyen"
+      "pho gia truyen",
+      "pho bo tai",
+      "pho bo tai nan",
+      "pho bo tai nam",
+      "pho bo tai gau",
+      "pho bo tai sach",
+      "pho bo vien",
+      "pho bo chin",
+      "pho bo tai chin nam gau",
+      "pho tai nam gau",
+      "pho tai chin",
+      "pho tai sach",
+      "pho bo kho",
+      "pho ga xe phai",
+      "pho ga ta"
     ],
     "bun bo": [
       "bun bo hue",
@@ -29,7 +64,15 @@
       "bun bo gio heo",
       "bun bo tai",
       "bun bo xao",
-      "bun bo nam bo"
+      "bun bo nam bo",
+      "bun bo gio heo cha hue",
+      "bun bo gio heo huyet",
+      "bun bo huyet",
+      "bun bo cha",
+      "bun bo gan",
+      "bun bo nam bo trung",
+      "bun bo xao rau",
+      "bun gio heo"
     ],
     "banh mi": [
       "banh my",
@@ -43,7 +86,21 @@
       "doner kebab",
       "banh mi tho nhi ky",
       "banh mi cha lua",
-      "hamburger"
+      "hamburger",
+      "banh mi thit nguoi",
+      "banh mi op la",
+      "banh mi op la thit nguoi",
+      "banh mi op la pate",
+      "banh mi thit nuong",
+      "banh mi bo kho",
+      "banh mi ga",
+      "banh mi trung",
+      "banh mi trung pho mai",
+      "banh mi dac biet",
+      "banh mi pate cha lua thit nguoi",
+      "banh mi chien",
+      "banh mi nuong",
+      "banh mi nuong mo hanh"
     ],
     "hu tieu": [
       "hu tiu",
@@ -54,7 +111,17 @@
       "hu tieu sa dec",
       "hu tieu de",
       "hu tieu ca",
-      "hu tieu thanh xuan"
+      "hu tieu thanh xuan",
+      "hu tieu kho",
+      "hu tieu nuoc",
+      "hu tieu bo vien",
+      "hu tieu tom thit",
+      "hu tieu tom thit trung cut",
+      "hu tieu nam vang tom thit",
+      "hu tieu suon",
+      "hu tieu thap cam",
+      "hu tieu xao",
+      "hu tieu mi kho"
     ],
     "ca phe": [
       "cafe",
@@ -95,7 +162,14 @@
       "banh canh trang bang",
       "banh canh bot loc",
       "banh canh ca loc",
-      "banh canh cua roi"
+      "banh canh cua roi",
+      "banh canh cua gio heo",
+      "banh canh cua tom",
+      "banh canh gio heo trung cut",
+      "banh canh cha ca gio heo",
+      "banh canh thap cam",
+      "banh canh ghe",
+      "banh canh suon"
     ],
     "bun rieu": [
       "bun rieu cua",
@@ -114,7 +188,19 @@
       "xoi thit kho",
       "xoi khau nhuc",
       "xoi thap cam",
-      "xoi cuc"
+      "xoi cuc",
+      "xoi dau xanh",
+      "xoi dau phong",
+      "xoi ga xe",
+      "xoi suon",
+      "xoi trung lon",
+      "xoi lap xuong",
+      "xoi lap xuong trung",
+      "xoi ga lap xuong",
+      "xoi ba chi",
+      "xoi ga trung cut",
+      "xoi xeo lap xuong trung",
+      "xoi man dac biet"
     ],
     "banh trang tron": [
       "banh trang cuon",
@@ -144,7 +230,20 @@
       "lau ech",
       "lau ga la e",
       "lau nam",
-      "lau bo nhuoc"
+      "lau bo nhuoc",
+      "lau ca",
+      "lau ca keo",
+      "lau ca dieu hong",
+      "lau ca linh bong dien dien",
+      "lau suon",
+      "lau tom",
+      "lau tom cua",
+      "lau hai san nam",
+      "lau bo hai san",
+      "lau thai hai san",
+      "lau thai bo",
+      "lau oc",
+      "lau ga sate"
     ],
     "oc": [
       "quan oc",
@@ -184,7 +283,16 @@
       "com ga phan rang",
       "com ga tam ky"
     ],
-    "mi cay": ["mi cay 7 cap do", "mi han quoc"],
+    "mi cay": [
+      "mi cay 7 cap do",
+      "mi han quoc",
+      "mi cay tuong den",
+      "tokbokki",
+      "tteokbokki",
+      "banh gao cay",
+      "mi cay 3 cap do",
+      "mi cay cap do"
+    ],
     "nem nuong": [
       "nem lui",
       "nem nuong nha trang",
@@ -301,7 +409,16 @@
       "an chay",
       "hu tieu chay",
       "lau chay",
-      "mi chay"
+      "mi chay",
+      "bun chay",
+      "xoi chay",
+      "banh mi chay",
+      "che chay",
+      "goi cuon chay",
+      "vegan",
+      "vegetarian",
+      "thuc duong",
+      "chay truong"
     ],
     "bun mam": ["bun mam mien tay", "lau mam", "bun nuoc leo"],
     "mi hoanh thanh": [
@@ -323,7 +440,17 @@
       "bap xao",
       "ho lo nuong",
       "ca vien",
-      "bo vien"
+      "bo vien",
+      "trung ca sau",
+      "nuoc uot",
+      "xuc xich chien",
+      "khoai tay chien",
+      "phomai que chien",
+      "nugget ga",
+      "bap rang bo",
+      "bap que",
+      "rong bien",
+      "khoai lang chien"
     ],
     "kem": [
       "ice cream",
@@ -352,7 +479,15 @@
       "chao ech",
       "chao ech singapore",
       "chao trang ho ga",
-      "chao hai san"
+      "chao hai san",
+      "chao long gan",
+      "chao long huyet",
+      "chao ga xe phai",
+      "chao ca",
+      "chao tom",
+      "chao thap cam",
+      "chao suon tieu",
+      "chao bo"
     ],
     "pha lau": [
       "pha lau bo",
@@ -435,7 +570,184 @@
       "roll",
       "do an nhat",
       "kimbap",
-      "sushi duong pho"
+      "sushi duong pho",
+      "onigiri",
+      "tempura",
+      "udon",
+      "ramen nhat"
+    ],
+    "ramen": [
+      "mi nhat",
+      "mi ramen goi",
+      "mi bo han quoc",
+      "mi ramen",
+      "mi goi nhat ban",
+      "udon",
+      "soba"
+    ],
+    "ca ri": [
+      "curry",
+      "ca ri ga",
+      "ca ri bo",
+      "ca ri de",
+      "ca ri vit",
+      "ca ri hai san",
+      "ca ri an do",
+      "ca ri nhat",
+      "banh mi ca ri",
+      "com ca ri",
+      "ca ri nuoc cot dua",
+      "ca ri xanh",
+      "ca ri do"
+    ],
+    "hai san": [
+      "tom hum",
+      "cua rang muoi",
+      "tom rang muoi",
+      "muc xao chua ngot",
+      "muc nuong sa te",
+      "bach tuoc nuong",
+      "ghep rang muoi",
+      "ca hap",
+      "tom nuong",
+      "cua hap bia",
+      "tom chien nuoc mam",
+      "do bien"
+    ],
+    "mi xao": [
+      "mi ap chao",
+      "mi gion",
+      "chow mein",
+      "mi xao don",
+      "mi xao mem",
+      "mi xao hai san",
+      "mi xao bo",
+      "mi xao rau cu",
+      "mi xao ga"
+    ],
+    "banh flan": [
+      "flan",
+      "caramen",
+      "caramel",
+      "flan cacao",
+      "flan ca phe",
+      "flan pho mai",
+      "pudding",
+      "banh flan trung",
+      "do ngot"
+    ],
+    "nuoc mia": [
+      "mia da",
+      "mia ep",
+      "mia tuoi",
+      "nuoc mia gung",
+      "mia lanh",
+      "nuoc ep mia",
+      "mia tac"
+    ],
+    "banh bao": [
+      "banh bao nhan thit",
+      "banh bao nhan kem",
+      "banh bao chien",
+      "banh bao xiu mai",
+      "banh bao hap",
+      "bao chien",
+      "mantou",
+      "bao nhan trung muoi"
+    ],
+    "com suon": [
+      "suon ran",
+      "suon nuong",
+      "suon chien don",
+      "suon bo",
+      "suon non",
+      "com suon can",
+      "suon xao chua ngot"
+    ],
+    "ca kho": [
+      "ca kho to",
+      "ca kho gung",
+      "ca kho rieng",
+      "ca bong lau kho to",
+      "ca loc kho to",
+      "ca kho sieu cay",
+      "ca kho tieu",
+      "ca hap gung hanh"
+    ],
+    "banh ngot": [
+      "banh kem",
+      "cup cake",
+      "cake",
+      "cookie",
+      "macaron",
+      "brownie",
+      "tiramisu",
+      "banh su",
+      "banh eclair",
+      "tart trung",
+      "egg tart",
+      "matcha roll",
+      "do nuong ngot"
+    ],
+    "sandwich": [
+      "toast",
+      "banh sandwich",
+      "banh mi nuong bo",
+      "banh mi nuong trung",
+      "french toast",
+      "banh mi cat",
+      "banh mi goi trung",
+      "club sandwich"
+    ],
+    "pizza": [
+      "pizza banh trang",
+      "pizza viet",
+      "pizza thit bo",
+      "pizza hai san",
+      "pizza pho mai",
+      "pizza ga",
+      "calzone"
+    ],
+    "bun thai": [
+      "lau thai",
+      "bun nuoc thai",
+      "mi thai",
+      "pad thai",
+      "tom yum",
+      "do an thai lan",
+      "bun nuoc chua cay thai"
+    ],
+    "nuoc ep": [
+      "nuoc cam",
+      "nuoc ep tao",
+      "nuoc ep ca rot",
+      "nuoc ep dua hau",
+      "nuoc ep bo",
+      "nuoc ep xoai",
+      "nuoc ep thanh long",
+      "nuoc ep cu den",
+      "nuoc ep ro ma",
+      "cold press"
+    ],
+    "kho qua": [
+      "kho qua don thit",
+      "kho qua kho trung",
+      "kho qua xao trung",
+      "sup kho qua",
+      "kho qua nhoi thit",
+      "kho qua luoc"
+    ],
+    "do uong": [
+      "nuoc suoi",
+      "nuoc khoang",
+      "soda",
+      "tonic water",
+      "nuoc tang luc",
+      "nuoc dua",
+      "sua tuoi",
+      "sua chua uong",
+      "yogurt",
+      "nuoc soi"
     ]
   }
 }
