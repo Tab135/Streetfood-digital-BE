@@ -141,18 +141,18 @@ namespace StreetFood.Controllers
             }
         }
 
-        [HttpGet("system-campaigns/{campaignId}/statistics")]
+        [HttpGet("system-campaigns/statistics")]
         [Authorize(Roles = "Admin")]
-        [ProducesResponseType(typeof(ApiResponse<AdminSystemCampaignDetailsDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetSystemCampaignStatistics(int campaignId)
+        [ProducesResponseType(typeof(ApiResponse<List<AdminSystemCampaignDetailsDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetSystemCampaignStatistics()
         {
             try
             {
-                var dashboardDto = await _adminDashboardService.GetSystemCampaignDetailsAsync(campaignId);
+                var dashboardDto = await _adminDashboardService.GetAllSystemCampaignDetailsAsync();
 
                 return Ok(new
                 {
-                    message = "Lấy thống kê chiến dịch hệ thống thành công",
+                    message = "Lấy danh sách thống kê các chiến dịch hệ thống thành công",
                     data = dashboardDto
                 });
             }

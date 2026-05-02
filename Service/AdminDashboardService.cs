@@ -40,9 +40,9 @@ namespace Service
             return await _adminDashboardRepository.GetUserToVendorConversionChartAsync(fromDate, toDate);
         }
 
-        public async Task<AdminSystemCampaignDetailsDto> GetSystemCampaignDetailsAsync(int campaignId)
+        public async Task<List<AdminSystemCampaignDetailsDto>> GetAllSystemCampaignDetailsAsync()
         {
-            return await _adminDashboardRepository.GetSystemCampaignDetailsAsync(campaignId);
+            return await _adminDashboardRepository.GetAllSystemCampaignDetailsAsync();
         }
 
         private static void ValidateDateRange(DateTime fromDate, DateTime toDate)

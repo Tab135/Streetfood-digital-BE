@@ -10,6 +10,6 @@ namespace Repository.Interfaces
         Task<AdminMoneyChartDto> GetMoneyChartAsync(DateTime fromDate, DateTime toDate);
         Task<AdminCompensationChartDto> GetCompensationChartAsync(DateTime fromDate, DateTime toDate);
         Task<AdminUserToVendorConversionChartDto> GetUserToVendorConversionChartAsync(DateTime fromDate, DateTime toDate);
-        Task<AdminSystemCampaignDetailsDto> GetSystemCampaignDetailsAsync(int campaignId);
+        Task<List<AdminSystemCampaignDetailsDto>> GetAllSystemCampaignDetailsAsync();
     }
 }
