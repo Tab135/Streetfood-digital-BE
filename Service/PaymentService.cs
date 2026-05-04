@@ -1203,6 +1203,9 @@ namespace Service.PaymentsService
                 };
 
                 string paymentLinkId, checkoutUrl, qrCode;
+                string? bin = null;
+                string? accountNumber = null;
+                string? accountName = null;
                 if (_isDebugMode)
                 {
                     paymentLinkId = "DEBUG-CAMP-" + orderCode;
@@ -1215,9 +1218,12 @@ namespace Service.PaymentsService
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
                     qrCode = paymentLinkResponse.QrCode;
+                    bin = paymentLinkResponse.Bin;
+                    accountNumber = paymentLinkResponse.AccountNumber;
+                    accountName = paymentLinkResponse.AccountName;
                 }
 
-                await _paymentRepo.UpdatePaymentWithPayOSDetails(orderCode, "PENDING", paymentLinkId, checkoutUrl);
+                await _paymentRepo.UpdatePaymentWithPayOSDetails(orderCode, "PENDING", paymentLinkId, checkoutUrl, bin, accountNumber, accountName);
 
                 return new PaymentLinkResult
                 {
@@ -1225,7 +1231,10 @@ namespace Service.PaymentsService
                     PaymentUrl = checkoutUrl,
                     QrCode = qrCode,
                     OrderCode = orderCode,
-                    PaymentLinkId = paymentLinkId
+                    PaymentLinkId = paymentLinkId,
+                    Bin = bin,
+                    AccountNumber = accountNumber,
+                    AccountName = accountName
                 };
             }
             catch (Exception ex)
@@ -1314,6 +1323,9 @@ namespace Service.PaymentsService
                 };
 
                 string paymentLinkId, checkoutUrl, qrCode;
+                string? bin = null;
+                string? accountNumber = null;
+                string? accountName = null;
                 if (_isDebugMode)
                 {
                     paymentLinkId = "DEBUG-VENDOR-CAMP-" + orderCode;
@@ -1326,9 +1338,12 @@ namespace Service.PaymentsService
                     paymentLinkId = paymentLinkResponse.PaymentLinkId;
                     checkoutUrl = paymentLinkResponse.CheckoutUrl;
                     qrCode = paymentLinkResponse.QrCode;
+                    bin = paymentLinkResponse.Bin;
+                    accountNumber = paymentLinkResponse.AccountNumber;
+                    accountName = paymentLinkResponse.AccountName;
                 }
 
-                await _paymentRepo.UpdatePaymentWithPayOSDetails(orderCode, "PENDING", paymentLinkId, checkoutUrl);
+                await _paymentRepo.UpdatePaymentWithPayOSDetails(orderCode, "PENDING", paymentLinkId, checkoutUrl, bin, accountNumber, accountName);
 
                 return new PaymentLinkResult
                 {
@@ -1336,7 +1351,10 @@ namespace Service.PaymentsService
                     PaymentUrl = checkoutUrl,
                     QrCode = qrCode,
                     OrderCode = orderCode,
-                    PaymentLinkId = paymentLinkId
+                    PaymentLinkId = paymentLinkId,
+                    Bin = bin,
+                    AccountNumber = accountNumber,
+                    AccountName = accountName
                 };
             }
             catch (Exception ex)
