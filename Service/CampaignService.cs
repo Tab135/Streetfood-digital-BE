@@ -519,6 +519,9 @@ namespace Service
                 dto.QrCode = paymentResult.QrCode;
                 dto.OrderCode = paymentResult.OrderCode;
                 dto.PaymentLinkId = paymentResult.PaymentLinkId;
+                dto.Bin = paymentResult.Bin;
+                dto.AccountNumber = paymentResult.AccountNumber;
+                dto.AccountName = paymentResult.AccountName;
             }
 
             result.Branches.AddRange(pendingBranchDtos);
@@ -657,6 +660,9 @@ namespace Service
                 dto.QrCode = paymentResult.QrCode;
                 dto.OrderCode = paymentResult.OrderCode;
                 dto.PaymentLinkId = paymentResult.PaymentLinkId;
+                dto.Bin = paymentResult.Bin;
+                dto.AccountNumber = paymentResult.AccountNumber;
+                dto.AccountName = paymentResult.AccountName;
             }
 
             result.Branches.AddRange(pendingBranchDtos);

@@ -47,7 +47,10 @@ namespace StreetFood.Controllers
                     PaymentUrl = paymentSource.PaymentUrl,
                     QrCode = paymentSource.QrCode,
                     OrderCode = paymentSource.OrderCode,
-                    PaymentLinkId = paymentSource.PaymentLinkId
+                    PaymentLinkId = paymentSource.PaymentLinkId,
+                    Bin = paymentSource.Bin,
+                    AccountNumber = paymentSource.AccountNumber,
+                    AccountName = paymentSource.AccountName
                 };
             }
 
