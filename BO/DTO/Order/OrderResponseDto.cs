@@ -32,5 +32,6 @@ public class OrderResponseDto
     public int? OrderXP { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public string MoneyLocation { get; set; } = string.Empty;
     public List<OrderDishResponseDto> Items { get; set; } = new();
 }

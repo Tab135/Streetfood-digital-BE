@@ -191,8 +191,14 @@ public class OrderService : IOrderService
             return null;
         }
 
+        var hasPayment = false;
+        if (order.Status == OrderStatus.Cancelled)
+        {
+            var payment = await _paymentService.GetLatestPaymentByOrderIdAsync(orderId);
+            hasPayment = payment != null;
+        }
 
-        return MapToDto(order);
+        return MapToDto(order, hasPayment);
     }
 
     public async Task<PaginatedResponse<OrderResponseDto>> GetMyOrdersAsync(int userId, int pageNumber, int pageSize, OrderStatus? status = null)
@@ -221,7 +227,8 @@ public class OrderService : IOrderService
             };
 
         var (orders, totalCount) = await _orderRepository.GetByUserId(userId, pageNumber, pageSize, effectiveStatuses);
-        var items = orders.Select(MapToDto).ToList();
+        var paidOrderIds = await _orderRepository.GetOrderIdsWithPaymentsAsync(orders.Select(o => o.OrderId));
+        var items = orders.Select(o => MapToDto(o, paidOrderIds.Contains(o.OrderId))).ToList();
 
         return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
     }
@@ -250,7 +257,8 @@ public class OrderService : IOrderService
                 OrderStatus.Complete
             };
         var (orders, totalCount) = await _orderRepository.GetByBranchIds(branchIds, pageNumber, pageSize, effectiveStatuses);
-        var items = orders.Select(MapToDto).ToList();
+        var paidOrderIds = await _orderRepository.GetOrderIdsWithPaymentsAsync(orders.Select(o => o.OrderId));
+        var items = orders.Select(o => MapToDto(o, paidOrderIds.Contains(o.OrderId))).ToList();
 
         return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
     }
@@ -299,7 +307,8 @@ public class OrderService : IOrderService
             };
 
         var (orders, totalCount) = await _orderRepository.GetByBranchIds(new List<int> { branchId }, pageNumber, pageSize, effectiveStatuses);
-        var items = orders.Select(MapToDto).ToList();
+        var paidOrderIds = await _orderRepository.GetOrderIdsWithPaymentsAsync(orders.Select(o => o.OrderId));
+        var items = orders.Select(o => MapToDto(o, paidOrderIds.Contains(o.OrderId))).ToList();
 
         return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
     }
@@ -340,7 +349,8 @@ public class OrderService : IOrderService
             };
 
         var (orders, totalCount) = await _orderRepository.GetByBranchIds(branchIds, pageNumber, pageSize, effectiveStatuses);
-        var items = orders.Select(MapToDto).ToList();
+        var paidOrderIds = await _orderRepository.GetOrderIdsWithPaymentsAsync(orders.Select(o => o.OrderId));
+        var items = orders.Select(o => MapToDto(o, paidOrderIds.Contains(o.OrderId))).ToList();
 
         return new PaginatedResponse<OrderResponseDto>(items, totalCount, pageNumber, pageSize);
     }
@@ -956,6 +966,14 @@ public class OrderService : IOrderService
         return RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
     }
 
+    private static string ComputeMoneyLocation(OrderStatus status, bool hasPayment) => status switch
+    {
+        OrderStatus.Pending => "notPaid",
+        OrderStatus.Complete => "transToVendor",
+        OrderStatus.Cancelled => hasPayment ? "refundToCustomer" : "notPaid",
+        _ => "systemKeep"
+    };
+
     private static AdminOrderResponseDto MapToAdminDto(Order order, Payment? payment)
     {
         return new AdminOrderResponseDto
@@ -972,6 +990,7 @@ public class OrderService : IOrderService
             OrderXP = order.OrderXP,
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt,
+            MoneyLocation = ComputeMoneyLocation(order.Status, payment != null),
             User = order.User == null ? new AdminOrderUserDto() : new AdminOrderUserDto
             {
                 Id = order.User.Id,
@@ -1017,7 +1036,7 @@ public class OrderService : IOrderService
         };
     }
 
-    private static OrderResponseDto MapToDto(Order order)
+    private static OrderResponseDto MapToDto(Order order, bool hasPayment = false)
     {
         return new OrderResponseDto
         {
@@ -1040,6 +1059,7 @@ public class OrderService : IOrderService
             CreatedAt = order.CreatedAt,
             OrderXP = order.OrderXP,
             UpdatedAt = order.UpdatedAt,
+            MoneyLocation = ComputeMoneyLocation(order.Status, hasPayment),
             Items = order.OrderDishes.Select(od => new OrderDishResponseDto
             {
                 DishId = od.DishId,

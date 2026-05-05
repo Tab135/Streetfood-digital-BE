@@ -161,6 +161,17 @@ public class OrderDAO
         return await _context.Orders.AnyAsync(o => o.OrderId == orderId);
     }
 
+    public async Task<HashSet<int>> GetOrderIdsWithPaymentsAsync(IEnumerable<int> orderIds)
+    {
+        var idList = orderIds.ToList();
+        var result = await _context.Payments
+            .Where(p => p.OrderId.HasValue && idList.Contains(p.OrderId.Value))
+            .Select(p => p.OrderId!.Value)
+            .Distinct()
+            .ToListAsync();
+        return [.. result];
+    }
+
     public async Task<(List<Order> items, Dictionary<int, Payment> paymentByOrderId, int totalCount)> GetAllForAdminAsync(
         int pageNumber,
         int pageSize,
