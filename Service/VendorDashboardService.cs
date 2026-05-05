@@ -39,7 +39,7 @@ namespace Service
             return await _vendorDashboardRepo.GetCampaignDashboardAsync(vendorId.Value, fromDate, toDate);
         }
 
-        public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int userId)
+        public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int userId, DateTime fromDate, DateTime toDate)
         {
             var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
             if (vendorId == null)
@@ -47,10 +47,10 @@ namespace Service
                 throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
             }
 
-            return await _vendorDashboardRepo.GetVoucherDashboardAsync(vendorId.Value);
+            return await _vendorDashboardRepo.GetVoucherDashboardAsync(vendorId.Value, fromDate, toDate);
         }
 
-        public async Task<DishDashboardDto> GetDishDashboardAsync(int userId)
+        public async Task<DishDashboardDto> GetDishDashboardAsync(int userId, DateTime fromDate, DateTime toDate)
         {
             var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
             if (vendorId == null)
@@ -58,12 +58,12 @@ namespace Service
                 throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
             }
 
-            return await _vendorDashboardRepo.GetDishDashboardAsync(vendorId.Value);
+            return await _vendorDashboardRepo.GetDishDashboardAsync(vendorId.Value, fromDate, toDate);
         }
 
         public Task<DishDashboardDto> GetDishDashboardByVendorAsync(int vendorId)
         {
-            return _vendorDashboardRepo.GetDishDashboardAsync(vendorId);
+            return _vendorDashboardRepo.GetDishDashboardAsync(vendorId, DateTime.MinValue, DateTime.MaxValue);
         }
     }
 }

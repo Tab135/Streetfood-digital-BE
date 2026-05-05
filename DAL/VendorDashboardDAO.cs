@@ -24,6 +24,11 @@ namespace DAL
 
         public async Task<RevenueDashboardDto> GetRevenueDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
         {
+            var startDate = fromDate.Date;
+            var endDate = toDate.Date;
+            var endExclusive = endDate.AddDays(1);
+            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+
             var branchIds = await _context.Branches
                 .Where(b => b.VendorId == vendorId)
                 .Select(b => b.BranchId)
@@ -39,11 +44,19 @@ namespace DAL
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.BranchId)
                             && o.Status == OrderStatus.Complete
-                            && o.CreatedAt >= fromDate
-                            && o.CreatedAt <= toDate);
+                            && o.CreatedAt >= startDate
+                            && o.CreatedAt < endExclusive);
 
             decimal totalRevenue = await completedOrdersQuery.SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
             int totalOrders = await completedOrdersQuery.CountAsync();
+
+            var previousTotalRevenue = await _context.Orders
+                .AsNoTracking()
+                .Where(o => branchIds.Contains(o.BranchId)
+                            && o.Status == OrderStatus.Complete
+                            && o.CreatedAt >= previousStartDate
+                            && o.CreatedAt < previousEndExclusive)
+                .SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
 
             var dailyRevenues = await completedOrdersQuery
                 .GroupBy(o => o.CreatedAt.Date)
@@ -60,6 +73,7 @@ namespace DAL
             {
                 TotalRevenue = totalRevenue,
                 TotalOrders = totalOrders,
+                RevenueGrowthRate = CalculateGrowthRate(totalRevenue, previousTotalRevenue),
                 DailyRevenues = dailyRevenues
             };
         }
@@ -127,8 +141,12 @@ namespace DAL
             };
         }
 
-        public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId)
+        public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
         {
+            var startDate = fromDate.Date;
+            var endDate = toDate.Date;
+            var endExclusive = endDate.AddDays(1);
+
             var branchIds = await _context.Branches
                 .Where(b => b.VendorId == vendorId)
                 .Select(b => b.BranchId)
@@ -143,6 +161,8 @@ namespace DAL
                 .Where(o => branchIds.Contains(o.BranchId) 
                             && o.Status == OrderStatus.Complete 
                             && o.AppliedVoucherId != null
+                            && o.CreatedAt >= startDate
+                            && o.CreatedAt < endExclusive
                             && o.AppliedVoucher!.VendorCampaign != null 
                             && o.AppliedVoucher.VendorCampaign.CreatedByVendorId == vendorId)
                 .Include(o => o.AppliedVoucher)
@@ -161,8 +181,12 @@ namespace DAL
             };
         }
 
-        public async Task<DishDashboardDto> GetDishDashboardAsync(int vendorId)
+        public async Task<DishDashboardDto> GetDishDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
         {
+            var startDate = fromDate.Date;
+            var endDate = toDate.Date;
+            var endExclusive = endDate.AddDays(1);
+
             var allDishes = await _context.Dishes
                 .Where(d => d.VendorId == vendorId)
                 .ToListAsync();
@@ -182,7 +206,10 @@ namespace DAL
             if (branchIds.Any())
             {
                 var topDishesQuery = await _context.OrderDishes
-                    .Where(od => od.BranchId.HasValue && branchIds.Contains(od.BranchId.Value) && od.Order.Status == OrderStatus.Complete)
+                    .Where(od => od.BranchId.HasValue && branchIds.Contains(od.BranchId.Value) 
+                                && od.Order.Status == OrderStatus.Complete
+                                && od.Order.CreatedAt >= startDate
+                                && od.Order.CreatedAt < endExclusive)
                     .GroupBy(od => new { od.DishId, od.DishName })
                     .Select(g => new
                     {
@@ -247,6 +274,25 @@ namespace DAL
             {
                 TopDishes = fallbackTopDishes
             };
+        }
+
+        private static (DateTime PreviousStartDate, DateTime PreviousEndExclusive) GetPreviousPeriod(DateTime startDate, DateTime endDate)
+        {
+            var dayCount = (endDate - startDate).Days + 1;
+            var previousEndExclusive = startDate;
+            var previousStartDate = startDate.AddDays(-dayCount);
+
+            return (previousStartDate, previousEndExclusive);
+        }
+
+        private static decimal CalculateGrowthRate(decimal currentValue, decimal previousValue)
+        {
+            if (previousValue == 0m)
+            {
+                return currentValue == 0m ? 0m : 100m;
+            }
+
+            return Math.Round(((currentValue - previousValue) / previousValue) * 100m, 2);
         }
     }
 }

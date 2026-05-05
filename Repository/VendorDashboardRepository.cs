@@ -24,10 +24,10 @@ namespace Repository
         public Task<CampaignDashboardDto> GetCampaignDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
             => _vendorDashboardDao.GetCampaignDashboardAsync(vendorId, fromDate, toDate);
 
-        public Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId)
-            => _vendorDashboardDao.GetVoucherDashboardAsync(vendorId);
+        public Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
+            => _vendorDashboardDao.GetVoucherDashboardAsync(vendorId, fromDate, toDate);
 
-        public Task<DishDashboardDto> GetDishDashboardAsync(int vendorId)
-            => _vendorDashboardDao.GetDishDashboardAsync(vendorId);
+        public Task<DishDashboardDto> GetDishDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
+            => _vendorDashboardDao.GetDishDashboardAsync(vendorId, fromDate, toDate);
     }
 }

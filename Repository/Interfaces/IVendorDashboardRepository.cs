@@ -9,7 +9,7 @@ namespace Repository.Interfaces
         Task<int?> GetVendorIdByUserIdAsync(int userId);
         Task<RevenueDashboardDto> GetRevenueDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate);
         Task<CampaignDashboardDto> GetCampaignDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate);
-        Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId);
-        Task<DishDashboardDto> GetDishDashboardAsync(int vendorId);
+        Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate);
+        Task<DishDashboardDto> GetDishDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate);
     }
 }

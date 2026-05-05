@@ -314,6 +314,15 @@ namespace DAL
             {
                 var campaignId = campaign.CampaignId;
 
+                var campaignVoucherIds = await _context.Vouchers
+                    .AsNoTracking()
+                    .Where(v => v.VendorCampaignId == campaignId
+                                || _context.QuestTaskRewards.Any(qtr => qtr.RewardType == BO.Enums.QuestRewardType.VOUCHER
+                                                                        && qtr.RewardValue == v.VoucherId
+                                                                        && qtr.QuestTask.Quest.CampaignId == campaignId))
+                    .Select(v => v.VoucherId)
+                    .ToListAsync();
+
                 var totalBranchesJoined = await _context.BranchCampaigns
                     .AsNoTracking()
                     .Where(bc => bc.CampaignId == campaignId)
@@ -322,8 +331,8 @@ namespace DAL
                 var branchOrdersQuery = await _context.Orders
                     .AsNoTracking()
                     .Where(o => o.Status == OrderStatus.Complete 
-                                && o.AppliedVoucher != null 
-                                && o.AppliedVoucher.VendorCampaignId == campaignId)
+                                && o.AppliedVoucherId.HasValue
+                                && campaignVoucherIds.Contains(o.AppliedVoucherId.Value))
                     .GroupBy(o => new { o.BranchId, o.Branch.Name })
                     .Select(g => new AdminSystemCampaignBranchOrderDto
                     {
@@ -359,7 +368,7 @@ namespace DAL
 
                 var vouchersQuery = await _context.Vouchers
                     .AsNoTracking()
-                    .Where(v => v.VendorCampaignId == campaignId)
+                    .Where(v => campaignVoucherIds.Contains(v.VoucherId))
                     .Select(v => new AdminSystemCampaignVoucherDto
                     {
                         VoucherId = v.VoucherId,
@@ -371,8 +380,8 @@ namespace DAL
                 var campaignOrders = await _context.Orders
                     .AsNoTracking()
                     .Where(o => o.Status == OrderStatus.Complete 
-                                && o.AppliedVoucher != null 
-                                && o.AppliedVoucher.VendorCampaignId == campaignId)
+                                && o.AppliedVoucherId.HasValue
+                                && campaignVoucherIds.Contains(o.AppliedVoucherId.Value))
                     .OrderByDescending(o => o.CreatedAt)
                     .Select(o => new AdminSystemCampaignOrderDto
                     {

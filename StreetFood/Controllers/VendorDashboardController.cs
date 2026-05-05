@@ -60,17 +60,22 @@ namespace StreetFood.Controllers
         [HttpGet("vouchers")]
         [Authorize(Roles = "Vendor")]
         [ProducesResponseType(typeof(ApiResponse<VoucherDashboardDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetVoucherDashboard()
+        public async Task<IActionResult> GetVoucherDashboard([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
         {
             try
             {
+                if (fromDate == default || toDate == default)
+                {
+                    return BadRequest(new { message = "fromDate and toDate are required." });
+                }
+
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
                     return Unauthorized(new { message = "User not authenticated" });
                 }
 
-                var dashboardDto = await _vendorDashboardService.GetVoucherDashboardAsync(userId);
+                var dashboardDto = await _vendorDashboardService.GetVoucherDashboardAsync(userId, fromDate, toDate);
                 
                 return Ok(new
                 {
@@ -127,17 +132,22 @@ namespace StreetFood.Controllers
         [HttpGet("dishes")]
         [Authorize(Roles = "Vendor")]
         [ProducesResponseType(typeof(ApiResponse<DishDashboardDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetDishDashboard()
+        public async Task<IActionResult> GetDishDashboard([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
         {
             try
             {
+                if (fromDate == default || toDate == default)
+                {
+                    return BadRequest(new { message = "fromDate and toDate are required." });
+                }
+
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
                 {
                     return Unauthorized(new { message = "User not authenticated" });
                 }
 
-                var dashboardDto = await _vendorDashboardService.GetDishDashboardAsync(userId);
+                var dashboardDto = await _vendorDashboardService.GetDishDashboardAsync(userId, fromDate, toDate);
                 
                 return Ok(new
                 {

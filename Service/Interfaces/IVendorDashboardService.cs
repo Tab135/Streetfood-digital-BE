@@ -8,8 +8,8 @@ namespace Service.Interfaces
     {
         Task<RevenueDashboardDto> GetRevenueDashboardAsync(int userId, DateTime fromDate, DateTime toDate);
         Task<CampaignDashboardDto> GetCampaignDashboardAsync(int userId, DateTime fromDate, DateTime toDate);
-        Task<VoucherDashboardDto> GetVoucherDashboardAsync(int userId);
-        Task<DishDashboardDto> GetDishDashboardAsync(int userId);
+        Task<VoucherDashboardDto> GetVoucherDashboardAsync(int userId, DateTime fromDate, DateTime toDate);
+        Task<DishDashboardDto> GetDishDashboardAsync(int userId, DateTime fromDate, DateTime toDate);
 
         /// <summary>
         /// Returns the dish dashboard for a vendor addressed directly by vendorId
