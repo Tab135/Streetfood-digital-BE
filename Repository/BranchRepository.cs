@@ -210,9 +210,9 @@ namespace Repository
             await _branchDAO.UpdateBranchMetricsOnFeedbackDeletedAsync(branchId, rating);
         }
 
-        public async Task RecalculateBranchMetricsAsync(int branchId)
+        public async Task RecalculateBranchMetricsAsync(int branchId, int feedbackWindowSize)
         {
-            await _branchDAO.RecalculateBranchMetricsAsync(branchId);
+            await _branchDAO.RecalculateBranchMetricsAsync(branchId, feedbackWindowSize);
         }
 
         public async Task ResetAllTiersAsync(System.Threading.CancellationToken ct)

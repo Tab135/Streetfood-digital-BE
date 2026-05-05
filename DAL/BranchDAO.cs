@@ -684,8 +684,13 @@ namespace DAL
                 );
         }
 
-        public async Task RecalculateBranchMetricsAsync(int branchId)
+        public async Task RecalculateBranchMetricsAsync(int branchId, int feedbackWindowSize)
         {
+            if (feedbackWindowSize <= 0)
+            {
+                feedbackWindowSize = 20;
+            }
+
             var metrics = await _context.Feedbacks
                 .Where(f => f.BranchId == branchId)
                 .GroupBy(f => f.BranchId)
@@ -696,15 +701,15 @@ namespace DAL
             int newTotal = metrics?.Total ?? 0;
             double newAvg = newCount > 0 ? (double)newTotal / newCount : 0;
 
-            var latest20Feedbacks = await _context.Feedbacks
+            var latestWindowFeedbacks = await _context.Feedbacks
                 .Where(f => f.BranchId == branchId)
                 .OrderByDescending(f => f.CreatedAt)
-                .Take(20)
+                .Take(feedbackWindowSize)
                 .Select(f => f.Rating)
                 .ToListAsync();
 
-            int batchCount = latest20Feedbacks.Count;
-            int batchTotal = latest20Feedbacks.Sum();
+            int batchCount = latestWindowFeedbacks.Count;
+            int batchTotal = latestWindowFeedbacks.Sum();
 
             await _context.Branches
                 .Where(b => b.BranchId == branchId)

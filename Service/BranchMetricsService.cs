@@ -7,13 +7,21 @@ namespace Service;
 
 public class BranchMetricsService : IBranchMetricsService
 {
+    private const string TierFeedbackWindowSizeSettingName = "vendorTierFeedbackWindowSize";
+    private const int DefaultTierFeedbackWindowSize = 20;
+
     private readonly IBranchRepository _branchRepository;
     private readonly IFeedbackRepository _feedbackRepository;
+    private readonly ISettingService _settingService;
 
-    public BranchMetricsService(IBranchRepository branchRepository, IFeedbackRepository feedbackRepository)
+    public BranchMetricsService(
+        IBranchRepository branchRepository,
+        IFeedbackRepository feedbackRepository,
+        ISettingService settingService)
     {
         _branchRepository = branchRepository ?? throw new ArgumentNullException(nameof(branchRepository));
         _feedbackRepository = feedbackRepository ?? throw new ArgumentNullException(nameof(feedbackRepository));
+        _settingService = settingService ?? throw new ArgumentNullException(nameof(settingService));
     }
 
     public async Task OnFeedbackCreated(int branchId, int rating)
@@ -21,62 +29,40 @@ public class BranchMetricsService : IBranchMetricsService
         var branch = await _branchRepository.GetByIdAsync(branchId);
         if (branch == null) return;
 
+        int feedbackWindowSize = GetFeedbackWindowSize();
+
         // --- Tier Logic Processing ---
         int newBatchReviewCount = branch.BatchReviewCount;
         int newBatchRatingSum = branch.BatchRatingSum;
         int newTierId = branch.TierId;
         bool banBranch = false;
 
-        if (newBatchReviewCount < 20)
+        if (newBatchReviewCount < feedbackWindowSize)
         {
             newBatchReviewCount++;
             newBatchRatingSum += rating;
         }
-        else // == 20
+        else // == feedbackWindowSize
         {
-            // Trừ đi điểm của review thứ 21 (là cái cũ nhất trong danh sách 21 cái vì chúng ta gọi Get sau khi Feedback đã tạo)
-            // Wait: Khi OnFeedbackCreated chạy thì feedback LẼ RA ĐÃ ĐƯỢC TẠO rồi vào DB. 
-            // Vậy 20 cái mới nhất là gồm cái rating hiện tại, và 19 cái trước đó. Cái thứ 21 sẽ là cái bị out khỏi list.
-            var oldRating21 = await _feedbackRepository.GetRatingOfRecentFeedbackAsync(branchId, 20); // skip 20 = get 21st review
-            if (oldRating21.HasValue)
+            // OnFeedbackCreated runs after new feedback is saved.
+            // Need to remove the (windowSize + 1)-th oldest item from rolling sum.
+            var droppedRating = await _feedbackRepository.GetRatingOfRecentFeedbackAsync(branchId, feedbackWindowSize);
+            if (droppedRating.HasValue)
             {
-                newBatchRatingSum = newBatchRatingSum - oldRating21.Value + rating;
+                newBatchRatingSum = newBatchRatingSum - droppedRating.Value + rating;
             }
             else
             {
-                // Fallback nếu có lỗi data từ trước dẫn tới sum lệch
                 newBatchRatingSum += rating;
             }
         }
 
-        // Kiểm tra chuyển bậc Tier
-        if (newBatchReviewCount >= 20)
+        // Re-evaluate tier only when we have enough feedback in rolling window.
+        if (newBatchReviewCount >= feedbackWindowSize)
         {
-            double average = (double)newBatchRatingSum / 20;
-
-            if (average >= 3.0)
-            {
-                // Tăng 1 bậc Tier (Không phân biệt đã thanh toán hay chưa)
-                if (newTierId < 4) // Diamond = 4
-                {
-                    newTierId++;
-                    // Reset lại chu kỳ sau khi lên tier không? (Requirement không đề cập đến reset, nên chúng ta giữ rolling window)
-                }
-            }
-            else if (average <= 2.0)
-            {
-                // Giảm 1 bậc Tier
-                if (newTierId > 1) // Warning = 1
-                {
-                    newTierId--;
-                }
-                
-                // Đặc biệt: Nếu Tier == Warning VÀ Average <= 2.0 -> Set IsActive = False (Ban quán)
-                if (branch.TierId == 1) // So với tier cũ trước khi trừ, hoặc newTierid cũng k sao vì nó ko thể bé hơn 1
-                {
-                    banBranch = true;
-                }
-            }
+            double average = (double)newBatchRatingSum / feedbackWindowSize;
+            newTierId = ResolveTierIdByAverage(average);
+            banBranch = newTierId == 1 && average < 2.0;
         }
 
         await _branchRepository.UpdateBranchMetricsAndTierAsync(
@@ -85,20 +71,35 @@ public class BranchMetricsService : IBranchMetricsService
 
     public async Task OnFeedbackUpdated(int branchId, int oldRating, int newRating)
     {
+        int feedbackWindowSize = GetFeedbackWindowSize();
         await _branchRepository.UpdateBranchMetricsOnFeedbackUpdatedAsync(branchId, oldRating, newRating);
-        // Call recalculate to ensure rolling window stats are sync if the updated feedback was in the last 20
-        await _branchRepository.RecalculateBranchMetricsAsync(branchId);
+        await _branchRepository.RecalculateBranchMetricsAsync(branchId, feedbackWindowSize);
     }
 
     public async Task OnFeedbackDeleted(int branchId, int rating)
     {
+        int feedbackWindowSize = GetFeedbackWindowSize();
         await _branchRepository.UpdateBranchMetricsOnFeedbackDeletedAsync(branchId, rating);
-        // Call recalculate to sync rolling window stats properly
-        await _branchRepository.RecalculateBranchMetricsAsync(branchId);
+        await _branchRepository.RecalculateBranchMetricsAsync(branchId, feedbackWindowSize);
     }
 
     public async Task RecalculateFromScratch(int branchId)
     {
-        await _branchRepository.RecalculateBranchMetricsAsync(branchId);
+        int feedbackWindowSize = GetFeedbackWindowSize();
+        await _branchRepository.RecalculateBranchMetricsAsync(branchId, feedbackWindowSize);
+    }
+
+    private int GetFeedbackWindowSize()
+    {
+        int configured = _settingService.GetInt(TierFeedbackWindowSizeSettingName, DefaultTierFeedbackWindowSize);
+        return configured > 0 ? configured : DefaultTierFeedbackWindowSize;
+    }
+
+    private static int ResolveTierIdByAverage(double average)
+    {
+        if (average >= 4.5) return 4; // Diamond
+        if (average >= 3.0) return 3; // Gold
+        if (average >= 2.0) return 2; // Silver
+        return 1; // Warning
     }
 }
