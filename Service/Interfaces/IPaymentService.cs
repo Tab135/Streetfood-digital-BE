@@ -21,6 +21,7 @@ namespace Service.PaymentsService
             List<int> pendingBranchCampaignIds);
 
         Task<Payment?> GetPaymentByOrderCode(long orderCode);
+        Task<Payment?> GetLatestPaymentByOrderIdAsync(int orderId);
         Task CancelOrderPaymentAsync(int orderId);
 
         Task<List<PaymentHistoryDto>> GetUserPaymentHistory(int userId);

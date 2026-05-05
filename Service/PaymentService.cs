@@ -816,6 +816,11 @@ namespace Service.PaymentsService
             return await _paymentRepo.GetPaymentByOrderCode(orderCode);
         }
 
+        public async Task<Payment?> GetLatestPaymentByOrderIdAsync(int orderId)
+        {
+            return await _paymentRepo.GetLatestPaymentByOrderId(orderId);
+        }
+
         public async Task<List<PaymentHistoryDto>> GetUserPaymentHistory(int userId)
         {
             var payments = await _paymentRepo.GetUserPayments(userId);
