@@ -65,5 +65,16 @@ namespace Service
         {
             return _vendorDashboardRepo.GetDishDashboardAsync(vendorId, DateTime.MinValue, DateTime.MaxValue);
         }
+
+        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(int userId, DateTime fromDate, DateTime toDate)
+        {
+            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
+            if (vendorId == null)
+            {
+                throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
+            }
+
+            return await _vendorDashboardRepo.GetRevenueBarChartAsync(vendorId.Value, fromDate, toDate);
+        }
     }
 }

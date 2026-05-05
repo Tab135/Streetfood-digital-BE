@@ -57,6 +57,42 @@ namespace StreetFood.Controllers
             }
         }
 
+        [HttpGet("revenue/bar")]
+        [Authorize(Roles = "Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<RevenueBarChartDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetRevenueBarChart([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
+        {
+            try
+            {
+                if (fromDate == default || toDate == default)
+                {
+                    return BadRequest(new { message = "fromDate and toDate are required." });
+                }
+
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                var chart = await _vendorDashboardService.GetRevenueBarChartAsync(userId, fromDate, toDate);
+
+                return Ok(new
+                {
+                    message = "Get revenue bar chart successfully",
+                    data = chart
+                });
+            }
+            catch (BO.Exceptions.DomainExceptions ex)
+            {
+                return BadRequest(new { message = ex.Message, errorCode = ex.ErrorCode });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+            }
+        }
+
         [HttpGet("vouchers")]
         [Authorize(Roles = "Vendor")]
         [ProducesResponseType(typeof(ApiResponse<VoucherDashboardDto>), StatusCodes.Status200OK)]

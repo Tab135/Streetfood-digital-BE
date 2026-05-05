@@ -17,5 +17,7 @@ namespace Service.Interfaces
         /// best-sellers without requiring the caller to know the owning manager's userId.
         /// </summary>
         Task<DishDashboardDto> GetDishDashboardByVendorAsync(int vendorId);
+
+        Task<RevenueBarChartDto> GetRevenueBarChartAsync(int userId, DateTime fromDate, DateTime toDate);
     }
 }

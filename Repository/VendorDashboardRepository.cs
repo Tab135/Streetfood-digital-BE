@@ -29,5 +29,8 @@ namespace Repository
 
         public Task<DishDashboardDto> GetDishDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
             => _vendorDashboardDao.GetDishDashboardAsync(vendorId, fromDate, toDate);
+
+        public Task<RevenueBarChartDto> GetRevenueBarChartAsync(int vendorId, DateTime fromDate, DateTime toDate)
+            => _vendorDashboardDao.GetRevenueBarChartAsync(vendorId, fromDate, toDate);
     }
 }

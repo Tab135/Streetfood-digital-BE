@@ -79,6 +79,76 @@ namespace DAL
             };
         }
 
+        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(int vendorId, DateTime fromDate, DateTime toDate)
+        {
+            var startDate = fromDate.Date;
+            var endDate = toDate.Date;
+            var endExclusive = endDate.AddDays(1);
+            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+
+            var branchIds = await _context.Branches
+                .Where(b => b.VendorId == vendorId)
+                .Select(b => b.BranchId)
+                .ToListAsync();
+
+            var result = new RevenueBarChartDto();
+
+            if (!branchIds.Any())
+            {
+                // return two zero-value bars with correct ranges
+                result.Items.Add(new BarChartItemDto
+                {
+                    Label = "Previous",
+                    FromDate = previousStartDate,
+                    ToDate = previousEndExclusive.AddDays(-1),
+                    Value = 0m
+                });
+                result.Items.Add(new BarChartItemDto
+                {
+                    Label = "Now",
+                    FromDate = startDate,
+                    ToDate = endExclusive.AddDays(-1),
+                    Value = 0m
+                });
+
+                return result;
+            }
+
+            var currentTotal = await _context.Orders
+                .AsNoTracking()
+                .Where(o => branchIds.Contains(o.BranchId)
+                            && o.Status == OrderStatus.Complete
+                            && o.CreatedAt >= startDate
+                            && o.CreatedAt < endExclusive)
+                .SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
+
+            var previousTotal = await _context.Orders
+                .AsNoTracking()
+                .Where(o => branchIds.Contains(o.BranchId)
+                            && o.Status == OrderStatus.Complete
+                            && o.CreatedAt >= previousStartDate
+                            && o.CreatedAt < previousEndExclusive)
+                .SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
+
+            result.Items.Add(new BarChartItemDto
+            {
+                Label = "Previous",
+                FromDate = previousStartDate,
+                ToDate = previousEndExclusive.AddDays(-1),
+                Value = previousTotal
+            });
+
+            result.Items.Add(new BarChartItemDto
+            {
+                Label = "Now",
+                FromDate = startDate,
+                ToDate = endExclusive.AddDays(-1),
+                Value = currentTotal
+            });
+
+            return result;
+        }
+
         public async Task<CampaignDashboardDto> GetCampaignDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
         {
             var vendorCampaigns = await _context.Campaigns
@@ -184,9 +254,16 @@ namespace DAL
 
         public async Task<DishDashboardDto> GetDishDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
         {
-            var startDate = fromDate.Date;
-            var endDate = toDate.Date;
-            var endExclusive = endDate.AddDays(1);
+            var hasDateFilter = !(fromDate == DateTime.MinValue && toDate == DateTime.MaxValue);
+            DateTime startDate = DateTime.MinValue;
+            DateTime endDate = DateTime.MaxValue;
+            DateTime endExclusive = DateTime.MaxValue;
+            if (hasDateFilter)
+            {
+                startDate = fromDate.Date;
+                endDate = toDate.Date;
+                endExclusive = endDate == DateTime.MaxValue.Date ? DateTime.MaxValue : endDate.AddDays(1);
+            }
 
             var allDishes = await _context.Dishes
                 .Where(d => d.VendorId == vendorId)
@@ -206,11 +283,16 @@ namespace DAL
 
             if (branchIds.Any())
             {
-                var topDishesQuery = await _context.OrderDishes
-                    .Where(od => od.BranchId.HasValue && branchIds.Contains(od.BranchId.Value) 
-                                && od.Order.Status == OrderStatus.Complete
-                                && od.Order.CreatedAt >= startDate
-                                && od.Order.CreatedAt < endExclusive)
+                var orderDishesQuery = _context.OrderDishes
+                    .Where(od => od.BranchId.HasValue && branchIds.Contains(od.BranchId.Value)
+                                && od.Order.Status == OrderStatus.Complete);
+
+                if (hasDateFilter)
+                {
+                    orderDishesQuery = orderDishesQuery.Where(od => od.Order.CreatedAt >= startDate && od.Order.CreatedAt < endExclusive);
+                }
+
+                var topDishesQuery = await orderDishesQuery
                     .GroupBy(od => new { od.DishId, od.DishName })
                     .Select(g => new
                     {
