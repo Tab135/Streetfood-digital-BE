@@ -37,7 +37,7 @@ public class NotificationController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<NotificationDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetNotifications(
-        [FromQuery] int page = 1, [FromQuery] int pageSize )
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         try
         {
