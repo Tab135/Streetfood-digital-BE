@@ -67,4 +67,17 @@ namespace BO.DTO.Dashboard
         public string DishName { get; set; } = string.Empty;
         public int TotalQuantityOrdered { get; set; }
     }
+
+    public class BranchPerformanceDto
+    {
+        public int BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public int OrderCount { get; set; }
+        public decimal Revenue { get; set; }
+    }
+
+    public class BranchesPerformanceDashboardDto
+    {
+        public List<BranchPerformanceDto> Branches { get; set; } = new List<BranchPerformanceDto>();
+    }
 }

@@ -359,6 +359,59 @@ namespace DAL
             };
         }
 
+        public async Task<BranchesPerformanceDashboardDto> GetBranchesPerformanceAsync(int vendorId, DateTime fromDate, DateTime toDate)
+        {
+            var startDate = fromDate.Date;
+            var endDate = toDate.Date;
+            var endExclusive = endDate.AddDays(1);
+
+            var branches = await _context.Branches
+                .AsNoTracking()
+                .Where(b => b.VendorId == vendorId)
+                .Select(b => new { b.BranchId, b.Name })
+                .ToListAsync();
+
+            if (!branches.Any())
+            {
+                return new BranchesPerformanceDashboardDto();
+            }
+
+            var branchIds = branches.Select(b => b.BranchId).ToList();
+
+            var branchPerformances = await _context.Orders
+                .AsNoTracking()
+                .Where(o => branchIds.Contains(o.BranchId)
+                            && o.Status == OrderStatus.Complete
+                            && o.CreatedAt >= startDate
+                            && o.CreatedAt < endExclusive)
+                .GroupBy(o => o.BranchId)
+                .Select(g => new
+                {
+                    BranchId = g.Key,
+                    OrderCount = g.Count(),
+                    Revenue = g.Sum(o => o.FinalAmount)
+                })
+                .ToListAsync();
+
+            var result = new List<BranchPerformanceDto>();
+            foreach (var branch in branches)
+            {
+                var performance = branchPerformances.FirstOrDefault(bp => bp.BranchId == branch.BranchId);
+                result.Add(new BranchPerformanceDto
+                {
+                    BranchId = branch.BranchId,
+                    BranchName = branch.Name,
+                    OrderCount = performance?.OrderCount ?? 0,
+                    Revenue = performance?.Revenue ?? 0m
+                });
+            }
+
+            return new BranchesPerformanceDashboardDto
+            {
+                Branches = result
+            };
+        }
+
         private static (DateTime PreviousStartDate, DateTime PreviousEndExclusive) GetPreviousPeriod(DateTime startDate, DateTime endDate)
         {
             var dayCount = (endDate - startDate).Days + 1;

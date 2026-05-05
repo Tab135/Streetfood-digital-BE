@@ -12,5 +12,6 @@ namespace Repository.Interfaces
         Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate);
         Task<DishDashboardDto> GetDishDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate);
         Task<RevenueBarChartDto> GetRevenueBarChartAsync(int vendorId, DateTime fromDate, DateTime toDate);
+        Task<BranchesPerformanceDashboardDto> GetBranchesPerformanceAsync(int vendorId, DateTime fromDate, DateTime toDate);
     }
 }

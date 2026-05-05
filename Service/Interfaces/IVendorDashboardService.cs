@@ -19,5 +19,6 @@ namespace Service.Interfaces
         Task<DishDashboardDto> GetDishDashboardByVendorAsync(int vendorId);
 
         Task<RevenueBarChartDto> GetRevenueBarChartAsync(int userId, DateTime fromDate, DateTime toDate);
+        Task<BranchesPerformanceDashboardDto> GetBranchesPerformanceAsync(int userId, DateTime fromDate, DateTime toDate);
     }
 }

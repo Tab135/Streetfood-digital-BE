@@ -76,5 +76,16 @@ namespace Service
 
             return await _vendorDashboardRepo.GetRevenueBarChartAsync(vendorId.Value, fromDate, toDate);
         }
+
+        public async Task<BranchesPerformanceDashboardDto> GetBranchesPerformanceAsync(int userId, DateTime fromDate, DateTime toDate)
+        {
+            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
+            if (vendorId == null)
+            {
+                throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
+            }
+
+            return await _vendorDashboardRepo.GetBranchesPerformanceAsync(vendorId.Value, fromDate, toDate);
+        }
     }
 }
