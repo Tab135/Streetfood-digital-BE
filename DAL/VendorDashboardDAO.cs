@@ -54,7 +54,7 @@ namespace DAL
                 return new RevenueDashboardDto();
             }
 
-            // Keep this query projected/aggregated to avoid selecting unused columns.
+            // Calculate settled revenue (TotalAmount for system vouchers, FinalAmount otherwise)
             var completedOrdersQuery = _context.Orders
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.BranchId)
@@ -62,27 +62,61 @@ namespace DAL
                             && o.CreatedAt >= startDate
                             && o.CreatedAt < endExclusive);
 
-            decimal totalRevenue = await completedOrdersQuery.SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
-            int totalOrders = await completedOrdersQuery.CountAsync();
+            // Get all completed orders with voucher details to calculate correct settlement amount
+            var ordersWithVouchers = await completedOrdersQuery
+                .Include(o => o.AppliedVoucher)
+                    .ThenInclude(v => v!.VendorCampaign)
+                .Select(o => new
+                {
+                    o.OrderId,
+                    o.FinalAmount,
+                    o.TotalAmount,
+                    o.CreatedAt,
+                    IsSystemVoucher = o.AppliedVoucher == null ? false :
+                        (o.AppliedVoucher.VendorCampaignId == null ? true :
+                        o.AppliedVoucher.VendorCampaign!.CreatedByVendorId == null)
+                })
+                .ToListAsync();
 
-            var previousTotalRevenue = await _context.Orders
+            decimal totalRevenue = ordersWithVouchers.Sum(o => 
+                o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount);
+            int totalOrders = ordersWithVouchers.Count;
+
+            // Previous period calculation
+            var previousOrdersQuery = _context.Orders
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.BranchId)
                             && o.Status == OrderStatus.Complete
                             && o.CreatedAt >= previousStartDate
-                            && o.CreatedAt < previousEndExclusive)
-                .SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
+                            && o.CreatedAt < previousEndExclusive);
 
-            var dailyRevenues = await completedOrdersQuery
+            var previousOrdersWithVouchers = await previousOrdersQuery
+                .Include(o => o.AppliedVoucher)
+                    .ThenInclude(v => v!.VendorCampaign)
+                .Select(o => new
+                {
+                    o.FinalAmount,
+                    o.TotalAmount,
+                    IsSystemVoucher = o.AppliedVoucher == null ? false :
+                        (o.AppliedVoucher.VendorCampaignId == null ? true :
+                        o.AppliedVoucher.VendorCampaign!.CreatedByVendorId == null)
+                })
+                .ToListAsync();
+
+            decimal previousTotalRevenue = previousOrdersWithVouchers.Sum(o =>
+                o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount);
+
+            // Daily revenues grouped by date
+            var dailyRevenues = ordersWithVouchers
                 .GroupBy(o => o.CreatedAt.Date)
                 .Select(g => new DailyRevenueDto
                 {
                     Date = g.Key,
-                    Revenue = g.Sum(o => o.FinalAmount),
+                    Revenue = g.Sum(o => o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount),
                     OrderCount = g.Count()
                 })
                 .OrderBy(d => d.Date)
-                .ToListAsync();
+                .ToList();
 
             return new RevenueDashboardDto
             {
@@ -129,21 +163,49 @@ namespace DAL
                 return result;
             }
 
-            var currentTotal = await _context.Orders
+            // Get current period orders with voucher details
+            var currentOrders = await _context.Orders
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.BranchId)
                             && o.Status == OrderStatus.Complete
                             && o.CreatedAt >= startDate
                             && o.CreatedAt < endExclusive)
-                .SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
+                .Include(o => o.AppliedVoucher)
+                    .ThenInclude(v => v!.VendorCampaign)
+                .Select(o => new
+                {
+                    o.FinalAmount,
+                    o.TotalAmount,
+                    IsSystemVoucher = o.AppliedVoucher == null ? false :
+                        (o.AppliedVoucher.VendorCampaignId == null ? true :
+                        o.AppliedVoucher.VendorCampaign!.CreatedByVendorId == null)
+                })
+                .ToListAsync();
 
-            var previousTotal = await _context.Orders
+            decimal currentTotal = currentOrders.Sum(o => 
+                o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount);
+
+            // Get previous period orders with voucher details
+            var previousOrders = await _context.Orders
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.BranchId)
                             && o.Status == OrderStatus.Complete
                             && o.CreatedAt >= previousStartDate
                             && o.CreatedAt < previousEndExclusive)
-                .SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
+                .Include(o => o.AppliedVoucher)
+                    .ThenInclude(v => v!.VendorCampaign)
+                .Select(o => new
+                {
+                    o.FinalAmount,
+                    o.TotalAmount,
+                    IsSystemVoucher = o.AppliedVoucher == null ? false :
+                        (o.AppliedVoucher.VendorCampaignId == null ? true :
+                        o.AppliedVoucher.VendorCampaign!.CreatedByVendorId == null)
+                })
+                .ToListAsync();
+
+            decimal previousTotal = previousOrders.Sum(o =>
+                o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount);
 
             result.Items.Add(new BarChartItemDto
             {
@@ -401,20 +463,36 @@ namespace DAL
 
             var branchIds = branches.Select(b => b.BranchId).ToList();
 
-            var branchPerformances = await _context.Orders
+            // Get all orders with voucher details for settlement amount calculation
+            var orders = await _context.Orders
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.BranchId)
                             && o.Status == OrderStatus.Complete
                             && o.CreatedAt >= startDate
                             && o.CreatedAt < endExclusive)
+                .Include(o => o.AppliedVoucher)
+                    .ThenInclude(v => v!.VendorCampaign)
+                .Select(o => new
+                {
+                    o.BranchId,
+                    o.FinalAmount,
+                    o.TotalAmount,
+                    IsSystemVoucher = o.AppliedVoucher == null ? false :
+                        (o.AppliedVoucher.VendorCampaignId == null ? true :
+                        o.AppliedVoucher.VendorCampaign!.CreatedByVendorId == null)
+                })
+                .ToListAsync();
+
+            // Group by branch and calculate settled revenue
+            var branchPerformances = orders
                 .GroupBy(o => o.BranchId)
                 .Select(g => new
                 {
                     BranchId = g.Key,
                     OrderCount = g.Count(),
-                    Revenue = g.Sum(o => o.FinalAmount)
+                    Revenue = g.Sum(o => o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount)
                 })
-                .ToListAsync();
+                .ToList();
 
             var result = new List<BranchPerformanceDto>();
             foreach (var branch in branches)
