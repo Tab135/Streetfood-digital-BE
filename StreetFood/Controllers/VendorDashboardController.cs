@@ -22,7 +22,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("revenue")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<RevenueDashboardDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetRevenueDashboard([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
         {
@@ -58,7 +58,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("revenue/bar")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<RevenueBarChartDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetRevenueBarChart([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
         {
@@ -94,7 +94,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("vouchers")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<VoucherDashboardDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetVoucherDashboard([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
         {
@@ -130,7 +130,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("campaigns")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<CampaignDashboardDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetCampaignDashboard([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
         {
@@ -166,7 +166,7 @@ namespace StreetFood.Controllers
         }
 
         [HttpGet("dishes")]
-        [Authorize(Roles = "Vendor")]
+        [Authorize(Roles = "Vendor,Manager")]
         [ProducesResponseType(typeof(ApiResponse<DishDashboardDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetDishDashboard([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
         {
@@ -238,3 +238,4 @@ namespace StreetFood.Controllers
         }
     }
 }
+

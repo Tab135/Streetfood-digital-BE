@@ -16,20 +16,35 @@ namespace DAL
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public async Task<int?> GetVendorIdByUserIdAsync(int userId)
+        public async Task<(int? vendorId, System.Collections.Generic.List<int>? allowedBranchIds)> GetDashboardContextByUserIdAsync(int userId)
         {
-            var vendor = await _context.Vendors.FirstOrDefaultAsync(v => v.UserId == userId);
-            return vendor?.VendorId;
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null) return (null, null);
+
+            if (user.Role == BO.Entities.Role.Vendor)
+            {
+                var vendor = await _context.Vendors.FirstOrDefaultAsync(v => v.UserId == userId);
+                return (vendor?.VendorId, null);
+            }
+            else if (user.Role == BO.Entities.Role.Manager)
+            {
+                var branches = await _context.Branches.Where(b => b.ManagerId == userId).ToListAsync();
+                var vendorId = branches.FirstOrDefault()?.VendorId;
+                var branchIds = branches.Select(b => b.BranchId).ToList();
+                return (vendorId, branchIds);
+            }
+            
+            return (null, null);
         }
 
-        public async Task<RevenueDashboardDto> GetRevenueDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
+        public async Task<RevenueDashboardDto> GetRevenueDashboardAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
         {
             var startDate = fromDate.Date;
             var endDate = toDate.Date;
             var endExclusive = endDate.AddDays(1);
             var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
 
-            var branchIds = await _context.Branches
+            var branchIds = allowedBranchIds ?? await _context.Branches
                 .Where(b => b.VendorId == vendorId)
                 .Select(b => b.BranchId)
                 .ToListAsync();
@@ -79,14 +94,14 @@ namespace DAL
             };
         }
 
-        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(int vendorId, DateTime fromDate, DateTime toDate)
+        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
         {
             var startDate = fromDate.Date;
             var endDate = toDate.Date;
             var endExclusive = endDate.AddDays(1);
             var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
 
-            var branchIds = await _context.Branches
+            var branchIds = allowedBranchIds ?? await _context.Branches
                 .Where(b => b.VendorId == vendorId)
                 .Select(b => b.BranchId)
                 .ToListAsync();
@@ -149,7 +164,7 @@ namespace DAL
             return result;
         }
 
-        public async Task<CampaignDashboardDto> GetCampaignDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
+        public async Task<CampaignDashboardDto> GetCampaignDashboardAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
         {
             var vendorCampaigns = await _context.Campaigns
                 .AsNoTracking()
@@ -212,13 +227,13 @@ namespace DAL
             };
         }
 
-        public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
+        public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
         {
             var startDate = fromDate.Date;
             var endDate = toDate.Date;
             var endExclusive = endDate.AddDays(1);
 
-            var branchIds = await _context.Branches
+            var branchIds = allowedBranchIds ?? await _context.Branches
                 .Where(b => b.VendorId == vendorId)
                 .Select(b => b.BranchId)
                 .ToListAsync();
@@ -252,7 +267,7 @@ namespace DAL
             };
         }
 
-        public async Task<DishDashboardDto> GetDishDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
+        public async Task<DishDashboardDto> GetDishDashboardAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
         {
             var hasDateFilter = !(fromDate == DateTime.MinValue && toDate == DateTime.MaxValue);
             DateTime startDate = DateTime.MinValue;
@@ -269,7 +284,7 @@ namespace DAL
                 .Where(d => d.VendorId == vendorId)
                 .ToListAsync();
 
-            var branchIds = await _context.Branches
+            var branchIds = allowedBranchIds ?? await _context.Branches
                 .Where(b => b.VendorId == vendorId)
                 .Select(b => b.BranchId)
                 .ToListAsync();
@@ -432,3 +447,9 @@ namespace DAL
         }
     }
 }
+
+
+
+
+
+
