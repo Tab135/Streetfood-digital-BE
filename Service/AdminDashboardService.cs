@@ -45,6 +45,12 @@ namespace Service
             return await _adminDashboardRepository.GetAllSystemCampaignDetailsAsync();
         }
 
+        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate)
+        {
+            ValidateDateRange(fromDate, toDate);
+            return await _adminDashboardRepository.GetRevenueBarChartAsync(fromDate, toDate);
+        }
+
         private static void ValidateDateRange(DateTime fromDate, DateTime toDate)
         {
             if (fromDate == default || toDate == default)

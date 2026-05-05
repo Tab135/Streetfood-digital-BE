@@ -11,5 +11,6 @@ namespace Repository.Interfaces
         Task<AdminCompensationChartDto> GetCompensationChartAsync(DateTime fromDate, DateTime toDate);
         Task<AdminUserToVendorConversionChartDto> GetUserToVendorConversionChartAsync(DateTime fromDate, DateTime toDate);
         Task<List<AdminSystemCampaignDetailsDto>> GetAllSystemCampaignDetailsAsync();
+        Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate);
     }
 }
