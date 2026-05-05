@@ -1,6 +1,5 @@
 using BO.DTO.Dashboard;
 using BO.Exceptions;
-using DAL;
 using Repository.Interfaces;
 using Service.Interfaces;
 using System;
@@ -19,62 +18,62 @@ namespace Service
 
         public async Task<RevenueDashboardDto> GetRevenueDashboardAsync(int userId, DateTime fromDate, DateTime toDate)
         {
-            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
-            if (vendorId == null)
+            var context = await _vendorDashboardRepo.GetDashboardContextByUserIdAsync(userId);
+            if (context.vendorId == null)
             {
-                throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
+                throw new DomainExceptions("Kh�ng t�m th?y Vendor ho?c Manager cho ngu?i d�ng n�y.", "VENDOR_OR_MANAGER_NOT_FOUND");
             }
 
-            return await _vendorDashboardRepo.GetRevenueDashboardAsync(vendorId.Value, fromDate, toDate);
+            return await _vendorDashboardRepo.GetRevenueDashboardAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
         }
 
         public async Task<CampaignDashboardDto> GetCampaignDashboardAsync(int userId, DateTime fromDate, DateTime toDate)
         {
-            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
-            if (vendorId == null)
+            var context = await _vendorDashboardRepo.GetDashboardContextByUserIdAsync(userId);
+            if (context.vendorId == null)
             {
-                throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
+                throw new DomainExceptions("Kh�ng t�m th?y Vendor ho?c Manager cho ngu?i d�ng n�y.", "VENDOR_OR_MANAGER_NOT_FOUND");
             }
 
-            return await _vendorDashboardRepo.GetCampaignDashboardAsync(vendorId.Value, fromDate, toDate);
+            return await _vendorDashboardRepo.GetCampaignDashboardAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
         }
 
         public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int userId, DateTime fromDate, DateTime toDate)
         {
-            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
-            if (vendorId == null)
+            var context = await _vendorDashboardRepo.GetDashboardContextByUserIdAsync(userId);
+            if (context.vendorId == null)
             {
-                throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
+                throw new DomainExceptions("Kh�ng t�m th?y Vendor ho?c Manager cho ngu?i d�ng n�y.", "VENDOR_OR_MANAGER_NOT_FOUND");
             }
 
-            return await _vendorDashboardRepo.GetVoucherDashboardAsync(vendorId.Value, fromDate, toDate);
+            return await _vendorDashboardRepo.GetVoucherDashboardAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
         }
 
         public async Task<DishDashboardDto> GetDishDashboardAsync(int userId, DateTime fromDate, DateTime toDate)
         {
-            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
-            if (vendorId == null)
+            var context = await _vendorDashboardRepo.GetDashboardContextByUserIdAsync(userId);
+            if (context.vendorId == null)
             {
-                throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
+                throw new DomainExceptions("Kh�ng t�m th?y Vendor ho?c Manager cho ngu?i d�ng n�y.", "VENDOR_OR_MANAGER_NOT_FOUND");
             }
 
-            return await _vendorDashboardRepo.GetDishDashboardAsync(vendorId.Value, fromDate, toDate);
+            return await _vendorDashboardRepo.GetDishDashboardAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
         }
 
         public Task<DishDashboardDto> GetDishDashboardByVendorAsync(int vendorId)
         {
-            return _vendorDashboardRepo.GetDishDashboardAsync(vendorId, DateTime.MinValue, DateTime.MaxValue);
+            return _vendorDashboardRepo.GetDishDashboardAsync(vendorId, null, DateTime.MinValue, DateTime.MaxValue);
         }
 
         public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(int userId, DateTime fromDate, DateTime toDate)
         {
-            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
-            if (vendorId == null)
+            var context = await _vendorDashboardRepo.GetDashboardContextByUserIdAsync(userId);
+            if (context.vendorId == null)
             {
-                throw new DomainExceptions("Không tìm thấy Vendor cho người dùng này.", "VENDOR_NOT_FOUND");
+                throw new DomainExceptions("Kh�ng t�m th?y Vendor ho?c Manager cho ngu?i d�ng n�y.", "VENDOR_OR_MANAGER_NOT_FOUND");
             }
 
-            return await _vendorDashboardRepo.GetRevenueBarChartAsync(vendorId.Value, fromDate, toDate);
+            return await _vendorDashboardRepo.GetRevenueBarChartAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
         }
     }
 }

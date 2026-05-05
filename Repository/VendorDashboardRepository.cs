@@ -15,22 +15,23 @@ namespace Repository
             _vendorDashboardDao = vendorDashboardDao ?? throw new ArgumentNullException(nameof(vendorDashboardDao));
         }
 
-        public Task<int?> GetVendorIdByUserIdAsync(int userId)
-            => _vendorDashboardDao.GetVendorIdByUserIdAsync(userId);
+        public Task<(int? vendorId, System.Collections.Generic.List<int>? allowedBranchIds)> GetDashboardContextByUserIdAsync(int userId)
+            => _vendorDashboardDao.GetDashboardContextByUserIdAsync(userId);
 
-        public Task<RevenueDashboardDto> GetRevenueDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
-            => _vendorDashboardDao.GetRevenueDashboardAsync(vendorId, fromDate, toDate);
+        public Task<RevenueDashboardDto> GetRevenueDashboardAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
+            => _vendorDashboardDao.GetRevenueDashboardAsync(vendorId, allowedBranchIds, fromDate, toDate);
 
-        public Task<CampaignDashboardDto> GetCampaignDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
-            => _vendorDashboardDao.GetCampaignDashboardAsync(vendorId, fromDate, toDate);
+        public Task<CampaignDashboardDto> GetCampaignDashboardAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
+            => _vendorDashboardDao.GetCampaignDashboardAsync(vendorId, allowedBranchIds, fromDate, toDate);
 
-        public Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
-            => _vendorDashboardDao.GetVoucherDashboardAsync(vendorId, fromDate, toDate);
+        public Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
+            => _vendorDashboardDao.GetVoucherDashboardAsync(vendorId, allowedBranchIds, fromDate, toDate);
 
-        public Task<DishDashboardDto> GetDishDashboardAsync(int vendorId, DateTime fromDate, DateTime toDate)
-            => _vendorDashboardDao.GetDishDashboardAsync(vendorId, fromDate, toDate);
+        public Task<DishDashboardDto> GetDishDashboardAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
+            => _vendorDashboardDao.GetDishDashboardAsync(vendorId, allowedBranchIds, fromDate, toDate);
 
-        public Task<RevenueBarChartDto> GetRevenueBarChartAsync(int vendorId, DateTime fromDate, DateTime toDate)
-            => _vendorDashboardDao.GetRevenueBarChartAsync(vendorId, fromDate, toDate);
+        public Task<RevenueBarChartDto> GetRevenueBarChartAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
+            => _vendorDashboardDao.GetRevenueBarChartAsync(vendorId, allowedBranchIds, fromDate, toDate);
     }
 }
+
