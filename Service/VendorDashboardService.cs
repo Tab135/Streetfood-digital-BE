@@ -21,7 +21,7 @@ namespace Service
             var context = await _vendorDashboardRepo.GetDashboardContextByUserIdAsync(userId);
             if (context.vendorId == null)
             {
-                throw new DomainExceptions("KhÙng tÏm th?y Vendor ho?c Manager cho ngu?i d˘ng n‡y.", "VENDOR_OR_MANAGER_NOT_FOUND");
+                throw new DomainExceptions("KhÔøΩng tÔøΩm th?y Vendor ho?c Manager cho ngu?i dÔøΩng nÔøΩy.", "VENDOR_OR_MANAGER_NOT_FOUND");
             }
 
             return await _vendorDashboardRepo.GetRevenueDashboardAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
@@ -32,7 +32,7 @@ namespace Service
             var context = await _vendorDashboardRepo.GetDashboardContextByUserIdAsync(userId);
             if (context.vendorId == null)
             {
-                throw new DomainExceptions("KhÙng tÏm th?y Vendor ho?c Manager cho ngu?i d˘ng n‡y.", "VENDOR_OR_MANAGER_NOT_FOUND");
+                throw new DomainExceptions("KhÔøΩng tÔøΩm th?y Vendor ho?c Manager cho ngu?i dÔøΩng nÔøΩy.", "VENDOR_OR_MANAGER_NOT_FOUND");
             }
 
             return await _vendorDashboardRepo.GetCampaignDashboardAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
@@ -43,7 +43,7 @@ namespace Service
             var context = await _vendorDashboardRepo.GetDashboardContextByUserIdAsync(userId);
             if (context.vendorId == null)
             {
-                throw new DomainExceptions("KhÙng tÏm th?y Vendor ho?c Manager cho ngu?i d˘ng n‡y.", "VENDOR_OR_MANAGER_NOT_FOUND");
+                throw new DomainExceptions("KhÔøΩng tÔøΩm th?y Vendor ho?c Manager cho ngu?i dÔøΩng nÔøΩy.", "VENDOR_OR_MANAGER_NOT_FOUND");
             }
 
             return await _vendorDashboardRepo.GetVoucherDashboardAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
@@ -54,7 +54,7 @@ namespace Service
             var context = await _vendorDashboardRepo.GetDashboardContextByUserIdAsync(userId);
             if (context.vendorId == null)
             {
-                throw new DomainExceptions("KhÙng tÏm th?y Vendor ho?c Manager cho ngu?i d˘ng n‡y.", "VENDOR_OR_MANAGER_NOT_FOUND");
+                throw new DomainExceptions("KhÔøΩng tÔøΩm th?y Vendor ho?c Manager cho ngu?i dÔøΩng nÔøΩy.", "VENDOR_OR_MANAGER_NOT_FOUND");
             }
 
             return await _vendorDashboardRepo.GetDishDashboardAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
@@ -70,7 +70,7 @@ namespace Service
             var context = await _vendorDashboardRepo.GetDashboardContextByUserIdAsync(userId);
             if (context.vendorId == null)
             {
-                throw new DomainExceptions("KhÙng tÏm th?y Vendor ho?c Manager cho ngu?i d˘ng n‡y.", "VENDOR_OR_MANAGER_NOT_FOUND");
+                throw new DomainExceptions("KhÔøΩng tÔøΩm th?y Vendor ho?c Manager cho ngu?i dÔøΩng nÔøΩy.", "VENDOR_OR_MANAGER_NOT_FOUND");
             }
 
             return await _vendorDashboardRepo.GetRevenueBarChartAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
@@ -78,13 +78,13 @@ namespace Service
 
         public async Task<BranchesPerformanceDashboardDto> GetBranchesPerformanceAsync(int userId, DateTime fromDate, DateTime toDate)
         {
-            var vendorId = await _vendorDashboardRepo.GetVendorIdByUserIdAsync(userId);
-            if (vendorId == null)
+            var context = await _vendorDashboardRepo.GetDashboardContextByUserIdAsync(userId);
+            if (context.vendorId == null)
             {
-                throw new DomainExceptions("Kh√¥ng t√¨m th·∫•y Vendor cho ng∆∞·ªùi d√πng n√†y.", "VENDOR_NOT_FOUND");
+                throw new DomainExceptions("Kh√¥ng t√¨m th·∫•y Vendor ho·∫∑c Manager cho ng∆∞·ªùi d√πng n√†y.", "VENDOR_OR_MANAGER_NOT_FOUND");
             }
 
-            return await _vendorDashboardRepo.GetBranchesPerformanceAsync(vendorId.Value, fromDate, toDate);
+            return await _vendorDashboardRepo.GetBranchesPerformanceAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
         }
     }
 }

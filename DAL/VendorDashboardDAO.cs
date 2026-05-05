@@ -374,15 +374,23 @@ namespace DAL
             };
         }
 
-        public async Task<BranchesPerformanceDashboardDto> GetBranchesPerformanceAsync(int vendorId, DateTime fromDate, DateTime toDate)
+        public async Task<BranchesPerformanceDashboardDto> GetBranchesPerformanceAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
         {
             var startDate = fromDate.Date;
             var endDate = toDate.Date;
             var endExclusive = endDate.AddDays(1);
 
-            var branches = await _context.Branches
+            var branchQuery = _context.Branches
                 .AsNoTracking()
-                .Where(b => b.VendorId == vendorId)
+                .Where(b => b.VendorId == vendorId);
+
+            // Filter by allowed branches if specified
+            if (allowedBranchIds != null && allowedBranchIds.Any())
+            {
+                branchQuery = branchQuery.Where(b => allowedBranchIds.Contains(b.BranchId));
+            }
+
+            var branches = await branchQuery
                 .Select(b => new { b.BranchId, b.Name })
                 .ToListAsync();
 
