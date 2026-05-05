@@ -413,5 +413,47 @@ namespace DAL
 
             return result;
         }
+
+        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate)
+        {
+            var startDate = fromDate.Date;
+            var endDate = toDate.Date;
+            var endExclusive = endDate.AddDays(1);
+            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+
+            var result = new RevenueBarChartDto();
+
+            var currentTotal = await _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Complete
+                            && o.CreatedAt >= startDate
+                            && o.CreatedAt < endExclusive)
+                .SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
+
+            var previousTotal = await _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Complete
+                            && o.CreatedAt >= previousStartDate
+                            && o.CreatedAt < previousEndExclusive)
+                .SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
+
+            result.Items.Add(new BarChartItemDto
+            {
+                Label = "Previous",
+                FromDate = previousStartDate,
+                ToDate = previousEndExclusive.AddDays(-1),
+                Value = previousTotal
+            });
+
+            result.Items.Add(new BarChartItemDto
+            {
+                Label = "Now",
+                FromDate = startDate,
+                ToDate = endExclusive.AddDays(-1),
+                Value = currentTotal
+            });
+
+            return result;
+        }
     }
 }

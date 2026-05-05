@@ -165,5 +165,35 @@ namespace StreetFood.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
             }
         }
+
+        [HttpGet("revenue/bar")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(ApiResponse<RevenueBarChartDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetRevenueBarChart([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
+        {
+            try
+            {
+                if (fromDate == default || toDate == default)
+                {
+                    return BadRequest(new { message = "Vui lòng truyền fromDate và toDate." });
+                }
+
+                var chart = await _adminDashboardService.GetRevenueBarChartAsync(fromDate, toDate);
+
+                return Ok(new
+                {
+                    message = "Lấy biểu đồ doanh thu (Previous vs Now) thành công",
+                    data = chart
+                });
+            }
+            catch (DomainExceptions ex)
+            {
+                return BadRequest(new { message = ex.Message, errorCode = ex.ErrorCode });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+            }
+        }
     }
 }
