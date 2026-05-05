@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DAL;
 
+
 public class OrderDAO
 {
     private readonly StreetFoodDbContext _context;
@@ -158,5 +159,58 @@ public class OrderDAO
     public async Task<bool> ExistsAsync(int orderId)
     {
         return await _context.Orders.AnyAsync(o => o.OrderId == orderId);
+    }
+
+    public async Task<(List<Order> items, Dictionary<int, Payment> paymentByOrderId, int totalCount)> GetAllForAdminAsync(
+        int pageNumber,
+        int pageSize,
+        List<OrderStatus>? statuses = null,
+        int? branchId = null,
+        int? userId = null,
+        DateTime? fromDate = null,
+        DateTime? toDate = null)
+    {
+        var query = _context.Orders
+            .Include(o => o.User)
+            .Include(o => o.Branch).ThenInclude(b => b.Vendor)
+            .Include(o => o.AppliedVoucher)
+            .Include(o => o.OrderDishes)
+                .ThenInclude(od => od.BranchDish)
+                    .ThenInclude(bd => bd.Dish)
+            .AsQueryable();
+
+        if (statuses != null && statuses.Count > 0)
+            query = query.Where(o => statuses.Contains(o.Status));
+
+        if (branchId.HasValue)
+            query = query.Where(o => o.BranchId == branchId.Value);
+
+        if (userId.HasValue)
+            query = query.Where(o => o.UserId == userId.Value);
+
+        if (fromDate.HasValue)
+            query = query.Where(o => o.CreatedAt >= fromDate.Value);
+
+        if (toDate.HasValue)
+            query = query.Where(o => o.CreatedAt <= toDate.Value);
+
+        query = query.OrderByDescending(o => o.CreatedAt);
+
+        var totalCount = await query.CountAsync();
+        var orders = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var orderIds = orders.Select(o => o.OrderId).ToList();
+        var payments = await _context.Payments
+            .Where(p => p.OrderId.HasValue && orderIds.Contains(p.OrderId.Value))
+            .ToListAsync();
+
+        var paymentByOrderId = payments
+            .GroupBy(p => p.OrderId!.Value)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.CreatedAt).First());
+
+        return (orders, paymentByOrderId, totalCount);
     }
 }

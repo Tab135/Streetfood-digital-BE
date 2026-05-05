@@ -10,6 +10,7 @@ public interface IOrderRepository
     Task<Order?> GetLatestPendingByUserAndBranch(int userId, int branchId);
     Task<List<Order>> GetPendingOrdersNotUpdatedSince(DateTime staleBeforeUtc);
     Task<(List<Order> items, int totalCount)> GetByBranchIds(List<int> branchIds, int pageNumber, int pageSize, List<OrderStatus>? statuses = null);
+    Task<(List<Order> items, Dictionary<int, Payment> paymentByOrderId, int totalCount)> GetAllForAdminAsync(int pageNumber, int pageSize, List<OrderStatus>? statuses = null, int? branchId = null, int? userId = null, DateTime? fromDate = null, DateTime? toDate = null);
     Task<Order> Update(Order order, List<OrderDish>? orderDishes = null);
     Task Delete(int orderId);
     Task<bool> Exists(int orderId);

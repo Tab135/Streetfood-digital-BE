@@ -144,6 +144,26 @@ public class OrderController : ControllerBase
         });
     }
 
+    [HttpGet("admin/orders")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<AdminOrderResponseDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAllOrdersForAdmin(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] BO.Entities.OrderStatus? status = null,
+        [FromQuery] int? branchId = null,
+        [FromQuery] int? userId = null,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null)
+    {
+        var orders = await _orderService.GetAllOrdersForAdminAsync(pageNumber, pageSize, status, branchId, userId, fromDate, toDate);
+        return Ok(new
+        {
+            message = "Get all orders successfully",
+            data = orders
+        });
+    }
+
     [HttpPut("{id}")]
     [Authorize(Roles = "Manager,Vendor")]
     [ProducesResponseType(typeof(ApiResponse<OrderResponseDto>), StatusCodes.Status200OK)]
