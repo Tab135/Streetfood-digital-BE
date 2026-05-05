@@ -908,6 +908,28 @@ public class OrderService : IOrderService
         return order.FinalAmount;
     }
 
+    public async Task<PaginatedResponse<AdminOrderResponseDto>> GetAllOrdersForAdminAsync(
+        int pageNumber, int pageSize,
+        OrderStatus? status = null,
+        int? branchId = null,
+        int? userId = null,
+        DateTime? fromDate = null,
+        DateTime? toDate = null)
+    {
+        if (pageNumber <= 0) pageNumber = 1;
+        if (pageSize <= 0) pageSize = 10;
+
+        var statuses = status.HasValue
+            ? new List<OrderStatus> { status.Value }
+            : null;
+
+        var (orders, paymentByOrderId, totalCount) = await _orderRepository.GetAllForAdminAsync(
+            pageNumber, pageSize, statuses, branchId, userId, fromDate, toDate);
+
+        var items = orders.Select(o => MapToAdminDto(o, paymentByOrderId.GetValueOrDefault(o.OrderId))).ToList();
+        return new PaginatedResponse<AdminOrderResponseDto>(items, totalCount, pageNumber, pageSize);
+    }
+
     private static bool IsSystemFundedVoucher(Voucher voucher)
     {
         if (!voucher.VendorCampaignId.HasValue)
@@ -932,6 +954,67 @@ public class OrderService : IOrderService
     private static string GenerateCompletionCode()
     {
         return RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+    }
+
+    private static AdminOrderResponseDto MapToAdminDto(Order order, Payment? payment)
+    {
+        return new AdminOrderResponseDto
+        {
+            OrderId = order.OrderId,
+            Status = order.Status,
+            Table = order.Table,
+            PaymentMethod = order.PaymentMethod,
+            Note = order.Note,
+            TotalAmount = order.TotalAmount,
+            DiscountAmount = order.DiscountAmount,
+            FinalAmount = order.FinalAmount,
+            IsTakeAway = order.IsTakeAway,
+            OrderXP = order.OrderXP,
+            CreatedAt = order.CreatedAt,
+            UpdatedAt = order.UpdatedAt,
+            User = order.User == null ? new AdminOrderUserDto() : new AdminOrderUserDto
+            {
+                Id = order.User.Id,
+                FirstName = order.User.FirstName,
+                LastName = order.User.LastName,
+                Email = order.User.Email,
+                PhoneNumber = order.User.PhoneNumber,
+                AvatarUrl = order.User.AvatarUrl
+            },
+            Branch = order.Branch == null ? new AdminOrderBranchDto() : new AdminOrderBranchDto
+            {
+                BranchId = order.Branch.BranchId,
+                Name = order.Branch.Name,
+                City = order.Branch.City,
+                PhoneNumber = order.Branch.PhoneNumber,
+                VendorId = order.Branch.VendorId,
+                VendorName = order.Branch.Vendor?.Name
+            },
+            Payment = payment == null ? null : new AdminOrderPaymentDto
+            {
+                Id = payment.Id,
+                OrderCode = payment.OrderCode,
+                Amount = payment.Amount,
+                Status = payment.Status,
+                PaymentMethod = payment.PaymentMethod,
+                PaidAt = payment.PaidAt,
+                TransactionCode = payment.TransactionCode
+            },
+            AppliedVoucher = order.AppliedVoucher == null ? null : new AdminOrderVoucherDto
+            {
+                VoucherId = order.AppliedVoucher.VoucherId,
+                VoucherCode = order.AppliedVoucher.VoucherCode,
+                VoucherName = order.AppliedVoucher.Name
+            },
+            Items = order.OrderDishes.Select(od => new OrderDishResponseDto
+            {
+                DishId = od.DishId,
+                DishName = !string.IsNullOrEmpty(od.DishName) ? od.DishName : (od.BranchDish?.Dish?.Name ?? string.Empty),
+                Price = od.Price > 0 ? od.Price : (od.BranchDish?.Dish?.Price ?? 0m),
+                Quantity = od.Quantity,
+                ImageUrl = od.ImageUrl ?? od.BranchDish?.Dish?.ImageUrl
+            }).ToList()
+        };
     }
 
     private static OrderResponseDto MapToDto(Order order)
