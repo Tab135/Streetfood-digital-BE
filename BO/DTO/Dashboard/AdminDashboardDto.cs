@@ -9,6 +9,7 @@ namespace BO.DTO.Dashboard
         public DateTime ToDate { get; set; }
         public int TotalSignupCount { get; set; }
         public decimal SignupGrowthRate { get; set; }
+        public string PreviousPeriod { get; set; } = string.Empty;
         public List<AdminUserSignupPointDto> DailySignups { get; set; } = new List<AdminUserSignupPointDto>();
     }
 
@@ -26,6 +27,7 @@ namespace BO.DTO.Dashboard
         public decimal TotalSystemCampaignAmount { get; set; }
         public decimal BranchRegistrationGrowthRate { get; set; }
         public decimal SystemCampaignGrowthRate { get; set; }
+        public string PreviousPeriod { get; set; } = string.Empty;
         public List<AdminMoneyPointDto> DailyAmounts { get; set; } = new List<AdminMoneyPointDto>();
     }
 
@@ -42,6 +44,7 @@ namespace BO.DTO.Dashboard
         public DateTime ToDate { get; set; }
         public decimal TotalCompensationAmount { get; set; }
         public decimal CompensationGrowthRate { get; set; }
+        public string PreviousPeriod { get; set; } = string.Empty;
         public List<AdminCompensationPointDto> DailyCompensations { get; set; } = new List<AdminCompensationPointDto>();
         public List<AdminVendorCompensationDto> CompensationByVendors { get; set; } = new List<AdminVendorCompensationDto>();
     }
@@ -65,6 +68,7 @@ namespace BO.DTO.Dashboard
         public DateTime ToDate { get; set; }
         public int TotalConversionCount { get; set; }
         public decimal ConversionGrowthRate { get; set; }
+        public string PreviousPeriod { get; set; } = string.Empty;
         public List<AdminUserToVendorConversionPointDto> DailyConversions { get; set; } = new List<AdminUserToVendorConversionPointDto>();
     }
 

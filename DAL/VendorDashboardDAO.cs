@@ -74,6 +74,7 @@ namespace DAL
                 TotalRevenue = totalRevenue,
                 TotalOrders = totalOrders,
                 RevenueGrowthRate = CalculateGrowthRate(totalRevenue, previousTotalRevenue),
+                PreviousPeriod = $"từ {previousStartDate:dd-MM-yyyy} tới {previousEndExclusive.AddDays(-1):dd-MM-yyyy}",
                 DailyRevenues = dailyRevenues
             };
         }

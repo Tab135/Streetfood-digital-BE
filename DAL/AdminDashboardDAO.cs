@@ -51,6 +51,7 @@ namespace DAL
                 ToDate = endDate,
                 TotalSignupCount = totalSignupCount,
                 SignupGrowthRate = CalculateGrowthRate(totalSignupCount, previousTotalSignupCount),
+                PreviousPeriod = $"từ {previousStartDate:dd-MM-yyyy} tới {previousEndExclusive.AddDays(-1):dd-MM-yyyy}",
                 DailySignups = dailySignups
             };
         }
@@ -163,6 +164,7 @@ namespace DAL
                 TotalSystemCampaignAmount = totalSystemCampaignAmount,
                 BranchRegistrationGrowthRate = CalculateGrowthRate(totalBranchRegistrationAmount, previousTotalBranchRegistrationAmount),
                 SystemCampaignGrowthRate = CalculateGrowthRate(totalSystemCampaignAmount, previousTotalSystemCampaignAmount),
+                PreviousPeriod = $"từ {previousStartDate:dd-MM-yyyy} tới {previousEndExclusive.AddDays(-1):dd-MM-yyyy}",
                 DailyAmounts = dailyAmounts
             };
         }
@@ -224,6 +226,7 @@ namespace DAL
                 ToDate = endDate,
                 TotalCompensationAmount = totalCompensationAmount,
                 CompensationGrowthRate = CalculateGrowthRate(totalCompensationAmount, previousTotalCompensationAmount),
+                PreviousPeriod = $"từ {previousStartDate:dd-MM-yyyy} tới {previousEndExclusive.AddDays(-1):dd-MM-yyyy}",
                 DailyCompensations = dailyCompensations,
                 CompensationByVendors = compensationByVendors
             };
@@ -264,6 +267,7 @@ namespace DAL
                 ToDate = endDate,
                 TotalConversionCount = totalConversionCount,
                 ConversionGrowthRate = CalculateGrowthRate(totalConversionCount, previousTotalConversionCount),
+                PreviousPeriod = $"từ {previousStartDate:dd-MM-yyyy} tới {previousEndExclusive.AddDays(-1):dd-MM-yyyy}",
                 DailyConversions = dailyConversions
             };
         }

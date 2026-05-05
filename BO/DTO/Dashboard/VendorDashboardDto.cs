@@ -8,6 +8,7 @@ namespace BO.DTO.Dashboard
         public decimal TotalRevenue { get; set; }
         public int TotalOrders { get; set; }
         public decimal RevenueGrowthRate { get; set; }
+        public string PreviousPeriod { get; set; } = string.Empty;
         public List<DailyRevenueDto> DailyRevenues { get; set; } = new List<DailyRevenueDto>();
     }
 
