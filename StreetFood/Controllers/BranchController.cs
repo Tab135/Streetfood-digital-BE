@@ -567,7 +567,10 @@ namespace StreetFood.Controllers
                 }
 
                 await _branchService.ClaimBranchRequestAsync(id, userId);
-                return Ok(new { message = "Đã nhận yêu cầu duyệt quán thành công." });
+                return Ok(new { 
+                    message = "Đã nhận yêu cầu duyệt quán thành công.", 
+                    data = new { verifiedBy = userId } 
+                });
             }
             catch (Exception ex)
             {
