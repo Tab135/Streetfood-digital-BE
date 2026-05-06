@@ -419,7 +419,7 @@ namespace StreetFood.Controllers
 
 
         [HttpPost("{id}/submit-license")]
-        [Authorize(Roles = "User,Vendor,Manager")]
+        [Authorize(Roles = "User,Vendor,Manager,Moderator")]
         [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status200OK)]
         public async Task<IActionResult> SubmitBranchLicense(int id, List<IFormFile> licenseImages)
         {
@@ -544,6 +544,30 @@ namespace StreetFood.Controllers
             {
                 var branches = await _branchService.GetUnverifiedBranchesAsync(pageNumber, pageSize);
                 return Ok(new { message = "Unverified branches retrieved successfully", data = branches });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Claim a branch verification task (Moderator only)
+        /// </summary>
+        [HttpPut("{id}/claim")]
+        [Authorize(Roles = "Admin,Moderator")]
+        public async Task<IActionResult> ClaimBranch(int id)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    return Unauthorized(new { message = "User not authenticated" });
+                }
+
+                await _branchService.ClaimBranchRequestAsync(id, userId);
+                return Ok(new { message = "Đã nhận yêu cầu duyệt quán thành công." });
             }
             catch (Exception ex)
             {

@@ -456,8 +456,11 @@ namespace Service
                 throw new DomainExceptions($"Không tìm thấy chi nhánh với ID {branchId}");
             }
 
-            // Verify user can manage the branch (vendor owner or assigned manager)
-            if (!await UserCanManageBranchAsync(branchId, userId))
+            // Verify user can manage the branch (vendor owner, assigned manager, or moderator)
+            var user = await _userRepository.GetUserById(userId);
+            bool isModerator = user != null && user.Role == Role.Moderator;
+            
+            if (!isModerator && !await UserCanManageBranchAsync(branchId, userId))
             {
                 throw new DomainExceptions("Không có quyền: Bạn không quản lý chi nhánh này");
             }
@@ -585,6 +588,33 @@ namespace Service
             return new PaginatedResponse<PendingRegistrationDto>(items, totalCount, pageNumber, pageSize);
         }
 
+        public async Task<bool> ClaimBranchRequestAsync(int branchId, int verifierUserId)
+        {
+            await EnsureVerifierIsAdminOrModeratorAsync(verifierUserId);
+
+            var registrationRequest = await _branchRepository.GetBranchRequestAsync(branchId);
+            if (registrationRequest == null)
+            {
+                throw new DomainExceptions($"Không tìm thấy yêu cầu đăng ký cho chi nhánh với ID {branchId}");
+            }
+
+            if (registrationRequest.Status != RegisterVendorStatusEnum.Pending)
+            {
+                throw new DomainExceptions("Yêu cầu này đã được xử lý.");
+            }
+
+            if (registrationRequest.VerifiedBy.HasValue && registrationRequest.VerifiedBy.Value != verifierUserId)
+            {
+                throw new DomainExceptions("Đã có người khác nhận duyệt yêu cầu này.");
+            }
+
+            registrationRequest.VerifiedBy = verifierUserId;
+            registrationRequest.UpdatedAt = DateTime.UtcNow;
+            await _branchRepository.UpdateBranchRequestAsync(registrationRequest);
+
+            return true;
+        }
+
         public async Task<bool> VerifyBranchAsync(int branchId, int verifierUserId)
         {
             await EnsureVerifierIsAdminOrModeratorAsync(verifierUserId);
@@ -593,6 +623,18 @@ namespace Service
             if (registrationRequest == null)
             {
                 throw new DomainExceptions($"Không tìm thấy yêu cầu đăng ký cho chi nhánh với ID {branchId}");
+            }
+
+            if (registrationRequest.VerifiedBy.HasValue && registrationRequest.VerifiedBy.Value != verifierUserId)
+            {
+                throw new DomainExceptions("Bạn không thể duyệt yêu cầu do người khác đã nhận.");
+            }
+
+            if (!registrationRequest.VerifiedBy.HasValue)
+            {
+                // Auto-claim if not claimed yet, or throw exception. The user said "bấm nhận verified quán đó trước xong tới verified", meaning it might be required. Let's auto-claim or just set it. 
+                // Actually they requested explicitly to claim first. So let's demand it.
+                throw new DomainExceptions("Bạn phải nhận duyệt quán này trước khi thực hiện duyệt.");
             }
 
             var branch = await _branchRepository.GetByIdAsync(branchId);
@@ -648,7 +690,10 @@ namespace Service
 
             branch.IsVerified = true;
             branch.IsActive = true;
-            branch.IsSubscribed = false; // "ko đóng tiền thì chỉ là branch bình thường chưa được isSubcribed"
+            if (!branch.IsSubscribed)
+            {
+                branch.IsSubscribed = false; // "ko đóng tiền thì chỉ là branch bình thường chưa được isSubcribed"
+            }
             branch.TierId = 2; // Silver
             branch.BatchReviewCount = 0;
             branch.BatchRatingSum = 0;
@@ -714,6 +759,16 @@ namespace Service
             if (registrationRequest == null)
             {
                 throw new DomainExceptions($"Không tìm thấy yêu cầu đăng ký cho chi nhánh với ID {branchId}");
+            }
+
+            if (registrationRequest.VerifiedBy.HasValue && registrationRequest.VerifiedBy.Value != verifierUserId)
+            {
+                throw new DomainExceptions("Bạn không thể từ chối yêu cầu do người khác đã nhận.");
+            }
+
+            if (!registrationRequest.VerifiedBy.HasValue)
+            {
+                throw new DomainExceptions("Bạn phải nhận duyệt quán này trước khi thực hiện từ chối.");
             }
 
             registrationRequest.Status = RegisterVendorStatusEnum.Reject;

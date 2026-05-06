@@ -32,7 +32,8 @@ namespace Service.Interfaces
         Task<BranchRequest> SubmitBranchLicenseAsync(int branchId, List<string> licenseImagePaths, int userId);
         Task<BranchRequest> GetBranchLicenseStatusAsync(int branchId, int userId);
         Task<PaginatedResponse<PendingRegistrationDto>> GetPendingBranchRegistrationsAsync(int pageNumber, int pageSize, int? type = null);
-        Task<bool> VerifyBranchAsync(int branchId, int verifierUserId);
+        Task<bool> VerifyBranchAsync(int branchId, int verifierUserId);        
+        Task<bool> ClaimBranchRequestAsync(int branchId, int verifierUserId);        
         Task<bool> RejectBranchRegistrationAsync(int branchId, string rejectionReason, int verifierUserId);
 
         // Work Schedule operations
