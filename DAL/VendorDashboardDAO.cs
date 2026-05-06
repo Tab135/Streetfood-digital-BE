@@ -9,6 +9,9 @@ namespace DAL
 {
     public class VendorDashboardDAO
     {
+        private const string VendorOrderCommissionPercentSettingName = "VendorOrderCommissionPercent";
+        private const int DefaultVendorOrderCommissionPercent = 10;
+
         private readonly StreetFoodDbContext _context;
 
         public VendorDashboardDAO(StreetFoodDbContext context)
@@ -54,65 +57,54 @@ namespace DAL
                 return new RevenueDashboardDto();
             }
 
-            // Calculate settled revenue (TotalAmount for system vouchers, FinalAmount otherwise)
-            var completedOrdersQuery = _context.Orders
+            var commissionRate = await GetVendorOrderCommissionRateAsync();
+
+            var completedOrders = await _context.Orders
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.BranchId)
                             && o.Status == OrderStatus.Complete
                             && o.CreatedAt >= startDate
-                            && o.CreatedAt < endExclusive);
-
-            // Get all completed orders with voucher details to calculate correct settlement amount
-            var ordersWithVouchers = await completedOrdersQuery
-                .Include(o => o.AppliedVoucher)
-                    .ThenInclude(v => v!.VendorCampaign)
+                            && o.CreatedAt < endExclusive)
                 .Select(o => new
                 {
-                    o.OrderId,
-                    o.FinalAmount,
-                    o.TotalAmount,
                     o.CreatedAt,
-                    IsSystemVoucher = o.AppliedVoucher == null ? false :
-                        (o.AppliedVoucher.VendorCampaignId == null ? true :
-                        o.AppliedVoucher.VendorCampaign!.CreatedByVendorId == null)
+                    o.TotalAmount,
+                    o.FinalAmount,
+                    IsSystemVoucher = o.AppliedVoucherId.HasValue
+                        && (o.AppliedVoucher!.VendorCampaignId == null
+                            || (o.AppliedVoucher.VendorCampaign != null
+                                && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue))
                 })
                 .ToListAsync();
 
-            decimal totalRevenue = ordersWithVouchers.Sum(o => 
-                o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount);
-            int totalOrders = ordersWithVouchers.Count;
+            decimal totalRevenue = completedOrders.Sum(o => CalculateVendorNetRevenue(o.TotalAmount, o.FinalAmount, o.IsSystemVoucher, commissionRate));
+            int totalOrders = completedOrders.Count;
 
-            // Previous period calculation
-            var previousOrdersQuery = _context.Orders
+            var previousCompletedOrders = await _context.Orders
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.BranchId)
                             && o.Status == OrderStatus.Complete
                             && o.CreatedAt >= previousStartDate
-                            && o.CreatedAt < previousEndExclusive);
-
-            var previousOrdersWithVouchers = await previousOrdersQuery
-                .Include(o => o.AppliedVoucher)
-                    .ThenInclude(v => v!.VendorCampaign)
+                            && o.CreatedAt < previousEndExclusive)
                 .Select(o => new
                 {
-                    o.FinalAmount,
                     o.TotalAmount,
-                    IsSystemVoucher = o.AppliedVoucher == null ? false :
-                        (o.AppliedVoucher.VendorCampaignId == null ? true :
-                        o.AppliedVoucher.VendorCampaign!.CreatedByVendorId == null)
+                    o.FinalAmount,
+                    IsSystemVoucher = o.AppliedVoucherId.HasValue
+                        && (o.AppliedVoucher!.VendorCampaignId == null
+                            || (o.AppliedVoucher.VendorCampaign != null
+                                && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue))
                 })
                 .ToListAsync();
 
-            decimal previousTotalRevenue = previousOrdersWithVouchers.Sum(o =>
-                o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount);
+            var previousTotalRevenue = previousCompletedOrders.Sum(o => CalculateVendorNetRevenue(o.TotalAmount, o.FinalAmount, o.IsSystemVoucher, commissionRate));
 
-            // Daily revenues grouped by date
-            var dailyRevenues = ordersWithVouchers
+            var dailyRevenues = completedOrders
                 .GroupBy(o => o.CreatedAt.Date)
                 .Select(g => new DailyRevenueDto
                 {
                     Date = g.Key,
-                    Revenue = g.Sum(o => o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount),
+                    Revenue = g.Sum(o => CalculateVendorNetRevenue(o.TotalAmount, o.FinalAmount, o.IsSystemVoucher, commissionRate)),
                     OrderCount = g.Count()
                 })
                 .OrderBy(d => d.Date)
@@ -126,6 +118,7 @@ namespace DAL
                 PreviousPeriod = $"từ {previousStartDate:dd-MM-yyyy} tới {previousEndExclusive.AddDays(-1):dd-MM-yyyy}",
                 DailyRevenues = dailyRevenues
             };
+
         }
 
         public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
@@ -163,49 +156,46 @@ namespace DAL
                 return result;
             }
 
-            // Get current period orders with voucher details
+            var commissionRate = await GetVendorOrderCommissionRateAsync();
+
             var currentOrders = await _context.Orders
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.BranchId)
                             && o.Status == OrderStatus.Complete
                             && o.CreatedAt >= startDate
                             && o.CreatedAt < endExclusive)
-                .Include(o => o.AppliedVoucher)
-                    .ThenInclude(v => v!.VendorCampaign)
                 .Select(o => new
                 {
-                    o.FinalAmount,
                     o.TotalAmount,
-                    IsSystemVoucher = o.AppliedVoucher == null ? false :
-                        (o.AppliedVoucher.VendorCampaignId == null ? true :
-                        o.AppliedVoucher.VendorCampaign!.CreatedByVendorId == null)
+                    o.FinalAmount,
+                    IsSystemVoucher = o.AppliedVoucherId.HasValue
+                        && (o.AppliedVoucher!.VendorCampaignId == null
+                            || (o.AppliedVoucher.VendorCampaign != null
+                                && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue))
                 })
                 .ToListAsync();
 
-            decimal currentTotal = currentOrders.Sum(o => 
-                o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount);
+            var currentTotal = currentOrders.Sum(o => CalculateVendorNetRevenue(o.TotalAmount, o.FinalAmount, o.IsSystemVoucher, commissionRate));
 
-            // Get previous period orders with voucher details
             var previousOrders = await _context.Orders
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.BranchId)
                             && o.Status == OrderStatus.Complete
                             && o.CreatedAt >= previousStartDate
                             && o.CreatedAt < previousEndExclusive)
-                .Include(o => o.AppliedVoucher)
-                    .ThenInclude(v => v!.VendorCampaign)
                 .Select(o => new
                 {
-                    o.FinalAmount,
                     o.TotalAmount,
-                    IsSystemVoucher = o.AppliedVoucher == null ? false :
-                        (o.AppliedVoucher.VendorCampaignId == null ? true :
-                        o.AppliedVoucher.VendorCampaign!.CreatedByVendorId == null)
+                    o.FinalAmount,
+                    IsSystemVoucher = o.AppliedVoucherId.HasValue
+                        && (o.AppliedVoucher!.VendorCampaignId == null
+                            || (o.AppliedVoucher.VendorCampaign != null
+                                && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue))
                 })
                 .ToListAsync();
 
-            decimal previousTotal = previousOrders.Sum(o =>
-                o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount);
+            var previousTotal = previousOrders.Sum(o => CalculateVendorNetRevenue(o.TotalAmount, o.FinalAmount, o.IsSystemVoucher, commissionRate));
+
 
             result.Items.Add(new BarChartItemDto
             {
@@ -228,6 +218,8 @@ namespace DAL
 
         public async Task<CampaignDashboardDto> GetCampaignDashboardAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
         {
+            var commissionRate = await GetVendorOrderCommissionRateAsync();
+
             var vendorCampaigns = await _context.Campaigns
                 .AsNoTracking()
                 .Where(c => c.CreatedByVendorId == vendorId)
@@ -255,6 +247,16 @@ namespace DAL
                                 && o.AppliedVoucher.VendorCampaignId == campaign.CampaignId
                                 && o.CreatedAt >= fromDate
                                 && o.CreatedAt <= toDate)
+                    .Select(o => new
+                    {
+                        o.BranchId,
+                        o.TotalAmount,
+                        o.FinalAmount,
+                        IsSystemVoucher = o.AppliedVoucherId.HasValue
+                            && (o.AppliedVoucher!.VendorCampaignId == null
+                                || (o.AppliedVoucher.VendorCampaign != null
+                                    && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue))
+                    })
                     .ToListAsync();
 
                 var branchesDto = new List<VendorCampaignBranchDto>();
@@ -266,7 +268,7 @@ namespace DAL
                         BranchId = b.BranchId,
                         BranchName = b.Name,
                         OrderCount = branchOrders.Count,
-                        Revenue = branchOrders.Sum(o => o.FinalAmount)
+                        Revenue = branchOrders.Sum(o => CalculateVendorNetRevenue(o.TotalAmount, o.FinalAmount, o.IsSystemVoucher, commissionRate))
                     });
                 }
 
@@ -275,7 +277,7 @@ namespace DAL
                     CampaignId = campaign.CampaignId,
                     CampaignName = campaign.Name,
                     OrderCount = orders.Count,
-                    Revenue = orders.Sum(o => o.FinalAmount),
+                    Revenue = orders.Sum(o => CalculateVendorNetRevenue(o.TotalAmount, o.FinalAmount, o.IsSystemVoucher, commissionRate)),
                     Branches = branchesDto
                 });
             }
@@ -462,37 +464,36 @@ namespace DAL
             }
 
             var branchIds = branches.Select(b => b.BranchId).ToList();
+            var commissionRate = await GetVendorOrderCommissionRateAsync();
 
-            // Get all orders with voucher details for settlement amount calculation
-            var orders = await _context.Orders
+            var completedOrders = await _context.Orders
                 .AsNoTracking()
                 .Where(o => branchIds.Contains(o.BranchId)
                             && o.Status == OrderStatus.Complete
                             && o.CreatedAt >= startDate
                             && o.CreatedAt < endExclusive)
-                .Include(o => o.AppliedVoucher)
-                    .ThenInclude(v => v!.VendorCampaign)
                 .Select(o => new
                 {
                     o.BranchId,
-                    o.FinalAmount,
                     o.TotalAmount,
-                    IsSystemVoucher = o.AppliedVoucher == null ? false :
-                        (o.AppliedVoucher.VendorCampaignId == null ? true :
-                        o.AppliedVoucher.VendorCampaign!.CreatedByVendorId == null)
+                    o.FinalAmount,
+                    IsSystemVoucher = o.AppliedVoucherId.HasValue
+                        && (o.AppliedVoucher!.VendorCampaignId == null
+                            || (o.AppliedVoucher.VendorCampaign != null
+                                && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue))
                 })
                 .ToListAsync();
 
-            // Group by branch and calculate settled revenue
-            var branchPerformances = orders
+            var branchPerformances = completedOrders
                 .GroupBy(o => o.BranchId)
                 .Select(g => new
                 {
                     BranchId = g.Key,
                     OrderCount = g.Count(),
-                    Revenue = g.Sum(o => o.IsSystemVoucher ? o.TotalAmount : o.FinalAmount)
+                    Revenue = g.Sum(o => CalculateVendorNetRevenue(o.TotalAmount, o.FinalAmount, o.IsSystemVoucher, commissionRate))
                 })
                 .ToList();
+
 
             var result = new List<BranchPerformanceDto>();
             foreach (var branch in branches)
@@ -530,6 +531,32 @@ namespace DAL
             }
 
             return Math.Round(((currentValue - previousValue) / previousValue) * 100m, 2);
+        }
+
+        private async Task<decimal> GetVendorOrderCommissionRateAsync()
+        {
+            var rawPercent = await _context.Settings
+                .AsNoTracking()
+                .Where(s => s.Name == VendorOrderCommissionPercentSettingName)
+                .Select(s => s.Value)
+                .FirstOrDefaultAsync();
+
+            var percent = int.TryParse(rawPercent, out var parsedPercent)
+                ? parsedPercent
+                : DefaultVendorOrderCommissionPercent;
+
+            percent = Math.Clamp(percent, 0, 100);
+            return percent / 100m;
+        }
+
+        private static decimal CalculateVendorNetRevenue(decimal totalAmount, decimal finalAmount, bool isSystemVoucher, decimal commissionRate)
+        {
+            var grossReceivable = isSystemVoucher ? totalAmount : finalAmount;
+            var commissionBase = isSystemVoucher ? finalAmount : totalAmount;
+            var commissionAmount = Math.Round(commissionBase * commissionRate, 2, MidpointRounding.AwayFromZero);
+            var netRevenue = grossReceivable - commissionAmount;
+
+            return netRevenue < 0m ? 0m : netRevenue;
         }
     }
 }

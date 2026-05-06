@@ -14,6 +14,9 @@ namespace Service;
 
 public class OrderService : IOrderService
 {
+    private const string VendorOrderCommissionPercentSettingName = "VendorOrderCommissionPercent";
+    private const int DefaultVendorOrderCommissionPercent = 10;
+
     private readonly IOrderRepository _orderRepository;
     private readonly IBranchRepository _branchRepository;
     private readonly IDishRepository _dishRepository;
@@ -897,25 +900,51 @@ public class OrderService : IOrderService
 
     private async Task<decimal> CalculateVendorSettlementAmountAsync(Order order)
     {
+        var commissionRate = GetVendorOrderCommissionRate();
+        var (grossReceivable, commissionBaseAmount) = await CalculateVendorSettlementComponentsAsync(order);
+
+        var commissionAmount = Math.Round(commissionBaseAmount * commissionRate, 2, MidpointRounding.AwayFromZero);
+        var settlementAmount = grossReceivable - commissionAmount;
+
+        return settlementAmount < 0m ? 0m : settlementAmount;
+    }
+
+    private decimal GetVendorOrderCommissionRate()
+    {
+        var commissionPercent = _settingService.GetInt(VendorOrderCommissionPercentSettingName, DefaultVendorOrderCommissionPercent);
+        commissionPercent = Math.Clamp(commissionPercent, 0, 100);
+        return commissionPercent / 100m;
+    }
+
+    private async Task<(decimal GrossReceivable, decimal CommissionBaseAmount)> CalculateVendorSettlementComponentsAsync(Order order)
+    {
+        // Default: no voucher, vendor receives paid amount and commission is calculated on the paid amount.
+        var grossReceivable = order.FinalAmount;
+        var commissionBaseAmount = order.FinalAmount;
+
         if (!order.AppliedVoucherId.HasValue)
         {
-            return order.FinalAmount;
+            return (grossReceivable, commissionBaseAmount);
         }
 
         var voucher = await _voucherRepository.GetByIdAsync(order.AppliedVoucherId.Value);
         if (voucher == null)
         {
-            return order.FinalAmount;
+            return (grossReceivable, commissionBaseAmount);
         }
 
-        // System-funded vouchers compensate vendor for the discounted part.
-        // Vendor/branch-funded vouchers do not.
         if (IsSystemFundedVoucher(voucher))
         {
-            return order.TotalAmount;
+            // System voucher: vendor gets discount compensation, commission is applied on discounted amount.
+            grossReceivable = order.TotalAmount;
+            commissionBaseAmount = order.FinalAmount;
+            return (grossReceivable, commissionBaseAmount);
         }
 
-        return order.FinalAmount;
+        // Vendor voucher: vendor absorbs voucher discount, commission is applied on gross order value.
+        grossReceivable = order.FinalAmount;
+        commissionBaseAmount = order.TotalAmount;
+        return (grossReceivable, commissionBaseAmount);
     }
 
     public async Task<PaginatedResponse<AdminOrderResponseDto>> GetAllOrdersForAdminAsync(
