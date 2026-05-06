@@ -382,14 +382,17 @@ namespace DAL
 
                 var totalBranchesJoined = await _context.BranchCampaigns
                     .AsNoTracking()
-                    .Where(bc => bc.CampaignId == campaignId)
+                    .Where(bc => bc.CampaignId == campaignId && bc.IsActive)
                     .CountAsync();
 
                 var branchOrdersQuery = await _context.Orders
                     .AsNoTracking()
                     .Where(o => o.Status == OrderStatus.Complete 
                                 && o.AppliedVoucherId.HasValue
-                                && campaignVoucherIds.Contains(o.AppliedVoucherId.Value))
+                                && campaignVoucherIds.Contains(o.AppliedVoucherId.Value)
+                                && _context.BranchCampaigns.Any(bc => bc.CampaignId == campaignId
+                                                                    && bc.BranchId == o.BranchId
+                                                                    && bc.IsActive))
                     .GroupBy(o => new { o.BranchId, o.Branch.Name })
                     .Select(g => new AdminSystemCampaignBranchOrderDto
                     {
@@ -438,7 +441,10 @@ namespace DAL
                     .AsNoTracking()
                     .Where(o => o.Status == OrderStatus.Complete 
                                 && o.AppliedVoucherId.HasValue
-                                && campaignVoucherIds.Contains(o.AppliedVoucherId.Value))
+                                && campaignVoucherIds.Contains(o.AppliedVoucherId.Value)
+                                && _context.BranchCampaigns.Any(bc => bc.CampaignId == campaignId
+                                                                    && bc.BranchId == o.BranchId
+                                                                    && bc.IsActive))
                     .OrderByDescending(o => o.CreatedAt)
                     .Select(o => new AdminSystemCampaignOrderDto
                     {
