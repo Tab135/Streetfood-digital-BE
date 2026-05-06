@@ -86,5 +86,10 @@ namespace Service
 
             return await _vendorDashboardRepo.GetBranchesPerformanceAsync(context.vendorId.Value, context.allowedBranchIds, fromDate, toDate);
         }
+
+        public Task<decimal> GetCommissionRateAsync()
+        {
+            return _vendorDashboardRepo.GetCommissionRateAsync();
+        }
     }
 }

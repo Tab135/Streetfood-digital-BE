@@ -236,6 +236,25 @@ namespace StreetFood.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
             }
         }
+
+        [HttpGet("commission-rate")]
+        [Authorize(Roles = "Vendor,Manager,Admin")]
+        public async Task<IActionResult> GetCommissionRate()
+        {
+            try
+            {
+                var rate = await _vendorDashboardService.GetCommissionRateAsync();
+                return Ok(new
+                {
+                    message = "Get current commission rate successfully",
+                    data = new { commissionPercent = rate }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
+            }
+        }
     }
 }
 

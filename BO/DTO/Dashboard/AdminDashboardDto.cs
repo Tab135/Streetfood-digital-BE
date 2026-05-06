@@ -25,8 +25,10 @@ namespace BO.DTO.Dashboard
         public DateTime ToDate { get; set; }
         public decimal TotalBranchRegistrationAmount { get; set; }
         public decimal TotalSystemCampaignAmount { get; set; }
+        public decimal TotalOrderCommissionAmount { get; set; }
         public decimal BranchRegistrationGrowthRate { get; set; }
         public decimal SystemCampaignGrowthRate { get; set; }
+        public decimal OrderCommissionGrowthRate { get; set; }
         public string PreviousPeriod { get; set; } = string.Empty;
         public List<AdminMoneyPointDto> DailyAmounts { get; set; } = new List<AdminMoneyPointDto>();
     }
@@ -36,6 +38,7 @@ namespace BO.DTO.Dashboard
         public DateTime Date { get; set; }
         public decimal BranchRegistrationAmount { get; set; }
         public decimal SystemCampaignAmount { get; set; }
+        public decimal OrderCommissionAmount { get; set; }
     }
 
     public class AdminCompensationChartDto

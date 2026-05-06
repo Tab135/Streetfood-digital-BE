@@ -35,6 +35,9 @@ namespace Repository
 
         public Task<BranchesPerformanceDashboardDto> GetBranchesPerformanceAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
             => _vendorDashboardDao.GetBranchesPerformanceAsync(vendorId, allowedBranchIds, fromDate, toDate);
+
+        public Task<decimal> GetCommissionRateAsync()
+            => _vendorDashboardDao.GetCommissionRateAsync();
     }
 }
 

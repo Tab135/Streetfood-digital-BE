@@ -20,5 +20,6 @@ namespace Service.Interfaces
 
         Task<RevenueBarChartDto> GetRevenueBarChartAsync(int userId, DateTime fromDate, DateTime toDate);
         Task<BranchesPerformanceDashboardDto> GetBranchesPerformanceAsync(int userId, DateTime fromDate, DateTime toDate);
+        Task<decimal> GetCommissionRateAsync();
     }
 }

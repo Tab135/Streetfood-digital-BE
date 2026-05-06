@@ -102,6 +102,7 @@ public class OrderService : IOrderService
             DiscountAmount = request.DiscountAmount,
             FinalAmount = finalAmount,
             IsTakeAway = request.IsTakeAway,
+            CommissionRate = GetVendorOrderCommissionRate(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -160,6 +161,7 @@ public class OrderService : IOrderService
             existingPendingOrder.DiscountAmount = request.DiscountAmount;
             existingPendingOrder.FinalAmount = finalAmount;
             existingPendingOrder.IsTakeAway = request.IsTakeAway;
+            existingPendingOrder.CommissionRate = GetVendorOrderCommissionRate();
 
             var updated = await _orderRepository.Update(existingPendingOrder, orderDishes);
             return (MapToDto(updated), false, previousAppliedVoucherId);
@@ -178,6 +180,7 @@ public class OrderService : IOrderService
             DiscountAmount = request.DiscountAmount,
             FinalAmount = finalAmount,
             IsTakeAway = request.IsTakeAway,
+            CommissionRate = GetVendorOrderCommissionRate(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -900,7 +903,7 @@ public class OrderService : IOrderService
 
     private async Task<decimal> CalculateVendorSettlementAmountAsync(Order order)
     {
-        var commissionRate = GetVendorOrderCommissionRate();
+        var commissionRate = order.CommissionRate ?? 0m;
         var (grossReceivable, commissionBaseAmount) = await CalculateVendorSettlementComponentsAsync(order);
 
         var commissionAmount = Math.Round(commissionBaseAmount * commissionRate, 2, MidpointRounding.AwayFromZero);

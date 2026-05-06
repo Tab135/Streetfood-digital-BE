@@ -105,26 +105,57 @@ namespace DAL
                 })
                 .ToDictionaryAsync(x => x.Date, x => x.Amount);
 
+            var currentOrderCommissions = await _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Complete
+                            && o.CreatedAt >= startDate
+                            && o.CreatedAt < endExclusive)
+                .Select(o => new
+                {
+                    o.CreatedAt,
+                    o.TotalAmount,
+                    o.FinalAmount,
+                    CommissionRate = o.CommissionRate ?? 0m,
+                    IsSystemVoucher = o.AppliedVoucherId.HasValue
+                        && (o.AppliedVoucher!.VendorCampaignId == null
+                            || (o.AppliedVoucher.VendorCampaign != null
+                                && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue))
+                })
+                .ToListAsync();
+
+            var orderCommissionByDate = currentOrderCommissions
+                .GroupBy(o => o.CreatedAt.Date)
+                .Select(g => new
+                {
+                    Date = g.Key,
+                    Amount = g.Sum(o => Math.Round((o.IsSystemVoucher ? o.FinalAmount : o.TotalAmount) * o.CommissionRate, 2, MidpointRounding.AwayFromZero))
+                })
+                .ToDictionary(x => x.Date, x => x.Amount);
+
             var dailyAmounts = branchRegistrationRevenueByDate.Keys
                 .Union(systemCampaignRevenueByDate.Keys)
+                .Union(orderCommissionByDate.Keys)
                 .OrderBy(date => date)
                 .Select(date =>
                 {
                     branchRegistrationRevenueByDate.TryGetValue(date, out var branchRegistrationAmount);
                     systemCampaignRevenueByDate.TryGetValue(date, out var systemCampaignAmount);
+                    orderCommissionByDate.TryGetValue(date, out var orderCommissionAmount);
 
                     return new AdminMoneyPointDto
                     {
                         Date = date,
                         BranchRegistrationAmount = branchRegistrationAmount,
-                        SystemCampaignAmount = systemCampaignAmount
+                        SystemCampaignAmount = systemCampaignAmount,
+                        OrderCommissionAmount = orderCommissionAmount
                     };
                 })
-                .Where(x => x.BranchRegistrationAmount > 0m || x.SystemCampaignAmount > 0m)
+                .Where(x => x.BranchRegistrationAmount > 0m || x.SystemCampaignAmount > 0m || x.OrderCommissionAmount > 0m)
                 .ToList();
 
             var totalBranchRegistrationAmount = dailyAmounts.Sum(x => x.BranchRegistrationAmount);
             var totalSystemCampaignAmount = dailyAmounts.Sum(x => x.SystemCampaignAmount);
+            var totalOrderCommissionAmount = dailyAmounts.Sum(x => x.OrderCommissionAmount);
 
             var previousTotalBranchRegistrationAmount = await _context.Payments
                 .AsNoTracking()
@@ -156,14 +187,36 @@ namespace DAL
                 .Where(x => !x.Campaign.CreatedByVendorId.HasValue)
                 .SumAsync(x => (decimal?)x.Payment.Amount) ?? 0m;
 
+            var previousOrderCommissions = await _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Complete
+                            && o.CreatedAt >= previousStartDate
+                            && o.CreatedAt < previousEndExclusive)
+                .Select(o => new
+                {
+                    o.TotalAmount,
+                    o.FinalAmount,
+                    CommissionRate = o.CommissionRate ?? 0m,
+                    IsSystemVoucher = o.AppliedVoucherId.HasValue
+                        && (o.AppliedVoucher!.VendorCampaignId == null
+                            || (o.AppliedVoucher.VendorCampaign != null
+                                && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue))
+                })
+                .ToListAsync();
+
+            var previousTotalOrderCommissionAmount = previousOrderCommissions
+                .Sum(o => Math.Round((o.IsSystemVoucher ? o.FinalAmount : o.TotalAmount) * o.CommissionRate, 2, MidpointRounding.AwayFromZero));
+
             return new AdminMoneyChartDto
             {
                 FromDate = startDate,
                 ToDate = endDate,
                 TotalBranchRegistrationAmount = totalBranchRegistrationAmount,
                 TotalSystemCampaignAmount = totalSystemCampaignAmount,
+                TotalOrderCommissionAmount = totalOrderCommissionAmount,
                 BranchRegistrationGrowthRate = CalculateGrowthRate(totalBranchRegistrationAmount, previousTotalBranchRegistrationAmount),
                 SystemCampaignGrowthRate = CalculateGrowthRate(totalSystemCampaignAmount, previousTotalSystemCampaignAmount),
+                OrderCommissionGrowthRate = CalculateGrowthRate(totalOrderCommissionAmount, previousTotalOrderCommissionAmount),
                 PreviousPeriod = $"từ {previousStartDate:dd-MM-yyyy} tới {previousEndExclusive.AddDays(-1):dd-MM-yyyy}",
                 DailyAmounts = dailyAmounts
             };

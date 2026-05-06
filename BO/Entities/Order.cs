@@ -41,6 +41,8 @@ public class Order
 
     public bool IsTakeAway { get; set; }
 
+    public decimal? CommissionRate { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
