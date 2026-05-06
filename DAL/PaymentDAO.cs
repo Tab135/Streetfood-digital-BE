@@ -242,10 +242,16 @@ namespace DAL
                     (p.PaymentMethod == "Vendor Wallet" || p.PaymentMethod == "PAYOS_PAYOUT"));
 
             if (fromDate.HasValue)
-                query = query.Where(p => p.CreatedAt >= fromDate.Value);
+            {
+                var from = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
+                query = query.Where(p => p.CreatedAt >= from);
+            }
 
             if (toDate.HasValue)
-                query = query.Where(p => p.CreatedAt <= toDate.Value.AddDays(1).AddTicks(-1));
+            {
+                var to = DateTime.SpecifyKind(toDate.Value.AddDays(1), DateTimeKind.Utc);
+                query = query.Where(p => p.CreatedAt < to);
+            }
 
             if (!string.IsNullOrEmpty(paymentMethod))
                 query = query.Where(p => p.PaymentMethod == paymentMethod);
