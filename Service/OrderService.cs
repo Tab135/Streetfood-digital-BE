@@ -648,6 +648,11 @@ public class OrderService : IOrderService
         var vendorSettlementAmount = await CalculateVendorSettlementAmountAsync(order);
         vendor.MoneyBalance += vendorSettlementAmount;
         await _vendorRepository.UpdateAsync(vendor);
+        await _paymentService.CreateVendorWalletCreditAsync(
+            vendor.UserId,
+            (int)vendorSettlementAmount,
+            $"Thanh toán đơn hàng #{order.OrderId}",
+            orderId: order.OrderId);
 
         var updated = await _orderRepository.Update(order);
 

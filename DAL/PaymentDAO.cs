@@ -231,5 +231,15 @@ namespace DAL
         {
             return await _context.Payments.AnyAsync(p => p.OrderCode == orderCode);
         }
+
+        public async Task<List<Payment>> GetVendorPayments(int vendorUserId)
+        {
+            return await _context.Payments
+                .Include(p => p.User)
+                .Where(p => p.UserId == vendorUserId &&
+                    (p.PaymentMethod == "Vendor Wallet" || p.PaymentMethod == "PAYOS_PAYOUT"))
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+        }
     }
 }
