@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Repository.Interfaces;
 using Service.Interfaces;
+using Service.PaymentsService;
 using BO.Entities;
 using System;
 using System.Linq;
@@ -19,6 +20,7 @@ namespace Service
         private readonly IBranchCampaignRepository _branchCampaignRepo;
         private readonly IVendorRepository _vendorRepo;
         private readonly INotificationService _notificationService;
+        private readonly IPaymentService _paymentService;
         private readonly ILogger<CampaignStatusJob> _logger;
 
         public CampaignStatusJob(
@@ -26,12 +28,14 @@ namespace Service
             IBranchCampaignRepository branchCampaignRepo,
             IVendorRepository vendorRepo,
             INotificationService notificationService,
+            IPaymentService paymentService,
             ILogger<CampaignStatusJob> logger)
         {
             _campaignRepo = campaignRepo;
             _branchCampaignRepo = branchCampaignRepo;
             _vendorRepo = vendorRepo;
             _notificationService = notificationService;
+            _paymentService = paymentService;
             _logger = logger;
         }
 
@@ -203,6 +207,11 @@ namespace Service
                     if (campaign.JoinFee > 0)
                     {
                         var refunds = await _vendorRepo.RefundCampaignJoinFeeAsync(campaignId, campaign.JoinFee);
+                        var creditTasks = refunds.Select(r => _paymentService.CreateVendorWalletCreditAsync(
+                            r.UserId,
+                            (int)r.Amount,
+                            $"Hoàn phí tham gia chiến dịch '{campaign.Name}'"));
+                        await Task.WhenAll(creditTasks);
                         var notifyTasks = refunds.Select(r => _notificationService.NotifyAsync(
                             r.UserId,
                             NotificationType.CampaignCancelledRefund,

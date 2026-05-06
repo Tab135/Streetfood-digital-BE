@@ -89,5 +89,10 @@ namespace Repository
         {
             await _paymentDAO.UpdatePaymentWithPayOSDetails(orderCode, status, paymentLinkId, checkoutUrl, bin, accountNumber, accountName);
         }
+
+        public async Task<List<Payment>> GetVendorPayments(int vendorUserId)
+        {
+            return await _paymentDAO.GetVendorPayments(vendorUserId);
+        }
     }
 }
