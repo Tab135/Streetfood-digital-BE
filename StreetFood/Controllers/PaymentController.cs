@@ -356,8 +356,8 @@ namespace Ielts_System.Controllers.Payments
 
         [HttpGet("vendor/history")]
         [Authorize(Roles = "Vendor")]
-        [ProducesResponseType(typeof(ApiResponse<List<PaymentHistoryDto>>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetVendorPaymentHistory()
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<PaymentHistoryDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetVendorPaymentHistory([FromQuery] VendorPaymentHistoryFilterDto filter)
         {
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
@@ -365,7 +365,7 @@ namespace Ielts_System.Controllers.Payments
                 return Unauthorized(new { message = "User not authenticated" });
             }
 
-            var history = await _paymentService.GetVendorPaymentHistoryAsync(userId);
+            var history = await _paymentService.GetVendorPaymentHistoryAsync(userId, filter);
             return Ok(new { message = "Get vendor payment history successfully", data = history });
         }
 

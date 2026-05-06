@@ -232,14 +232,32 @@ namespace DAL
             return await _context.Payments.AnyAsync(p => p.OrderCode == orderCode);
         }
 
-        public async Task<List<Payment>> GetVendorPayments(int vendorUserId)
+        public async Task<(List<Payment> Items, int TotalCount)> GetVendorPayments(
+            int vendorUserId, DateTime? fromDate, DateTime? toDate, string? paymentMethod,
+            int pageNumber, int pageSize)
         {
-            return await _context.Payments
+            var query = _context.Payments
                 .Include(p => p.User)
                 .Where(p => p.UserId == vendorUserId &&
-                    (p.PaymentMethod == "Vendor Wallet" || p.PaymentMethod == "PAYOS_PAYOUT"))
+                    (p.PaymentMethod == "Vendor Wallet" || p.PaymentMethod == "PAYOS_PAYOUT"));
+
+            if (fromDate.HasValue)
+                query = query.Where(p => p.CreatedAt >= fromDate.Value);
+
+            if (toDate.HasValue)
+                query = query.Where(p => p.CreatedAt <= toDate.Value.AddDays(1).AddTicks(-1));
+
+            if (!string.IsNullOrEmpty(paymentMethod))
+                query = query.Where(p => p.PaymentMethod == paymentMethod);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
                 .OrderByDescending(p => p.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            return (items, totalCount);
         }
     }
 }

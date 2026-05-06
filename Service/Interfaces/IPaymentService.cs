@@ -48,6 +48,7 @@ namespace Service.PaymentsService
 
         Task CreateVendorWalletCreditAsync(int vendorUserId, int amount, string description, int? orderId = null, int? branchCampaignId = null);
 
-        Task<List<PaymentHistoryDto>> GetVendorPaymentHistoryAsync(int vendorUserId);
+        Task<PaginatedResponse<PaymentHistoryDto>> GetVendorPaymentHistoryAsync(
+            int vendorUserId, VendorPaymentHistoryFilterDto filter);
     }
 }

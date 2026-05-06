@@ -844,10 +844,17 @@ namespace Service.PaymentsService
             }).ToList();
         }
 
-        public async Task<List<PaymentHistoryDto>> GetVendorPaymentHistoryAsync(int vendorUserId)
+        public async Task<PaginatedResponse<PaymentHistoryDto>> GetVendorPaymentHistoryAsync(
+            int vendorUserId, VendorPaymentHistoryFilterDto filter)
         {
-            var payments = await _paymentRepo.GetVendorPayments(vendorUserId);
-            return payments.Select(p => new PaymentHistoryDto
+            var pageNumber = filter.PageNumber <= 0 ? 1 : filter.PageNumber;
+            var pageSize = filter.PageSize <= 0 ? 10 : filter.PageSize;
+
+            var (payments, totalCount) = await _paymentRepo.GetVendorPayments(
+                vendorUserId, filter.FromDate, filter.ToDate, filter.PaymentMethod,
+                pageNumber, pageSize);
+
+            var items = payments.Select(p => new PaymentHistoryDto
             {
                 Id = p.Id,
                 UserId = p.UserId,
@@ -865,6 +872,8 @@ namespace Service.PaymentsService
                 PaymentMethod = p.PaymentMethod,
                 CheckoutUrl = p.CheckoutUrl
             }).ToList();
+
+            return new PaginatedResponse<PaymentHistoryDto>(items, totalCount, pageNumber, pageSize);
         }
 
         public async Task<PaginatedResponse<PaymentHistoryDto>> GetAllPayoutsAsync(int pageNumber, int pageSize)
