@@ -25,6 +25,8 @@ public class OrderResponseDto
     public decimal TotalAmount { get; set; }
     public decimal? DiscountAmount { get; set; }
     public decimal FinalAmount { get; set; }
+    public decimal PlatformFee { get; set; }
+    public decimal VendorPayout { get; set; }
     public int? AppliedVoucherId { get; set; }
     public string? AppliedVoucherCode { get; set; }
     public string? AppliedVoucherName { get; set; }

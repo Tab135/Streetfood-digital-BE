@@ -18,7 +18,7 @@ public class OrderDAO
         return await _context.Orders
             .Include(o => o.User)
             .Include(o => o.Branch)
-            .Include(o => o.AppliedVoucher)
+            .Include(o => o.AppliedVoucher).ThenInclude(v => v.VendorCampaign)
             .Include(o => o.OrderDishes)
                 .ThenInclude(od => od.BranchDish)
                     .ThenInclude(bd => bd.Dish)
@@ -30,7 +30,7 @@ public class OrderDAO
         var query = _context.Orders
             .Where(o => o.UserId == userId)
             .Include(o => o.Branch)
-            .Include(o => o.AppliedVoucher)
+            .Include(o => o.AppliedVoucher).ThenInclude(v => v.VendorCampaign)
             .Include(o => o.OrderDishes)
                 .ThenInclude(od => od.BranchDish)
                     .ThenInclude(bd => bd.Dish)
@@ -80,7 +80,7 @@ public class OrderDAO
             .Where(o => branchIds.Contains(o.BranchId))
             .Include(o => o.User)
             .Include(o => o.Branch)
-            .Include(o => o.AppliedVoucher)
+            .Include(o => o.AppliedVoucher).ThenInclude(v => v.VendorCampaign)
             .Include(o => o.OrderDishes)
                 .ThenInclude(od => od.BranchDish)
                     .ThenInclude(bd => bd.Dish)
@@ -184,7 +184,7 @@ public class OrderDAO
         var query = _context.Orders
             .Include(o => o.User)
             .Include(o => o.Branch).ThenInclude(b => b.Vendor)
-            .Include(o => o.AppliedVoucher)
+            .Include(o => o.AppliedVoucher).ThenInclude(v => v.VendorCampaign)
             .Include(o => o.OrderDishes)
                 .ThenInclude(od => od.BranchDish)
                     .ThenInclude(bd => bd.Dish)

@@ -1070,6 +1070,28 @@ public class OrderService : IOrderService
 
     private static OrderResponseDto MapToDto(Order order, bool hasPayment = false)
     {
+        var commissionRate = order.CommissionRate ?? 0m;
+        var grossReceivable = order.FinalAmount;
+        var commissionBaseAmount = order.FinalAmount;
+
+        if (order.AppliedVoucher != null)
+        {
+            if (IsSystemFundedVoucher(order.AppliedVoucher))
+            {
+                grossReceivable = order.TotalAmount;
+                commissionBaseAmount = order.FinalAmount;
+            }
+            else
+            {
+                grossReceivable = order.FinalAmount;
+                commissionBaseAmount = order.TotalAmount;
+            }
+        }
+
+        var platformFee = Math.Round(commissionBaseAmount * commissionRate, 2, MidpointRounding.AwayFromZero);
+        var vendorPayout = grossReceivable - platformFee;
+        if (vendorPayout < 0m) vendorPayout = 0m;
+
         return new OrderResponseDto
         {
             OrderId = order.OrderId,
@@ -1084,6 +1106,9 @@ public class OrderService : IOrderService
             TotalAmount = order.TotalAmount,
             DiscountAmount = order.DiscountAmount,
             FinalAmount = order.FinalAmount,
+            PlatformFee = platformFee,
+            VendorPayout = vendorPayout,
+
             AppliedVoucherId = order.AppliedVoucherId,
             AppliedVoucherCode = order.AppliedVoucher?.VoucherCode,
             AppliedVoucherName = order.AppliedVoucher?.Name,
