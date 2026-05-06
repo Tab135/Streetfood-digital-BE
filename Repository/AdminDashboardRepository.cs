@@ -40,9 +40,9 @@ namespace Repository
             return await _adminDashboardDAO.GetAllSystemCampaignDetailsAsync();
         }
 
-        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate)
+        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate, DateTime? previousFromDate = null, DateTime? previousToDate = null)
         {
-            return await _adminDashboardDAO.GetRevenueBarChartAsync(fromDate, toDate);
+            return await _adminDashboardDAO.GetRevenueBarChartAsync(fromDate, toDate, previousFromDate, previousToDate);
         }
     }
 }

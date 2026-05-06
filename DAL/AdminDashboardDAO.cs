@@ -467,12 +467,25 @@ namespace DAL
             return result;
         }
 
-        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate)
+        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate, DateTime? previousFromDate = null, DateTime? previousToDate = null)
         {
             var startDate = fromDate.Date;
             var endDate = toDate.Date;
             var endExclusive = endDate.AddDays(1);
-            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+            
+            // Use provided previous dates if available, otherwise auto-calculate
+            DateTime previousStartDate;
+            DateTime previousEndExclusive;
+            
+            if (previousFromDate.HasValue && previousToDate.HasValue)
+            {
+                previousStartDate = previousFromDate.Value.Date;
+                previousEndExclusive = previousToDate.Value.Date.AddDays(1);
+            }
+            else
+            {
+                (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+            }
 
             var result = new RevenueBarChartDto();
 
