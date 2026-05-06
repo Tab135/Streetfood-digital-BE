@@ -811,7 +811,8 @@ public class StreetFoodDbContext : DbContext
                 new Setting { Id = 7, Name = "GoldMinXP", Value = "3000" },
                 new Setting { Id = 8, Name = "DiamondMinXP", Value = "10000" },
                 new Setting { Id = 9, Name = "feedbackDailyLimit", Value = "3" },
-                new Setting { Id = 10, Name = "VendorOrderCommissionPercent", Value = "10" }
+                new Setting { Id = 10, Name = "vendorTierFeedbackWindowSize", Value = "20" },
+                new Setting { Id = 11, Name = "VendorOrderCommissionPercent", Value = "10" }
             );
         });
     }

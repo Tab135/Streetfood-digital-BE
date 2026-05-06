@@ -16,6 +16,7 @@ namespace DAL.Migrations
                 type: "numeric",
                 nullable: true);
 
+            migrationBuilder.Sql("INSERT INTO \"Settings\" (\"Name\", \"Value\") SELECT 'VendorOrderCommissionPercent', '10' WHERE NOT EXISTS (SELECT 1 FROM \"Settings\" WHERE \"Name\" = 'VendorOrderCommissionPercent');");
         }
 
     protected override void Down(MigrationBuilder migrationBuilder)
