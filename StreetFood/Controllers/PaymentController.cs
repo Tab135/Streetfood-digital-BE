@@ -354,6 +354,21 @@ namespace Ielts_System.Controllers.Payments
             return Ok(new { message = "Get vendor balance successfully", data = new { balance } });
         }
 
+        [HttpGet("vendor/history")]
+        [Authorize(Roles = "Vendor")]
+        [ProducesResponseType(typeof(ApiResponse<PaginatedResponse<PaymentHistoryDto>>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetVendorPaymentHistory([FromQuery] VendorPaymentHistoryFilterDto filter)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            var history = await _paymentService.GetVendorPaymentHistoryAsync(userId, filter);
+            return Ok(new { message = "Get vendor payment history successfully", data = history });
+        }
+
         [HttpPost("vendor/transfer")]
         [Authorize(Roles = "Vendor")]
         public async Task<IActionResult> RequestVendorTransfer([FromBody] VendorPayoutRequestDto request)

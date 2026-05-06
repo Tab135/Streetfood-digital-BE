@@ -83,6 +83,15 @@ namespace BO.DTO.Payments
         public decimal CurrentVendorBalance { get; set; }
     }
 
+    public class VendorPaymentHistoryFilterDto
+    {
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public string? PaymentMethod { get; set; }
+        public int PageNumber { get; set; } = 1;
+        public int PageSize { get; set; } = 10;
+    }
+
     public class PaymentHistoryDto
     {
         public int Id { get; set; }

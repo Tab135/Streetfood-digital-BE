@@ -45,5 +45,10 @@ namespace Service.PaymentsService
         Task<bool> HandleWebhookAsync(Webhook webhook);
 
         Task CreateWalletRefundAsync(int userId, int orderId, decimal amount);
+
+        Task CreateVendorWalletCreditAsync(int vendorUserId, int amount, string description, int? orderId = null, int? branchCampaignId = null);
+
+        Task<PaginatedResponse<PaymentHistoryDto>> GetVendorPaymentHistoryAsync(
+            int vendorUserId, VendorPaymentHistoryFilterDto filter);
     }
 }

@@ -844,6 +844,38 @@ namespace Service.PaymentsService
             }).ToList();
         }
 
+        public async Task<PaginatedResponse<PaymentHistoryDto>> GetVendorPaymentHistoryAsync(
+            int vendorUserId, VendorPaymentHistoryFilterDto filter)
+        {
+            var pageNumber = filter.PageNumber <= 0 ? 1 : filter.PageNumber;
+            var pageSize = filter.PageSize <= 0 ? 10 : filter.PageSize;
+
+            var (payments, totalCount) = await _paymentRepo.GetVendorPayments(
+                vendorUserId, filter.FromDate, filter.ToDate, filter.PaymentMethod,
+                pageNumber, pageSize);
+
+            var items = payments.Select(p => new PaymentHistoryDto
+            {
+                Id = p.Id,
+                UserId = p.UserId,
+                UserName = p.User?.UserName,
+                UserEmail = p.User?.Email,
+                Amount = p.Amount,
+                Description = p.Description,
+                Status = p.Status,
+                CreatedAt = p.CreatedAt,
+                PaidAt = p.PaidAt,
+                TransactionCode = p.TransactionCode,
+                OrderId = p.OrderId,
+                BranchId = p.BranchId,
+                BranchCampaignId = p.BranchCampaignId,
+                PaymentMethod = p.PaymentMethod,
+                CheckoutUrl = p.CheckoutUrl
+            }).ToList();
+
+            return new PaginatedResponse<PaymentHistoryDto>(items, totalCount, pageNumber, pageSize);
+        }
+
         public async Task<PaginatedResponse<PaymentHistoryDto>> GetAllPayoutsAsync(int pageNumber, int pageSize)
         {
             var payouts = await _paymentRepo.GetAllPayouts(pageNumber, pageSize);
@@ -1568,6 +1600,22 @@ namespace Service.PaymentsService
                         orderId);
                 }
             }
+        }
+
+        private const string VendorWalletMethod = "Vendor Wallet";
+
+        public async Task CreateVendorWalletCreditAsync(int vendorUserId, int amount, string description, int? orderId = null, int? branchCampaignId = null)
+        {
+            var orderCode = await GenerateUniqueOrderCodeAsync();
+            await _paymentRepo.CreatePayment(
+                userId: vendorUserId,
+                orderCode: orderCode,
+                branchId: null,
+                amount: Math.Abs(amount),
+                description: description,
+                orderId: orderId,
+                branchCampaignId: branchCampaignId);
+            await TryUpdatePayoutPaymentStatusAsync(orderCode, "PAID", null, null, VendorWalletMethod);
         }
 
         private async Task<long> CreatePayoutPaymentRecordAsync(int userId, int amount, string description, string payoutType)

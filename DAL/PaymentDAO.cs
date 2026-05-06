@@ -231,5 +231,39 @@ namespace DAL
         {
             return await _context.Payments.AnyAsync(p => p.OrderCode == orderCode);
         }
+
+        public async Task<(List<Payment> Items, int TotalCount)> GetVendorPayments(
+            int vendorUserId, DateTime? fromDate, DateTime? toDate, string? paymentMethod,
+            int pageNumber, int pageSize)
+        {
+            var query = _context.Payments
+                .Include(p => p.User)
+                .Where(p => p.UserId == vendorUserId &&
+                    (p.PaymentMethod == "Vendor Wallet" || p.PaymentMethod == "PAYOS_PAYOUT"));
+
+            if (fromDate.HasValue)
+            {
+                var from = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Utc);
+                query = query.Where(p => p.CreatedAt >= from);
+            }
+
+            if (toDate.HasValue)
+            {
+                var to = DateTime.SpecifyKind(toDate.Value.AddDays(1), DateTimeKind.Utc);
+                query = query.Where(p => p.CreatedAt < to);
+            }
+
+            if (!string.IsNullOrEmpty(paymentMethod))
+                query = query.Where(p => p.PaymentMethod == paymentMethod);
+
+            var totalCount = await query.CountAsync();
+            var items = await query
+                .OrderByDescending(p => p.CreatedAt)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
     }
 }
