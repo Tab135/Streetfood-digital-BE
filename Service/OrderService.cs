@@ -899,7 +899,7 @@ public class OrderService : IOrderService
         // Restore voucher deducted during checkout
         await RestoreVoucherUsageForCancellationAsync(order);
 
-        order.Status = OrderStatus.Cancelled;
+        order.Status = OrderStatus.Expired;
         order.CompletionCode = null;
         await _orderRepository.Update(order);
 
@@ -1102,6 +1102,7 @@ public class OrderService : IOrderService
     private static string ComputeMoneyLocation(OrderStatus status, bool hasPayment) => status switch
     {
         OrderStatus.Pending => "notPaid",
+        OrderStatus.Expired => "notPaid",
         OrderStatus.Complete => "transToVendor",
         OrderStatus.Cancelled => hasPayment ? "refundToCustomer" : "notPaid",
         _ => "systemKeep"

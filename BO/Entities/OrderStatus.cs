@@ -6,5 +6,6 @@ public enum OrderStatus
     AwaitingVendorConfirmation = 1,
     Paid = 2,
     Cancelled = 3,
-    Complete = 4
+    Complete = 4,
+    Expired = 5
 }
