@@ -76,7 +76,13 @@ namespace Service
                 foreach (var sb in scored)
                 {
                     sb.DisplayNameScore = SearchScorer.ScoreDisplayName(
-                        normalizedKeyword, sb.Branch.Vendor?.Name, sb.Branch.Name);
+                        normalizedKeyword, filter.Keyword, sb.Branch.Vendor?.Name, sb.Branch.Name);
+
+                    if (SearchScorer.MatchesWithDiacritics(filter.Keyword, sb.Branch.Vendor?.Name) ||
+                        SearchScorer.MatchesWithDiacritics(filter.Keyword, sb.Branch.Name))
+                    {
+                        sb.DiacriticExactMatch = true;
+                    }
                 }
             }
 
@@ -148,7 +154,11 @@ namespace Service
                     var similar = SearchScorer.ScoreSimilar(vendorDishNames, anchorSignatureUnion);
                     if (similar > 0)
                     {
-                        foreach (var sb in g) sb.DisplayNameScore = similar;
+                        foreach (var sb in g)
+                        {
+                            sb.DisplayNameScore = similar;
+                            sb.ScoredByKfcRule = true;
+                        }
                     }
                 }
             }
@@ -173,9 +183,14 @@ namespace Service
                         {
                             foreach (var form in keywordForms)
                             {
-                                var s = SearchScorer.ScoreDish(form, bd.Dish.Name,
+                                var s = SearchScorer.ScoreDish(form, filter.Keyword, bd.Dish.Name,
                                     isBestSeller, branch.AvgRating, branch.TotalReviewCount);
                                 if (s > bestDishScore) bestDishScore = s;
+                            }
+
+                            if (SearchScorer.MatchesWithDiacritics(filter.Keyword, bd.Dish.Name))
+                            {
+                                sb.DiacriticExactMatch = true;
                             }
                         }
                         else
@@ -213,11 +228,17 @@ namespace Service
             }
 
             // ---------- Drop branches that match only by dish when no dish actually scored > 0 ----------
-            // A keyword-search candidate must either have DisplayName > 0 or at least one dishScore > 0.
+            // A keyword-search candidate must pass at least one of:
+            //   (a) DisplayName scored via actual brand-name matching (score > 0 and NOT from the KFC
+            //       similarity rule), OR
+            //   (b) At least one dish scored > 0 against the keyword.
+            // Vendors that only ranked up via the KFC dish-similarity rule (Similar bucket 50–70) but
+            // have no dish-level match for this keyword are dropped — they are a different cuisine type
+            // and would be confusing in the results (e.g. a tea shop surfaced by "Cơm tấm" search).
             if (hasKeyword)
             {
                 scored = scored
-                    .Where(sb => sb.DisplayNameScore > 0 || sb.DishScore > 0)
+                    .Where(sb => (!sb.ScoredByKfcRule && sb.DisplayNameScore > 0) || sb.DishScore > 0)
                     .ToList();
             }
 
@@ -274,6 +295,7 @@ namespace Service
 
             var orderedVendors = vendorBuckets
                 .OrderByDescending(v => BucketOf(v.Primary.DisplayNameScore))
+                .ThenByDescending(v => v.Primary.DiacriticExactMatch)
                 .ThenByDescending(v => v.Primary.FinalScore)
                 .ToList();
 
@@ -345,6 +367,8 @@ namespace Service
             public double DisplayNameScore { get; set; }
             public double DishScore { get; set; }
             public double FinalScore { get; set; }
+            public bool ScoredByKfcRule { get; set; }
+            public bool DiacriticExactMatch { get; set; }
             public List<DishSearchDto> Dishes { get; set; } = new();
 
             public ScoredBranch(Branch branch, double distanceKm)

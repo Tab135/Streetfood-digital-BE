@@ -89,12 +89,14 @@ namespace Service.Utils
             return dp[m, n];
         }
 
-        // Tokens ≤ 2 chars: no fuzzy (too short, too many false positives).
-        // Tokens 3–4 chars: allow 1 typo. Tokens ≥ 5 chars: allow 2 typos.
+        // Tokens ≤ 3 chars: exact match only — Vietnamese 3-char tokens are too ambiguous for fuzzy
+        // (e.g. "tôm"→"tom", "cẩm"→"cam", "cam" all land within edit-1 of "com"/"tam" after
+        // diacritic stripping, causing unrelated dishes to score against a "Cơm tấm" keyword).
+        // Tokens 4–5 chars: allow 1 typo. Tokens ≥ 6 chars: allow 2 typos.
         private static int FuzzyThreshold(int tokenLength)
         {
-            if (tokenLength <= 2) return 0;
-            if (tokenLength <= 4) return 1;
+            if (tokenLength <= 3) return 0;
+            if (tokenLength <= 5) return 1;
             return 2;
         }
 

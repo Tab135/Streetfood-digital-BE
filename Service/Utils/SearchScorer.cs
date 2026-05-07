@@ -16,13 +16,35 @@ namespace Service.Utils
         public const double DisplayNameSimilarFloor = 50.0;
         public const double DisplayNameSimilarCeil = 70.0;
         public const double DishExact = 100.0;
-        public const double DishCap = 120.0;
+        public const double DishCap = 140.0;              // raised to accommodate diacritic + best-seller + high-rating bonuses
         public const double DishFuzzyFloor = 20.0;        // fuzzy dish match floor
         public const double DishFuzzyCeil = 35.0;         // fuzzy dish match ceil
         public const double BestSellerBonus = 10.0;
         public const double HighRatingBonus = 5.0;
         public const double HighRatingThreshold = 4.5;
         public const int HighRatingMinReviews = 20;
+        // Bonus when the user's keyword (with diacritics) appears literally in the original
+        // (un-stripped) vendor / branch / dish name. Distinguishes "Phở" → "Phở Bò" from
+        // "Phở" → "Phô Mai" even though both strip to "pho" via NormalizeForSearch.
+        public const double DiacriticExactBonus = 15.0;
+
+        /// <summary>
+        /// Returns true when the user typed a keyword with Vietnamese diacritics AND the
+        /// original (un-stripped) text contains that keyword as a case-insensitive substring.
+        /// Returns false when the keyword has no diacritics — in that case the user did not
+        /// signal a preference for diacritic-exact ranking and the bonus does not apply.
+        /// </summary>
+        public static bool MatchesWithDiacritics(string? originalKeyword, string? originalText)
+        {
+            if (string.IsNullOrWhiteSpace(originalKeyword) || string.IsNullOrWhiteSpace(originalText))
+                return false;
+
+            var stripped = TextNormalizer.RemoveVietnameseAccents(originalKeyword);
+            if (string.Equals(stripped, originalKeyword, StringComparison.OrdinalIgnoreCase))
+                return false; // keyword carries no diacritics — bonus disabled
+
+            return originalText.ToLowerInvariant().Contains(originalKeyword.ToLowerInvariant());
+        }
 
         /// <summary>
         /// Score the DisplayName bucket for a single (vendor, branch) pair against the keyword.
@@ -30,7 +52,11 @@ namespace Service.Utils
         /// 80 for substring / word-subset fuzzy match; 0 when nothing matches.
         /// The 50–70 Similar bucket is produced separately by <see cref="ScoreSimilar"/>.
         /// </summary>
-        public static double ScoreDisplayName(string normalizedKeyword, string? vendorName, string? branchName)
+        public static double ScoreDisplayName(
+            string normalizedKeyword,
+            string? originalKeyword,
+            string? vendorName,
+            string? branchName)
         {
             if (string.IsNullOrEmpty(normalizedKeyword))
                 return 0.0;
@@ -41,30 +67,40 @@ namespace Service.Utils
                 ? normVendor
                 : (string.IsNullOrEmpty(normVendor) ? normBranch : $"{normVendor} {normBranch}");
 
+            double baseScore = 0.0;
+
             if (Exact(normVendor, normalizedKeyword) ||
                 Exact(normBranch, normalizedKeyword) ||
                 Exact(normDisplay, normalizedKeyword))
             {
-                return DisplayNameExact;
+                baseScore = DisplayNameExact;
             }
-
-            if (Fuzzy(normVendor, normalizedKeyword) ||
-                Fuzzy(normBranch, normalizedKeyword) ||
-                Fuzzy(normDisplay, normalizedKeyword))
+            else if (Fuzzy(normVendor, normalizedKeyword) ||
+                     Fuzzy(normBranch, normalizedKeyword) ||
+                     Fuzzy(normDisplay, normalizedKeyword))
             {
-                return DisplayNameFuzzy;
+                baseScore = DisplayNameFuzzy;
             }
-
-            // Typo-tolerant fallback: every keyword token fuzzy-matches some token in
-            // the vendor or branch name (Levenshtein, per-token threshold).
-            var kwTokens = TextNormalizer.Tokenize(normalizedKeyword);
-            if (TextNormalizer.FuzzyAllTokensMatch(kwTokens, TextNormalizer.Tokenize(normVendor)) ||
-                TextNormalizer.FuzzyAllTokensMatch(kwTokens, TextNormalizer.Tokenize(normBranch)))
+            else
             {
-                return DisplayNameFuzzyTypo;
+                // Typo-tolerant fallback: every keyword token fuzzy-matches some token in
+                // the vendor or branch name (Levenshtein, per-token threshold).
+                var kwTokens = TextNormalizer.Tokenize(normalizedKeyword);
+                if (TextNormalizer.FuzzyAllTokensMatch(kwTokens, TextNormalizer.Tokenize(normVendor)) ||
+                    TextNormalizer.FuzzyAllTokensMatch(kwTokens, TextNormalizer.Tokenize(normBranch)))
+                {
+                    baseScore = DisplayNameFuzzyTypo;
+                }
             }
 
-            return 0.0;
+            if (baseScore > 0 &&
+                (MatchesWithDiacritics(originalKeyword, vendorName) ||
+                 MatchesWithDiacritics(originalKeyword, branchName)))
+            {
+                baseScore += DiacriticExactBonus;
+            }
+
+            return baseScore;
         }
 
         /// <summary>
@@ -74,6 +110,7 @@ namespace Service.Utils
         /// </summary>
         public static double ScoreDish(
             string normalizedKeyword,
+            string? originalKeyword,
             string? dishName,
             bool isBestSeller,
             double branchAvgRating,
@@ -111,13 +148,19 @@ namespace Service.Utils
                 else
                 {
                     // Fuzzy fallback: fraction of keyword tokens that fuzzy-match a dish token.
-                    // Require >= 50% match to avoid false positives from short token coincidences
-                    // (e.g. "chau" from "tra sua tran chau" fuzzy-matching "cha" in unrelated dishes).
+                    // Short keywords (≤3 tokens) require ALL tokens to match — a 2-token keyword
+                    // like "com tam" has no tolerance for single-token misses. Longer synonym
+                    // forms (4+ tokens, e.g. "com tam thit nuong") require at least 60% to avoid
+                    // matching on shared generic tokens like "thit nuong" alone.
                     var fuzzyFraction = TextNormalizer.FuzzyMatchFraction(keywordTokens, dishTokens);
-                    if (fuzzyFraction < 0.5) return 0.0;
+                    double minFuzzyFraction = keywordTokens.Length <= 3 ? 1.0 : 0.6;
+                    if (fuzzyFraction < minFuzzyFraction) return 0.0;
                     baseScore = DishFuzzyFloor + (DishFuzzyCeil - DishFuzzyFloor) * fuzzyFraction;
                 }
             }
+
+            if (baseScore > 0 && MatchesWithDiacritics(originalKeyword, dishName))
+                baseScore += DiacriticExactBonus;
 
             if (isBestSeller)
                 baseScore += BestSellerBonus;
@@ -161,7 +204,7 @@ namespace Service.Utils
                 double bestForSignature = 0.0;
                 foreach (var dish in normalizedDishes)
                 {
-                    var score = ScoreDish(signature, dish, isBestSeller: false, branchAvgRating: 0.0, branchReviewCount: 0);
+                    var score = ScoreDish(signature, originalKeyword: null, dish, isBestSeller: false, branchAvgRating: 0.0, branchReviewCount: 0);
                     var normalized = Math.Min(1.0, score / DishExact);
                     if (normalized > bestForSignature)
                         bestForSignature = normalized;
