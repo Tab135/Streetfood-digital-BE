@@ -69,6 +69,11 @@ namespace Repository
             return await _branchDAO.GetUnverifiedBranchesAsync(pageNumber, pageSize);
         }
 
+        public async Task<int> CountPendingGhostPinsByUserAsync(int userId)
+        {
+            return await _branchDAO.CountPendingGhostPinsByUserAsync(userId);
+        }
+
         public async Task UpdateAsync(Branch branch)
         {
             await _branchDAO.UpdateAsync(branch);

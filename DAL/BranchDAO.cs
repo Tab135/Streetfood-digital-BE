@@ -173,6 +173,20 @@ namespace DAL
         }
 
 
+        public async Task<int> CountPendingGhostPinsByUserAsync(int userId)
+        {
+            return await _context.Branches
+                .AsNoTracking()
+                .Where(b => b.CreatedById == userId
+                    && b.VendorId == null
+                    && !b.IsVerified
+                    && _context.BranchRequests.Any(r =>
+                        r.BranchId == b.BranchId
+                        && r.Type == 0
+                        && r.Status == BO.Entities.RegisterVendorStatusEnum.Pending))
+                .CountAsync();
+        }
+
         public async Task<(List<Branch> items, int totalCount)> GetUnverifiedBranchesAsync(int pageNumber, int pageSize)
         {
             var query = _context.Branches

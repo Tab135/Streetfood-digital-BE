@@ -108,6 +108,13 @@ namespace Service
 
         public async Task<BranchResponseDto> CreateUserBranchAsync(CreateUserBranchRequest request, int userId)
         {
+            const int MaxPendingGhostPinsPerUser = 3;
+            var pendingCount = await _branchRepository.CountPendingGhostPinsByUserAsync(userId);
+            if (pendingCount >= MaxPendingGhostPinsPerUser)
+            {
+                throw new GhostPinLimitExceededException(MaxPendingGhostPinsPerUser, pendingCount);
+            }
+
             var ghostpinXP = _settingService.GetInt("ghostpinXP", 0);
 
             var branch = new Branch
@@ -1416,6 +1423,19 @@ namespace Service
                 Items      = responseDtos,
                 TotalCount = responseDtos.Count
             };
+        }
+    }
+
+    public class GhostPinLimitExceededException : Exception
+    {
+        public int Limit { get; }
+        public int CurrentCount { get; }
+
+        public GhostPinLimitExceededException(int limit, int currentCount)
+            : base($"Bạn chỉ có thể tạo tối đa {limit} ghost pin chưa được xác thực cùng lúc. Vui lòng chờ kiểm duyệt các ghost pin hiện có.")
+        {
+            Limit = limit;
+            CurrentCount = currentCount;
         }
     }
 }

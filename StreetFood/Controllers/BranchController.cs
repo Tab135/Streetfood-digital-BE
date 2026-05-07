@@ -2,6 +2,7 @@ using BO.Common;
 using BO.DTO.Branch;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Service;
 using Service.Interfaces;
 using StreetFood.Services;
 using System;
@@ -134,6 +135,16 @@ namespace StreetFood.Controllers
                 var branchResponse = await _branchService.CreateUserBranchAsync(request, userId);
 
                 return CreatedAtAction(nameof(GetBranchById), new { id = branchResponse.BranchId }, branchResponse);
+            }
+            catch (GhostPinLimitExceededException ex)
+            {
+                return StatusCode(StatusCodes.Status429TooManyRequests, new
+                {
+                    message = ex.Message,
+                    errorCode = "ERR_GHOST_PIN_LIMIT",
+                    limit = ex.Limit,
+                    currentCount = ex.CurrentCount
+                });
             }
             catch (Exception ex)
             {

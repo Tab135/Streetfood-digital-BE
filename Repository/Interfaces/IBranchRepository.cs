@@ -17,6 +17,7 @@ namespace Repository.Interfaces
         Task<(List<Branch> items, int totalCount)> GetAllAsync(int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetActiveBranchesAsync(int pageNumber, int pageSize);
         Task<(List<Branch> items, int totalCount)> GetUnverifiedBranchesAsync(int pageNumber, int pageSize);
+        Task<int> CountPendingGhostPinsByUserAsync(int userId);
         Task UpdateAsync(Branch branch);
         Task<List<WorkSchedule>> GetWorkSchedulesAsync(int branchId);
         Task<List<DayOff>> GetDayOffsAsync(int branchId);
