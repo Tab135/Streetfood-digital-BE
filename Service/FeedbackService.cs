@@ -168,8 +168,8 @@ namespace Service
                 null,
                 createFeedbackDto.TagIds);
 
-            // Award XP from config - only for subscribed branches or user-created unverified branches
-            if (feedbackXP > 0 && (branch.IsSubscribed || isUserCreatedUnverifiedBranch))
+            // Award XP from config - only for isVerified branches 
+            if (feedbackXP > 0 && branch.IsVerified)
             {
                 await _userService.AddXPAsync(userId, feedbackXP);
             }
