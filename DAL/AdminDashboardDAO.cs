@@ -495,8 +495,8 @@ namespace DAL
 
             var result = new RevenueBarChartDto();
 
-            var currentTotal = await GetOrderCommissionTotalAsync(startDate, endExclusive);
-            var previousTotal = await GetOrderCommissionTotalAsync(previousStartDate, previousEndExclusive);
+            var currentTotal = await GetMoneyTotalAsync(startDate, endExclusive);
+            var previousTotal = await GetMoneyTotalAsync(previousStartDate, previousEndExclusive);
 
             result.Items.Add(new BarChartItemDto
             {
@@ -517,9 +517,39 @@ namespace DAL
             return result;
         }
 
-        private async Task<decimal> GetOrderCommissionTotalAsync(DateTime periodStart, DateTime periodEndExclusive)
+        private async Task<decimal> GetMoneyTotalAsync(DateTime periodStart, DateTime periodEndExclusive)
         {
-            var orderCommissions = await _context.Orders
+            var branchRegistrationTotal = await _context.Payments
+                .AsNoTracking()
+                .Where(p => p.Status == "PAID"
+                            && p.PaidAt.HasValue
+                            && p.PaidAt.Value >= periodStart
+                            && p.PaidAt.Value < periodEndExclusive
+                            && p.BranchId.HasValue
+                            && !p.OrderId.HasValue
+                            && !p.BranchCampaignId.HasValue)
+                .SumAsync(p => (decimal?)p.Amount) ?? 0m;
+
+            var systemCampaignTotal = await _context.Payments
+                .AsNoTracking()
+                .Where(p => p.Status == "PAID"
+                            && p.PaidAt.HasValue
+                            && p.PaidAt.Value >= periodStart
+                            && p.PaidAt.Value < periodEndExclusive
+                            && p.BranchCampaignId.HasValue
+                            && !p.OrderId.HasValue)
+                .Join(_context.BranchCampaigns.AsNoTracking(),
+                    p => p.BranchCampaignId!.Value,
+                    bc => bc.Id,
+                    (p, bc) => new { Payment = p, BranchCampaign = bc })
+                .Join(_context.Campaigns.AsNoTracking(),
+                    x => x.BranchCampaign.CampaignId,
+                    c => c.CampaignId,
+                    (x, c) => new { x.Payment, Campaign = c })
+                .Where(x => !x.Campaign.CreatedByVendorId.HasValue)
+                .SumAsync(x => (decimal?)x.Payment.Amount) ?? 0m;
+
+            var orderCommissionTotal = await _context.Orders
                 .AsNoTracking()
                 .Where(o => o.Status == OrderStatus.Complete
                             && o.CreatedAt >= periodStart
@@ -536,8 +566,10 @@ namespace DAL
                 })
                 .ToListAsync();
 
-            return orderCommissions
+            var totalOrderCommissionAmount = orderCommissionTotal
                 .Sum(o => Math.Round((o.IsSystemVoucher ? o.FinalAmount : o.TotalAmount) * o.CommissionRate, 2, MidpointRounding.AwayFromZero));
+
+            return branchRegistrationTotal + systemCampaignTotal + totalOrderCommissionAmount;
         }
     }
 }
