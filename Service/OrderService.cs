@@ -398,7 +398,7 @@ public class OrderService : IOrderService
             throw new DomainExceptions("Đơn hàng chỉ có thể bị hủy khi đang chờ thanh toán", "ERR_BAD_REQUEST");
         }
 
-        await _paymentService.CancelOrderPaymentAsync(orderId);
+        await _paymentService.CancelOrderPaymentAsync(orderId, true);
         await RestoreVoucherUsageForCancellationAsync(order);
 
         order.Status = OrderStatus.Cancelled;

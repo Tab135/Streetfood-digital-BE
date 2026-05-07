@@ -25,6 +25,7 @@ namespace Repository.Interfaces
             string? transactionCode, DateTime? paidAt, string? paymentMethod);
         Task UpdatePaymentWithPayOSDetails(long orderCode, string status,
             string? paymentLinkId, string? checkoutUrl, string? bin = null, string? accountNumber = null, string? accountName = null);
+        Task DeletePaymentByOrderCode(long orderCode);
         Task<(List<Payment> Items, int TotalCount)> GetVendorPayments(
             int vendorUserId, DateTime? fromDate, DateTime? toDate, string? paymentMethod,
             int pageNumber, int pageSize);

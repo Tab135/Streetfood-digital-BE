@@ -966,7 +966,7 @@ namespace Service.PaymentsService
             }
         }
 
-        public async Task CancelOrderPaymentAsync(int orderId)
+        public async Task CancelOrderPaymentAsync(int orderId, bool initiatedByUser = false)
         {
             var latestPayment = await _paymentRepo.GetLatestPaymentByOrderId(orderId);
             if (latestPayment == null)
@@ -1001,7 +1001,14 @@ namespace Service.PaymentsService
                 }
             }
 
-            await _paymentRepo.UpdatePaymentStatus(latestPayment.OrderCode, "CANCELLED");
+            if (initiatedByUser)
+            {
+                await _paymentRepo.DeletePaymentByOrderCode(latestPayment.OrderCode);
+            }
+            else
+            {
+                await _paymentRepo.UpdatePaymentStatus(latestPayment.OrderCode, "CANCELLED");
+            }
         }
 
             public async Task<PaymentStatusResponse> ConfirmPaymentFromRedirect(long orderCode, string status, string? transactionId)

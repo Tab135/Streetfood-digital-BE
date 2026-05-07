@@ -227,6 +227,23 @@ namespace DAL
             }
         }
 
+        public async Task DeletePaymentByOrderCode(long orderCode)
+        {
+            try
+            {
+                var payments = _context.Payments.Where(p => p.OrderCode == orderCode);
+                _context.Payments.RemoveRange(payments);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Deleted payment records for OrderCode={OrderCode}", orderCode);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting payment records for OrderCode={OrderCode}", orderCode);
+                throw;
+            }
+        }
+
         public async Task<bool> OrderCodeExists(long orderCode)
         {
             return await _context.Payments.AnyAsync(p => p.OrderCode == orderCode);

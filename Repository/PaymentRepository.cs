@@ -90,6 +90,11 @@ namespace Repository
             await _paymentDAO.UpdatePaymentWithPayOSDetails(orderCode, status, paymentLinkId, checkoutUrl, bin, accountNumber, accountName);
         }
 
+        public async Task DeletePaymentByOrderCode(long orderCode)
+        {
+            await _paymentDAO.DeletePaymentByOrderCode(orderCode);
+        }
+
         public async Task<(List<Payment> Items, int TotalCount)> GetVendorPayments(
             int vendorUserId, DateTime? fromDate, DateTime? toDate, string? paymentMethod,
             int pageNumber, int pageSize)

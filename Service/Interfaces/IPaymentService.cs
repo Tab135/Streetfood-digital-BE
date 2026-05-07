@@ -22,7 +22,7 @@ namespace Service.PaymentsService
 
         Task<Payment?> GetPaymentByOrderCode(long orderCode);
         Task<Payment?> GetLatestPaymentByOrderIdAsync(int orderId);
-        Task CancelOrderPaymentAsync(int orderId);
+        Task CancelOrderPaymentAsync(int orderId, bool initiatedByUser = false);
 
         Task<List<PaymentHistoryDto>> GetUserPaymentHistory(int userId);
         Task<PaginatedResponse<PaymentHistoryDto>> GetAllPayoutsAsync(int pageNumber, int pageSize);
