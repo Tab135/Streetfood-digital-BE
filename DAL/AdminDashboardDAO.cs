@@ -24,21 +24,19 @@ namespace DAL
 
         private static DateTime NormalizeToUtcDayStart(DateTime dt)
         {
-            // Ensure the DateTime is treated as UTC before converting
             var utcDt = dt.Kind == DateTimeKind.Unspecified
                 ? DateTime.SpecifyKind(dt, DateTimeKind.Utc)
                 : dt.ToUniversalTime();
 
-            // Convert to Vietnam local time, take the local date, convert back to UTC
             var vnLocal = TimeZoneInfo.ConvertTimeFromUtc(utcDt, VietnamTz);
-            var vnDayStart = vnLocal.Date; // e.g. 2026-05-01 00:00:00 (Vietnam)
-            return TimeZoneInfo.ConvertTimeToUtc(vnDayStart, VietnamTz); // e.g. 2026-04-30T17:00:00Z
+            var vnDayStart = vnLocal.Date; 
+            return TimeZoneInfo.ConvertTimeToUtc(vnDayStart, VietnamTz); 
         }
 
         public async Task<AdminUserSignupChartDto> GetUserSignupChartAsync(DateTime fromDate, DateTime toDate)
         {
             fromDate = NormalizeToUtcDayStart(fromDate);
-            toDate = NormalizeToUtcDayStart(toDate);
+            toDate = NormalizeToUtcDayStart(toDate).AddDays(1);
 
             var duration = toDate - fromDate;
             var previousEnd = fromDate;
@@ -79,7 +77,7 @@ namespace DAL
         public async Task<AdminMoneyChartDto> GetMoneyChartAsync(DateTime fromDate, DateTime toDate)
         {
             fromDate = NormalizeToUtcDayStart(fromDate);
-            toDate = NormalizeToUtcDayStart(toDate);
+            toDate = NormalizeToUtcDayStart(toDate).AddDays(1); // exclusive end: include full last VN day
 
             var duration = toDate - fromDate;
             var previousEnd = fromDate;
@@ -251,7 +249,7 @@ namespace DAL
         public async Task<AdminCompensationChartDto> GetCompensationChartAsync(DateTime fromDate, DateTime toDate)
         {
             fromDate = NormalizeToUtcDayStart(fromDate);
-            toDate = NormalizeToUtcDayStart(toDate);
+            toDate = NormalizeToUtcDayStart(toDate).AddDays(1); // exclusive end: include full last VN day
 
             var duration = toDate - fromDate;
             var previousEnd = fromDate;
@@ -317,7 +315,7 @@ namespace DAL
         public async Task<AdminUserToVendorConversionChartDto> GetUserToVendorConversionChartAsync(DateTime fromDate, DateTime toDate)
         {
             fromDate = NormalizeToUtcDayStart(fromDate);
-            toDate = NormalizeToUtcDayStart(toDate);
+            toDate = NormalizeToUtcDayStart(toDate).AddDays(1); // exclusive end: include full last VN day
 
             var duration = toDate - fromDate;
             var previousEnd = fromDate;
@@ -359,7 +357,7 @@ namespace DAL
         public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate, DateTime? previousFromDate = null, DateTime? previousToDate = null)
         {
             fromDate = NormalizeToUtcDayStart(fromDate);
-            toDate = NormalizeToUtcDayStart(toDate);
+            toDate = NormalizeToUtcDayStart(toDate).AddDays(1); // exclusive end
 
             DateTime previousStart;
             DateTime previousEnd;
@@ -367,7 +365,7 @@ namespace DAL
             if (previousFromDate.HasValue && previousToDate.HasValue)
             {
                 previousStart = NormalizeToUtcDayStart(previousFromDate.Value);
-                previousEnd = NormalizeToUtcDayStart(previousToDate.Value);
+                previousEnd = NormalizeToUtcDayStart(previousToDate.Value).AddDays(1); // exclusive end
             }
             else
             {
