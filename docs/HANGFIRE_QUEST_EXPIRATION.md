@@ -37,7 +37,9 @@ var campaign = await _campaignRepository.GetByIdAsync(campaignId);
 if (campaign == null) return;
 if (campaign.EndDate > DateTime.UtcNow) return; // stale job guard
 
-var userQuests = await _userQuestRepository.GetByUserAndCampaignQuestsInProgressAsync(campaignId);
+// Includes both IN_PROGRESS and STOPPED, so paused campaign quests
+// also expire when the campaign reaches EndDate.
+var userQuests = await _userQuestRepository.GetActiveOrStoppedByCampaignAsync(campaignId);
 foreach (var uq in userQuests)
 {
     uq.Status = "EXPIRED";

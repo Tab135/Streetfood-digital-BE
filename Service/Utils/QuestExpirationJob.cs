@@ -28,7 +28,9 @@ namespace Service
             // a new job was already created for the real EndDate — abort here.
             if (campaign.EndDate > DateTime.UtcNow) return;
 
-            var userQuests = await _userQuestRepository.GetByUserAndCampaignQuestsInProgressAsync(campaignId);
+            // Expire both IN_PROGRESS and STOPPED userQuests — a paused campaign quest
+            // must still expire when its campaign reaches EndDate.
+            var userQuests = await _userQuestRepository.GetActiveOrStoppedByCampaignAsync(campaignId);
 
             foreach (var uq in userQuests)
             {

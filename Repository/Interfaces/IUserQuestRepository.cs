@@ -19,11 +19,11 @@ namespace Repository.Interfaces
         Task AddUserQuestTasksAsync(List<UserQuestTask> tasks);
         Task<List<UserQuest>> GetByUserAndCampaignAsync(int userId, int campaignId);
         Task<(List<UserQuest> Items, int TotalCount)> GetUserQuestTasksByQuestAsync(UserQuestTaskQueryDto query);
-        /// <summary>Returns the active (IN_PROGRESS) standalone UserQuest for this user, or null.</summary>
-        Task<UserQuest?> GetActiveStandaloneQuestAsync(int userId);
+        /// <summary>Returns the active (IN_PROGRESS) UserQuest for this user — campaign or standalone — or null. Used to enforce the one-active-quest-at-a-time rule.</summary>
+        Task<UserQuest?> GetActiveUserQuestAsync(int userId);
         /// <summary>Returns the UserQuest for (userId, questId) regardless of status, or null.</summary>
         Task<UserQuest?> GetByUserAndQuestAnyStatusAsync(int userId, int questId);
-        /// <summary>Returns all IN_PROGRESS UserQuests whose Quest belongs to the given campaign.</summary>
-        Task<List<UserQuest>> GetByUserAndCampaignQuestsInProgressAsync(int campaignId);
+        /// <summary>Returns all UserQuests in IN_PROGRESS or STOPPED state whose Quest belongs to the given campaign. Used by the expiration job so paused quests still expire on campaign EndDate.</summary>
+        Task<List<UserQuest>> GetActiveOrStoppedByCampaignAsync(int campaignId);
     }
 }

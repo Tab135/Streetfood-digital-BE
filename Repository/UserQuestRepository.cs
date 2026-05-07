@@ -28,8 +28,8 @@ namespace Repository
         public Task AddUserQuestTasksAsync(List<UserQuestTask> tasks) => _dao.AddUserQuestTasksAsync(tasks);
         public Task<List<UserQuest>> GetByUserAndCampaignAsync(int userId, int campaignId) => _dao.GetByUserAndCampaignAsync(userId, campaignId);
         public Task<(List<UserQuest> Items, int TotalCount)> GetUserQuestTasksByQuestAsync(UserQuestTaskQueryDto query) => _dao.GetUserQuestTasksByQuestAsync(query);
-        public Task<UserQuest?> GetActiveStandaloneQuestAsync(int userId) => _dao.GetActiveStandaloneQuestAsync(userId);
+        public Task<UserQuest?> GetActiveUserQuestAsync(int userId) => _dao.GetActiveUserQuestAsync(userId);
         public Task<UserQuest?> GetByUserAndQuestAnyStatusAsync(int userId, int questId) => _dao.GetByUserAndQuestAnyStatusAsync(userId, questId);
-        public Task<List<UserQuest>> GetByUserAndCampaignQuestsInProgressAsync(int campaignId) => _dao.GetByUserAndCampaignQuestsInProgressAsync(campaignId);
+        public Task<List<UserQuest>> GetActiveOrStoppedByCampaignAsync(int campaignId) => _dao.GetActiveOrStoppedByCampaignAsync(campaignId);
     }
 }

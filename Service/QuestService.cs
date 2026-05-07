@@ -313,13 +313,9 @@ namespace Service
                 // STOPPED: allow re-enrollment (resume)
                 if (existing.Status == "STOPPED")
                 {
-                    // For standalone quests, enforce the 1-active limit before resuming
-                    if (quest.IsStandalone)
-                    {
-                        var activeStandalone = await _userQuestRepository.GetActiveStandaloneQuestAsync(userId);
-                        if (activeStandalone != null && activeStandalone.UserQuestId != existing.UserQuestId)
-                            throw new DomainExceptions("Bạn đang có một quest độc lập đang hoạt động. Hãy dừng nó trước khi bắt đầu quest khác.");
-                    }
+                    var active = await _userQuestRepository.GetActiveUserQuestAsync(userId);
+                    if (active != null && active.UserQuestId != existing.UserQuestId)
+                        throw new DomainExceptions("Bạn đang làm 1 nhiệm vụ khác, vui lòng dừng hoặc hoàn thành trước");
 
                     existing.Status = "IN_PROGRESS";
                     await _userQuestRepository.UpdateUserQuestAsync(existing);
@@ -329,13 +325,10 @@ namespace Service
                 }
             }
 
-            // New enrollment — enforce standalone limit
-            if (quest.IsStandalone)
-            {
-                var activeStandalone = await _userQuestRepository.GetActiveStandaloneQuestAsync(userId);
-                if (activeStandalone != null)
-                    throw new DomainExceptions("Bạn đang có một quest độc lập đang hoạt động. Hãy dừng nó trước khi bắt đầu quest khác.");
-            }
+            // New enrollment — only one active quest allowed at a time, regardless of type
+            var activeQuest = await _userQuestRepository.GetActiveUserQuestAsync(userId);
+            if (activeQuest != null)
+                throw new DomainExceptions("Bạn đang làm 1 nhiệm vụ khác, vui lòng dừng hoặc hoàn thành trước");
 
             var userQuest = new UserQuest
             {
@@ -370,10 +363,6 @@ namespace Service
 
             if (existing.Status != "IN_PROGRESS")
                 throw new DomainExceptions($"Không thể dừng quest — trạng thái hiện tại là {existing.Status}");
-
-            var quest = await _questRepository.GetByIdAsync(questId);
-            if (quest != null && !quest.IsStandalone)
-                throw new DomainExceptions("Chỉ quest độc lập mới có thể dừng thủ công");
 
             existing.Status = "STOPPED";
             await _userQuestRepository.UpdateUserQuestAsync(existing);

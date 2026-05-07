@@ -194,13 +194,12 @@ namespace DAL
                 .ToListAsync();
         }
 
-        public async Task<UserQuest?> GetActiveStandaloneQuestAsync(int userId)
+        public async Task<UserQuest?> GetActiveUserQuestAsync(int userId)
         {
             return await _context.UserQuests
                 .Include(uq => uq.Quest)
                 .Where(uq => uq.UserId == userId
-                    && uq.Status == "IN_PROGRESS"
-                    && uq.Quest.IsStandalone)
+                    && uq.Status == "IN_PROGRESS")
                 .FirstOrDefaultAsync();
         }
 
@@ -213,11 +212,12 @@ namespace DAL
                 .FirstOrDefaultAsync(uq => uq.UserId == userId && uq.QuestId == questId);
         }
 
-        public async Task<List<UserQuest>> GetByUserAndCampaignQuestsInProgressAsync(int campaignId)
+        public async Task<List<UserQuest>> GetActiveOrStoppedByCampaignAsync(int campaignId)
         {
             return await _context.UserQuests
                 .Include(uq => uq.Quest)
-                .Where(uq => uq.Status == "IN_PROGRESS" && uq.Quest.CampaignId == campaignId)
+                .Where(uq => (uq.Status == "IN_PROGRESS" || uq.Status == "STOPPED")
+                    && uq.Quest.CampaignId == campaignId)
                 .ToListAsync();
         }
     }
