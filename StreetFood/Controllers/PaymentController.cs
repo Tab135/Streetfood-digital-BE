@@ -287,6 +287,11 @@ namespace Ielts_System.Controllers.Payments
         public IActionResult PaymentCancel([FromQuery] long orderCode)
         {
             _logger.LogInformation("Payment cancelled: OrderCode={OrderCode}", orderCode);
+            
+            // Note: Voucher restoration happens via webhook when PayOS sends CANCELLED status.
+            // This endpoint just acknowledges the redirect; the webhook is the source of truth.
+            // However, if webhook fails to arrive, the payment will remain PENDING and voucher stays deducted.
+            // Expired/unpicked payments can be cleaned up via background jobs if needed.
 
             return Ok(new
             {

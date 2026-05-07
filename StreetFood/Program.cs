@@ -197,6 +197,7 @@ namespace StreetFood
         builder.Services.AddScoped<Service.Interfaces.IQuestProgressService, Service.QuestProgressService>();
         builder.Services.AddScoped<Service.Interfaces.IQuestExpirationJob, Service.QuestExpirationJob>();
         builder.Services.AddScoped<Service.Interfaces.ICampaignStatusJob, Service.CampaignStatusJob>();
+        builder.Services.AddScoped<Service.Interfaces.IOrderAutoCompleteJob, Service.Utils.OrderAutoCompleteJob>();
 
         // Hangfire — stores jobs in the same PostgreSQL DB
         builder.Services.AddHangfire(config => config

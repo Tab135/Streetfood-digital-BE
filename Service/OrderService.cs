@@ -3,6 +3,7 @@ using BO.DTO.Order;
 using BO.Entities;
 using BO.Enums;
 using BO.Exceptions;
+using Hangfire;
 using Repository.Interfaces;
 using Service.Interfaces;
 using Service.PaymentsService;
@@ -30,6 +31,7 @@ public class OrderService : IOrderService
     private readonly ISettingService _settingService;
     private readonly IUserService _userService;
     private readonly IPaymentService _paymentService;
+    private readonly IBackgroundJobClient _backgroundJobClient;
     private static readonly TimeSpan PendingCheckoutAbandonmentThreshold = TimeSpan.FromMinutes(10);
 
     public OrderService(
@@ -45,7 +47,8 @@ public class OrderService : IOrderService
         IQuestProgressService questProgressService,
         ISettingService settingService,
         IUserService userService,
-        IPaymentService paymentService
+        IPaymentService paymentService,
+        IBackgroundJobClient backgroundJobClient
     )
     {
         _orderRepository = orderRepository ?? throw new ArgumentNullException(nameof(orderRepository));
@@ -61,6 +64,7 @@ public class OrderService : IOrderService
         _settingService = settingService ?? throw new ArgumentNullException(nameof(settingService));
         _userService = userService ?? throw new ArgumentNullException(nameof(userService));
         _paymentService = paymentService ?? throw new ArgumentNullException(nameof(paymentService));
+        _backgroundJobClient = backgroundJobClient ?? throw new ArgumentNullException(nameof(backgroundJobClient));
     }
 
     public async Task<OrderResponseDto> CreateOrderAsync(CreateOrderRequest request, int userId)
@@ -401,11 +405,13 @@ public class OrderService : IOrderService
         await _paymentService.CancelOrderPaymentAsync(orderId, true);
         await RestoreVoucherUsageForCancellationAsync(order);
 
-        order.Status = OrderStatus.Cancelled;
-        order.CompletionCode = null;
-
-        var updated = await _orderRepository.Update(order);
-        return MapToDto(updated);
+        // Map to DTO before deletion so we can still return order info
+        var orderDto = MapToDto(order);
+        
+        // Delete the order record entirely (not just mark as cancelled)
+        await _orderRepository.Delete(orderId);
+        
+        return orderDto;
     }
 
     public async Task<OrderResponseDto> UpdateOrderAsync(int orderId, UpdateOrderRequest request, int userId)
@@ -550,6 +556,12 @@ public class OrderService : IOrderService
         {
             order.Status = OrderStatus.Paid;
             order.CompletionCode = GenerateCompletionCode();
+            
+            // Schedule auto-completion after 2 hours if order not picked up
+            var autoCompleteTime = DateTime.UtcNow.AddHours(2);
+            _backgroundJobClient.Schedule<IOrderAutoCompleteJob>(
+                job => job.AutoCompleteOrderAsync(order.OrderId),
+                autoCompleteTime);
         }
         else
         {
@@ -694,6 +706,86 @@ public class OrderService : IOrderService
         return true;
     }
 
+    /// <summary>
+    /// Auto-complete unpicked order after 2-hour timeout.
+    /// Called by Hangfire background job. Only completes if order is still in Paid status.
+    /// Transfers settlement amount to vendor wallet without requiring customer pickup verification.
+    /// </summary>
+    public async Task AutoCompleteUnpickedOrderAsync(int orderId)
+    {
+        var order = await _orderRepository.GetById(orderId);
+        if (order == null)
+        {
+            return; // Order deleted or doesn't exist
+        }
+
+        // Only auto-complete if still in Paid status (user didn't pick up, vendor didn't manually complete)
+        if (order.Status != OrderStatus.Paid)
+        {
+            return;
+        }
+
+        var branch = await _branchRepository.GetByIdAsync(order.BranchId);
+        if (branch == null)
+        {
+            return;
+        }
+
+        if (!branch.VendorId.HasValue || branch.VendorId.Value <= 0)
+        {
+            return;
+        }
+
+        var vendor = await _vendorRepository.GetByIdAsync(branch.VendorId.Value);
+        if (vendor == null)
+        {
+            return;
+        }
+
+        // Mark order as complete
+        order.Status = OrderStatus.Complete;
+        order.CompletionCode = null;
+
+        // Award XP to user for order
+        var orderXP = _settingService.GetInt("orderXP", 0);
+        if (orderXP > 0)
+        {
+            await _userService.AddXPAsync(order.UserId, orderXP);
+            order.OrderXP = orderXP;
+        }
+
+        // Calculate and transfer settlement to vendor
+        var vendorSettlementAmount = await CalculateVendorSettlementAmountAsync(order);
+        vendor.MoneyBalance += vendorSettlementAmount;
+        await _vendorRepository.UpdateAsync(vendor);
+        await _paymentService.CreateVendorWalletCreditAsync(
+            vendor.UserId,
+            (int)vendorSettlementAmount,
+            $"Thanh toán tự động đơn hàng #{order.OrderId} (không lấy hàng)",
+            orderId: order.OrderId);
+
+        var updated = await _orderRepository.Update(order);
+
+        // Notify customer about auto-completion
+        var pushData = new
+        {
+            type = "order_status",
+            orderId = order.OrderId,
+            branchName = branch.Name,
+            orderStatus = "auto-complete",
+        };
+
+        await _notificationService.NotifyAsync(
+            order.UserId,
+            NotificationType.OrderStatusUpdate,
+            "Đơn hàng đã hoàn thành (tự động)",
+            $"Đơn hàng #{order.OrderId} ở {branch.Name} đã được tính là hoàn thành do quá giờ không lấy hàng. Khoản tiền đã được chuyển cho nhà hàng.",
+            order.OrderId,
+            pushData);
+
+        await _questProgressService.UpdateProgressAsync(order.UserId, QuestTaskType.ORDER_AMOUNT, (int)order.FinalAmount);
+    }
+
     public async Task<int> CancelAbandonedPendingOrdersAsync(TimeSpan inactivityTimeout, CancellationToken cancellationToken = default)
     {
         if (inactivityTimeout <= TimeSpan.Zero)
@@ -801,6 +893,10 @@ public class OrderService : IOrderService
             return false;
         }
 
+        // Cancel payment record (marks as CANCELLED, not deleted since this is system-initiated)
+        await _paymentService.CancelOrderPaymentAsync(order.OrderId, initiatedByUser: false);
+        
+        // Restore voucher deducted during checkout
         await RestoreVoucherUsageForCancellationAsync(order);
 
         order.Status = OrderStatus.Cancelled;

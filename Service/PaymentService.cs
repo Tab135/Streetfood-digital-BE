@@ -41,6 +41,8 @@ namespace Service.PaymentsService
         private readonly INotificationService _notificationService;
         private readonly ISettingService _settings;
         private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly IVoucherRepository _voucherRepository;
+        private readonly IUserVoucherRepository _userVoucherRepository;
         private readonly bool _isDebugMode;
         private const string LowcaWalletPaymentMethod = "Lowca Wallet";
         private static readonly object OrderCodeLock = new();
@@ -59,6 +61,8 @@ namespace Service.PaymentsService
             INotificationService notificationService,
             ISettingService settings,
             IBackgroundJobClient backgroundJobClient,
+            IVoucherRepository voucherRepository,
+            IUserVoucherRepository userVoucherRepository,
             IConfiguration configuration,
             ILogger<PaymentService> logger)
         {
@@ -73,6 +77,8 @@ namespace Service.PaymentsService
             _notificationService = notificationService;
             _settings = settings;
             _backgroundJobClient = backgroundJobClient;
+            _voucherRepository = voucherRepository;
+            _userVoucherRepository = userVoucherRepository;
             _configuration = configuration;
             _logger = logger;
             _isDebugMode = bool.TryParse(_configuration["PayOS:DebugMode"], out var debugMode) && debugMode;
@@ -1011,6 +1017,59 @@ namespace Service.PaymentsService
             }
         }
 
+        /// <summary>
+        /// Restore voucher usage when a payment is cancelled or expired.
+        /// Called when payment link is not completed by user.
+        /// </summary>
+        private async Task RestoreVoucherForCancelledPaymentAsync(Payment? payment)
+        {
+            if (payment?.OrderId == null)
+            {
+                return;
+            }
+
+            var order = await _orderRepository.GetById(payment.OrderId.Value);
+            if (order == null || !order.AppliedVoucherId.HasValue)
+            {
+                return;
+            }
+
+            try
+            {
+                var voucher = await _voucherRepository.GetByIdAsync(order.AppliedVoucherId.Value);
+                if (voucher == null)
+                {
+                    return;
+                }
+
+                // System-funded voucher: restore UserVoucher quantity
+                if (voucher.RedeemPoint > 0)
+                {
+                    var userVoucher = await _userVoucherRepository.GetByUserAndVoucherAsync(order.UserId, voucher.VoucherId);
+                    if (userVoucher != null)
+                    {
+                        userVoucher.Quantity += 1;
+                        userVoucher.IsAvailable = true;
+                        await _userVoucherRepository.UpdateAsync(userVoucher);
+                    }
+                    return;
+                }
+
+                // Vendor-funded voucher: restore Voucher.UsedQuantity
+                if (voucher.UsedQuantity > 0)
+                {
+                    voucher.UsedQuantity -= 1;
+                    await _voucherRepository.UpdateAsync(voucher);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Failed to restore voucher for cancelled payment OrderCode={OrderCode}, OrderId={OrderId}",
+                    payment.OrderCode, payment.OrderId);
+            }
+        }
+
             public async Task<PaymentStatusResponse> ConfirmPaymentFromRedirect(long orderCode, string status, string? transactionId)
             {
             try
@@ -1094,6 +1153,9 @@ namespace Service.PaymentsService
 
                     if (payment != null)
                     {
+                        // Restore voucher when payment is not completed
+                        await RestoreVoucherForCancelledPaymentAsync(payment);
+                        
                         await _notificationPusher.PushPaymentStatusAsync(
                             payment.UserId, orderCode, actualStatus, payment.OrderId);
                     }

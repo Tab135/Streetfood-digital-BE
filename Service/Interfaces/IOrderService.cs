@@ -20,6 +20,7 @@ public interface IOrderService
     Task<OrderResponseDto> UpdateOrderAsync(int orderId, UpdateOrderRequest request, int userId);
     Task<OrderResponseDto> VendorDecideOrderAsync(int orderId, int vendorUserId, bool approve);
     Task<OrderResponseDto> VendorCompleteOrderAsync(int orderId, int vendorUserId, string verificationCode);
+    Task AutoCompleteUnpickedOrderAsync(int orderId);
     Task<int> CancelAbandonedPendingOrdersAsync(TimeSpan inactivityTimeout, CancellationToken cancellationToken = default);
     Task<bool> DeleteOrderAsync(int orderId, int userId);
 }
