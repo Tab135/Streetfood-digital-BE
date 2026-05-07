@@ -495,19 +495,8 @@ namespace DAL
 
             var result = new RevenueBarChartDto();
 
-            var currentTotal = await _context.Orders
-                .AsNoTracking()
-                .Where(o => o.Status == OrderStatus.Complete
-                            && o.CreatedAt >= startDate
-                            && o.CreatedAt < endExclusive)
-                .SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
-
-            var previousTotal = await _context.Orders
-                .AsNoTracking()
-                .Where(o => o.Status == OrderStatus.Complete
-                            && o.CreatedAt >= previousStartDate
-                            && o.CreatedAt < previousEndExclusive)
-                .SumAsync(o => (decimal?)o.FinalAmount) ?? 0m;
+            var currentTotal = await GetOrderCommissionTotalAsync(startDate, endExclusive);
+            var previousTotal = await GetOrderCommissionTotalAsync(previousStartDate, previousEndExclusive);
 
             result.Items.Add(new BarChartItemDto
             {
@@ -526,6 +515,29 @@ namespace DAL
             });
 
             return result;
+        }
+
+        private async Task<decimal> GetOrderCommissionTotalAsync(DateTime periodStart, DateTime periodEndExclusive)
+        {
+            var orderCommissions = await _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Complete
+                            && o.CreatedAt >= periodStart
+                            && o.CreatedAt < periodEndExclusive)
+                .Select(o => new
+                {
+                    o.TotalAmount,
+                    o.FinalAmount,
+                    CommissionRate = o.CommissionRate ?? 0m,
+                    IsSystemVoucher = o.AppliedVoucherId.HasValue
+                        && (o.AppliedVoucher!.VendorCampaignId == null
+                            || (o.AppliedVoucher.VendorCampaign != null
+                                && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue))
+                })
+                .ToListAsync();
+
+            return orderCommissions
+                .Sum(o => Math.Round((o.IsSystemVoucher ? o.FinalAmount : o.TotalAmount) * o.CommissionRate, 2, MidpointRounding.AwayFromZero));
         }
     }
 }
