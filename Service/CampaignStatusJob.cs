@@ -114,8 +114,6 @@ namespace Service
                 await _campaignRepo.UpdateAsync(campaign);
             }
 
-            await _branchCampaignRepo.SetAllIsActiveForCampaignAsync(campaign.CampaignId, false);
-
             _logger.LogInformation("CampaignStatusJob: deactivated campaign {CampaignId} at {Now}.", campaignId, now);
         }
 

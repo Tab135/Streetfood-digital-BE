@@ -66,13 +66,9 @@ namespace Service
                     .SetProperty(c => c.IsActive, false)
                     .SetProperty(c => c.UpdatedAt, now), ct);
 
-            var updatedBranchCampaigns = await db.BranchCampaigns
-                .Where(bc => bc.IsActive && expiredCampaignIds.Contains(bc.CampaignId))
-                .ExecuteUpdateAsync(s => s.SetProperty(bc => bc.IsActive, false), ct);
-
             _logger.LogInformation(
-                "CampaignExpiryService: deactivated {CampaignCount} campaign(s) and {BranchCampaignCount} branch-campaign row(s) at {Now}.",
-                updatedCampaigns, updatedBranchCampaigns, now);
+                "CampaignExpiryService: deactivated {CampaignCount} campaign(s) at {Now}; BranchCampaign.IsActive values were preserved.",
+                updatedCampaigns, now);
         }
     }
 }
