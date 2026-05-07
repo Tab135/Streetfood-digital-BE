@@ -233,7 +233,8 @@ public class OrderService : IOrderService
                 OrderStatus.AwaitingVendorConfirmation,
                 OrderStatus.Paid,
                 OrderStatus.Cancelled,
-                OrderStatus.Complete
+                OrderStatus.Complete,
+                OrderStatus.Expired
             };
 
         var (orders, totalCount) = await _orderRepository.GetByUserId(userId, pageNumber, pageSize, effectiveStatuses);
@@ -264,7 +265,8 @@ public class OrderService : IOrderService
                 OrderStatus.AwaitingVendorConfirmation,
                 OrderStatus.Paid,
                 OrderStatus.Cancelled,
-                OrderStatus.Complete
+                OrderStatus.Complete,
+                OrderStatus.Expired
             };
         var (orders, totalCount) = await _orderRepository.GetByBranchIds(branchIds, pageNumber, pageSize, effectiveStatuses);
         var paidOrderIds = await _orderRepository.GetOrderIdsWithPaymentsAsync(orders.Select(o => o.OrderId));
@@ -313,7 +315,8 @@ public class OrderService : IOrderService
                 OrderStatus.AwaitingVendorConfirmation,
                 OrderStatus.Paid,
                 OrderStatus.Cancelled,
-                OrderStatus.Complete
+                OrderStatus.Complete,
+                OrderStatus.Expired
             };
 
         var (orders, totalCount) = await _orderRepository.GetByBranchIds(new List<int> { branchId }, pageNumber, pageSize, effectiveStatuses);
@@ -355,7 +358,8 @@ public class OrderService : IOrderService
                 OrderStatus.AwaitingVendorConfirmation,
                 OrderStatus.Paid,
                 OrderStatus.Cancelled,
-                OrderStatus.Complete
+                OrderStatus.Complete,
+                OrderStatus.Expired
             };
 
         var (orders, totalCount) = await _orderRepository.GetByBranchIds(branchIds, pageNumber, pageSize, effectiveStatuses);
