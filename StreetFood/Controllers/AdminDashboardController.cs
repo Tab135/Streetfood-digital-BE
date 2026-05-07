@@ -169,7 +169,7 @@ namespace StreetFood.Controllers
         [HttpGet("revenue/bar")]
         [Authorize(Roles = "Admin")]
         [ProducesResponseType(typeof(ApiResponse<RevenueBarChartDto>), StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetRevenueBarChart([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
+        public async Task<IActionResult> GetRevenueBarChart([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate, [FromQuery] DateTime? previousFromDate = null, [FromQuery] DateTime? previousToDate = null)
         {
             try
             {
@@ -178,7 +178,7 @@ namespace StreetFood.Controllers
                     return BadRequest(new { message = "Vui lòng truyền fromDate và toDate." });
                 }
 
-                var chart = await _adminDashboardService.GetRevenueBarChartAsync(fromDate, toDate);
+                var chart = await _adminDashboardService.GetRevenueBarChartAsync(fromDate, toDate, previousFromDate, previousToDate);
 
                 return Ok(new
                 {

@@ -382,14 +382,17 @@ namespace DAL
 
                 var totalBranchesJoined = await _context.BranchCampaigns
                     .AsNoTracking()
-                    .Where(bc => bc.CampaignId == campaignId)
+                    .Where(bc => bc.CampaignId == campaignId && bc.IsActive)
                     .CountAsync();
 
                 var branchOrdersQuery = await _context.Orders
                     .AsNoTracking()
                     .Where(o => o.Status == OrderStatus.Complete 
                                 && o.AppliedVoucherId.HasValue
-                                && campaignVoucherIds.Contains(o.AppliedVoucherId.Value))
+                                && campaignVoucherIds.Contains(o.AppliedVoucherId.Value)
+                                && _context.BranchCampaigns.Any(bc => bc.CampaignId == campaignId
+                                                                    && bc.BranchId == o.BranchId
+                                                                    && bc.IsActive))
                     .GroupBy(o => new { o.BranchId, o.Branch.Name })
                     .Select(g => new AdminSystemCampaignBranchOrderDto
                     {
@@ -438,7 +441,10 @@ namespace DAL
                     .AsNoTracking()
                     .Where(o => o.Status == OrderStatus.Complete 
                                 && o.AppliedVoucherId.HasValue
-                                && campaignVoucherIds.Contains(o.AppliedVoucherId.Value))
+                                && campaignVoucherIds.Contains(o.AppliedVoucherId.Value)
+                                && _context.BranchCampaigns.Any(bc => bc.CampaignId == campaignId
+                                                                    && bc.BranchId == o.BranchId
+                                                                    && bc.IsActive))
                     .OrderByDescending(o => o.CreatedAt)
                     .Select(o => new AdminSystemCampaignOrderDto
                     {
@@ -467,12 +473,25 @@ namespace DAL
             return result;
         }
 
-        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate)
+        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate, DateTime? previousFromDate = null, DateTime? previousToDate = null)
         {
             var startDate = fromDate.Date;
             var endDate = toDate.Date;
             var endExclusive = endDate.AddDays(1);
-            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+            
+            // Use provided previous dates if available, otherwise auto-calculate
+            DateTime previousStartDate;
+            DateTime previousEndExclusive;
+            
+            if (previousFromDate.HasValue && previousToDate.HasValue)
+            {
+                previousStartDate = previousFromDate.Value.Date;
+                previousEndExclusive = previousToDate.Value.Date.AddDays(1);
+            }
+            else
+            {
+                (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+            }
 
             var result = new RevenueBarChartDto();
 
