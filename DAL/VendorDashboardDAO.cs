@@ -14,6 +14,20 @@ namespace DAL
 
         private readonly StreetFoodDbContext _context;
 
+        private static readonly TimeZoneInfo VietnamTz =
+            TimeZoneInfo.FindSystemTimeZoneById(
+                OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
+
+        private static DateTime NormalizeToUtcDayStart(DateTime dt)
+        {
+            var utcDt = dt.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+                : dt.ToUniversalTime();
+            var vnLocal = TimeZoneInfo.ConvertTimeFromUtc(utcDt, VietnamTz);
+            var vnDayStart = vnLocal.Date;
+            return TimeZoneInfo.ConvertTimeToUtc(vnDayStart, VietnamTz);
+        }
+
         public VendorDashboardDAO(StreetFoodDbContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -42,10 +56,9 @@ namespace DAL
 
         public async Task<RevenueDashboardDto> GetRevenueDashboardAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
         {
-            var startDate = fromDate.Date;
-            var endDate = toDate.Date;
-            var endExclusive = endDate.AddDays(1);
-            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+            var startDate = NormalizeToUtcDayStart(fromDate);
+            var endExclusive = NormalizeToUtcDayStart(toDate).AddDays(1);
+            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endExclusive.AddDays(-1));
 
             var branchIds = allowedBranchIds ?? await _context.Branches
                 .Where(b => b.VendorId == vendorId)
@@ -123,10 +136,9 @@ namespace DAL
 
         public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
         {
-            var startDate = fromDate.Date;
-            var endDate = toDate.Date;
-            var endExclusive = endDate.AddDays(1);
-            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+            var startDate = NormalizeToUtcDayStart(fromDate);
+            var endExclusive = NormalizeToUtcDayStart(toDate).AddDays(1);
+            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endExclusive.AddDays(-1));
 
             var branchIds = allowedBranchIds ?? await _context.Branches
                 .Where(b => b.VendorId == vendorId)
@@ -238,13 +250,16 @@ namespace DAL
                     .Select(bc => new { bc.BranchId, bc.Branch.Name })
                     .ToListAsync();
 
+                var campaignStartDate = NormalizeToUtcDayStart(fromDate);
+                var campaignEndExclusive = NormalizeToUtcDayStart(toDate).AddDays(1);
+
                 var orders = await _context.Orders
                     .AsNoTracking()
                     .Where(o => o.Status == OrderStatus.Complete
                                 && o.AppliedVoucher != null
                                 && o.AppliedVoucher.VendorCampaignId == campaign.CampaignId
-                                && o.CreatedAt >= fromDate
-                                && o.CreatedAt <= toDate)
+                                && o.CreatedAt >= campaignStartDate
+                                && o.CreatedAt < campaignEndExclusive)
                     .Select(o => new
                     {
                         o.BranchId,
@@ -292,9 +307,8 @@ namespace DAL
 
         public async Task<VoucherDashboardDto> GetVoucherDashboardAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
         {
-            var startDate = fromDate.Date;
-            var endDate = toDate.Date;
-            var endExclusive = endDate.AddDays(1);
+            var startDate = NormalizeToUtcDayStart(fromDate);
+            var endExclusive = NormalizeToUtcDayStart(toDate).AddDays(1);
 
             var branchIds = allowedBranchIds ?? await _context.Branches
                 .Where(b => b.VendorId == vendorId)
@@ -334,13 +348,11 @@ namespace DAL
         {
             var hasDateFilter = !(fromDate == DateTime.MinValue && toDate == DateTime.MaxValue);
             DateTime startDate = DateTime.MinValue;
-            DateTime endDate = DateTime.MaxValue;
             DateTime endExclusive = DateTime.MaxValue;
             if (hasDateFilter)
             {
-                startDate = fromDate.Date;
-                endDate = toDate.Date;
-                endExclusive = endDate == DateTime.MaxValue.Date ? DateTime.MaxValue : endDate.AddDays(1);
+                startDate = NormalizeToUtcDayStart(fromDate);
+                endExclusive = NormalizeToUtcDayStart(toDate).AddDays(1);
             }
 
             var allDishes = await _context.Dishes
@@ -439,9 +451,8 @@ namespace DAL
 
         public async Task<BranchesPerformanceDashboardDto> GetBranchesPerformanceAsync(int vendorId, System.Collections.Generic.List<int>? allowedBranchIds, DateTime fromDate, DateTime toDate)
         {
-            var startDate = fromDate.Date;
-            var endDate = toDate.Date;
-            var endExclusive = endDate.AddDays(1);
+            var startDate = NormalizeToUtcDayStart(fromDate);
+            var endExclusive = NormalizeToUtcDayStart(toDate).AddDays(1);
 
             var branchQuery = _context.Branches
                 .AsNoTracking()
@@ -514,8 +525,9 @@ namespace DAL
 
         private static (DateTime PreviousStartDate, DateTime PreviousEndExclusive) GetPreviousPeriod(DateTime startDate, DateTime endDate)
         {
-            var dayCount = (endDate - startDate).Days + 1;
-            var previousEndExclusive = startDate;
+            // endDate is the inclusive last day (not exclusive), so dayCount = inclusive span
+            var dayCount = (int)(endDate - startDate).TotalDays + 1;
+            var previousEndExclusive = startDate; // exclusive upper bound = first day of current period
             var previousStartDate = startDate.AddDays(-dayCount);
 
             return (previousStartDate, previousEndExclusive);

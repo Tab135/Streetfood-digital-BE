@@ -17,16 +17,36 @@ namespace DAL
             _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
+
+        private static readonly TimeZoneInfo VietnamTz =
+            TimeZoneInfo.FindSystemTimeZoneById(
+                OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
+
+        private static DateTime NormalizeToUtcDayStart(DateTime dt)
+        {
+            // Ensure the DateTime is treated as UTC before converting
+            var utcDt = dt.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(dt, DateTimeKind.Utc)
+                : dt.ToUniversalTime();
+
+            // Convert to Vietnam local time, take the local date, convert back to UTC
+            var vnLocal = TimeZoneInfo.ConvertTimeFromUtc(utcDt, VietnamTz);
+            var vnDayStart = vnLocal.Date; // e.g. 2026-05-01 00:00:00 (Vietnam)
+            return TimeZoneInfo.ConvertTimeToUtc(vnDayStart, VietnamTz); // e.g. 2026-04-30T17:00:00Z
+        }
+
         public async Task<AdminUserSignupChartDto> GetUserSignupChartAsync(DateTime fromDate, DateTime toDate)
         {
-            var startDate = fromDate.Date;
-            var endDate = toDate.Date;
-            var endExclusive = endDate.AddDays(1);
-            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+            fromDate = NormalizeToUtcDayStart(fromDate);
+            toDate = NormalizeToUtcDayStart(toDate);
+
+            var duration = toDate - fromDate;
+            var previousEnd = fromDate;
+            var previousStart = fromDate.Add(-duration);
 
             var dailySignups = await _context.Users
                 .AsNoTracking()
-                .Where(u => u.CreatedAt >= startDate && u.CreatedAt < endExclusive
+                .Where(u => u.CreatedAt >= fromDate && u.CreatedAt < toDate
                             && u.Role != Role.Admin && u.Role != Role.Moderator)
                 .GroupBy(u => u.CreatedAt.Date)
                 .Select(g => new AdminUserSignupPointDto
@@ -41,34 +61,36 @@ namespace DAL
 
             var previousTotalSignupCount = await _context.Users
                 .AsNoTracking()
-                .Where(u => u.CreatedAt >= previousStartDate && u.CreatedAt < previousEndExclusive
+                .Where(u => u.CreatedAt >= previousStart && u.CreatedAt < previousEnd
                             && u.Role != Role.Admin && u.Role != Role.Moderator)
                 .CountAsync();
 
             return new AdminUserSignupChartDto
             {
-                FromDate = startDate,
-                ToDate = endDate,
+                FromDate = fromDate,
+                ToDate = toDate,
                 TotalSignupCount = totalSignupCount,
                 SignupGrowthRate = CalculateGrowthRate(totalSignupCount, previousTotalSignupCount),
-                PreviousPeriod = $"từ {previousStartDate:dd-MM-yyyy} tới {previousEndExclusive.AddDays(-1):dd-MM-yyyy}",
+                PreviousPeriod = $"từ {previousStart:dd-MM-yyyy} tới {previousEnd:dd-MM-yyyy}",
                 DailySignups = dailySignups
             };
         }
 
         public async Task<AdminMoneyChartDto> GetMoneyChartAsync(DateTime fromDate, DateTime toDate)
         {
-            var startDate = fromDate.Date;
-            var endDate = toDate.Date;
-            var endExclusive = endDate.AddDays(1);
-            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+            fromDate = NormalizeToUtcDayStart(fromDate);
+            toDate = NormalizeToUtcDayStart(toDate);
+
+            var duration = toDate - fromDate;
+            var previousEnd = fromDate;
+            var previousStart = fromDate.Add(-duration);
 
             var branchRegistrationRevenueByDate = await _context.Payments
                 .AsNoTracking()
                 .Where(p => p.Status == "PAID"
                             && p.PaidAt.HasValue
-                            && p.PaidAt.Value >= startDate
-                            && p.PaidAt.Value < endExclusive
+                            && p.PaidAt.Value >= fromDate
+                            && p.PaidAt.Value < toDate
                             && p.BranchId.HasValue
                             && !p.OrderId.HasValue
                             && !p.BranchCampaignId.HasValue)
@@ -84,8 +106,8 @@ namespace DAL
                 .AsNoTracking()
                 .Where(p => p.Status == "PAID"
                             && p.PaidAt.HasValue
-                            && p.PaidAt.Value >= startDate
-                            && p.PaidAt.Value < endExclusive
+                            && p.PaidAt.Value >= fromDate
+                            && p.PaidAt.Value < toDate
                             && p.BranchCampaignId.HasValue
                             && !p.OrderId.HasValue)
                 .Join(_context.BranchCampaigns.AsNoTracking(),
@@ -108,8 +130,8 @@ namespace DAL
             var currentOrderCommissions = await _context.Orders
                 .AsNoTracking()
                 .Where(o => o.Status == OrderStatus.Complete
-                            && o.CreatedAt >= startDate
-                            && o.CreatedAt < endExclusive)
+                            && o.CreatedAt >= fromDate
+                            && o.CreatedAt < toDate)
                 .Select(o => new
                 {
                     o.CreatedAt,
@@ -128,7 +150,9 @@ namespace DAL
                 .Select(g => new
                 {
                     Date = g.Key,
-                    Amount = g.Sum(o => Math.Round((o.IsSystemVoucher ? o.FinalAmount : o.TotalAmount) * o.CommissionRate, 2, MidpointRounding.AwayFromZero))
+                    Amount = g.Sum(o => Math.Round(
+                        (o.IsSystemVoucher ? o.FinalAmount : o.TotalAmount) * o.CommissionRate,
+                        2, MidpointRounding.AwayFromZero))
                 })
                 .ToDictionary(x => x.Date, x => x.Amount);
 
@@ -161,8 +185,8 @@ namespace DAL
                 .AsNoTracking()
                 .Where(p => p.Status == "PAID"
                             && p.PaidAt.HasValue
-                            && p.PaidAt.Value >= previousStartDate
-                            && p.PaidAt.Value < previousEndExclusive
+                            && p.PaidAt.Value >= previousStart
+                            && p.PaidAt.Value < previousEnd
                             && p.BranchId.HasValue
                             && !p.OrderId.HasValue
                             && !p.BranchCampaignId.HasValue)
@@ -172,8 +196,8 @@ namespace DAL
                 .AsNoTracking()
                 .Where(p => p.Status == "PAID"
                             && p.PaidAt.HasValue
-                            && p.PaidAt.Value >= previousStartDate
-                            && p.PaidAt.Value < previousEndExclusive
+                            && p.PaidAt.Value >= previousStart
+                            && p.PaidAt.Value < previousEnd
                             && p.BranchCampaignId.HasValue
                             && !p.OrderId.HasValue)
                 .Join(_context.BranchCampaigns.AsNoTracking(),
@@ -190,8 +214,8 @@ namespace DAL
             var previousOrderCommissions = await _context.Orders
                 .AsNoTracking()
                 .Where(o => o.Status == OrderStatus.Complete
-                            && o.CreatedAt >= previousStartDate
-                            && o.CreatedAt < previousEndExclusive)
+                            && o.CreatedAt >= previousStart
+                            && o.CreatedAt < previousEnd)
                 .Select(o => new
                 {
                     o.TotalAmount,
@@ -205,31 +229,35 @@ namespace DAL
                 .ToListAsync();
 
             var previousTotalOrderCommissionAmount = previousOrderCommissions
-                .Sum(o => Math.Round((o.IsSystemVoucher ? o.FinalAmount : o.TotalAmount) * o.CommissionRate, 2, MidpointRounding.AwayFromZero));
+                .Sum(o => Math.Round(
+                    (o.IsSystemVoucher ? o.FinalAmount : o.TotalAmount) * o.CommissionRate,
+                    2, MidpointRounding.AwayFromZero));
 
             return new AdminMoneyChartDto
             {
-                FromDate = startDate,
-                ToDate = endDate,
+                FromDate = fromDate,
+                ToDate = toDate,
                 TotalBranchRegistrationAmount = totalBranchRegistrationAmount,
                 TotalSystemCampaignAmount = totalSystemCampaignAmount,
                 TotalOrderCommissionAmount = totalOrderCommissionAmount,
                 BranchRegistrationGrowthRate = CalculateGrowthRate(totalBranchRegistrationAmount, previousTotalBranchRegistrationAmount),
                 SystemCampaignGrowthRate = CalculateGrowthRate(totalSystemCampaignAmount, previousTotalSystemCampaignAmount),
                 OrderCommissionGrowthRate = CalculateGrowthRate(totalOrderCommissionAmount, previousTotalOrderCommissionAmount),
-                PreviousPeriod = $"từ {previousStartDate:dd-MM-yyyy} tới {previousEndExclusive.AddDays(-1):dd-MM-yyyy}",
+                PreviousPeriod = $"từ {previousStart:dd-MM-yyyy} tới {previousEnd:dd-MM-yyyy}",
                 DailyAmounts = dailyAmounts
             };
         }
 
         public async Task<AdminCompensationChartDto> GetCompensationChartAsync(DateTime fromDate, DateTime toDate)
         {
-            var startDate = fromDate.Date;
-            var endDate = toDate.Date;
-            var endExclusive = endDate.AddDays(1);
-            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+            fromDate = NormalizeToUtcDayStart(fromDate);
+            toDate = NormalizeToUtcDayStart(toDate);
 
-            var systemVoucherCompensableOrdersQuery = GetSystemVoucherCompensableOrdersQuery(startDate, endExclusive);
+            var duration = toDate - fromDate;
+            var previousEnd = fromDate;
+            var previousStart = fromDate.Add(-duration);
+
+            var systemVoucherCompensableOrdersQuery = GetSystemVoucherCompensableOrdersQuery(fromDate, toDate);
 
             var systemVoucherCompensationByDate = await systemVoucherCompensableOrdersQuery
                 .GroupBy(o => o.UpdatedAt.Date)
@@ -270,16 +298,17 @@ namespace DAL
 
             var totalCompensationAmount = dailyCompensations.Sum(x => x.CompensationAmount);
 
-            var previousTotalCompensationAmount = await GetSystemVoucherCompensableOrdersQuery(previousStartDate, previousEndExclusive)
-                .SumAsync(o => o.DiscountAmount) ?? 0m;
+            // FIXED: removed duplicate declaration and undefined variable references
+            var previousTotalCompensationAmount = await GetSystemVoucherCompensableOrdersQuery(previousStart, previousEnd)
+                .SumAsync(o => (decimal?)o.DiscountAmount) ?? 0m;
 
             return new AdminCompensationChartDto
             {
-                FromDate = startDate,
-                ToDate = endDate,
+                FromDate = fromDate,
+                ToDate = toDate,
                 TotalCompensationAmount = totalCompensationAmount,
                 CompensationGrowthRate = CalculateGrowthRate(totalCompensationAmount, previousTotalCompensationAmount),
-                PreviousPeriod = $"từ {previousStartDate:dd-MM-yyyy} tới {previousEndExclusive.AddDays(-1):dd-MM-yyyy}",
+                PreviousPeriod = $"từ {previousStart:dd-MM-yyyy} tới {previousEnd:dd-MM-yyyy}",
                 DailyCompensations = dailyCompensations,
                 CompensationByVendors = compensationByVendors
             };
@@ -287,14 +316,16 @@ namespace DAL
 
         public async Task<AdminUserToVendorConversionChartDto> GetUserToVendorConversionChartAsync(DateTime fromDate, DateTime toDate)
         {
-            var startDate = fromDate.Date;
-            var endDate = toDate.Date;
-            var endExclusive = endDate.AddDays(1);
-            var (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
+            fromDate = NormalizeToUtcDayStart(fromDate);
+            toDate = NormalizeToUtcDayStart(toDate);
+
+            var duration = toDate - fromDate;
+            var previousEnd = fromDate;
+            var previousStart = fromDate.Add(-duration);
 
             var dailyConversions = await _context.Vendors
                 .AsNoTracking()
-                .Where(v => v.CreatedAt >= startDate && v.CreatedAt < endExclusive)
+                .Where(v => v.CreatedAt >= fromDate && v.CreatedAt < toDate)
                 .GroupBy(v => v.CreatedAt.Date)
                 .Select(g => new AdminUserToVendorConversionPointDto
                 {
@@ -309,53 +340,64 @@ namespace DAL
 
             var previousTotalConversionCount = await _context.Vendors
                 .AsNoTracking()
-                .Where(v => v.CreatedAt >= previousStartDate && v.CreatedAt < previousEndExclusive)
+                .Where(v => v.CreatedAt >= previousStart && v.CreatedAt < previousEnd)
                 .Select(v => v.UserId)
                 .Distinct()
                 .CountAsync();
 
             return new AdminUserToVendorConversionChartDto
             {
-                FromDate = startDate,
-                ToDate = endDate,
+                FromDate = fromDate,
+                ToDate = toDate,
                 TotalConversionCount = totalConversionCount,
                 ConversionGrowthRate = CalculateGrowthRate(totalConversionCount, previousTotalConversionCount),
-                PreviousPeriod = $"từ {previousStartDate:dd-MM-yyyy} tới {previousEndExclusive.AddDays(-1):dd-MM-yyyy}",
+                PreviousPeriod = $"từ {previousStart:dd-MM-yyyy} tới {previousEnd:dd-MM-yyyy}",
                 DailyConversions = dailyConversions
             };
         }
 
-        private IQueryable<Order> GetSystemVoucherCompensableOrdersQuery(DateTime periodStart, DateTime periodEndExclusive)
+        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate, DateTime? previousFromDate = null, DateTime? previousToDate = null)
         {
-            return _context.Orders
-                .AsNoTracking()
-                .Where(o => o.Status == OrderStatus.Complete
-                            && o.AppliedVoucherId.HasValue
-                            && o.UpdatedAt >= periodStart
-                            && o.UpdatedAt < periodEndExclusive
-                            && o.AppliedVoucher!.UserVouchers.Any(uv => uv.UserId == o.UserId)
-                            && (o.AppliedVoucher!.VendorCampaignId == null
-                                || (o.AppliedVoucher.VendorCampaign != null
-                                    && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue)));
-        }
+            fromDate = NormalizeToUtcDayStart(fromDate);
+            toDate = NormalizeToUtcDayStart(toDate);
 
-        private static (DateTime PreviousStartDate, DateTime PreviousEndExclusive) GetPreviousPeriod(DateTime startDate, DateTime endDate)
-        {
-            var dayCount = (endDate - startDate).Days + 1;
-            var previousEndExclusive = startDate;
-            var previousStartDate = startDate.AddDays(-dayCount);
+            DateTime previousStart;
+            DateTime previousEnd;
 
-            return (previousStartDate, previousEndExclusive);
-        }
-
-        private static decimal CalculateGrowthRate(decimal currentValue, decimal previousValue)
-        {
-            if (previousValue == 0m)
+            if (previousFromDate.HasValue && previousToDate.HasValue)
             {
-                return currentValue == 0m ? 0m : 100m;
+                previousStart = NormalizeToUtcDayStart(previousFromDate.Value);
+                previousEnd = NormalizeToUtcDayStart(previousToDate.Value);
+            }
+            else
+            {
+                var duration = toDate - fromDate;
+                previousEnd = fromDate;
+                previousStart = fromDate.Add(-duration);
             }
 
-            return Math.Round(((currentValue - previousValue) / previousValue) * 100m, 2);
+            var result = new RevenueBarChartDto();
+
+            var currentTotal = await GetMoneyTotalAsync(fromDate, toDate);
+            var previousTotal = await GetMoneyTotalAsync(previousStart, previousEnd);
+
+            result.Items.Add(new BarChartItemDto
+            {
+                Label = "Previous",
+                FromDate = previousStart,
+                ToDate = previousEnd,
+                Value = previousTotal
+            });
+
+            result.Items.Add(new BarChartItemDto
+            {
+                Label = "Now",
+                FromDate = fromDate,
+                ToDate = toDate,
+                Value = currentTotal
+            });
+
+            return result;
         }
 
         public async Task<List<AdminSystemCampaignDetailsDto>> GetAllSystemCampaignDetailsAsync()
@@ -374,9 +416,10 @@ namespace DAL
                 var campaignVoucherIds = await _context.Vouchers
                     .AsNoTracking()
                     .Where(v => v.VendorCampaignId == campaignId
-                                || _context.QuestTaskRewards.Any(qtr => qtr.RewardType == BO.Enums.QuestRewardType.VOUCHER
-                                                                        && qtr.RewardValue == v.VoucherId
-                                                                        && qtr.QuestTask.Quest.CampaignId == campaignId))
+                                || _context.QuestTaskRewards.Any(qtr =>
+                                    qtr.RewardType == BO.Enums.QuestRewardType.VOUCHER
+                                    && qtr.RewardValue == v.VoucherId
+                                    && qtr.QuestTask.Quest.CampaignId == campaignId))
                     .Select(v => v.VoucherId)
                     .ToListAsync();
 
@@ -387,12 +430,13 @@ namespace DAL
 
                 var branchOrdersQuery = await _context.Orders
                     .AsNoTracking()
-                    .Where(o => o.Status == OrderStatus.Complete 
+                    .Where(o => o.Status == OrderStatus.Complete
                                 && o.AppliedVoucherId.HasValue
                                 && campaignVoucherIds.Contains(o.AppliedVoucherId.Value)
-                                && _context.BranchCampaigns.Any(bc => bc.CampaignId == campaignId
-                                                                    && bc.BranchId == o.BranchId
-                                                                    && bc.IsActive))
+                                && _context.BranchCampaigns.Any(bc =>
+                                    bc.CampaignId == campaignId
+                                    && bc.BranchId == o.BranchId
+                                    && bc.IsActive))
                     .GroupBy(o => new { o.BranchId, o.Branch.Name })
                     .Select(g => new AdminSystemCampaignBranchOrderDto
                     {
@@ -433,18 +477,20 @@ namespace DAL
                     {
                         VoucherId = v.VoucherId,
                         VoucherName = v.Name,
-                        TotalUsed = _context.Orders.Count(o => o.Status == OrderStatus.Complete && o.AppliedVoucherId == v.VoucherId)
+                        TotalUsed = _context.Orders.Count(o =>
+                            o.Status == OrderStatus.Complete && o.AppliedVoucherId == v.VoucherId)
                     })
                     .ToListAsync();
 
                 var campaignOrders = await _context.Orders
                     .AsNoTracking()
-                    .Where(o => o.Status == OrderStatus.Complete 
+                    .Where(o => o.Status == OrderStatus.Complete
                                 && o.AppliedVoucherId.HasValue
                                 && campaignVoucherIds.Contains(o.AppliedVoucherId.Value)
-                                && _context.BranchCampaigns.Any(bc => bc.CampaignId == campaignId
-                                                                    && bc.BranchId == o.BranchId
-                                                                    && bc.IsActive))
+                                && _context.BranchCampaigns.Any(bc =>
+                                    bc.CampaignId == campaignId
+                                    && bc.BranchId == o.BranchId
+                                    && bc.IsActive))
                     .OrderByDescending(o => o.CreatedAt)
                     .Select(o => new AdminSystemCampaignOrderDto
                     {
@@ -473,48 +519,18 @@ namespace DAL
             return result;
         }
 
-        public async Task<RevenueBarChartDto> GetRevenueBarChartAsync(DateTime fromDate, DateTime toDate, DateTime? previousFromDate = null, DateTime? previousToDate = null)
+        private IQueryable<Order> GetSystemVoucherCompensableOrdersQuery(DateTime periodStart, DateTime periodEndExclusive)
         {
-            var startDate = fromDate.Date;
-            var endDate = toDate.Date;
-            var endExclusive = endDate.AddDays(1);
-            
-            // Use provided previous dates if available, otherwise auto-calculate
-            DateTime previousStartDate;
-            DateTime previousEndExclusive;
-            
-            if (previousFromDate.HasValue && previousToDate.HasValue)
-            {
-                previousStartDate = previousFromDate.Value.Date;
-                previousEndExclusive = previousToDate.Value.Date.AddDays(1);
-            }
-            else
-            {
-                (previousStartDate, previousEndExclusive) = GetPreviousPeriod(startDate, endDate);
-            }
-
-            var result = new RevenueBarChartDto();
-
-            var currentTotal = await GetMoneyTotalAsync(startDate, endExclusive);
-            var previousTotal = await GetMoneyTotalAsync(previousStartDate, previousEndExclusive);
-
-            result.Items.Add(new BarChartItemDto
-            {
-                Label = "Previous",
-                FromDate = previousStartDate,
-                ToDate = previousEndExclusive.AddDays(-1),
-                Value = previousTotal
-            });
-
-            result.Items.Add(new BarChartItemDto
-            {
-                Label = "Now",
-                FromDate = startDate,
-                ToDate = endExclusive.AddDays(-1),
-                Value = currentTotal
-            });
-
-            return result;
+            return _context.Orders
+                .AsNoTracking()
+                .Where(o => o.Status == OrderStatus.Complete
+                            && o.AppliedVoucherId.HasValue
+                            && o.UpdatedAt >= periodStart
+                            && o.UpdatedAt < periodEndExclusive
+                            && o.AppliedVoucher!.UserVouchers.Any(uv => uv.UserId == o.UserId)
+                            && (o.AppliedVoucher!.VendorCampaignId == null
+                                || (o.AppliedVoucher.VendorCampaign != null
+                                    && !o.AppliedVoucher.VendorCampaign.CreatedByVendorId.HasValue)));
         }
 
         private async Task<decimal> GetMoneyTotalAsync(DateTime periodStart, DateTime periodEndExclusive)
@@ -549,7 +565,7 @@ namespace DAL
                 .Where(x => !x.Campaign.CreatedByVendorId.HasValue)
                 .SumAsync(x => (decimal?)x.Payment.Amount) ?? 0m;
 
-            var orderCommissionTotal = await _context.Orders
+            var orderCommissions = await _context.Orders
                 .AsNoTracking()
                 .Where(o => o.Status == OrderStatus.Complete
                             && o.CreatedAt >= periodStart
@@ -566,10 +582,22 @@ namespace DAL
                 })
                 .ToListAsync();
 
-            var totalOrderCommissionAmount = orderCommissionTotal
-                .Sum(o => Math.Round((o.IsSystemVoucher ? o.FinalAmount : o.TotalAmount) * o.CommissionRate, 2, MidpointRounding.AwayFromZero));
+            var totalOrderCommissionAmount = orderCommissions
+                .Sum(o => Math.Round(
+                    (o.IsSystemVoucher ? o.FinalAmount : o.TotalAmount) * o.CommissionRate,
+                    2, MidpointRounding.AwayFromZero));
 
             return branchRegistrationTotal + systemCampaignTotal + totalOrderCommissionAmount;
+        }
+
+        private static decimal CalculateGrowthRate(decimal currentValue, decimal previousValue)
+        {
+            if (previousValue == 0m)
+            {
+                return currentValue == 0m ? 0m : 100m;
+            }
+
+            return Math.Round(((currentValue - previousValue) / previousValue) * 100m, 2);
         }
     }
 }
