@@ -744,7 +744,9 @@ namespace Service
             var recipientUserIds = new HashSet<int>();
 
             var title = "Chiến dịch hệ thống mới";
-            var message = $"Chiến dịch {campaign.Name} vừa được tạo. Hãy tham gia ngay.";
+            var regStart = campaign.RegistrationStartDate?.ToString("dd/MM/yyyy") ?? "N/A";
+            var regEnd = campaign.RegistrationEndDate?.ToString("dd/MM/yyyy") ?? "N/A";
+            var message = $"Chiến dịch {campaign.Name} vừa được tạo. Thời gian đăng ký từ {regStart} đến {regEnd}. Hãy tham gia ngay.";
             var pushData = new
             {
                 type = "system_campaign_created",
