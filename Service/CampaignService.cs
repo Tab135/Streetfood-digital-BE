@@ -785,10 +785,10 @@ namespace Service
                 return;
             }
 
-            var notificationTasks = recipientUserIds.Select(userId =>
-                NotifySystemCampaignCreatedToVendorSafeAsync(userId, campaign.CampaignId, title, message, pushData));
-
-            await Task.WhenAll(notificationTasks);
+            foreach (var userId in recipientUserIds)
+            {
+                await NotifySystemCampaignCreatedToVendorSafeAsync(userId, campaign.CampaignId, title, message, pushData);
+            }
 
             _logger.LogInformation(
                 "Dispatched system campaign notification to {RecipientCount} recipient(s). CampaignId={CampaignId}",
